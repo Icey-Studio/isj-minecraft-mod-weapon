@@ -71,6 +71,15 @@ public class WeaponsMod {
                 com.minhphuc.weapons.client.renderer.KuboRenderer::new
         );
 
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.MilimModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.MilimModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.MILIM,
+                com.minhphuc.weapons.client.renderer.MilimRenderer::new
+        );
+
         LOGGER.info("Weapons Mod Client Setup complete!");
     }
 }

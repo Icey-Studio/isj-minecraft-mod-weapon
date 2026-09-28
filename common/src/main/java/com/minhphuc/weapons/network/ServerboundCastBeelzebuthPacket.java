@@ -1,5 +1,9 @@
 package com.minhphuc.weapons.network;
 
+import com.minhphuc.weapons.content.divine.HeavenlyJudgmentArrayAbility;
+import com.minhphuc.weapons.content.divine.JacobsLadderAbility;
+import com.minhphuc.weapons.content.divine.PurificationPillarAbility;
+import com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility;
 import com.minhphuc.weapons.content.tensura.BeelzebuthAbility;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import dev.architectury.networking.NetworkManager;
@@ -7,6 +11,7 @@ import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.item.ItemStack;
 
 import java.util.function.Supplier;
 
@@ -39,7 +44,7 @@ public class ServerboundCastBeelzebuthPacket {
 
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
-                int lordSkills = hasCreation ? 8 : 7;
+                int lordSkills = hasCreation ? 15 : 14;
 
                 if (isTrueDemonLord && isPrimordial) {
                     int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
@@ -56,42 +61,63 @@ public class ServerboundCastBeelzebuthPacket {
                     return;
                 }
 
-                // Thi triển Kỹ Năng Chân Ma Vương
+                // Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
                 int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
 
-                // Nếu đang kích hoạt Tuyệt Diệt Tinh Tú, chỉ cho phép kích hoạt thêm Thị Nhục (Chiêu 6 - index 5) hoặc Diệt Thế Tà Tinh (Chiêu 7 - index 6)
-                if (selectedSkill != 3 && selectedSkill != 5 && selectedSkill != 6 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(player)) {
+                // Nếu đang kích hoạt Tuyệt Diệt Tinh Tú, chỉ cho phép kích hoạt thêm Thị Nhục (Chiêu 9 - index 8) hoặc Diệt Thế Tà Tinh (Chiêu 10 - index 9)
+                if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(player)) {
                     player.displayClientMessage(
                         Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
                         true
                     );
                     return;
                 }
-                
-                if (selectedSkill == 7) {
-                    // Chiêu 8: Sáng Tạo Vật Chất - Mở Giao Diện Ngưng Tụ Thần Khí
+
+                if (hasCreation && selectedSkill == 14) {
+                    // Chiêu 15: Sáng Tạo Vật Chất - Mở Giao Diện Ngưng Tụ Thần Khí
                     ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
-                } else if (selectedSkill == 6) {
-                    // Chiêu 7: Diệt Thế Tà Tinh - Alkaid (Yêu cầu đang bật Tuyệt Diệt Tinh Tú)
+                } else if (selectedSkill == 13) {
+                    // Chiêu 14: Kiêu Ngạo Vương Lucifer - Sao Chép Tuyệt Kỹ
+                    com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(serverLevel, player);
+                } else if (selectedSkill == 12) {
+                    // Chiêu 13: Trí Huệ Chi Vương - Thẩm Định Vạn Vật
+                    com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(serverLevel, player);
+                } else if (selectedSkill == 11) {
+                    // Chiêu 12: Trí Huệ Chi Vương - Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo
+                    com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(serverLevel, player);
+                } else if (selectedSkill == 10) {
+                    // Chiêu 11: Cú Bắn Granit (Granite Blast)
+                    com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(serverLevel, player);
+                } else if (selectedSkill == 9) {
+                    // Chiêu 10: Diệt Thế Tà Tinh - Alkaid (Yêu cầu đang bật Tuyệt Diệt Tinh Tú)
                     com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 5) {
-                    // Chiêu 6: Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)
+                } else if (selectedSkill == 8) {
+                    // Chiêu 9: Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)
                     com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 4) {
-                    // Chiêu 5: Lục Nhậm Thần Khóa - Trận Đồ Cưỡng Chế Tai Ương (Bật / Tắt chủ động)
+                } else if (selectedSkill == 7) {
+                    // Chiêu 8: Lục Nhậm Thần Khóa - Trận Đồ Cưỡng Chế Tai Ương (Bật / Tắt chủ động)
                     com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.toggleBarrier(serverLevel, player);
-                } else if (selectedSkill == 3) {
-                    // Chiêu 4: Phẫn Nộ Vương - Tuyệt Diệt Tinh Tú (Thái Tuế Tinh Quân)
+                } else if (selectedSkill == 6) {
+                    // Chiêu 7: Phẫn Nộ Vương - Tuyệt Diệt Tinh Tú (Thái Tuế Tinh Quân)
                     com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 2) {
-                    // Chiêu 3: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Giáp Thần Linh)
+                } else if (selectedSkill == 5) {
+                    // Chiêu 6: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Giáp Thần Linh)
                     com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 1) {
-                    // Chiêu 2: Bạo Thực Vương - Hủ Hóa & Bạo Liệt
-                    BeelzebuthAbility.executeCorrosion(serverLevel, player);
-                } else {
-                    // Chiêu 1: Bạo Thực Vương - Thôn Phệ (Mặc định)
+                } else if (selectedSkill == 4) {
+                    // Chiêu 5: Bạo Thực Vương - Thôn Phệ
                     BeelzebuthAbility.executeBeelzebuth(serverLevel, player);
+                } else if (selectedSkill == 3) {
+                    // Chiêu 4: Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Không cần cầm kiếm)
+                    PurificationPillarAbility.cast(serverLevel, player, ItemStack.EMPTY);
+                } else if (selectedSkill == 2) {
+                    // Chiêu 3: Bát Môn Thiên Phạt Trận (Không cần cầm kiếm)
+                    HeavenlyJudgmentArrayAbility.cast(serverLevel, player, ItemStack.EMPTY);
+                } else if (selectedSkill == 1) {
+                    // Chiêu 2: Tà Khứ Vũ Thê Tử (Jacob's Ladder) (Không cần cầm kiếm)
+                    JacobsLadderAbility.cast(serverLevel, player, ItemStack.EMPTY);
+                } else {
+                    // Chiêu 1: Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Không cần cầm kiếm)
+                    SanctuaryDisintegrationAbility.cast(serverLevel, player, ItemStack.EMPTY);
                 }
             } else {
                 player.displayClientMessage(

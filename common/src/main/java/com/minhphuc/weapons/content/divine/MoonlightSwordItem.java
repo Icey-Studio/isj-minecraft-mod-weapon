@@ -50,24 +50,27 @@ public class MoonlightSwordItem extends Item {
 
     public static String getSkillName(int skillOrdinal) {
         return switch (skillOrdinal) {
-            case 0 -> "§4§l1. Thần Tỵ - Hắc Thiểm Bá Vương (Divine Departure - Black Flash)";
-            case 1 -> "§e§l2. Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Multi-Tier Disintegration)";
-            case 2 -> "§b§l3. Tà Khứ Vũ Thê Tử (Jacob's Ladder)";
-            case 3 -> "§6§l4. Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)";
-            case 4 -> "§a§l5. Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)";
-            case 5 -> "§d§l6. Bạo Thực Vương Beelzebuth";
-            case 6 -> "§d§l7. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
-            case 7 -> "§c§l8. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú (Extinction Stars)";
-            case 8 -> "§b§l9. Trận Đồ Cưỡng Chế Tai Ương";
-            case 9 -> "§c§l10. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
-            case 10 -> "§4§l11. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
+            case 0 -> "§e§l1. Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Multi-Tier Disintegration)";
+            case 1 -> "§b§l2. Tà Khứ Vũ Thê Tử (Jacob's Ladder)";
+            case 2 -> "§6§l3. Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)";
+            case 3 -> "§a§l4. Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)";
+            case 4 -> "§d§l5. Bạo Thực Vương: Thôn Phệ (Predator)";
+            case 5 -> "§d§l6. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
+            case 6 -> "§e§l7. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú (Extinction Stars)";
+            case 7 -> "§b§l8. Trận Đồ Cưỡng Chế Tai Ương (Lục Nhậm Thần Khóa)";
+            case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
+            case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
+            case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
+            case 11 -> "§b§l12. Trí Huệ Chi Vương: Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo (Ciel)";
+            case 12 -> "§a§l13. Trí Huệ Chi Vương: Thẩm Định Vạn Vật (All of Creation)";
+            case 13 -> "§4§l14. Kiêu Ngạo Vương Lucifer: Sao Chép Tuyệt Kỹ (Replication)";
             default -> "§7Chưa chọn";
         };
     }
 
     public static void cycleSkill(ServerPlayer player, ItemStack stack) {
         boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
-        int maxSkills = isTrueDemonLord ? 11 : 5;
+        int maxSkills = isTrueDemonLord ? 14 : 4;
 
         int current = ItemStackDataHelper.getInt(stack, NBT_SKILL);
         int next = (current + 1) % maxSkills;
@@ -90,8 +93,8 @@ public class MoonlightSwordItem extends Item {
         if (!level.isClientSide() && level instanceof ServerLevel serverLevel && player instanceof ServerPlayer serverPlayer) {
             int skill = ItemStackDataHelper.getInt(stack, NBT_SKILL);
 
-            // Kiểm tra nếu đang kích hoạt Tuyệt Diệt Tinh Tú thì chỉ cho phép kết hợp kích hoạt Thị Nhục (Chiêu 10 - index 9) hoặc Alkaid (Chiêu 11 - index 10)
-            if (skill != 7 && skill != 9 && skill != 10 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
+            // Kiểm tra nếu đang kích hoạt Tuyệt Diệt Tinh Tú thì chỉ cho phép kết hợp kích hoạt Thị Nhục (Chiêu 9 - index 8) hoặc Alkaid (Chiêu 10 - index 9)
+            if (skill != 6 && skill != 8 && skill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
                 serverPlayer.displayClientMessage(
                     Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
                     true
@@ -100,116 +103,52 @@ public class MoonlightSwordItem extends Item {
             }
 
             if (skill == 0) {
-                // Chiêu 1: Thần Tỵ - Hắc Thiểm Bá Vương
-                executeThanTy(serverLevel, serverPlayer, stack);
-            } else if (skill == 1) {
-                // Chiêu 2: Tam Trọng Thánh Giới - Linh Tử Băng Hoại
+                // Chiêu 1: Tam Trọng Thánh Giới - Linh Tử Băng Hoại
                 SanctuaryDisintegrationAbility.cast(serverLevel, serverPlayer, stack);
-            } else if (skill == 2) {
-                // Chiêu 3: Tà Khứ Vũ Thê Tử (Jacob's Ladder)
+            } else if (skill == 1) {
+                // Chiêu 2: Tà Khứ Vũ Thê Tử (Jacob's Ladder)
                 JacobsLadderAbility.cast(serverLevel, serverPlayer, stack);
-            } else if (skill == 3) {
-                // Chiêu 4: Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)
+            } else if (skill == 2) {
+                // Chiêu 3: Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)
                 HeavenlyJudgmentArrayAbility.cast(serverLevel, serverPlayer, stack);
-            } else if (skill == 4) {
-                // Chiêu 5: Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)
+            } else if (skill == 3) {
+                // Chiêu 4: Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)
                 PurificationPillarAbility.cast(serverLevel, serverPlayer, stack);
-            } else if (skill == 5) {
-                // Chiêu 6: Bạo Thực Vương Beelzebuth (Dành cho Chân Ma Vương)
+            } else if (skill == 4) {
+                // Chiêu 5: Bạo Thực Vương: Thôn Phệ (Dành cho Chân Ma Vương)
                 BeelzebuthAbility.executeBeelzebuth(serverLevel, serverPlayer);
                 player.getCooldowns().addCooldown(this, 30);
-            } else if (skill == 6) {
-                // Chiêu 7: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Chân Ma Vương + Giáp Thần Linh)
+            } else if (skill == 5) {
+                // Chiêu 6: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Chân Ma Vương + Giáp Thần Linh)
                 com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 7) {
-                // Chiêu 8: Phẫn Nộ Vương - Tuyệt Diệt Tinh Tú (Extinction Stars - Thái Tuế Tinh Quân)
+            } else if (skill == 6) {
+                // Chiêu 7: Phẫn Nộ Vương - Tuyệt Diệt Tinh Tú (Extinction Stars - Thái Tuế Tinh Quân)
                 com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 8) {
-                // Chiêu 9: Lớp Phòng Ngự Lục Nhậm Thần Khóa (Bật / Tắt chủ động)
+            } else if (skill == 7) {
+                // Chiêu 8: Lớp Phòng Ngự Lục Nhậm Thần Khóa (Bật / Tắt chủ động)
                 com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.toggleBarrier(serverLevel, serverPlayer);
-            } else if (skill == 9) {
-                // Chiêu 10: Thị Nhục (Seer Flesh) - Thái Tuế Tinh Quân
+            } else if (skill == 8) {
+                // Chiêu 9: Thị Nhục (Seer Flesh) - Thái Tuế Tinh Quân
                 com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 10) {
-                // Chiêu 11: Diệt Thế Tà Tinh - Alkaid (Yêu cầu đang bật Tuyệt Diệt Tinh Tú)
+            } else if (skill == 9) {
+                // Chiêu 10: Diệt Thế Tà Tinh - Alkaid (Yêu cầu đang bật Tuyệt Diệt Tinh Tú)
                 com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(serverLevel, serverPlayer);
+            } else if (skill == 10) {
+                // Chiêu 11: Cú Bắn Granit (Granite Blast)
+                com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(serverLevel, serverPlayer);
+            } else if (skill == 11) {
+                // Chiêu 12: Trí Huệ Chi Vương - Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo
+                com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(serverLevel, serverPlayer);
+            } else if (skill == 12) {
+                // Chiêu 13: Trí Huệ Chi Vương - Thẩm Định Vạn Vật
+                com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(serverLevel, serverPlayer);
+            } else if (skill == 13) {
+                // Chiêu 14: Kiêu Ngạo Vương Lucifer - Sao Chép Tuyệt Kỹ
+                com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(serverLevel, serverPlayer);
             }
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-    }
-
-    /**
-     * Chiêu 1: Thần Tỵ - Hắc Thiểm Bá Vương (Tia sét đỏ - đen xé rách không gian)
-     */
-    private void executeThanTy(ServerLevel level, ServerPlayer player, ItemStack stack) {
-        Vec3 eyePos = player.getEyePosition(1.0F);
-        Vec3 look = player.getLookAngle();
-        double maxDist = 12.0D;
-
-        // 1. Gieo xúc xắc xuất lực ngẫu nhiên (Low 30%, Normal 50%, Overdrive 20%)
-        SkillPowerRoll roll = SkillPowerRoll.roll();
-        roll.announceAndPlayEffects(player, "Thần Tỵ - Hắc Thiểm Bá Vương");
-
-        // 2. Kích hoạt hiệu ứng âm thanh Hắc Thiểm & Haki Bá Vương rung chấn
-        BlackFlashVFX.playBlackFlashSounds(level, player);
-
-        // 3. Kích hoạt chuỗi tia sét ziczac Hắc Thiểm Đỏ - Đen đa tầng
-        BlackFlashVFX.spawnBlackFlashSlashVFX(level, player, eyePos, look, maxDist);
-
-        Set<LivingEntity> hitEntities = new HashSet<>();
-
-        // Véc tơ vuông góc ngang để tạo hình vòng cung kiếm khí
-        Vec3 right = new Vec3(-look.z, 0, look.x).normalize();
-
-        // 4. Quét trảm sát toàn bộ sinh vật trong quạt chém kiếm khí
-        Vec3 end = eyePos.add(look.scale(maxDist));
-        double maxArcWidth = 1.5D + (maxDist * 0.25D);
-        AABB slashSector = new AABB(eyePos, end).inflate(maxArcWidth + 1.0D);
-        List<LivingEntity> potentialTargets = level.getEntitiesOfClass(LivingEntity.class, slashSector, e -> e != player && e.isAlive());
-
-        for (LivingEntity target : potentialTargets) {
-            Vec3 toTarget = target.position().add(0, target.getBbHeight() * 0.5D, 0).subtract(eyePos);
-            double distAlongLook = toTarget.dot(look);
-
-            if (distAlongLook >= 0.5D && distAlongLook <= maxDist) {
-                double arcWidthAtDist = 1.5D + (distAlongLook * 0.3D);
-                double lateralDist = Math.abs(toTarget.dot(right));
-                double verticalDist = Math.abs(toTarget.y);
-
-                if (lateralDist <= arcWidthAtDist && verticalDist <= 2.8D) {
-                    com.minhphuc.weapons.content.tensura.TensuraEvents.handleMobDeathDrop(player, target);
-                    
-                    // Hiệu ứng nổ bùng tia sét Hắc Thiểm ngay tại cơ thể mục tiêu bị trảm
-                    BlackFlashVFX.spawnTargetImpactVFX(level, target);
-
-                    if (roll.isOverdrive()) {
-                        // BẠO KÍCH CỰC HẠN (20%): Tất sát 1 hit tiêu diệt triệt để
-                        target.hurt(level.damageSources().playerAttack(player), 100000.0F);
-                        if (target.isAlive()) {
-                            target.discard();
-                        }
-                    } else if (roll.isNormal()) {
-                        // XUẤT LỰC CHUẨN (50%): 220 sát thương * multiplier, quái thường chết ngay, boss mất máu nặng
-                        float damage = 220.0F * roll.multiplier;
-                        target.hurt(level.damageSources().playerAttack(player), damage);
-                        Vec3 knockback = look.scale(1.5D).add(0, 0.3D, 0);
-                        target.setDeltaMovement(knockback);
-                        target.hasImpulse = true;
-                    } else {
-                        // ĐẦU RA THẤP (30%): 50 sát thương * multiplier, mục tiêu bị choáng và đẩy lùi
-                        float damage = 50.0F * roll.multiplier;
-                        target.hurt(level.damageSources().playerAttack(player), damage);
-                        Vec3 knockback = look.scale(0.8D).add(0, 0.2D, 0);
-                        target.setDeltaMovement(knockback);
-                        target.hasImpulse = true;
-                    }
-                    hitEntities.add(target);
-                }
-            }
-        }
-
-        player.getCooldowns().addCooldown(this, 30); // 1.5 giây hồi chiêu
     }
 
     @Override
@@ -227,18 +166,14 @@ public class MoonlightSwordItem extends Item {
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§6⚡ Kỹ Năng Đang Chọn: " + getSkillName(currentSkill)));
         tooltip.add(Component.literal("§7- Nhấn phím §e[Z] §7để chuyển đổi thứ tự chiêu thức:"));
-        tooltip.add(Component.literal("§7   + §41. Thần Tỵ (Hắc Thiểm): §fTia sét đỏ đen xé rách không gian, quét 12 blocks"));
-        tooltip.add(Component.literal("§7   + §e2. Tam Trọng Thánh Giới: §fMa Pháp Trận 3 tầng giam cầm & Cột Thiên Phạt phân rã"));
-        tooltip.add(Component.literal("§7   + §b3. Tà Khứ Vũ Thê Tử: §fCột sáng 4x4 chọc trời, phá hủy địa hình & diệt trừ nguyền rủa"));
-        tooltip.add(Component.literal("§7   + §64. Bát Môn Thiên Phạt Trận: §fMa trận 7 cột sáng vây hãm, lốc xoáy & kích nổ hủy diệt"));
-        tooltip.add(Component.literal("§7   + §a5. Đại Thánh Tẩy: §fThánh trụ cứu rỗi, hồi máu toàn diện, chuyển hóa Zombie/Witch thành Dân Làng"));
-        tooltip.add(Component.literal("§7   + §d6..9. Kỹ Năng Tối Thượng Ma Vương: §fBeelzebuth, Dragon Nova, Tinh Tú, Lục Nhậm Thần Khóa"));
-        tooltip.add(Component.literal("§7   + §c10. Thị Nhục (Seer Flesh): §fKhối thịt lúc nhúc 12 mắt, hồi 100% HP, xóa độc & rạch mắt trị liệu"));
-        tooltip.add(Component.literal("§7   + §411. Diệt Thế Tà Tinh (Alkaid): §fTất sát tà tinh tụ 8s tạo đại cầu phân rã khoan xuyên lòng đất!"));
+        tooltip.add(Component.literal("§7   + §e1. Tam Trọng Thánh Giới: §fMa Pháp Trận 3 tầng giam cầm & Cột Thiên Phạt phân rã"));
+        tooltip.add(Component.literal("§7   + §b2. Tà Khứ Vũ Thê Tử: §fCột sáng 4x4 chọc trời, phá hủy địa hình & diệt trừ nguyền rủa"));
+        tooltip.add(Component.literal("§7   + §63. Bát Môn Thiên Phạt Trận: §fMa trận 7 cột sáng vây hãm, lốc xoáy & kích nổ hủy diệt"));
+        tooltip.add(Component.literal("§7   + §a4. Đại Thánh Tẩy: §fThánh trụ cứu rỗi, hồi máu toàn diện, chuyển hóa Zombie/Witch thành Dân Làng"));
+        tooltip.add(Component.literal("§7   + §d5..8. Kỹ Năng Tối Thượng Ma Vương: §fBeelzebuth, Dragon Nova, Tinh Tú, Lục Nhậm Thần Khóa"));
+        tooltip.add(Component.literal("§7   + §c9. Thị Nhục (Seer Flesh): §fKhối thịt lúc nhúc 12 mắt, hồi 100% HP, xóa độc & rạch mắt trị liệu"));
+        tooltip.add(Component.literal("§7   + §410. Diệt Thế Tà Tinh (Alkaid): §fTất sát tà tinh tụ 8s tạo đại cầu phân rã!"));
+        tooltip.add(Component.literal("§7   + §611. Cú Bắn Granit (Granite Blast): §fĐại pháo năng lượng chấn thiên bắn ngang xuyên toạc không gian!"));
         tooltip.add(Component.literal("§7- Nhấn §a[Chuột Phải] §7để thi triển kỹ năng đã chọn"));
-        tooltip.add(Component.literal("§5🎲 Cơ Chế Xuất Lực Ngẫu Nhiên:"));
-        tooltip.add(Component.literal("§7  • §7Đầu Ra Thấp (30%): §fHụt lực, sát thương nhẹ, đẩy lùi"));
-        tooltip.add(Component.literal("§7  • §bXuất Lực Chuẩn (50%): §fSát thương chuẩn, diệt quái thường, rút máu Boss"));
-        tooltip.add(Component.literal("§7  • §4§lBạo Kích Tối Thượng (20%): §e§lHắc Thiểm tất sát 100% vạn vật!"));
     }
 }

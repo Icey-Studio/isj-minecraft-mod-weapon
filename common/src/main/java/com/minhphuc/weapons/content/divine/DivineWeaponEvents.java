@@ -116,14 +116,14 @@ public class DivineWeaponEvents {
                 }
             }
 
-            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương
+            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
             if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
                 if (isTrueDemonLord) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
-                    if (selectedSkill != 3 && selectedSkill != 5 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
+                    if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
                         serverPlayer.displayClientMessage(
-                            Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục!"),
+                            Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
                             true
                         );
                         return EventResult.interruptTrue();
@@ -133,18 +133,34 @@ public class DivineWeaponEvents {
                         return EventResult.interruptTrue();
                     }
                     ServerLevel sl = (ServerLevel) serverPlayer.level();
-                    if (selectedSkill == 5) {
+                    if (selectedSkill == 13) {
+                        com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 12) {
+                        com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 11) {
+                        com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 10) {
+                        com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 9) {
+                        com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 8) {
                         com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 4) {
+                    } else if (selectedSkill == 7) {
                         com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.toggleBarrier(sl, serverPlayer);
-                    } else if (selectedSkill == 3) {
+                    } else if (selectedSkill == 6) {
                         com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 2) {
+                    } else if (selectedSkill == 5) {
                         com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 1) {
-                        BeelzebuthAbility.executeCorrosion(sl, serverPlayer);
-                    } else {
+                    } else if (selectedSkill == 4) {
                         BeelzebuthAbility.executeBeelzebuth(sl, serverPlayer);
+                    } else if (selectedSkill == 3) {
+                        PurificationPillarAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else if (selectedSkill == 2) {
+                        HeavenlyJudgmentArrayAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else if (selectedSkill == 1) {
+                        JacobsLadderAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else {
+                        SanctuaryDisintegrationAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
                     }
                     return EventResult.interruptTrue();
                 }

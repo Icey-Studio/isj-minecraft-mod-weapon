@@ -59,8 +59,8 @@ public class ServerboundCycleSkillPacket {
                 com.minhphuc.weapons.entity.tensura.DemonType demonType = PrimordialPlayerDataHelper.getPrimordialType(player);
 
                 if (isTrueDemonLord && isPrimordial) {
-                    // Cả Ma Vương và Thủy Tổ: 8 chiêu Ma Vương + 5 chiêu Thủy Tổ = 13 chiêu
-                    int lordSkills = hasCreation ? 8 : 7;
+                    // Cả Ma Vương và Thủy Tổ: (14 hoặc 15) chiêu Ma Vương & Kiếm Thần Thoại + 5 chiêu Thủy Tổ
+                    int lordSkills = hasCreation ? 15 : 14;
                     int totalSkills = lordSkills + 5;
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     int next = (current + 1) % totalSkills;
@@ -69,14 +69,21 @@ public class ServerboundCycleSkillPacket {
                     String skillName;
                     if (next < lordSkills) {
                         skillName = switch (next) {
-                            case 0 -> "§d§l1. Bạo Thực Vương: Thôn Phệ (Predator)";
-                            case 1 -> "§c§l2. Bạo Thực Vương: Hủ Hóa & Bạo Liệt (Corrosion)";
-                            case 2 -> "§d§l3. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
-                            case 3 -> "§e§l4. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú";
-                            case 4 -> "§b§l5. Trận Đồ Cưỡng Chế Tai Ương";
-                            case 5 -> "§c§l6. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
-                            case 6 -> "§4§l7. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
-                            case 7 -> "§6§l8. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
+                            case 0 -> "§e§l1. Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Multi-Tier Disintegration)";
+                            case 1 -> "§b§l2. Tà Khứ Vũ Thê Tử (Jacob's Ladder)";
+                            case 2 -> "§6§l3. Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)";
+                            case 3 -> "§a§l4. Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)";
+                            case 4 -> "§d§l5. Bạo Thực Vương: Thôn Phệ (Predator)";
+                            case 5 -> "§d§l6. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
+                            case 6 -> "§e§l7. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú";
+                            case 7 -> "§b§l8. Trận Đồ Cưỡng Chế Tai Ương (Lục Nhậm Thần Khóa)";
+                            case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
+                            case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
+                            case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
+                            case 11 -> "§b§l12. Trí Huệ Chi Vương: Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo (Ciel)";
+                            case 12 -> "§a§l13. Trí Huệ Chi Vương: Thẩm Định Vạn Vật (All of Creation)";
+                            case 13 -> "§4§l14. Kiêu Ngạo Vương Lucifer: Sao Chép Tuyệt Kỹ (Replication)";
+                            case 14 -> "§6§l15. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
                             default -> "§7Chưa chọn";
                         };
                     } else {
@@ -91,20 +98,27 @@ public class ServerboundCycleSkillPacket {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F + (next * 0.15F));
                 } else if (isTrueDemonLord) {
-                    int maxSkills = hasCreation ? 8 : 7;
+                    int maxSkills = hasCreation ? 15 : 14;
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     int next = (current + 1) % maxSkills;
                     EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
 
                     String skillName = switch (next) {
-                        case 0 -> "§d§l1. Bạo Thực Vương: Thôn Phệ (Predator)";
-                        case 1 -> "§c§l2. Bạo Thực Vương: Hủ Hóa & Bạo Liệt (Corrosion)";
-                        case 2 -> "§d§l3. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
-                        case 3 -> "§e§l4. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú";
-                        case 4 -> "§b§l5. Trận Đồ Cưỡng Chế Tai Ương";
-                        case 5 -> "§c§l6. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
-                        case 6 -> "§4§l7. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
-                        case 7 -> "§6§l8. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
+                        case 0 -> "§e§l1. Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Multi-Tier Disintegration)";
+                        case 1 -> "§b§l2. Tà Khứ Vũ Thê Tử (Jacob's Ladder)";
+                        case 2 -> "§6§l3. Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)";
+                        case 3 -> "§a§l4. Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)";
+                        case 4 -> "§d§l5. Bạo Thực Vương: Thôn Phệ (Predator)";
+                        case 5 -> "§d§l6. Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
+                        case 6 -> "§e§l7. Phẫn Nộ Vương: Tuyệt Diệt Tinh Tú";
+                        case 7 -> "§b§l8. Trận Đồ Cưỡng Chế Tai Ương (Lục Nhậm Thần Khóa)";
+                        case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
+                        case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
+                        case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
+                        case 11 -> "§b§l12. Trí Huệ Chi Vương: Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo (Ciel)";
+                        case 12 -> "§a§l13. Trí Huệ Chi Vương: Thẩm Định Vạn Vật (All of Creation)";
+                        case 13 -> "§4§l14. Kiêu Ngạo Vương Lucifer: Sao Chép Tuyệt Kỹ (Replication)";
+                        case 14 -> "§6§l15. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
                         default -> "§7Chưa chọn";
                     };
 

@@ -28,6 +28,7 @@ import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.Vec3;
+import java.util.List;
 
 public class TensuraEvents {
 
@@ -37,6 +38,7 @@ public class TensuraEvents {
         InteractionEvent.RIGHT_CLICK_BLOCK.register(TensuraEvents::onRightClickBlock);
         InteractionEvent.INTERACT_ENTITY.register(TensuraEvents::onInteractEntity);
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(TensuraEvents::onPlayerJoin);
+        dev.architectury.event.events.common.TickEvent.PLAYER_POST.register(TensuraEvents::onPlayerTick);
         dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
             CarreraBulletLogic.tickVortices();
             PrimordialSummonRitual.tickRituals(level);
@@ -44,7 +46,56 @@ public class TensuraEvents {
             IncubationCapsuleManager.tickCapsules(level);
             ResidualMagicCircleManager.tickResidualCircles(level);
             DeathStreakAbility.tickStreaks(level);
+            PentagramCelestialPillarAbility.tickPillars(level);
+            HorizontalHolyBeamAbility.tickBeams(level);
         });
+    }
+
+    private static final java.util.Map<java.util.UUID, java.util.Map<java.util.UUID, Long>> DEMON_GREETING_TIMESTAMPS = new java.util.HashMap<>();
+
+    public static void onPlayerTick(Player rawPlayer) {
+        if (rawPlayer.level().isClientSide() || !(rawPlayer instanceof ServerPlayer sp)) return;
+
+        // 1. CƠ CHẾ BAY (FLIGHT) CHO NGƯỜI CHƠI LÀ ÁC MA HOẶC MA VƯƠNG
+        boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(sp) || PrimordialPlayerDataHelper.isDemonLord(sp);
+        if (canFlyTensura) {
+            if (!sp.getAbilities().mayfly) {
+                sp.getAbilities().mayfly = true;
+                sp.onUpdateAbilities();
+            }
+        }
+
+        // 2. TƯƠNG TÁC CHÀO HỎI KHI NGƯỜI CHƠI BIẾN THÀNH ÁC MA GẶP CÁC ÁC MA KHÁC (Mỗi 40 ticks = 2s)
+        if (sp.tickCount % 40 == 0 && PrimordialPlayerDataHelper.isPrimordial(sp)) {
+            DemonType playerType = PrimordialPlayerDataHelper.getPrimordialType(sp);
+            if (playerType != null && sp.level() instanceof ServerLevel sl) {
+                List<PrimordialDemonEntity> nearbyDemons = sl.getEntitiesOfClass(
+                        PrimordialDemonEntity.class,
+                        sp.getBoundingBox().inflate(10.0D),
+                        d -> d.isAlive() && d.getDemonType() != playerType
+                );
+
+                long gameTime = sl.getGameTime();
+                for (PrimordialDemonEntity demon : nearbyDemons) {
+                    var playerMap = DEMON_GREETING_TIMESTAMPS.computeIfAbsent(sp.getUUID(), k -> new java.util.HashMap<>());
+                    long lastGreet = playerMap.getOrDefault(demon.getUUID(), 0L);
+
+                    // Cooldown chào hỏi 60 giây (1200 ticks) tránh spam
+                    if (gameTime - lastGreet >= 1200L) {
+                        playerMap.put(demon.getUUID(), gameTime);
+                        demon.getLookControl().setLookAt(sp, 30.0F, 30.0F);
+
+                        String greetingKey = "dialogue.weapons.demon.greet_" + playerType.name().toLowerCase();
+                        TensuraDialogueManager.sayDemonGreeting(demon, demon.getDemonType(), sp, greetingKey);
+                        break; // Mỗi lần quét chỉ chào 1 câu
+                    }
+                }
+            }
+        }
+
+        // 3. XỬ LÝ TICK KỸ NĂNG TRÍ HUỆ CHI VƯƠNG (Gia Tốc Tư Duy & Thẩm Định Vạn Vật)
+        ThoughtAccelerationAbility.tickPlayer(sp);
+        AllOfCreationAbility.tickPlayer(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -206,9 +257,14 @@ public class TensuraEvents {
 
         // Nếu người chơi chết: Reset toàn bộ thân phận Thủy Tổ Ác Ma theo luật chơi
         if (victim instanceof ServerPlayer deadPlayer) {
-            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer)) {
+            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer) || PrimordialPlayerDataHelper.isDemonLord(deadPlayer)) {
                 PrimordialPlayerDataHelper.resetOnDeath(deadPlayer);
-                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Cá thể đã tử trận! Toàn bộ căn nguyên Thủy Tổ Ác Ma đã tan biến.");
+                if (!deadPlayer.isCreative() && !deadPlayer.isSpectator()) {
+                    deadPlayer.getAbilities().mayfly = false;
+                    deadPlayer.getAbilities().flying = false;
+                    deadPlayer.onUpdateAbilities();
+                }
+                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Cá thể đã tử trận! Toàn bộ căn nguyên Thủy Tổ Ác Ma & Ma Vương đã tan biến.");
             }
             return EventResult.pass();
         }
@@ -358,8 +414,14 @@ public class TensuraEvents {
         }
 
         // =========================================================================
-        // 2. CƠ CHẾ MIỄN NHIỄM SÁT THƯƠNG KHI NGƯỜI CHƠI LÀ THỦY TỔ ÁC MA (VICTIM)
+        // 2. CƠ CHẾ TỰ ĐỘNG NÉ ĐÒN CỦA TRÍ HUỆ CHI VƯƠNG & MIỄN NHIỄM SÁT THƯƠNG
         // =========================================================================
+        if (victim instanceof ServerPlayer player) {
+            if (ThoughtAccelerationAbility.handleIncomingAttack(player, source, amount)) {
+                return EventResult.interruptFalse();
+            }
+        }
+
         if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isPrimordial(player)) {
             // Miễn nhiễm hoàn toàn sát thương ngã (Fall damage)
             if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) {
