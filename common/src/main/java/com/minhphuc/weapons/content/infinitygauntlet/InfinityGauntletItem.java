@@ -80,11 +80,6 @@ public class InfinityGauntletItem extends Item {
                     applyOrRefreshEffect(player, MobEffects.ABSORPTION, duration, 4);
                 }
 
-                // Tick hiệu ứng Kết Giới Vương Cung Thành Trì của Đá Không Gian
-                if (level instanceof ServerLevel serverLevel) {
-                    SpaceStoneAbility.tickCitadelBarrier(serverLevel, player);
-                }
-
                 // Frost Walker: Tự động đóng băng nước dưới chân khi ở Chế độ Frozen của Đá Thực Tại (kiểm tra mỗi 4 ticks, dùng flag 2)
                 int mode = ItemStackDataHelper.getInt(stack, NBT_MODE);
                 int subMode = ItemStackDataHelper.getInt(stack, "RealitySubMode");
@@ -377,10 +372,10 @@ public class InfinityGauntletItem extends Item {
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§7- Hướng dẫn: Nhấn phím §e[PgUp] §7để chọn chức năng."));
         tooltip.add(Component.literal("§7- §d🔮 Đá Sức Mạnh (Power Stone)§7: Bắn laze hủy diệt / Bộc phát xung giải thoát không gian kín."));
-        tooltip.add(Component.literal("§7- §9🌌 Đá Không Gian (Space Stone)§7: Chuột phải: Kết Giới Vương Cung Thành Trì 3 blocks (Ngăn quái, nổ Creeper, tên & tiếng thét Warden) / Shift+Chuột phải: Menu Dịch Chuyển."));
+        tooltip.add(Component.literal("§7- §9🌌 Đá Không Gian (Space Stone)§7: Menu Dịch Chuyển Không Gian tức thời (Teleport Menu)."));
         tooltip.add(Component.literal("§7- §c🔴 Đá Thực Tại (Reality Stone)§7: Đóng băng địa hình & sinh vật (bị đánh vỡ vụn). Nhìn lên trời đổi thời tiết."));
-        tooltip.add(Component.literal("§7- §6💀 Đá Linh Hồn (Soul Stone)§7: Gặt hái linh hồn (Hồi 100% máu + gọi Tử Linh Phục Sinh từ item rớt). Shift+Chuột phải: Tách linh hồn."));
-        tooltip.add(Component.literal("§7- §a⌛ Đá Thời Gian (Time Stone)§7: Lãnh Địa Dừng Thời Gian (Tạm dừng 100% quái vật 30 blocks & tốc độ siêu tốc)."));
+        tooltip.add(Component.literal("§7- §6💀 Đá Linh Hồn (Soul Stone)§7: Gặt hái linh hồn (Hồi máu & sát thương). Shift+Chuột phải: Tách linh hồn (Soul Extraction)."));
+        tooltip.add(Component.literal("§7- §a⌛ Đá Thời Gian (Time Stone)§7: Lão Hóa & Sinh Trưởng (Age Decay & Growth: Già hóa/suy yếu quái, thúc đẩy cây cối)."));
         tooltip.add(Component.literal("§7- §e🧠 Đá Tâm Trí (Mind Stone)§7: Bắn Laze Tâm Trí Vision. Shift+Chuột phải: Telekinesis nhấc ném mục tiêu."));
         tooltip.add(Component.literal("§7- §6✦ 6 Viên Đá (Snap)§7: Chuột phải búng tay diệt quái / Shift+Chuột phải bắn Laze Vũ Trụ 6 sắc màu. Gõ chat để Gemini AI thực thi!"));
     }

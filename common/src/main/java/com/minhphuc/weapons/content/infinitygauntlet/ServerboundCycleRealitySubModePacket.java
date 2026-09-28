@@ -59,14 +59,13 @@ public class ServerboundCycleRealitySubModePacket {
                     );
                 } else if (mainMode == 4) { // Đá Linh Hồn (Soul Stone)
                     int currentSubMode = ItemStackDataHelper.getInt(heldStack, "SoulSubMode");
-                    int nextSubMode = (currentSubMode + 1) % 4;
+                    int nextSubMode = (currentSubMode + 1) % 3;
                     ItemStackDataHelper.putInt(heldStack, "SoulSubMode", nextSubMode);
 
                     String subModeMessage = switch (nextSubMode) {
                         case 0 -> "§6[ĐÁ LINH HỒN] §fBáo cáo. Chế độ phụ: §e1. 🔥 Soul Harvest (Gặt Hái Linh Hồn)";
                         case 1 -> "§6[ĐÁ LINH HỒN] §fBáo cáo. Chế độ phụ: §b2. 👻 Soul Puppet (Chiêu Hồn Phụ Tá)";
                         case 2 -> "§6[ĐÁ LINH HỒN] §fBáo cáo. Chế độ phụ: §c3. 💥 Soul Extraction (Tách & Thiêu Rụi Linh Hồn)";
-                        case 3 -> "§6[ĐÁ LINH HỒN] §fBáo cáo. Chế độ phụ: §a4. 🧟 Kỹ Năng: Tử Linh Phục Sinh";
                         default -> "";
                     };
 
@@ -81,26 +80,17 @@ public class ServerboundCycleRealitySubModePacket {
                         1.0F, pitch
                     );
                 } else if (mainMode == 5) { // Đá Thời Gian (Time Stone)
-                    int currentSubMode = ItemStackDataHelper.getInt(heldStack, "TimeSubMode");
-                    int nextSubMode = (currentSubMode + 1) % 3;
-                    ItemStackDataHelper.putInt(heldStack, "TimeSubMode", nextSubMode);
-
-                    String subModeMessage = switch (nextSubMode) {
-                        case 0 -> "§a[ĐÁ THỜI GIAN] §fBáo cáo. Chế độ phụ: §e1. ⌛ Time Rewind (Tua Ngược Thời Gian)";
-                        case 1 -> "§a[ĐÁ THỜI GIAN] §fBáo cáo. Chế độ phụ: §b2. 🌿 Age Decay & Growth (Lão Hóa & Sinh Trưởng)";
-                        case 2 -> "§a[ĐÁ THỜI GIAN] §fBáo cáo. Chế độ phụ: §c3. 🛑 Time Freeze Domain (Đóng Băng Thời Gian)";
-                        default -> "";
-                    };
+                    ItemStackDataHelper.putInt(heldStack, "TimeSubMode", 0);
+                    String subModeMessage = "§a[ĐÁ THỜI GIAN] §fBáo cáo. Chức năng: §b🌿 Age Decay & Growth (Lão Hóa & Sinh Trưởng)";
 
                     player.displayClientMessage(Component.literal(subModeMessage), true);
 
-                    float pitch = 0.9F + (nextSubMode * 0.3F);
                     player.level().playSound(
                         null,
                         player.getX(), player.getY(), player.getZ(),
                         SoundEvents.BEACON_POWER_SELECT,
                         SoundSource.PLAYERS,
-                        1.0F, pitch
+                        1.0F, 1.2F
                     );
                 } else if (mainMode == 6) { // Đá Tâm Trí (Mind Stone)
                     int currentSubMode = ItemStackDataHelper.getInt(heldStack, "MindSubMode");
