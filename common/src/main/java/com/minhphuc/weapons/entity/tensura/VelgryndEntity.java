@@ -6,6 +6,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
@@ -95,7 +96,7 @@ public class VelgryndEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 4000.0D)
+                .add(Attributes.MAX_HEALTH, 5000.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.42D)
                 .add(Attributes.ATTACK_DAMAGE, 55.0D)
                 .add(Attributes.ARMOR, 30.0D)
@@ -225,7 +226,7 @@ public class VelgryndEntity extends Monster {
                 player.displayClientMessage(Component.literal("§6§l║      §c§l✦ CHƯỚC NHIỆT LONG VELGRYND (ĐỒNG MINH) ✦      §6§l║"), false);
                 player.displayClientMessage(Component.literal("§6§l╠════════════════════════════════════════════════╣"), false);
                 player.displayClientMessage(Component.literal("§e  Chủng Tộc: §fLong Chủng Tối Thượng (True Dragon - Đệ Tam Long)"), false);
-                player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a4,000 / 4,000 HP §7(Bất tử trước phàm nhân)"), false);
+                player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a5,000 / 5,000 HP §7(Bất tử trước phàm nhân)"), false);
                 player.displayClientMessage(Component.literal("§d  Ma Tố Lượng (EP): §b74,350,000 EP §7(Áp đảo Tuyệt Đối Ma Thần)"), false);
                 player.displayClientMessage(Component.literal("§6  Quyền Năng Bản Thể: §eThao Túng Thời Không, Gia Tốc Cardinal, Tồn Tại Song Song"), false);
                 player.displayClientMessage(Component.literal("§5  Quyền Năng Kế Thừa: §dLong Tinh Bộc Viêm Bá, Bạo Thực Vương, Tuyệt Diệt Tinh Tú"), false);
@@ -240,7 +241,7 @@ public class VelgryndEntity extends Monster {
                 player.displayClientMessage(Component.literal("§c§l║    §4§l✦ CHƯỚC NHIỆT LONG VELGRYND ✦    §c§l║"), false);
                 player.displayClientMessage(Component.literal("§c§l╠════════════════════════════════════════════════╣"), false);
                 player.displayClientMessage(Component.literal("§e  Chủng Tộc: §fLong Chủng Tối Thượng (True Dragon - Đệ Tam Long)"), false);
-                player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a4,000 / 4,000 HP §7(" + this.getDragonLayers() + "/4 Tầng Vảy Rồng Còn Lại)"), false);
+                player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a5,000 / 5,000 HP §7(" + this.getDragonLayers() + "/4 Tầng Vảy Rồng Còn Lại)"), false);
                 player.displayClientMessage(Component.literal("§d  Ma Tố Lượng (EP): §b74,350,000 EP §7(Đỉnh Cao Tensura)"), false);
                 player.displayClientMessage(Component.literal("§6  Quyền Năng: §eThao Túng Thời Không, Gia Tốc Cardinal, Chước Liệt Tiệt Đoán, Tồn Tại Song Song"), false);
                 player.displayClientMessage(Component.literal("§4  Cơ Chế: §cĐòn đánh thứ 3 xuyên 30% Máu Giáp Thần Thánh; Miễn nhiễm sát thương thường!"), false);
@@ -334,12 +335,27 @@ public class VelgryndEntity extends Monster {
                         this.getZ() + (this.random.nextDouble() - 0.5D) * 0.8D,
                         0, 0.04D, 0);
             }
-            if (this.getCastingState() > 0) {
+            int casting = this.getCastingState();
+            if (casting > 0) {
                 this.level().addParticle(ParticleTypes.SOUL_FIRE_FLAME,
                         this.getX() + (this.random.nextDouble() - 0.5D) * 1.2D,
                         this.getY() + this.random.nextDouble() * 2.0D,
                         this.getZ() + (this.random.nextDouble() - 0.5D) * 1.2D,
                         0, 0.08D, 0);
+            }
+            if (casting == 4) {
+                // Hiệu ứng tụ lực 7s cuộn xoáy trên Client
+                double rad = 2.8D;
+                for (int i = 0; i < 3; i++) {
+                    double angle = this.random.nextDouble() * Math.PI * 2.0;
+                    double px = this.getX() + Math.cos(angle) * rad;
+                    double pz = this.getZ() + Math.sin(angle) * rad;
+                    double py = this.getY() + 0.3D + this.random.nextDouble() * 2.2D;
+                    this.level().addParticle(ParticleTypes.FLAME, px, py, pz,
+                            (this.getX() - px) * 0.12D, 0.05D, (this.getZ() - pz) * 0.12D);
+                    this.level().addParticle(ParticleTypes.DRAGON_BREATH, px, py, pz,
+                            (this.getX() - px) * 0.1D, 0.04D, (this.getZ() - pz) * 0.1D);
+                }
             }
             return;
         }
@@ -505,6 +521,7 @@ public class VelgryndEntity extends Monster {
             if (activeSkillTicks == 45) {
                 this.broadcastDialogue("Trước mặt Thời Không Thao Túng, vạn vật chỉ là tĩnh chỉ! Vỡ vụn đi!");
                 sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 4.0F, 0.75F);
+                com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.recordSkillObserved(sLevel, this.position(), "SPACETIME_COLLAPSE", "Thao Túng Thời Không (Velgrynd)");
             }
 
             // Đóng băng thực thể trong 18m mỗi 8 ticks thay vì quét mỗi tick
@@ -596,51 +613,144 @@ public class VelgryndEntity extends Monster {
             }
         } else if (activeSkillId == 3) {
             // --- KỸ NĂNG 3: GIA TỐC CHƯỚC NHIỆT LONG (CARDINAL ACCELERATION) ---
-            if (accelDirection != null) {
-                this.setDeltaMovement(accelDirection.scale(1.8D));
-                this.hurtMarked = true;
+            if (activeSkillTicks > 25) {
+                // === GIAI ĐOẠN 1: TỤ LỰC 7 GIÂY (140 TICKS) ===
+                this.getNavigation().stop();
+                this.setDeltaMovement(0, 0.02D, 0); // Lơ lửng ổn định
 
-                // Tạo hư ảnh rồng lửa
-                Vec3 curPos = this.position();
-                sLevel.sendParticles(ParticleTypes.DRAGON_BREATH, curPos.x, curPos.y + 1.0D, curPos.z, 8, 1.2D, 1.0D, 1.2D, 0.05D);
-                sLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, curPos.x, curPos.y + 1.0D, curPos.z, 10, 1.0D, 1.0D, 1.0D, 0.08D);
-                sLevel.sendParticles(ParticleTypes.LAVA, curPos.x, curPos.y + 0.5D, curPos.z, 4, 0.8D, 0.8D, 0.8D, 0.05D);
+                LivingEntity target = this.getTarget();
+                if (target != null && target.isAlive()) {
+                    this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+                }
 
-                // Đào hầm phá hủy block bán kính 2.5 blocks trên đường lao
-                BlockPos centerBp = BlockPos.containing(curPos);
-                int r = 2;
-                for (int bx = -r; bx <= r; bx++) {
-                    for (int by = -1; by <= 3; by++) {
-                        for (int bz = -r; bz <= r; bz++) {
-                            if (bx * bx + bz * bz <= r * r + 1) {
-                                BlockPos bp = centerBp.offset(bx, by, bz);
-                                BlockState st = sLevel.getBlockState(bp);
-                                if (!st.isAir() && st.getDestroySpeed(sLevel, bp) >= 0.0F) {
-                                    sLevel.destroyBlock(bp, false);
-                                    // Tạo lửa trên mặt đất
-                                    if (sLevel.getBlockState(bp.below()).isSolid() && this.random.nextFloat() <= 0.25F) {
-                                        sLevel.setBlockAndUpdate(bp, Blocks.FIRE.defaultBlockState());
+                int chargeTicksRemaining = activeSkillTicks - 25; // 140 -> 1
+
+                // Hạt ma tố hỏa diễm xoáy cuộn hút vào tâm Velgrynd
+                double chargeProgress = 1.0D - (chargeTicksRemaining / 140.0D); // 0.0 -> 1.0
+                double radius = Math.max(0.6D, 3.8D * (1.0D - chargeProgress * 0.7D));
+                for (int i = 0; i < 4; i++) {
+                    double angle = (this.tickCount * 18.0D + i * 90.0D) * Math.PI / 180.0D;
+                    double px = this.getX() + Math.cos(angle) * radius;
+                    double pz = this.getZ() + Math.sin(angle) * radius;
+                    double py = this.getY() + 0.4D + (this.random.nextDouble() * 2.0D);
+
+                    sLevel.sendParticles(ParticleTypes.FLAME, px, py, pz, 1, (this.getX() - px) * 0.15D, 0.05D, (this.getZ() - pz) * 0.15D, 0.02D);
+                    sLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, px, py, pz, 1, (this.getX() - px) * 0.12D, 0.04D, (this.getZ() - pz) * 0.12D, 0.02D);
+                    sLevel.sendParticles(ParticleTypes.DRAGON_BREATH, px, py, pz, 1, 0, 0.02D, 0, 0.01D);
+                }
+
+                // Dưới chân bốc lửa và khói ma pháp
+                if (this.tickCount % 4 == 0) {
+                    sLevel.sendParticles(ParticleTypes.LAVA, this.getX(), this.getY() + 0.2D, this.getZ(), 3, 0.5D, 0.2D, 0.5D, 0.05D);
+                    sLevel.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX(), this.getY() + 0.2D, this.getZ(), 2, 0.3D, 0.2D, 0.3D, 0.02D);
+                }
+
+                // Đếm ngược mỗi giây (20 ticks) và phát thông báo
+                if (chargeTicksRemaining % 20 == 0) {
+                    int secondsLeft = chargeTicksRemaining / 20;
+
+                    float pitch = 0.5F + (7 - secondsLeft) * 0.15F;
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
+                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.HOSTILE, 2.5F, pitch);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
+                            SoundEvents.RESPAWN_ANCHOR_CHARGE, SoundSource.HOSTILE, 1.8F, 0.8F + (7 - secondsLeft) * 0.1F);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
+                            SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 2.0F, 0.9F);
+
+                    for (ServerPlayer p : sLevel.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(64.0D))) {
+                        p.displayClientMessage(
+                                Component.literal("§c§l[GIA TỐC CHƯỚC NHIỆT LONG] §6Tụ lực: §e" + secondsLeft + "s §c[CỰC ĐỘ NGUY HIỂM]! Mau chóng né tránh!"),
+                                true
+                        );
+                    }
+
+                    if (secondsLeft == 3) {
+                        this.broadcastDialogue("Sức nóng vượt qua giới hạn vật chất! Không một ai có thể trốn thoát!");
+                    } else if (secondsLeft == 1) {
+                        this.broadcastDialogue("Gia Tốc Tuyệt Đối... Tận diệt!");
+                    }
+                }
+
+                // Khi hết 7s tụ lực -> Chuyển sang giai đoạn lao Mach 5
+                if (activeSkillTicks == 26) {
+                    this.setCastingState(3); // Model chuyển sang Mach 5 lao thẳng
+                    LivingEntity t = this.getTarget();
+                    if (t != null && t.isAlive()) {
+                        this.accelDirection = t.position().add(0, t.getBbHeight() * 0.5D, 0).subtract(this.position().add(0, 1.0D, 0)).normalize();
+                    } else {
+                        this.accelDirection = this.getLookAngle();
+                    }
+
+                    com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.recordSkillObserved(sLevel, this.position(), "CARDINAL_ACCEL", "Gia Tốc Chước Nhiệt Long (Velgrynd)");
+
+                    this.broadcastDialogue("Thưởng thức cơn thịnh nộ tuyệt đối của Long Chủng đi — Gia Tốc Chước Nhiệt Long!");
+
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 5.0F, 0.9F);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 4.0F, 1.2F);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 4.0F, 0.8F);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 4.0F, 1.4F);
+
+                    for (ServerPlayer p : sLevel.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(64.0D))) {
+                        p.displayClientMessage(
+                                Component.literal("§4§l[CẢNH BÁO TỐI CAO] §c§lGIA TỐC CHƯỚC NHIỆT LONG ĐÃ KHAI HỎA!"),
+                                false
+                        );
+                    }
+                }
+            } else {
+                // === GIAI ĐOẠN 2: LAO SIÊU THANH (25 TICKS) ===
+                if (accelDirection != null) {
+                    this.setDeltaMovement(accelDirection.scale(2.2D));
+                    this.hurtMarked = true;
+
+                    // Tạo hư ảnh rồng lửa
+                    Vec3 curPos = this.position();
+                    sLevel.sendParticles(ParticleTypes.DRAGON_BREATH, curPos.x, curPos.y + 1.0D, curPos.z, 12, 1.2D, 1.0D, 1.2D, 0.05D);
+                    sLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, curPos.x, curPos.y + 1.0D, curPos.z, 15, 1.0D, 1.0D, 1.0D, 0.08D);
+                    sLevel.sendParticles(ParticleTypes.LAVA, curPos.x, curPos.y + 0.5D, curPos.z, 8, 0.8D, 0.8D, 0.8D, 0.05D);
+                    sLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, curPos.x, curPos.y + 0.8D, curPos.z, 1, 0, 0, 0, 0);
+
+                    // Đào hầm phá hủy block bán kính 2.5 blocks trên đường lao
+                    BlockPos centerBp = BlockPos.containing(curPos);
+                    int r = 2;
+                    for (int bx = -r; bx <= r; bx++) {
+                        for (int by = -1; by <= 3; by++) {
+                            for (int bz = -r; bz <= r; bz++) {
+                                if (bx * bx + bz * bz <= r * r + 1) {
+                                    BlockPos bp = centerBp.offset(bx, by, bz);
+                                    BlockState st = sLevel.getBlockState(bp);
+                                    if (!st.isAir() && st.getDestroySpeed(sLevel, bp) >= 0.0F) {
+                                        sLevel.destroyBlock(bp, false);
+                                        // Tạo lửa trên mặt đất
+                                        if (sLevel.getBlockState(bp.below()).isSolid() && this.random.nextFloat() <= 0.25F) {
+                                            sLevel.setBlockAndUpdate(bp, Blocks.FIRE.defaultBlockState());
+                                        }
                                     }
                                 }
                             }
                         }
                     }
+
+                    // Va chạm thực thể trên đường lao
+                    AABB hitBox = this.getBoundingBox().inflate(3.0D);
+                    List<LivingEntity> enemies = sLevel.getEntitiesOfClass(LivingEntity.class, hitBox, e -> e != this && e.isAlive());
+                    for (LivingEntity v : enemies) {
+                        applyDamageToTarget(v, 100.0F);
+                        v.setDeltaMovement(accelDirection.scale(3.0D).add(0, 1.0D, 0));
+                        v.setRemainingFireTicks(160);
+                        if (v instanceof ServerPlayer sp) {
+                            sp.connection.send(new ClientboundSetEntityMotionPacket(v));
+                        }
+                    }
                 }
 
-                // Va chạm thực thể trên đường lao
-                AABB hitBox = this.getBoundingBox().inflate(2.5D);
-                List<LivingEntity> enemies = sLevel.getEntitiesOfClass(LivingEntity.class, hitBox, e -> e != this && e.isAlive());
-                for (LivingEntity v : enemies) {
-                    applyDamageToTarget(v, 80.0F);
-                    v.setDeltaMovement(accelDirection.scale(2.2D).add(0, 0.8D, 0));
-                    v.setRemainingFireTicks(120);
+                if (activeSkillTicks == 1) {
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 5.0F, 0.8F);
+                    sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 4.0F, 1.2F);
+                    sLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, this.getX(), this.getY() + 1.0D, this.getZ(), 4, 1.0D, 1.0D, 1.0D, 0.05D);
+                    this.setCastingState(0);
+                    this.accelDirection = null;
                 }
-            }
-
-            if (activeSkillTicks == 1) {
-                sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 5.0F, 0.8F);
-                this.setCastingState(0);
-                this.accelDirection = null;
             }
         }
     }
@@ -662,12 +772,26 @@ public class VelgryndEntity extends Monster {
 
     public void startSkillCardinalAcceleration(LivingEntity target) {
         this.activeSkillId = 3;
-        this.activeSkillTicks = 24;
-        this.cardinalAccelCooldown = 320;
-        this.setCastingState(3);
-        this.broadcastDialogue("Thưởng thức cơn thịnh nộ tuyệt đối của Long Chủng đi — Gia Tốc Chước Nhiệt Long!");
-        Vec3 dir = target.position().subtract(this.position()).normalize();
-        this.accelDirection = dir;
+        this.activeSkillTicks = 165; // 140 ticks (7s tụ lực) + 25 ticks (lao siêu thanh)
+        this.cardinalAccelCooldown = 400; // 20s cooldown
+        this.setCastingState(4); // 4 = Charging Cardinal Acceleration
+        this.accelDirection = null;
+        this.getNavigation().stop();
+
+        this.broadcastDialogue("Cả bầu trời này sắp bị thiêu rụi... Hãy cảm nhận sức nóng tột cùng của Gia Tốc Chước Nhiệt Long!");
+
+        if (this.level() instanceof ServerLevel sLevel) {
+            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 4.0F, 0.7F);
+            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 3.5F, 1.3F);
+            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 4.0F, 1.1F);
+
+            for (ServerPlayer p : sLevel.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(64.0D))) {
+                p.displayClientMessage(
+                        Component.literal("§c§l[CHƯỚC NHIỆT LONG VELGRYND] §6§lĐang ngưng tụ Gia Tốc Chước Nhiệt Long (Cardinal Acceleration)! Đếm ngược 7 giây!"),
+                        false
+                );
+            }
+        }
     }
 
     /**
@@ -828,17 +952,93 @@ public class VelgryndEntity extends Monster {
 
     @Override
     public boolean doHurtTarget(Entity target) {
-        // 50% xác suất đổi vũ khí: Quạt Lông Vũ hoặc Đòn Đánh Tay Không
+        if (this.level().isClientSide()) return false;
+        ServerLevel sl = (ServerLevel) this.level();
+
+        // 50% xác suất đổi vũ khí: Quạt Lông Vũ hoặc Vuốt Rồng / Đòn Đánh Tay Không
         this.setHoldingFan(this.random.nextBoolean());
 
         if (this.isHoldingFan()) {
             this.broadcastDialogue("Biết thân biết phận một chút đi! Một cái phẩy quạt của ta cũng đủ biến ngươi thành tro bụi!");
+        } else {
+            this.broadcastDialogue("Vuốt rồng của Chước Nhiệt Long đủ sức xé toạc mọi ranh giới!");
         }
 
+        // 1. Phá giáp chắn khiên nếu mục tiêu đang đỡ đòn (tương tự Milim)
+        if (target instanceof Player player && player.isBlocking()) {
+            player.disableShield();
+        }
+
+        // 2. Hướng lực đánh (Direction vector)
+        Vec3 strikeOrigin = this.position().add(0, this.getEyeHeight() * 0.8D, 0);
+        Vec3 targetCenter = target.position().add(0, target.getBbHeight() * 0.5D, 0);
+        Vec3 dir = targetCenter.subtract(strikeOrigin).normalize();
+        if (dir.lengthSqr() < 1.0E-4) {
+            dir = this.getLookAngle();
+        }
+
+        // 3. Gây sát thương theo cơ chế Long Chủng (Giáp thần xuyên đòn 3, Guy Crimson cân bằng, quái thường)
         if (target instanceof LivingEntity livingTarget) {
             applyDamageToTarget(livingTarget, (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
-            livingTarget.setRemainingFireTicks(60);
+            livingTarget.setRemainingFireTicks(100);
         }
+
+        // 4. Đánh mục tiêu bay cực xa (Knockback siêu mạnh tương tự Milim)
+        Vec3 knockback = new Vec3(dir.x * 4.2D, 1.35D, dir.z * 4.2D);
+        target.setDeltaMovement(knockback);
+        target.hurtMarked = true;
+        target.hasImpulse = true;
+        if (target instanceof ServerPlayer sp) {
+            sp.connection.send(new ClientboundSetEntityMotionPacket(target));
+        }
+
+        // 5. Hiệu ứng bộc phá nổ lớn & khói mù mịt dày đặc
+        double hitX = target.getX();
+        double hitY = targetCenter.y;
+        double hitZ = target.getZ();
+
+        // Nổ lớn và sóng xung kích âm thanh
+        sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, hitX, hitY, hitZ, 3, 0.3D, 0.3D, 0.3D, 0.0D);
+        sl.sendParticles(ParticleTypes.SONIC_BOOM, hitX, hitY, hitZ, 2, 0.1D, 0.1D, 0.1D, 0.0D);
+        sl.sendParticles(ParticleTypes.FLASH, hitX, hitY, hitZ, 2, 0, 0, 0, 0);
+        sl.sendParticles(ParticleTypes.FLAME, hitX, hitY, hitZ, 100, 2.0D, 1.5D, 2.0D, 0.35D);
+        sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, hitX, hitY, hitZ, 80, 1.8D, 1.2D, 1.8D, 0.25D);
+        sl.sendParticles(ParticleTypes.DRAGON_BREATH, hitX, hitY, hitZ, 60, 1.5D, 1.2D, 1.5D, 0.1D);
+
+        // Khói mù mịt dày đặc lan tỏa rộng
+        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, hitX, hitY, hitZ, 80, 2.0D, 1.5D, 2.0D, 0.08D);
+        sl.sendParticles(ParticleTypes.LARGE_SMOKE, hitX, hitY, hitZ, 60, 1.8D, 1.2D, 1.8D, 0.12D);
+
+        // Âm thanh bộc phá vang dội
+        sl.playSound(null, hitX, hitY, hitZ, SoundEvents.GENERIC_EXPLODE, SoundSource.HOSTILE, 4.0F, 0.8F);
+        sl.playSound(null, hitX, hitY, hitZ, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 3.0F, 1.2F);
+        sl.playSound(null, hitX, hitY, hitZ, SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.HOSTILE, 2.5F, 0.6F);
+        sl.playSound(null, hitX, hitY, hitZ, SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 2.0F, 1.4F);
+
+        // 6. Xung lực chấn động thổi bay các thực thể xung quanh (Shockwave 7 blocks)
+        AABB shockBox = target.getBoundingBox().inflate(7.0D);
+        UUID ownerId = this.isAllied() ? this.getParsedOwnerUUID() : null;
+        for (LivingEntity nearby : sl.getEntitiesOfClass(LivingEntity.class, shockBox)) {
+            if (nearby != this && nearby != target && nearby.isAlive()) {
+                if (this.isAllied()) {
+                    if (ownerId != null && nearby.getUUID().equals(ownerId)) continue;
+                    if (nearby instanceof PrimordialDemonEntity demon && demon.isTame() && ownerId != null && demon.getOwnerUUID() != null && demon.getOwnerUUID().equals(ownerId)) continue;
+                }
+                Vec3 away = nearby.position().subtract(target.position()).normalize();
+                if (away.lengthSqr() < 1.0E-4) {
+                    away = dir;
+                }
+                nearby.setDeltaMovement(away.x * 2.5D, 0.9D, away.z * 2.5D);
+                nearby.hurtMarked = true;
+                nearby.hasImpulse = true;
+                if (nearby instanceof ServerPlayer nsp) {
+                    nsp.connection.send(new ClientboundSetEntityMotionPacket(nearby));
+                }
+                nearby.hurt(this.damageSources().mobAttack(this), 25.0F);
+                nearby.setRemainingFireTicks(60);
+            }
+        }
+
         return super.doHurtTarget(target);
     }
 
