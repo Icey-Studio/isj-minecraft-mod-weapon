@@ -61,6 +61,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> DEMON_LORD_SOUL = ITEMS.register("demon_lord_soul",
             () -> new com.minhphuc.weapons.content.tensura.DemonLordSoulItem(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> MILIM_DRAGON_CONTRACT = ITEMS.register("milim_dragon_contract",
+            () -> new com.minhphuc.weapons.content.tensura.MilimDragonContractItem(new Item.Properties()));
+
     public static final DeferredRegister<net.minecraft.world.item.ArmorMaterial> ARMOR_MATERIALS =
             DeferredRegister.create(WeaponsMod.MOD_ID, Registries.ARMOR_MATERIAL);
 
@@ -453,6 +456,7 @@ public class ModItems {
                         output.accept(DRAGON_SEED.get());
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
+                        output.accept(MILIM_DRAGON_CONTRACT.get());
 
                         // Vũ Khí Móng Vuốt & Thực Thể Dark Gathering
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());
