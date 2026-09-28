@@ -36,6 +36,12 @@ public class ResidualMagicCircleManager {
         }
     }
 
+    public static void removeCircle(Display.ItemDisplay display) {
+        if (display != null) {
+            ACTIVE_CIRCLES.remove(display);
+        }
+    }
+
     public static boolean isMagicCircleItem(Item item) {
         return item == ModItems.MAGIC_CIRCLE_NOIR.get() ||
                item == ModItems.MAGIC_CIRCLE_ROUGE.get() ||

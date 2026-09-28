@@ -39,6 +39,12 @@ public class PrimordialSkillDispatcher {
             return;
         }
 
+        // Skill 5 (Skill 6): Ngũ Trọng Ma Trận Cột Sáng Thiên Khấu (Chung cho 7 Ác Ma)
+        if (skillIndex == 5) {
+            PentagramCelestialPillarAbility.cast(level, player);
+            return;
+        }
+
         boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
         boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
 

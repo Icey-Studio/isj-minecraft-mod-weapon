@@ -74,6 +74,11 @@ public class ServerboundSelectPrimordialRebirthPacket {
                 }
             }
 
+            // Kích hoạt Cột Sáng Thiên Không & 5 Tầng Vòng Tròn Ma Thuật Nhỏ To Xếp DỌC
+            com.minhphuc.weapons.content.tensura.PentagramCelestialPillarAbility.spawnPillarAt(
+                    level, player, player.position().add(0, 0.05, 0), chosenType, false, true
+            );
+
             // Hiệu ứng âm thanh & hình ảnh chấn động
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.8F, 1.0F);
