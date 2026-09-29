@@ -249,21 +249,23 @@ public class JacobsLadderAbility {
                     l.level.sendParticles(ParticleTypes.WAX_OFF, gx, groundY + 0.08D, gz, 1, 0, 0.01D, 0, 0.01D);
                 }
 
-                // KHÓA CHÂN TỨC THÌ (Light Binding): Ghim chặt mục tiêu không cho chạy thoát
-                AABB bindZone = new AABB(l.center.x - 3.5D, groundY - 1.0D, l.center.z - 3.5D,
-                        l.center.x + 3.5D, groundY + 30.0D, l.center.z + 3.5D);
-                List<LivingEntity> boundVictims = l.level.getEntitiesOfClass(LivingEntity.class, bindZone, e -> e != l.caster && e.isAlive());
-                for (LivingEntity v : boundVictims) {
-                    v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 25, 255, false, false, true));
-                    v.addEffect(new MobEffectInstance(MobEffects.JUMP, 25, -255, false, false, true));
-                    v.addEffect(new MobEffectInstance(MobEffects.GLOWING, 25, 0, false, false, true));
+                // KHÓA CHÂN TỨC THÌ (Light Binding): Ghim chặt mục tiêu không cho chạy thoát (Quét mỗi 4 ticks)
+                if (elapsed % 4 == 0) {
+                    AABB bindZone = new AABB(l.center.x - 3.5D, groundY - 1.0D, l.center.z - 3.5D,
+                            l.center.x + 3.5D, groundY + 30.0D, l.center.z + 3.5D);
+                    List<LivingEntity> boundVictims = l.level.getEntitiesOfClass(LivingEntity.class, bindZone, e -> e != l.caster && e.isAlive());
+                    for (LivingEntity v : boundVictims) {
+                        v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 255, false, false, true));
+                        v.addEffect(new MobEffectInstance(MobEffects.JUMP, 30, -255, false, false, true));
+                        v.addEffect(new MobEffectInstance(MobEffects.GLOWING, 30, 0, false, false, true));
 
-                    double dx = l.center.x - v.getX();
-                    double dz = l.center.z - v.getZ();
-                    v.setDeltaMovement(dx * 0.15D, -0.25D, dz * 0.15D);
-                    v.hasImpulse = true;
+                        double dx = l.center.x - v.getX();
+                        double dz = l.center.z - v.getZ();
+                        v.setDeltaMovement(dx * 0.15D, -0.25D, dz * 0.15D);
+                        v.hasImpulse = true;
 
-                    l.level.sendParticles(ParticleTypes.WAX_OFF, v.getX(), v.getY() + 1.0D, v.getZ(), 3, 0.2D, 0.2D, 0.2D, 0.02D);
+                        l.level.sendParticles(ParticleTypes.WAX_OFF, v.getX(), v.getY() + 1.0D, v.getZ(), 3, 0.2D, 0.2D, 0.2D, 0.02D);
+                    }
                 }
             }
 
@@ -380,11 +382,13 @@ public class JacobsLadderAbility {
             // (TUYỆT ĐỐI KHÔNG GÂY THÊM SÁT THƯƠNG LẦN 2)
             // =========================================================================
             if (l.beamSpawned && elapsed < 65) {
-                // 1. Triệt tiêu toàn bộ đạn đạo bay vào cột sáng (Projectile Erasure)
-                List<Projectile> projectiles = l.level.getEntitiesOfClass(Projectile.class, pillarBox);
-                for (Projectile p : projectiles) {
-                    l.level.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY(), p.getZ(), 1, 0, 0, 0, 0);
-                    p.discard();
+                // 1. Triệt tiêu toàn bộ đạn đạo bay vào cột sáng (quét mỗi 3 ticks)
+                if (elapsed % 3 == 0) {
+                    List<Projectile> projectiles = l.level.getEntitiesOfClass(Projectile.class, pillarBox);
+                    for (Projectile p : projectiles) {
+                        l.level.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY(), p.getZ(), 1, 0, 0, 0, 0);
+                        p.discard();
+                    }
                 }
 
                 // 2. Viền lửa thánh chạy quanh chu vi hình vuông 4x4

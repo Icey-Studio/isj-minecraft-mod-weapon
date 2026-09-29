@@ -126,25 +126,11 @@ public class DivineWeaponEvents {
                 if (isTrueDemonLord || isWearingDivineArmor || hasEvolved) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
                     boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
-                    int lordSkills = hasCreation ? 15 : 14;
+                    int lordSkills = hasCreation ? 18 : 17;
 
-                    boolean isCastingEvolved = false;
-                    if (hasEvolved) {
-                        if (selectedSkill == 99) {
-                            isCastingEvolved = true;
-                        } else if (isTrueDemonLord && isPrimordial && selectedSkill == lordSkills + 5) {
-                            isCastingEvolved = true;
-                        } else if (isTrueDemonLord && selectedSkill == lordSkills) {
-                            isCastingEvolved = true;
-                        } else if (isPrimordial && selectedSkill == 5) {
-                            isCastingEvolved = true;
-                        } else if (isWearingDivineArmor && selectedSkill == 14) {
-                            isCastingEvolved = true;
-                        }
-                    }
-
-                    if (isCastingEvolved) {
-                        com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.cast((ServerLevel) serverPlayer.level(), serverPlayer);
+                    int evolvedSkillToCast = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getSelectedEvolvedSkillId(serverPlayer);
+                    if (evolvedSkillToCast != -1) {
+                        com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.castSkill((ServerLevel) serverPlayer.level(), serverPlayer, evolvedSkillToCast);
                         return EventResult.interruptTrue();
                     }
 
@@ -156,12 +142,32 @@ public class DivineWeaponEvents {
                         return EventResult.interruptTrue();
                     }
 
-                    // Kỹ năng Long Tinh Bộc Viêm Bá (Chiêu 6 - index 5): Không cần hồi năng lượng / ma lực
-                    if (selectedSkill != 5 && serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
-                        return EventResult.interruptTrue();
+                    boolean isZoneTrack = (hasCreation && selectedSkill == 17) || (!hasCreation && selectedSkill == 16);
+                    boolean isMultilayerCast = (hasCreation && selectedSkill == 16) || (!hasCreation && selectedSkill == 15);
+                    boolean isAntiMagicCast = (hasCreation && selectedSkill == 15) || (!hasCreation && selectedSkill == 14);
+
+                    // Kỹ năng Long Tinh Bộc Viêm Bá (5) và Granit Xuyên Phá Zone Track: KHÔNG CẦN HỒI NĂNG LƯỢNG / MA LỰC (ZERO COOLDOWN)!
+                    if (selectedSkill != 5 && !isZoneTrack) {
+                        if (serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
+                            return EventResult.interruptTrue();
+                        }
+                        serverPlayer.getCooldowns().addCooldown(ModItems.DEMON_LORD_SEED.get(), 25);
                     }
                     ServerLevel sl = (ServerLevel) serverPlayer.level();
-                    if (selectedSkill == 13) {
+
+                    if (isZoneTrack) {
+                        com.minhphuc.weapons.content.tensura.ZoneTrackAbility.cast(sl, serverPlayer);
+                        return EventResult.interruptTrue();
+                    } else if (isMultilayerCast) {
+                        com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(sl, serverPlayer);
+                        return EventResult.interruptTrue();
+                    } else if (isAntiMagicCast) {
+                        com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.castPlayerBarrier(sl, serverPlayer);
+                        return EventResult.interruptTrue();
+                    } else if (hasCreation && selectedSkill == 14) {
+                        com.minhphuc.weapons.network.ModMessages.sendToPlayer(new com.minhphuc.weapons.network.ClientboundOpenMaterialCreationPacket(), serverPlayer);
+                        return EventResult.interruptTrue();
+                    } else if (selectedSkill == 13) {
                         com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(sl, serverPlayer);
                     } else if (selectedSkill == 12) {
                         com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(sl, serverPlayer);

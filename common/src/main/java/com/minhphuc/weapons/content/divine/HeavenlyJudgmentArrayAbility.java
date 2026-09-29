@@ -50,12 +50,29 @@ import java.util.List;
  */
 public class HeavenlyJudgmentArrayAbility {
 
+    public static final int NUM_SATELLITES = 8; // Bát Môn: 8 cột sáng vệ tinh
+    public static final int[] SATELLITE_COLORS = new int[]{
+            0xFF2222, // 1. Đỏ Hỏa Ngục (Rouge)
+            0xFF7700, // 2. Cam Viêm Dương
+            0xFFD700, // 3. Vàng Kim Quang (Jaune)
+            0x00FF66, // 4. Lục Phong Bão (Vert)
+            0x00D0FF, // 5. Lam Băng Cực (Bleu)
+            0x3366FF, // 6. Lam Sâu Ma Pháp
+            0xAA00FF, // 7. Tử Độc Hư Không (Violet)
+            0xF0F4F8  // 8. Bạch Sắc Quang Minh (Blanc)
+    };
+
     public static class ActiveArray {
         public final ServerLevel level;
         public final ServerPlayer caster;
         public final Vec3 center;
         public final List<Display.ItemDisplay> satelliteDisplays = new ArrayList<>();
         public Display.ItemDisplay centralDisplay;
+        public Display.ItemDisplay magicCircleDisplay; // Vòng tròn ma thuật to ở tâm trận
+        public float circleAngle = 0.0F;
+        public final ItemStack magicCircleStack;
+        public final int magicCircleGlowColor;
+        public final int centralBeamColor;
         public int ticksRemaining;
         public final int totalTicks;
         public float rotationAngleDegrees = 0.0F;
@@ -64,13 +81,17 @@ public class HeavenlyJudgmentArrayAbility {
 
         public final SkillPowerRoll powerRoll;
 
-        public ActiveArray(ServerLevel level, ServerPlayer caster, Vec3 center, int durationTicks, SkillPowerRoll powerRoll) {
+        public ActiveArray(ServerLevel level, ServerPlayer caster, Vec3 center, int durationTicks,
+                           SkillPowerRoll powerRoll, ItemStack circleStack, int circleGlow, int centralColor) {
             this.level = level;
             this.caster = caster;
             this.center = center;
             this.ticksRemaining = durationTicks;
             this.totalTicks = durationTicks;
             this.powerRoll = powerRoll;
+            this.magicCircleStack = circleStack;
+            this.magicCircleGlowColor = circleGlow;
+            this.centralBeamColor = centralColor;
         }
 
         public void cleanupDisplays() {
@@ -82,6 +103,11 @@ public class HeavenlyJudgmentArrayAbility {
             if (centralDisplay != null && centralDisplay.isAlive()) {
                 centralDisplay.discard();
                 centralDisplay = null;
+            }
+
+            if (magicCircleDisplay != null && magicCircleDisplay.isAlive()) {
+                magicCircleDisplay.discard();
+                magicCircleDisplay = null;
             }
         }
     }
@@ -122,19 +148,47 @@ public class HeavenlyJudgmentArrayAbility {
             }
         }
 
+        // Xác định loại ác ma và vòng tròn ma thuật tương ứng
+        ItemStack circleStack;
+        int circleGlow;
+        int centralColor;
+
+        boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(player);
+        com.minhphuc.weapons.entity.tensura.DemonType demonType = isPrimordial
+                ? com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.getPrimordialType(player)
+                : null;
+
+        if (demonType != null) {
+            circleStack = new ItemStack(demonType.getMagicCircleItem().get());
+            circleGlow = demonType.getGlowColor();
+            centralColor = demonType.getGlowColor();
+        } else {
+            circleStack = new ItemStack(ModItems.DISINTEGRATION_MAGIC_CIRCLE.get());
+            circleGlow = 0xFFD700;
+            centralColor = 0xFFFF77;
+        }
+
         SkillPowerRoll roll = SkillPowerRoll.roll();
         roll.announceAndPlayEffects(player, "Bát Môn Thiên Phạt Trận (Judgment Array)");
 
-        ActiveArray array = new ActiveArray(level, player, targetCenter, 75, roll);
+        ActiveArray array = new ActiveArray(level, player, targetCenter, 75, roll, circleStack, circleGlow, centralColor);
+
+        // Triệu hồi Vòng Tròn Ma Thuật TO ở giữa tâm trận ngay khi khai mở
+        array.magicCircleDisplay = createMagicCircleDisplay(level, targetCenter.add(0, 0.08D, 0), 18.0F, circleGlow, circleStack);
+
         ACTIVE_ARRAYS.add(array);
 
-        // Âm thanh thánh ca khởi động
+        // Âm thanh thánh ca & ma pháp cộng hưởng khởi động
         level.playSound(null, targetCenter.x, targetCenter.y + 10.0D, targetCenter.z,
                 SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 4.0F, 1.6F);
         level.playSound(null, targetCenter.x, targetCenter.y + 10.0D, targetCenter.z,
                 SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 4.0F, 1.1F);
+        level.playSound(null, targetCenter.x, targetCenter.y + 1.0D, targetCenter.z,
+                SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.PLAYERS, 3.5F, 0.8F);
 
-        player.getCooldowns().addCooldown(sword.getItem(), 200); // 10s cooldown
+        if (sword != null && !sword.isEmpty()) {
+            player.getCooldowns().addCooldown(sword.getItem(), 200); // 10s cooldown
+        }
     }
 
     private static Vec3 findGroundBelow(ServerLevel level, Vec3 pos) {
@@ -175,11 +229,30 @@ public class HeavenlyJudgmentArrayAbility {
             double satelliteRadius = 9.0D;
 
             // =========================================================================
-            // GIAI ĐOẠN 1: BÁO HIỆU 6 CỘT VỆ TINH TRÊN TRỜI (Tick 0..11)
+            // XOAY VÒNG TRÒN MA THUẬT Ở TÂM TRẬN
+            // =========================================================================
+            if (a.magicCircleDisplay != null && a.magicCircleDisplay.isAlive()) {
+                a.circleAngle += 2.5F;
+                if (elapsed % 2 == 0) {
+                    DisplayAccessor dispAcc = (DisplayAccessor) a.magicCircleDisplay;
+                    Quaternionf rot = new Quaternionf()
+                            .rotateX((float) Math.toRadians(90.0F))
+                            .rotateZ((float) Math.toRadians(a.circleAngle));
+                    dispAcc.weapons$setTransformation(new Transformation(
+                            new Vector3f(0.0F, 0.0F, 0.0F),
+                            rot,
+                            new Vector3f(18.0F, 18.0F, 0.01F),
+                            null
+                    ));
+                }
+            }
+
+            // =========================================================================
+            // GIAI ĐOẠN 1: BÁO HIỆU 8 CỘT VỆ TINH TRÊN TRỜI (Tick 0..11)
             // =========================================================================
             if (elapsed < 12) {
-                for (int i = 0; i < 6; i++) {
-                    double angle = Math.toRadians(i * 60.0D);
+                for (int i = 0; i < NUM_SATELLITES; i++) {
+                    double angle = Math.toRadians(i * (360.0D / NUM_SATELLITES));
                     double px = a.center.x + Math.cos(angle) * satelliteRadius;
                     double pz = a.center.z + Math.sin(angle) * satelliteRadius;
                     for (int yStep = 0; yStep < 6; yStep++) {
@@ -189,15 +262,16 @@ public class HeavenlyJudgmentArrayAbility {
             }
 
             // =========================================================================
-            // GIAI ĐOẠN 2: 6 CỘT SÁNG VỆ TINH GIÁNG XUỐNG TẠO LỒNG GIAM (Tick 12)
+            // GIAI ĐOẠN 2: 8 CỘT SÁNG ĐA SẮC MÀU VỆ TINH GIÁNG XUỐNG TẠO LỒNG GIAM (Tick 12)
             // =========================================================================
             if (elapsed >= 12 && !a.satellitesSpawned) {
                 a.satellitesSpawned = true;
-                for (int i = 0; i < 6; i++) {
-                    double angle = Math.toRadians(i * 60.0D);
+                for (int i = 0; i < NUM_SATELLITES; i++) {
+                    double angle = Math.toRadians(i * (360.0D / NUM_SATELLITES));
                     double px = a.center.x + Math.cos(angle) * satelliteRadius;
                     double pz = a.center.z + Math.sin(angle) * satelliteRadius;
-                    Display.ItemDisplay sat = createPillarDisplay(a.level, new Vec3(px, groundY, pz), 2.2F, 40.0F, 2.2F, 0xEEFFFF);
+                    int col = SATELLITE_COLORS[i % SATELLITE_COLORS.length];
+                    Display.ItemDisplay sat = createPillarDisplay(a.level, new Vec3(px, groundY, pz), 2.2F, 40.0F, 2.2F, col);
                     if (sat != null) a.satelliteDisplays.add(sat);
                 }
 
@@ -213,18 +287,18 @@ public class HeavenlyJudgmentArrayAbility {
             if (elapsed >= 12 && elapsed < 40) {
                 a.rotationAngleDegrees += 4.5F;
 
-                // Cập nhật vị trí 6 cột sáng vệ tinh xoay quanh tâm
+                // Cập nhật vị trí 8 cột sáng vệ tinh xoay quanh tâm
                 for (int i = 0; i < a.satelliteDisplays.size(); i++) {
                     Display.ItemDisplay sat = a.satelliteDisplays.get(i);
                     if (sat != null && sat.isAlive()) {
-                        double currentAngle = Math.toRadians((i * 60.0D) + a.rotationAngleDegrees);
+                        double currentAngle = Math.toRadians((i * (360.0D / NUM_SATELLITES)) + a.rotationAngleDegrees);
                         double nx = a.center.x + Math.cos(currentAngle) * satelliteRadius;
                         double nz = a.center.z + Math.sin(currentAngle) * satelliteRadius;
                         sat.moveTo(nx, groundY, nz, 0.0F, 0.0F);
 
-                        // Hạt nối các cột tạo thành mạng lưới lục giác ánh sáng
-                        int nextIdx = (i + 1) % 6;
-                        double nextAngle = Math.toRadians((nextIdx * 60.0D) + a.rotationAngleDegrees);
+                        // Hạt nối các cột tạo thành mạng lưới bát giác ánh sáng
+                        int nextIdx = (i + 1) % NUM_SATELLITES;
+                        double nextAngle = Math.toRadians((nextIdx * (360.0D / NUM_SATELLITES)) + a.rotationAngleDegrees);
                         double nextX = a.center.x + Math.cos(nextAngle) * satelliteRadius;
                         double nextZ = a.center.z + Math.sin(nextAngle) * satelliteRadius;
 
@@ -246,7 +320,6 @@ public class HeavenlyJudgmentArrayAbility {
                 for (LivingEntity v : trapped) {
                     double dx = a.center.x - v.getX();
                     double dz = a.center.z - v.getZ();
-                    double dist = Math.sqrt(dx * dx + dz * dz);
 
                     // Ghim và cuốn xoáy về tâm
                     Vec3 vortex = new Vec3(dx, 0, dz).normalize().scale(0.35D);
@@ -274,8 +347,8 @@ public class HeavenlyJudgmentArrayAbility {
             if (elapsed >= 40 && !a.centralBeamSpawned) {
                 a.centralBeamSpawned = true;
 
-                // Triệu hồi Cột Sáng Trung Tâm Khổng Lồ (6x6)
-                a.centralDisplay = createPillarDisplay(a.level, a.center, 6.0F, 50.0F, 6.0F, 0xFFFF77);
+                // Triệu hồi Cột Sáng Trung Tâm Khổng Lồ (6x6) theo màu sắc của Ác Ma Thủy Tổ
+                a.centralDisplay = createPillarDisplay(a.level, a.center, 6.0F, 50.0F, 6.0F, a.centralBeamColor);
 
                 // Âm thanh đại thiên phạt
                 a.level.playSound(null, a.center.x, groundY, a.center.z,
@@ -330,7 +403,7 @@ public class HeavenlyJudgmentArrayAbility {
                     a.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 20, 0.4D, 0.6D, 0.4D, 0.2D);
                 }
 
-                // Tiêu biến dần 6 cột vệ tinh sau vụ nổ lớn
+                // Tiêu biến dần các cột vệ tinh sau vụ nổ lớn
                 for (Display.ItemDisplay sat : a.satelliteDisplays) {
                     if (sat != null && sat.isAlive()) {
                         a.level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, sat.getX(), groundY + 1.0D, sat.getZ(), 1, 0, 0, 0, 0);
@@ -349,6 +422,36 @@ public class HeavenlyJudgmentArrayAbility {
                 it.remove();
             }
         }
+    }
+
+    private static Display.ItemDisplay createMagicCircleDisplay(ServerLevel level, Vec3 center,
+                                                               float scale, int glowColor, ItemStack stack) {
+        Display.ItemDisplay display = EntityType.ITEM_DISPLAY.create(level);
+        if (display != null) {
+            display.moveTo(center.x, center.y, center.z, 0.0F, 0.0F);
+            ItemDisplayAccessor itemDisplayAcc = (ItemDisplayAccessor) display;
+            DisplayAccessor displayAcc = (DisplayAccessor) display;
+
+            itemDisplayAcc.weapons$setItemStack(stack);
+            itemDisplayAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+            displayAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
+            display.setGlowingTag(true);
+            display.addTag("DemonMagicCircle");
+            displayAcc.weapons$setGlowColorOverride(glowColor);
+            displayAcc.weapons$setViewRange(14.0F);
+
+            Quaternionf rot = new Quaternionf().rotateX((float) Math.toRadians(90.0F));
+            displayAcc.weapons$setTransformation(new Transformation(
+                    new Vector3f(0.0F, 0.0F, 0.0F),
+                    rot,
+                    new Vector3f(scale, scale, 0.01F),
+                    null
+            ));
+
+            level.addFreshEntity(display);
+            com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager.registerCircle(display);
+        }
+        return display;
     }
 
     private static Display.ItemDisplay createPillarDisplay(ServerLevel level, Vec3 center,
