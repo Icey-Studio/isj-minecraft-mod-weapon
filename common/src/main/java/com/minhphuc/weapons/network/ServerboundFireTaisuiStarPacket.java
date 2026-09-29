@@ -26,6 +26,9 @@ public class ServerboundFireTaisuiStarPacket {
             if (player == null) return;
 
             if (player.level() instanceof ServerLevel serverLevel) {
+                if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.checkEmptyHandPunch(player)) {
+                    return;
+                }
                 TaisuiExtinctionStarsAbility.fireStar(serverLevel, player);
             }
         });

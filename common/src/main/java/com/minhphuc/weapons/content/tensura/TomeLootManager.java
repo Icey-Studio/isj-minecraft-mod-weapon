@@ -42,26 +42,40 @@ public class TomeLootManager {
                     if (player.level().random.nextFloat() <= chance) {
                         // Unpack rương trước nếu chưa unpack
                         rcbe.unpackLootTable(player);
-                        insertTomeIntoContainer(rcbe);
+                        insertTomesIntoContainer(rcbe, player.level().random);
                     }
                 }
             }
         }
     }
 
-    private static void insertTomeIntoContainer(Container container) {
-        // Kiểm tra xem đã có sách trong rương chưa
+    private static void insertTomesIntoContainer(Container container, net.minecraft.util.RandomSource random) {
+        boolean hasRebirth = false;
+        boolean hasEvolution = false;
+
         for (int i = 0; i < container.getContainerSize(); i++) {
-            if (container.getItem(i).is(ModItems.PRIMORDIAL_REBIRTH_TOME.get())) {
-                return;
+            ItemStack stack = container.getItem(i);
+            if (stack.is(ModItems.PRIMORDIAL_REBIRTH_TOME.get())) hasRebirth = true;
+            if (stack.is(ModItems.SKILL_EVOLUTION_TOME.get())) hasEvolution = true;
+        }
+
+        // 1. Chèn Sách Cổ Khởi Nguyên Thủy Tổ
+        if (!hasRebirth) {
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (container.getItem(i).isEmpty()) {
+                    container.setItem(i, new ItemStack(ModItems.PRIMORDIAL_REBIRTH_TOME.get()));
+                    break;
+                }
             }
         }
 
-        // Tìm 1 slot trống để chèn sách vào
-        for (int i = 0; i < container.getContainerSize(); i++) {
-            if (container.getItem(i).isEmpty()) {
-                container.setItem(i, new ItemStack(ModItems.PRIMORDIAL_REBIRTH_TOME.get()));
-                return;
+        // 2. Chèn Quyển Thư Tiến Hóa Kỹ Năng (Tỷ lệ 50% khi tìm thấy rương bảo vật)
+        if (!hasEvolution && random.nextFloat() <= 0.50F) {
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (container.getItem(i).isEmpty()) {
+                    container.setItem(i, new ItemStack(ModItems.SKILL_EVOLUTION_TOME.get()));
+                    break;
+                }
             }
         }
     }

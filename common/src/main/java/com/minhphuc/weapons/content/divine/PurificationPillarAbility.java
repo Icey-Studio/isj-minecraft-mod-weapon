@@ -351,6 +351,39 @@ public class PurificationPillarAbility {
 
                     p.level.sendParticles(ParticleTypes.HEART, e.getX(), e.getY() + e.getBbHeight() + 0.3D, e.getZ(), 1, 0.2D, 0.1D, 0.2D, 0.02D);
 
+                    // =============================================================
+                    // 4. HỒI PHỤC TOÀN BỘ KỸ NĂNG ĐÃ MẤT / TIÊU HAO DO DUNG HỢP
+                    // =============================================================
+                    if (e instanceof ServerPlayer sp) {
+                        if (EvolvedSkillHelper.hasConsumedSkills(sp)) {
+                            EvolvedSkillHelper.restoreAllConsumedSkills(sp);
+
+                            ModMessages.sendToPlayer(
+                                    new ClientboundSyncEvolutionPacket(
+                                            new java.util.ArrayList<>(),
+                                            EvolvedSkillHelper.getEvolvedSkillId(sp),
+                                            EvolvedSkillHelper.getEvolvedSkillTier(sp)
+                                    ), sp);
+
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.6F);
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.5F, 1.2F);
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.0F, 1.2F);
+
+                            p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.0, sp.getZ(), 80, 0.6, 1.0, 0.6, 0.3);
+                            p.level.sendParticles(ParticleTypes.GLOW, sp.getX(), sp.getY() + 1.0, sp.getZ(), 50, 0.5, 0.8, 0.5, 0.05);
+                            p.level.sendParticles(ParticleTypes.END_ROD, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 0.5, 0.8, 0.5, 0.05);
+
+                            sp.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§a§l【 ĐẠI THÁNH TẨY CỨU RỖI 】")));
+                            sp.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e✦ Toàn bộ kỹ năng đã mất đã được hồi phục nguyên vẹn! ✦")));
+
+                            sp.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
+                            sp.sendSystemMessage(Component.literal("§e✨ ĐẠI THÁNH TẨY: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
+                            sp.sendSystemMessage(Component.literal("§7(Giờ đây bạn có thể mở Sách Kết Hợp Kỹ Năng để tiếp tục sử dụng hoặc dung hợp)"));
+                        }
+                    }
                 }
             }
 

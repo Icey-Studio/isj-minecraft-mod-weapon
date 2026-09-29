@@ -34,20 +34,46 @@ public class ServerboundCastBeelzebuthPacket {
 
             boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
             boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(player);
+            boolean isWearingDivineArmor = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+            boolean hasEvolved = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.hasEvolvedSkill(player);
 
-            if (isTrueDemonLord || isPrimordial) {
-                // Kiểm tra hồi chiêu kỹ năng (1.5 giây)
-                if (player.getCooldowns().isOnCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get())) {
-                    return;
-                }
-                player.getCooldowns().addCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get(), 25);
-
+            if (isTrueDemonLord || isPrimordial || isWearingDivineArmor || hasEvolved) {
+                int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
                 int lordSkills = hasCreation ? 15 : 14;
 
+                // Kiểm tra thi triển Kỹ Năng Tiến Hóa Tối Thượng
+                boolean isCastingEvolved = false;
+                if (hasEvolved) {
+                    if (selectedSkill == 99) {
+                        isCastingEvolved = true;
+                    } else if (isTrueDemonLord && isPrimordial && selectedSkill == lordSkills + 5) {
+                        isCastingEvolved = true;
+                    } else if (isTrueDemonLord && selectedSkill == lordSkills) {
+                        isCastingEvolved = true;
+                    } else if (isPrimordial && selectedSkill == 5) {
+                        isCastingEvolved = true;
+                    } else if (isWearingDivineArmor && selectedSkill == 14) {
+                        isCastingEvolved = true;
+                    }
+                }
+
+                if (isCastingEvolved) {
+                    com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.cast(serverLevel, player);
+                    return;
+                }
+
+                // Kỹ năng Long Tinh Bộc Viêm Bá (Chiêu 6 - index 5): Không cần hồi năng lượng / ma lực
+                if (selectedSkill != 5) {
+                    // Kiểm tra hồi chiêu kỹ năng (1.5 giây)
+                    if (player.getCooldowns().isOnCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get())) {
+                        return;
+                    }
+                    player.getCooldowns().addCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get(), 25);
+                }
+
                 if (isTrueDemonLord && isPrimordial) {
-                    int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     if (selectedSkill >= lordSkills) {
                         // Kỹ năng của Thủy Tổ Ác Ma
                         int primordialSkillIdx = selectedSkill - lordSkills;
@@ -61,8 +87,7 @@ public class ServerboundCastBeelzebuthPacket {
                     return;
                 }
 
-                // Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
-                int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
+                // Thi triển Kỹ Năng (Không cần cầm kiếm)
 
                 // Nếu đang kích hoạt Tuyệt Diệt Tinh Tú, chỉ cho phép kích hoạt thêm Thị Nhục (Chiêu 9 - index 8) hoặc Diệt Thế Tà Tinh (Chiêu 10 - index 9)
                 if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(player)) {

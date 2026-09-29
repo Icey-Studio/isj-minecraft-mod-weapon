@@ -523,6 +523,9 @@ public class TaisuiExtinctionStarsAbility {
      * Quét và bắn phá các vòng ma thuật trên đường bay của chùm tia Tinh Tú
      */
     public static int destroyMagicCirclesOnPath(ServerLevel level, ServerPlayer player, Vec3 eyePos, Vec3 targetEnd) {
+        // Phá hủy Ma Pháp Trận Chữa Lành của Làng nếu tia Tuyệt Diệt Tinh Tú bắn trúng
+        com.minhphuc.weapons.content.evolution.VillageHealingCircleManager.destroyCirclesOnPath(level, player, eyePos, targetEnd);
+
         AABB searchBox = new AABB(eyePos, targetEnd).inflate(16.0D);
         List<Entity> entities = level.getEntities((Entity) null, searchBox, e -> e.isAlive() && e != player);
 

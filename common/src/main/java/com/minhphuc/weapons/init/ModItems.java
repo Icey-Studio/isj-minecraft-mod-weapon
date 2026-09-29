@@ -234,6 +234,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> PRIMORDIAL_REBIRTH_TOME = ITEMS.register("primordial_rebirth_tome",
             () -> new com.minhphuc.weapons.content.tensura.PrimordialRebirthTomeItem(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> SKILL_EVOLUTION_TOME = ITEMS.register("skill_evolution_tome",
+            () -> new com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem(new Item.Properties()));
+
     public static final RegistrySupplier<Item> DEMON_SUMMONING_CIRCLE = ITEMS.register("demon_summoning_circle",
             () -> new Item(new Item.Properties()));
 
@@ -290,6 +293,8 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_BLEU.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DOMAIN_BARRIER_VERT = ITEMS.register("domain_barrier_vert",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
 
     // ==========================================
     // MODULE: CHƯỚC NHIỆT LONG VELGRYND (SCORCH DRAGON)
@@ -401,6 +406,7 @@ public class ModItems {
                         output.accept(DEMON_LORD_SOUL.get());
                         output.accept(PRIMORDIAL_GRIMOIRE.get());
                         output.accept(PRIMORDIAL_REBIRTH_TOME.get());
+                        output.accept(SKILL_EVOLUTION_TOME.get());
 
                         // Khế Ước Thủy Tổ
                         output.accept(PRIMORDIAL_PACT_NOIR.get());
@@ -419,6 +425,7 @@ public class ModItems {
                         output.accept(DOMAIN_BARRIER_VIOLET.get());
                         output.accept(DOMAIN_BARRIER_BLEU.get());
                         output.accept(DOMAIN_BARRIER_VERT.get());
+                        output.accept(DRAGON_PRISON_BARRIER.get());
 
                         output.accept(DIVINE_HELMET.get());
                         output.accept(DIVINE_CHESTPLATE.get());

@@ -120,10 +120,33 @@ public class DivineWeaponEvents {
             if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
                 boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
+                boolean hasEvolved = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.hasEvolvedSkill(serverPlayer);
                 boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
 
-                if (isTrueDemonLord || isWearingDivineArmor) {
+                if (isTrueDemonLord || isWearingDivineArmor || hasEvolved) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
+                    boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
+                    int lordSkills = hasCreation ? 15 : 14;
+
+                    boolean isCastingEvolved = false;
+                    if (hasEvolved) {
+                        if (selectedSkill == 99) {
+                            isCastingEvolved = true;
+                        } else if (isTrueDemonLord && isPrimordial && selectedSkill == lordSkills + 5) {
+                            isCastingEvolved = true;
+                        } else if (isTrueDemonLord && selectedSkill == lordSkills) {
+                            isCastingEvolved = true;
+                        } else if (isPrimordial && selectedSkill == 5) {
+                            isCastingEvolved = true;
+                        } else if (isWearingDivineArmor && selectedSkill == 14) {
+                            isCastingEvolved = true;
+                        }
+                    }
+
+                    if (isCastingEvolved) {
+                        com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.cast((ServerLevel) serverPlayer.level(), serverPlayer);
+                        return EventResult.interruptTrue();
+                    }
 
                     if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
                         serverPlayer.displayClientMessage(
