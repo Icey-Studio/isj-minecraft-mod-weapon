@@ -67,23 +67,23 @@ public class VillageHealingCircleManager {
             circle.ticksAlive++;
             Vec3 c = circle.center;
 
-            // 1. Vẽ cột sáng xanh lam chọc trời (Cyan Beacon Pillar) & Vòng tròn ma thuật mặt đất mỗi 3 ticks
-            if (circle.ticksAlive % 3 == 0) {
+            // 1. Vẽ cột sáng xanh lam chọc trời (Cyan Beacon Pillar) & Vòng tròn ma thuật mặt đất mỗi 8 ticks (giảm 65% tải mạng)
+            if (circle.ticksAlive % 8 == 0) {
                 // Cột sáng thẳng đứng lên 45 block
-                for (double y = 0; y < 45.0; y += 1.8) {
-                    level.sendParticles(CYAN_DUST, c.x, c.y + y, c.z, 2, 0.15, 0.1, 0.15, 0);
+                for (double y = 0; y < 45.0; y += 3.0) {
+                    level.sendParticles(CYAN_DUST, c.x, c.y + y, c.z, 1, 0.1, 0.1, 0.1, 0);
                     if (y % 6.0 < 1.0) {
-                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x, c.y + y, c.z, 1, 0.08, 0.08, 0.08, 0.01);
+                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, c.x, c.y + y, c.z, 1, 0.05, 0.05, 0.05, 0.01);
                     }
                 }
 
                 // Vòng ma trận mặt đất bán kính 4.0 block
-                for (int ang = 0; ang < 360; ang += 30) {
+                for (int ang = 0; ang < 360; ang += 45) {
                     double rad = Math.toRadians(ang);
                     double x = c.x + Math.cos(rad) * circle.radius;
                     double z = c.z + Math.sin(rad) * circle.radius;
                     level.sendParticles(CYAN_DUST, x, c.y, z, 1, 0, 0, 0, 0);
-                    if (circle.ticksAlive % 6 == 0) {
+                    if (circle.ticksAlive % 16 == 0) {
                         level.sendParticles(ParticleTypes.GLOW, x, c.y + 0.1, z, 1, 0.02, 0.05, 0.02, 0.01);
                     }
                 }
@@ -153,10 +153,18 @@ public class VillageHealingCircleManager {
             return;
         }
 
-        // 2. Nếu không tìm thấy chuông trực tiếp, thử quét cấu trúc làng
-        BlockPos villagePos = level.findNearestMapStructure(StructureTags.VILLAGE, playerPos, 64, false);
-        if (villagePos != null && playerPos.distSqr(villagePos) <= 64 * 64) {
-            BlockPos groundPos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, villagePos);
+        // 2. Nếu không có chuông, tìm khu nhà dân làng (HOME POI) trong bán kính 32 block (chỉ quét các chunk đã nạp)
+        Optional<BlockPos> homePoi = poiManager.find(
+                poi -> poi.is(PoiTypes.HOME),
+                p -> true,
+                playerPos,
+                32,
+                PoiManager.Occupancy.ANY
+        );
+
+        if (homePoi.isPresent()) {
+            BlockPos homePos = homePoi.get();
+            BlockPos groundPos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.WORLD_SURFACE, homePos);
             if (!ACTIVE_CIRCLES.containsKey(groundPos)) {
                 ACTIVE_CIRCLES.put(groundPos, new ActiveHealingCircle(groundPos));
                 level.playSound(null, groundPos.getX(), groundPos.getY(), groundPos.getZ(),

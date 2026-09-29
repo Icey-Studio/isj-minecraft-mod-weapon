@@ -14,11 +14,17 @@ public class ClientboundOpenSkillEvolutionScreenPacket {
     private final List<String> consumedSkills;
     private final int evolvedSkillId;
     private final int evolvedSkillTier;
+    private final int[] tiers;
 
-    public ClientboundOpenSkillEvolutionScreenPacket(List<String> consumedSkills, int evolvedSkillId, int evolvedSkillTier) {
+    public ClientboundOpenSkillEvolutionScreenPacket(List<String> consumedSkills, int evolvedSkillId, int evolvedSkillTier, int[] tiers) {
         this.consumedSkills = consumedSkills != null ? consumedSkills : new ArrayList<>();
         this.evolvedSkillId = evolvedSkillId;
         this.evolvedSkillTier = evolvedSkillTier;
+        this.tiers = tiers != null ? tiers : new int[4];
+    }
+
+    public ClientboundOpenSkillEvolutionScreenPacket(List<String> consumedSkills, int evolvedSkillId, int evolvedSkillTier) {
+        this(consumedSkills, evolvedSkillId, evolvedSkillTier, new int[4]);
     }
 
     public ClientboundOpenSkillEvolutionScreenPacket(FriendlyByteBuf buf) {
@@ -29,6 +35,10 @@ public class ClientboundOpenSkillEvolutionScreenPacket {
         }
         this.evolvedSkillId = buf.readVarInt();
         this.evolvedSkillTier = buf.readVarInt();
+        this.tiers = new int[4];
+        for (int i = 0; i < 4; i++) {
+            this.tiers[i] = buf.readVarInt();
+        }
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -38,12 +48,18 @@ public class ClientboundOpenSkillEvolutionScreenPacket {
         }
         buf.writeVarInt(this.evolvedSkillId);
         buf.writeVarInt(this.evolvedSkillTier);
+        for (int i = 0; i < 4; i++) {
+            buf.writeVarInt(this.tiers[i]);
+        }
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
         NetworkManager.PacketContext context = contextSupplier.get();
         context.queue(() -> {
-            EvolvedSkillHelper.setClientState(this.consumedSkills, this.evolvedSkillId, this.evolvedSkillTier);
+            EvolvedSkillHelper.setClientState(this.consumedSkills, this.evolvedSkillId, this.evolvedSkillTier, this.tiers);
+            if (context.getPlayer() != null && (this.consumedSkills == null || this.consumedSkills.isEmpty())) {
+                EvolvedSkillHelper.restoreAllConsumedSkills(context.getPlayer());
+            }
             ClientSkillEvolutionOpener.openScreen();
         });
     }

@@ -43,8 +43,6 @@ public class SkillEvolutionScreen extends Screen {
 
         evolveButton = Button.builder(Component.literal("§6§l⚡ TIẾN HÓA KỸ NĂNG ⚡"), btn -> {
             if (slotA != null && slotB != null && !slotA.key().equals(slotB.key())) {
-                EvolvedSkillHelper.CLIENT_CONSUMED_SKILLS.add(slotA.key());
-                EvolvedSkillHelper.CLIENT_CONSUMED_SKILLS.add(slotB.key());
                 ModMessages.sendToServer(new ServerboundEvolveSkillPacket(slotA.key(), slotB.key()));
                 if (minecraft != null && minecraft.player != null) {
                     minecraft.player.playSound(SoundEvents.ENCHANTMENT_TABLE_USE, 1.2F, 1.0F);
@@ -183,25 +181,38 @@ public class SkillEvolutionScreen extends Screen {
         gui.renderOutline(rightX, infoY, 202, 82, 0xFF4A346E);
 
         if (slotA != null && slotB != null && !slotA.key().equals(slotB.key())) {
-            int tier = EvolvedSkillHelper.calculateResultTier(slotA.rank(), slotB.rank());
-            String tierColor = tier == 1 ? "§aMức 1" : (tier == 2 ? "§eMức 2" : "§6§lMức 3");
+            int potentialTier = EvolvedSkillHelper.calculateResultTier(slotA.rank(), slotB.rank());
+            String tierColor = potentialTier == 1 ? "§aCấp 1" : (potentialTier == 2 ? "§eCấp 2" : "§6§lCấp 3");
 
-            gui.drawString(font, "§6✦ Dự Đoán Uy Lực: " + tierColor, rightX + 6, infoY + 6, 0xFFFFFF, true);
-            gui.drawString(font, "§7• Rank cao nhất: §eRank " + Math.max(slotA.rank(), slotB.rank()), rightX + 6, infoY + 18, 0xCCCCCC, true);
-            gui.drawString(font, "§b✦ Ngẫu Nhiên 1 Trong 4 Tuyệt Kỹ:", rightX + 6, infoY + 30, 0x00FFFF, true);
-            gui.drawString(font, " §61. Thế Ước Vương Uriel", rightX + 6, infoY + 42, 0xFFFFFF, true);
-            gui.drawString(font, " §e2. Vương Quyền Chi Phối", rightX + 6, infoY + 52, 0xFFFFFF, true);
-            gui.drawString(font, " §b3. Cảm Nhận Vạn Năng", rightX + 6, infoY + 62, 0xFFFFFF, true);
-            gui.drawString(font, " §d4. Long Giam Vô Hạn", rightX + 6, infoY + 72, 0xFFFFFF, true);
+            gui.drawString(font, "§6✦ Dự Đoán Uy Lực Tiềm Năng: " + tierColor, rightX + 6, infoY + 6, 0xFFFFFF, true);
+            gui.drawString(font, "§a✔ Kỹ năng nguyên liệu §lKHÔNG BỊ TIÊU HAO§a!", rightX + 6, infoY + 18, 0x55FF55, true);
+
+            int t0 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[0];
+            int t1 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[1];
+            int t2 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[2];
+            int t3 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[3];
+
+            gui.drawString(font, "§71. Uriel: " + (t0 > 0 ? "§6★ Cấp " + t0 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 30, 0xFFFFFF, true);
+            gui.drawString(font, "§72. Vương Quyền: " + (t1 > 0 ? "§e★ Cấp " + t1 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 42, 0xFFFFFF, true);
+            gui.drawString(font, "§73. Cảm Nhận Vạn Năng: " + (t2 > 0 ? "§b★ Cấp " + t2 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 54, 0xFFFFFF, true);
+            gui.drawString(font, "§74. Lồng Giam Vô Hạn: " + (t3 > 0 ? "§d★ Cấp " + t3 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 66, 0xFFFFFF, true);
 
             evolveButton.active = true;
         } else {
-            gui.drawString(font, "§f✦ Thông Tin Quy Tắc Tiến Hóa:", rightX + 6, infoY + 6, 0xFFFFFF, true);
-            gui.drawString(font, "§a• Kỹ năng Rank 1, 2  ➜ Uy lực Mức 1", rightX + 6, infoY + 20, 0x55FF55, true);
-            gui.drawString(font, "§e• Kỹ năng Rank 3, 4  ➜ Uy lực Mức 2", rightX + 6, infoY + 32, 0xFFFF55, true);
-            gui.drawString(font, "§6• Kỹ năng Rank 5+    ➜ Uy lực Mức 3", rightX + 6, infoY + 44, 0xFFAA00, true);
-            gui.drawString(font, "§c⚠️ Chết sẽ mất kỹ năng tiến hóa!", rightX + 6, infoY + 58, 0xFF5555, true);
-            gui.drawString(font, "§e(Hồi kỹ năng đã tiêu hao tại Làng)", rightX + 6, infoY + 70, 0xFFFF77, true);
+            gui.drawString(font, "§6✦ Trạng Thái 4 Tuyệt Kỹ Tối Thượng:", rightX + 6, infoY + 6, 0xFFFFFF, true);
+
+            int t0 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[0];
+            int t1 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[1];
+            int t2 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[2];
+            int t3 = EvolvedSkillHelper.CLIENT_EVOLVED_SKILL_TIERS[3];
+
+            gui.drawString(font, " §61. Uriel: " + (t0 > 0 ? "§6★ Cấp " + t0 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 18, 0xFFFFFF, true);
+            gui.drawString(font, " §e2. Vương Quyền: " + (t1 > 0 ? "§e★ Cấp " + t1 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 28, 0xFFFFFF, true);
+            gui.drawString(font, " §b3. Cảm Nhận: " + (t2 > 0 ? "§b★ Cấp " + t2 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 38, 0xFFFFFF, true);
+            gui.drawString(font, " §d4. Lồng Giam: " + (t3 > 0 ? "§d★ Cấp " + t3 + "/3" : "§8(Chưa mở)"), rightX + 6, infoY + 48, 0xFFFFFF, true);
+
+            gui.drawString(font, "§a✔ Dung hợp KHÔNG làm mất kỹ năng!", rightX + 6, infoY + 60, 0x55FF55, true);
+            gui.drawString(font, "§6★ Có thể nâng toàn bộ 4 Tuyệt Kỹ lên Cấp 3!", rightX + 6, infoY + 70, 0xFFAA00, true);
 
             evolveButton.active = false;
         }

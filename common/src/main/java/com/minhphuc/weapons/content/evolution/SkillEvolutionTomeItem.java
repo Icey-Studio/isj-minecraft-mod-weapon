@@ -45,7 +45,8 @@ public class SkillEvolutionTomeItem extends Item {
                     new com.minhphuc.weapons.network.ClientboundOpenSkillEvolutionScreenPacket(
                             new java.util.ArrayList<>(EvolvedSkillHelper.getConsumedSkills(sp)),
                             EvolvedSkillHelper.getEvolvedSkillId(sp),
-                            EvolvedSkillHelper.getEvolvedSkillTier(sp)
+                            EvolvedSkillHelper.getEvolvedSkillTier(sp),
+                            EvolvedSkillHelper.getEvolvedSkillTiers(sp)
                     ), sp);
         }
 
@@ -56,12 +57,12 @@ public class SkillEvolutionTomeItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.literal("§6§l✦ QUYỂN THƯ TIẾN HÓA KỸ NĂNG ✦"));
         tooltip.add(Component.literal("§7Bảo điển cổ xưa chứa đựng bí thuật dung hợp các Kỹ Năng Tối Thượng."));
-        tooltip.add(Component.literal("§7(Không thể chế tạo - Chỉ tìm thấy trong rương di tích thế giới)"));
+        tooltip.add(Component.literal("§7(Độ hiếm cực cao - Chỉ tìm thấy trong các siêu di tích thế giới cổ đại)"));
         tooltip.add(Component.empty());
         tooltip.add(Component.literal("§e▶ Nhấn §a[Chuột Phải] §eđể mở giao diện dung hợp kỹ năng."));
-        tooltip.add(Component.literal("§b• Kết hợp 2 kỹ năng bất kỳ để ngẫu nhiên nhận 1 Kỹ Năng Tối Thượng"));
-        tooltip.add(Component.literal("§e• Kỹ năng 1, 2 ➜ §aMức 1 §7| Kỹ năng 3, 4 ➜ §eMức 2 §7| Kỹ năng 5+ ➜ §6Mức 3"));
-        tooltip.add(Component.literal("§c⚠️ Kỹ năng tiến hóa sẽ mất hoàn toàn khi chết!"));
-        tooltip.add(Component.literal("§a✚ Đến Ngôi Làng bước vào Cột Sáng Xanh để hồi lại kỹ năng đã dung hợp."));
+        tooltip.add(Component.literal("§a✔ Các kỹ năng đem dung hợp §lKHÔNG BỊ MẤT§a và vẫn sử dụng được bình thường."));
+        tooltip.add(Component.literal("§6★ Có thể sở hữu và nâng cấp toàn bộ 4 Kỹ Năng Tối Thượng lên Cấp 3!"));
+        tooltip.add(Component.literal("§b• Phím §f[Z]§b: Luân chuyển nhanh giữa toàn bộ các kỹ năng đã thức tỉnh."));
+        tooltip.add(Component.literal("§c⚠️ Kỹ năng tiến hóa sẽ mất nếu bạn tử vong trong trận chiến!"));
     }
 }

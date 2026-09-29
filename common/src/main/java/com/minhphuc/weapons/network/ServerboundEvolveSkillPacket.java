@@ -12,6 +12,9 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 
+import net.minecraft.world.item.ItemStack;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
@@ -46,30 +49,82 @@ public class ServerboundEvolveSkillPacket {
                 return;
             }
 
-            List<EvolvedSkillHelper.AvailableSkill> available = EvolvedSkillHelper.getPlayerAvailableSkills(player);
-            EvolvedSkillHelper.AvailableSkill skillA = null;
-            EvolvedSkillHelper.AvailableSkill skillB = null;
-
-            for (EvolvedSkillHelper.AvailableSkill s : available) {
-                if (s.key().equals(skillKeyA)) skillA = s;
-                if (s.key().equals(skillKeyB)) skillB = s;
-            }
+            EvolvedSkillHelper.AvailableSkill skillA = EvolvedSkillHelper.getSkillByKey(player, skillKeyA);
+            EvolvedSkillHelper.AvailableSkill skillB = EvolvedSkillHelper.getSkillByKey(player, skillKeyB);
 
             if (skillA == null || skillB == null) {
-                player.displayClientMessage(Component.literal("§c⚠️ Kỹ năng được chọn không hợp lệ hoặc đã bị tiêu hao!"), true);
+                player.displayClientMessage(Component.literal("§c⚠️ Kỹ năng được chọn không hợp lệ!"), true);
                 return;
             }
 
-            // Tiêu hao 2 kỹ năng nguyên liệu
-            EvolvedSkillHelper.addConsumedSkill(player, skillA.key());
-            EvolvedSkillHelper.addConsumedSkill(player, skillB.key());
+            // Kiểm tra và tiêu hao Quyển Thư Tiến Hóa Kỹ Năng nếu không ở chế độ Sáng Tạo
+            boolean hasTome = player.isCreative();
+            if (!hasTome) {
+                for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                    if (player.getInventory().getItem(i).getItem() instanceof com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem) {
+                        hasTome = true;
+                        break;
+                    }
+                }
+            }
 
-            // Tính Mức Uy Lực (Tier 1-3)
-            int tier = EvolvedSkillHelper.calculateResultTier(skillA.rank(), skillB.rank());
+            if (!hasTome) {
+                player.displayClientMessage(Component.literal("§c⚠️ Bạn cần sở hữu Quyển Thư Tiến Hóa Kỹ Năng để dung hợp!"), true);
+                return;
+            }
 
-            // Random 1 trong 4 Kỹ Năng Tối Thượng
-            int evolvedSkillId = player.getRandom().nextInt(4);
-            EvolvedSkillHelper.setEvolvedSkill(player, evolvedSkillId, tier);
+            // Tính Mức Uy Lực tiềm năng (Tier 1-3) dựa vào rank của 2 kỹ năng nguyên liệu
+            int potentialTier = EvolvedSkillHelper.calculateResultTier(skillA.rank(), skillB.rank());
+
+            // Lấy danh sách tier hiện tại của cả 4 kỹ năng tối thượng
+            int[] currentTiers = EvolvedSkillHelper.getEvolvedSkillTiers(player);
+            List<Integer> unmaxed = new ArrayList<>();
+            List<Integer> locked = new ArrayList<>();
+
+            for (int i = 0; i < 4; i++) {
+                if (currentTiers[i] < 3) {
+                    unmaxed.add(i);
+                }
+                if (currentTiers[i] == 0) {
+                    locked.add(i);
+                }
+            }
+
+            if (unmaxed.isEmpty()) {
+                player.displayClientMessage(Component.literal("§6§l✦ CẢNH GIỚI TỐI CAO ✦ §fCá thể đã thức tỉnh toàn bộ 4 Kỹ Năng Tối Thượng ở Cấp 3 hoàn mỹ!"), true);
+                return;
+            }
+
+            // Ưu tiên mở khóa kỹ năng chưa có (locked), sau đó đến kỹ năng chưa max cấp 3
+            int evolvedSkillId;
+            if (!locked.isEmpty()) {
+                evolvedSkillId = locked.get(player.getRandom().nextInt(locked.size()));
+            } else {
+                evolvedSkillId = unmaxed.get(player.getRandom().nextInt(unmaxed.size()));
+            }
+
+            int curTier = currentTiers[evolvedSkillId];
+            int newTier = Math.min(3, Math.max(curTier + 1, potentialTier));
+            EvolvedSkillHelper.setEvolvedSkillTier(player, evolvedSkillId, newTier);
+
+            // Tiêu hao 1 quyển sách tiến hóa trong túi đồ (nếu không ở Creative)
+            if (!player.isCreative()) {
+                ItemStack main = player.getMainHandItem();
+                ItemStack off = player.getOffhandItem();
+                if (main.getItem() instanceof com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem) {
+                    main.shrink(1);
+                } else if (off.getItem() instanceof com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem) {
+                    off.shrink(1);
+                } else {
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack invStack = player.getInventory().getItem(i);
+                        if (invStack.getItem() instanceof com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem) {
+                            invStack.shrink(1);
+                            break;
+                        }
+                    }
+                }
+            }
 
             String skillName = EvolvedSkillHelper.getEvolvedSkillNameVi(evolvedSkillId);
             String color = EvolvedSkillHelper.getEvolvedSkillColor(evolvedSkillId);
@@ -88,22 +143,30 @@ public class ServerboundEvolveSkillPacket {
 
             // Gửi Title & Thông báo
             player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§6§l【 TIẾN HÓA KỸ NĂNG 】")));
-            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(color + "✦ " + skillName + " [Mức " + tier + "] ✦")));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal(color + "✦ " + skillName + " [Cấp " + newTier + "/3] ✦")));
+
+            int[] updatedTiers = EvolvedSkillHelper.getEvolvedSkillTiers(player);
+            int maxedCount = 0;
+            for (int t : updatedTiers) {
+                if (t >= 3) maxedCount++;
+            }
 
             player.sendSystemMessage(Component.literal("§6══════════════════════════════════════════════════"));
             player.sendSystemMessage(Component.literal("§e⚡ §lDUNG HỢP THÀNH CÔNG KỸ NĂNG TỐI THƯỢNG:"));
-            player.sendSystemMessage(Component.literal("   " + color + "▶ " + skillName + " §6§l(CẤP MỨC: " + tier + ")"));
-            player.sendSystemMessage(Component.literal("§7• Kỹ năng nguyên liệu đã tiêu hao: §f" + skillA.displayNameVi() + " §7& §f" + skillB.displayNameVi()));
-            player.sendSystemMessage(Component.literal("§c⚠️ Kỹ năng tiến hóa sẽ mất hoàn toàn nếu bạn tử vong!"));
-            player.sendSystemMessage(Component.literal("§a✚ Hãy dùng kỹ năng [Đại Thánh Tẩy] hoặc đến Ngôi Làng bước vào Cột Sáng Xanh để phục hồi lại các kỹ năng nguyên liệu."));
+            player.sendSystemMessage(Component.literal("   " + color + "▶ " + skillName + " §6§l(CẤP ĐỘ: " + newTier + "/3)"));
+            player.sendSystemMessage(Component.literal("§a✔ Kỹ năng kết hợp (§f" + skillA.displayNameVi() + " §a& §f" + skillB.displayNameVi() + "§a) KHÔNG bị mất và vẫn sử dụng bình thường!"));
+            player.sendSystemMessage(Component.literal("§6★ Tiến độ Tuyệt Kỹ: §e" + maxedCount + "/4 §6kỹ năng đã đạt Cấp 3 tối đa."));
+            player.sendSystemMessage(Component.literal("§b• Nhấn phím §f[Z]§b để luân chuyển giữa tất cả kỹ năng thường và kỹ năng tiến hóa!"));
+            player.sendSystemMessage(Component.literal("§c⚠️ Kỹ năng tiến hóa sẽ mất nếu bạn tử vong!"));
             player.sendSystemMessage(Component.literal("§6══════════════════════════════════════════════════"));
 
-            // Đồng bộ danh sách kỹ năng đã tiêu hao về máy khách
+            // Đồng bộ trạng thái và toàn bộ mảng tiers về máy khách
             ModMessages.sendToPlayer(
                     new ClientboundSyncEvolutionPacket(
-                            new java.util.ArrayList<>(EvolvedSkillHelper.getConsumedSkills(player)),
+                            new java.util.ArrayList<>(),
                             evolvedSkillId,
-                            tier
+                            newTier,
+                            updatedTiers
                     ), player);
         });
     }
