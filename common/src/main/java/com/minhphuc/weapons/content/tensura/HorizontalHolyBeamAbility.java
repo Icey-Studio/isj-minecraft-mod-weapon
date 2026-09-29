@@ -27,6 +27,8 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import com.minhphuc.weapons.entity.tensura.DemonType;
+import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 
 /**
  * Tuyệt kỹ: Cú Bắn Granit (Granite Blast - Ryu Ishigori / Tà Khứ Vũ Thê Tử Bắn Ngang)
@@ -227,6 +229,208 @@ public class HorizontalHolyBeamAbility {
             }
 
             // Phá vỡ thực vật / mạng nhện / hoa cỏ cản đường luồng pháo
+            BlockPos centerPos = BlockPos.containing(cur);
+            for (int ox = -1; ox <= 1; ox++) {
+                for (int oy = -1; oy <= 1; oy++) {
+                    for (int oz = -1; oz <= 1; oz++) {
+                        BlockPos checkPos = centerPos.offset(ox, oy, oz);
+                        net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(checkPos);
+                        if (bs.is(Blocks.COBWEB) || bs.is(Blocks.SHORT_GRASS) || bs.is(Blocks.TALL_GRASS)
+                                || bs.is(Blocks.SEAGRASS) || bs.is(Blocks.KELP) || bs.is(Blocks.SNOW)
+                                || bs.is(Blocks.ICE) || bs.is(Blocks.VINE)) {
+                            level.destroyBlock(checkPos, false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Bắn chùm pháo 3D "Linh Tử Bộc Phát" (Spiritron Outburst) dựa trên cơ chế Vụ Nổ Granit,
+     * tự động điều chỉnh màu sắc Lõi, Vỏ Bọc và các loại hạt particle theo màu đặc trưng của 7 Thủy Tổ Ác Ma.
+     */
+    public static void fireSpiritronOutburst(ServerLevel level, LivingEntity caster, Vec3 startPos, Vec3 dir,
+                                             DemonType type, double range, float damage) {
+        dir = dir.normalize();
+
+        // 1. Phối màu Lõi và Vỏ Bọc 3D Beam Display theo Thủy Tổ Ác Ma
+        int coreColor;
+        int outerColor;
+
+        if (type == null) {
+            coreColor = 0xFFFFFF;
+            outerColor = 0xFFAA00;
+        } else {
+            switch (type) {
+                case ROUGE -> { // Xích Sắc - Guy Crimson: Đỏ rực & Huyết diễm
+                    coreColor = 0xFF3333;
+                    outerColor = 0xAA0000;
+                }
+                case NOIR -> { // Hắc Sắc - Diablo: Đen tuyền & Tím hắc ám ma vực
+                    coreColor = 0x1A1A1A;
+                    outerColor = 0x4A0072;
+                }
+                case BLANC -> { // Bạch Sắc - Testarossa: Bạch quang tinh khiết & Băng lam phát sáng
+                    coreColor = 0xFFFFFF;
+                    outerColor = 0xCFE2FE;
+                }
+                case JAUNE -> { // Hoàng Sắc - Carrera: Hoàng kim rực rỡ & Cam nhiệt hạch
+                    coreColor = 0xFFFF22;
+                    outerColor = 0xFF6600;
+                }
+                case VIOLET -> { // Tử Sắc - Ultima: Tử quang kịch độc & Tím u tối
+                    coreColor = 0xD440FF;
+                    outerColor = 0x6E00B3;
+                }
+                case BLEU -> { // Lam Sắc - Rein: Băng lam cực hạn & Hải lam sâu thẳm
+                    coreColor = 0x50D2FE;
+                    outerColor = 0x0284C7;
+                }
+                case VERT -> { // Lục Sắc - Misery: Lục bảo bão táp & Lục sẫm rừng già
+                    coreColor = 0x4ADE80;
+                    outerColor = 0x15803D;
+                }
+                default -> {
+                    coreColor = 0xFFFFFF;
+                    outerColor = 0xFFAA00;
+                }
+            }
+        }
+
+        // Tạo 3D Beam Display với tầm bắn và độ dày hoành tráng
+        spawn3DBeamDisplay(level, startPos, dir, range, 3.4F, coreColor, 5.8F, outerColor, 32);
+
+        // 2. TÍNH TOÁN VA CHẠM, SÁT THƯƠNG & XÉ RÁCH KHÔNG GIAN THEO MÀU SẮC
+        double step = 1.0D;
+        Vec3 cur = startPos;
+
+        for (double d = 0; d < range; d += step) {
+            cur = cur.add(dir.scale(step));
+
+            // Sinh các hiệu ứng hạt đặc trưng theo hệ màu của từng Thủy Tổ
+            if (type == null) {
+                level.sendParticles(ParticleTypes.FLASH, cur.x, cur.y, cur.z, 1, 0.3, 0.3, 0.3, 0);
+                level.sendParticles(ParticleTypes.FLAME, cur.x, cur.y, cur.z, 3, 1.0, 1.0, 1.0, 0.08);
+                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, cur.x, cur.y, cur.z, 2, 0.6, 0.6, 0.6, 0.15);
+            } else {
+                switch (type) {
+                    case ROUGE -> {
+                        level.sendParticles(ParticleTypes.FLAME, cur.x, cur.y, cur.z, 5, 1.2, 1.2, 1.2, 0.08);
+                        level.sendParticles(ParticleTypes.LAVA, cur.x, cur.y, cur.z, 2, 0.8, 0.8, 0.8, 0.05);
+                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, cur.x, cur.y, cur.z, 2, 0.8, 0.8, 0.8, 0.05);
+                    }
+                    case NOIR -> {
+                        level.sendParticles(ParticleTypes.SQUID_INK, cur.x, cur.y, cur.z, 5, 1.2, 1.2, 1.2, 0.08);
+                        level.sendParticles(ParticleTypes.DRAGON_BREATH, cur.x, cur.y, cur.z, 3, 1.0, 1.0, 1.0, 0.05);
+                        level.sendParticles(ParticleTypes.PORTAL, cur.x, cur.y, cur.z, 4, 1.0, 1.0, 1.0, 0.2);
+                    }
+                    case BLANC -> {
+                        level.sendParticles(ParticleTypes.END_ROD, cur.x, cur.y, cur.z, 4, 1.0, 1.0, 1.0, 0.05);
+                        level.sendParticles(ParticleTypes.FLASH, cur.x, cur.y, cur.z, 1, 0.3, 0.3, 0.3, 0);
+                        level.sendParticles(ParticleTypes.SNOWFLAKE, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                    }
+                    case JAUNE -> {
+                        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, cur.x, cur.y, cur.z, 5, 1.2, 1.2, 1.2, 0.15);
+                        level.sendParticles(ParticleTypes.CRIT, cur.x, cur.y, cur.z, 4, 1.0, 1.0, 1.0, 0.1);
+                        level.sendParticles(ParticleTypes.LAVA, cur.x, cur.y, cur.z, 2, 0.6, 0.6, 0.6, 0.05);
+                    }
+                    case VIOLET -> {
+                        level.sendParticles(ParticleTypes.WITCH, cur.x, cur.y, cur.z, 5, 1.2, 1.2, 1.2, 0.08);
+                        level.sendParticles(ParticleTypes.DRAGON_BREATH, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                        level.sendParticles(ParticleTypes.PORTAL, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.15);
+                    }
+                    case BLEU -> {
+                        level.sendParticles(ParticleTypes.SNOWFLAKE, cur.x, cur.y, cur.z, 5, 1.2, 1.2, 1.2, 0.08);
+                        level.sendParticles(ParticleTypes.ITEM_SNOWBALL, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                        level.sendParticles(ParticleTypes.GLOW, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                    }
+                    case VERT -> {
+                        level.sendParticles(ParticleTypes.HAPPY_VILLAGER, cur.x, cur.y, cur.z, 4, 1.2, 1.2, 1.2, 0.08);
+                        level.sendParticles(ParticleTypes.COMPOSTER, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                        level.sendParticles(ParticleTypes.CLOUD, cur.x, cur.y, cur.z, 3, 0.8, 0.8, 0.8, 0.05);
+                    }
+                }
+            }
+
+            // Sóng xung kích siêu thanh và chớp sáng bộc phát cách mỗi 5m
+            if (Math.round(d) % 5 == 0) {
+                level.sendParticles(ParticleTypes.SONIC_BOOM, cur.x, cur.y, cur.z, 1, 0, 0, 0, 0);
+                level.sendParticles(ParticleTypes.FLASH, cur.x, cur.y, cur.z, 1, 0, 0, 0, 0);
+            }
+
+            AABB box = new AABB(cur.x - 3.4, cur.y - 3.4, cur.z - 3.4,
+                    cur.x + 3.4, cur.y + 3.4, cur.z + 3.4);
+
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive());
+            for (LivingEntity victim : victims) {
+                // Tước bỏ toàn bộ trạng thái phòng ngự
+                victim.removeEffect(MobEffects.REGENERATION);
+                victim.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+                victim.removeEffect(MobEffects.FIRE_RESISTANCE);
+
+                // Áp dụng trạng thái đặc trưng theo hệ ác ma
+                if (type != null) {
+                    switch (type) {
+                        case ROUGE -> {
+                            victim.setRemainingFireTicks(300);
+                            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 2, false, false, true));
+                        }
+                        case NOIR -> {
+                            victim.addEffect(new MobEffectInstance(MobEffects.WITHER, 120, 2, false, false, true));
+                            victim.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 80, 0, false, false, true));
+                        }
+                        case BLANC -> {
+                            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 2, false, false, true));
+                            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 3, false, false, true));
+                        }
+                        case JAUNE -> {
+                            victim.addEffect(new MobEffectInstance(MobEffects.GLOWING, 140, 0, false, false, true));
+                            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 4, false, false, true));
+                        }
+                        case VIOLET -> {
+                            victim.addEffect(new MobEffectInstance(MobEffects.POISON, 140, 2, false, false, true));
+                            victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 0, false, false, true));
+                        }
+                        case BLEU -> {
+                            victim.setTicksFrozen(260);
+                            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 4, false, false, true));
+                        }
+                        case VERT -> {
+                            victim.addEffect(new MobEffectInstance(MobEffects.LEVITATION, 35, 1, false, false, true));
+                            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 1, false, false, true));
+                        }
+                    }
+                } else {
+                    victim.setRemainingFireTicks(240);
+                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 4, false, false, true));
+                }
+
+                // Lực đẩy lùi cực mạnh theo hướng bắn của tia pháo
+                Vec3 knockback = dir.scale(2.4D).add(0, 0.4D, 0);
+                victim.setDeltaMovement(knockback);
+                victim.hasImpulse = true;
+
+                // Xử lý sát thương tương ứng với nguồn bắn
+                if (caster instanceof ServerPlayer sp) {
+                    victim.hurt(sp.damageSources().playerAttack(sp), damage);
+                    TensuraEvents.handleMobDeathDrop(sp, victim);
+                } else if (caster instanceof PrimordialDemonEntity pde) {
+                    pde.dealDemonicDamage(victim, damage);
+                } else {
+                    victim.hurt(level.damageSources().magic(), damage);
+                }
+            }
+
+            // Thiêu đốt mặt đất và làm vỡ các khối yếu
+            BlockPos groundPos = BlockPos.containing(cur).below();
+            if (level.getBlockState(groundPos).isSolid() && level.getBlockState(groundPos.above()).isAir()) {
+                if (level.random.nextFloat() < 0.35F) {
+                    level.setBlockAndUpdate(groundPos.above(), Blocks.FIRE.defaultBlockState());
+                }
+            }
+
+            // Phá vỡ thực vật cản đường chùm tia
             BlockPos centerPos = BlockPos.containing(cur);
             for (int ox = -1; ox <= 1; ox++) {
                 for (int oy = -1; oy <= 1; oy++) {

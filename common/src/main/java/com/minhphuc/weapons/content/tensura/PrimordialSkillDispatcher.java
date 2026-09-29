@@ -39,14 +39,24 @@ public class PrimordialSkillDispatcher {
             return;
         }
 
-        // Skill 5 (Skill 6): Ngũ Trọng Ma Trận Cột Sáng Thiên Khấu (Chung cho 7 Ác Ma)
+        boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
+        boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
+
+        // Skill 5 (Skill 6): Ngũ Trọng Ma Trận Cột Sáng Thiên Khấu (Chung cho các Ác Ma khác, riêng Jaune là Cấm Thuật Hạt Nhân Supernova)
         if (skillIndex == 5) {
+            if (type == DemonType.JAUNE) {
+                JaunePlayerSkillManager.castSkillFive(level, player, hasBody, isDemonLord);
+                return;
+            }
             PentagramCelestialPillarAbility.cast(level, player);
             return;
         }
 
-        boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
-        boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
+        // Skill 6 (Skill 7): Linh Tử Bộc Phát (Spiritron Outburst - Granite Blast theo màu Thủy Tổ)
+        if (skillIndex == 6) {
+            castSpiritronOutburst(level, player, type, hasBody, isDemonLord);
+            return;
+        }
 
         switch (type) {
             case NOIR -> castNoir(level, player, skillIndex, hasBody, isDemonLord);
@@ -57,6 +67,35 @@ public class PrimordialSkillDispatcher {
             case BLEU -> castBleu(level, player, skillIndex, hasBody, isDemonLord);
             case VERT -> castVert(level, player, skillIndex, hasBody, isDemonLord);
         }
+    }
+
+    private static void castSpiritronOutburst(ServerLevel level, ServerPlayer player, DemonType type, boolean hasBody, boolean isDemonLord) {
+        Vec3 eyePos = player.getEyePosition(1.0F);
+        Vec3 look = player.getLookAngle();
+
+        // Âm thanh đại pháo nổ rung trời kết hợp hiệu ứng sấm chấn
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 5.0F, 0.6F);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 4.5F, 1.1F);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 4.0F, 1.3F);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 4.0F, 1.5F);
+
+        String demonName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        player.displayClientMessage(
+                Component.literal("§6§l[" + demonName + "] §e§l💥 LINH TỬ BỘC PHÁT (SPIRITRON OUTBURST) PHÁT HỎA!! ⚡✨"),
+                true
+        );
+
+        // Hiệu ứng giật lùi nhẹ theo hướng bắn
+        Vec3 recoil = look.scale(-0.45D);
+        player.setDeltaMovement(player.getDeltaMovement().add(recoil.x, 0.12D, recoil.z));
+        player.hurtMarked = true;
+
+        float damage = (hasBody || isDemonLord) ? 2200.0F : 1300.0F;
+        HorizontalHolyBeamAbility.fireSpiritronOutburst(level, player, eyePos, look, type, 64.0D, damage);
     }
 
     private static void dealDamage(ServerPlayer player, LivingEntity victim, float baseDmg, boolean hasBody, boolean isDemonLord) {
@@ -225,42 +264,14 @@ public class PrimordialSkillDispatcher {
     // 4. JAUNE (CARRERA) - HOÀNG SẮC
     // ==========================================
     private static void castJaune(ServerLevel level, ServerPlayer player, int skill, boolean hasBody, boolean isDemonLord) {
-        Vec3 pos = player.position();
-        if (skill == 1) { // Sụp Đổ Trọng Lực (Gravity Collapse)
-            Vec3 target = pos.add(player.getLookAngle().scale(10.0));
-            level.playSound(null, target.x, target.y, target.z, SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 2.5F, 0.7F);
-            level.sendParticles(ParticleTypes.CRIT, target.x, target.y + 1.0, target.z, 120, 5.0, 1.0, 5.0, 0.2);
-            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, new AABB(target.x - 8, target.y - 3, target.z - 8, target.x + 8, target.y + 5, target.z + 8), e -> e != player && e.isAlive());
-            for (LivingEntity e : targets) {
-                e.setDeltaMovement(0, -2.0, 0);
-                e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 6));
-                dealDamage(player, e, 50.0F, hasBody, isDemonLord);
-            }
-        } else if (skill == 2) { // Tia Sáng Hoàng Kim (Golden Breaker)
-            Vec3 look = player.getLookAngle();
-            level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.5F, 1.5F);
-            for (double d = 2.0; d <= 30.0; d += 2.0) {
-                Vec3 p = pos.add(look.scale(d));
-                level.sendParticles(ParticleTypes.ELECTRIC_SPARK, p.x, p.y + 1.2, p.z, 12, 0.4, 0.4, 0.4, 0.1);
-                List<LivingEntity> hit = level.getEntitiesOfClass(LivingEntity.class, new AABB(p.x - 2, p.y - 1, p.z - 2, p.x + 2, p.y + 3, p.z + 2), e -> e != player && e.isAlive());
-                for (LivingEntity e : hit) {
-                    dealDamage(player, e, 80.0F, hasBody, isDemonLord);
-                }
-            }
-        } else if (skill == 3) { // Tập Trung Xạ Kích (Abaddon Focus)
-            level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 2.0F, 1.8F);
-            player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 200, 2));
-            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, 2));
-            player.displayClientMessage(Component.literal("§6§l[JAUNE] §eTập Trung Xạ Kích: Tăng cường toàn bộ tốc độ và uy lực ma pháp!"), true);
-        } else if (skill == 4) { // Pháo Hạt Nhân Khởi Nguyên (Nuclear Cannon)
-            Vec3 target = pos.add(player.getLookAngle().scale(15.0));
-            level.playSound(null, target.x, target.y, target.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.5F, 0.6F);
-            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, target.x, target.y + 1.0, target.z, 8, 2.0, 2.0, 2.0, 0.0);
-            level.sendParticles(ParticleTypes.LAVA, target.x, target.y + 1.0, target.z, 80, 4.0, 2.0, 4.0, 0.2);
-            List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, new AABB(target.x - 12, target.y - 4, target.z - 12, target.x + 12, target.y + 8, target.z + 12), e -> e != player && e.isAlive());
-            for (LivingEntity e : targets) {
-                dealDamage(player, e, 130.0F, hasBody, isDemonLord);
-            }
+        if (skill == 1) { // Bão Đạn Hạt Nhân: Bách Phát Đoạt Mệnh (Barrage Guns of Abaddon)
+            JaunePlayerSkillManager.castSkillOne(level, player, hasBody, isDemonLord);
+        } else if (skill == 2) { // Hố Đen Trọng Lực Sụp Đổ (Gravity Collapse: Event Horizon)
+            JaunePlayerSkillManager.castSkillTwo(level, player, hasBody, isDemonLord);
+        } else if (skill == 3) { // Cự Pháo Hạt Nhân Xuyên Thấu (Nuclear Cannon: Abaddon Piercer)
+            JaunePlayerSkillManager.castSkillThree(level, player, hasBody, isDemonLord);
+        } else if (skill == 4) { // Thần Kiếm Trọng Lực: Bứt Tốc Trảm (Gravitational Blade Dash)
+            JaunePlayerSkillManager.castSkillFour(level, player, hasBody, isDemonLord);
         }
     }
 

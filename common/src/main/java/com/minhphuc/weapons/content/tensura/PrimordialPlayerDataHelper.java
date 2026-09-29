@@ -69,17 +69,17 @@ public class PrimordialPlayerDataHelper {
     public static int getSelectedSkillIndex(Player player) {
         if (player == null) return 0;
         CompoundTag tag = EntityDataHelper.getCustomData(player);
-        return Math.max(0, Math.min(5, tag.getInt(NBT_SELECTED_SKILL)));
+        return Math.max(0, Math.min(6, tag.getInt(NBT_SELECTED_SKILL)));
     }
 
     public static void setSelectedSkillIndex(Player player, int skillIndex) {
         if (player == null) return;
-        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, Math.max(0, Math.min(5, skillIndex)));
+        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, Math.max(0, Math.min(6, skillIndex)));
     }
 
     public static int cycleSkill(Player player) {
         int current = getSelectedSkillIndex(player);
-        int next = (current + 1) % 6;
+        int next = (current + 1) % 7;
         setSelectedSkillIndex(player, next);
         return next;
     }
@@ -127,7 +127,13 @@ public class PrimordialPlayerDataHelper {
             return "Tà Khứ Vũ Thê Tử (Death Streak)";
         }
         if (skillIndex == 5) {
+            if (type == DemonType.JAUNE) {
+                return "Cấm Thuật Tận Diệt Hạt Nhân (Abyss Annihilation / Supernova)";
+            }
             return "Ngũ Trọng Ma Trận: Cột Sáng Thiên Khấu (Pentagram Celestial Pillar)";
+        }
+        if (skillIndex == 6) {
+            return "Linh Tử Bộc Phát (Spiritron Outburst)";
         }
         if (type == null) return "Chưa thức tỉnh";
         return switch (type) {
@@ -153,10 +159,11 @@ public class PrimordialPlayerDataHelper {
                 default -> "Kỹ Năng Thủy Tổ";
             };
             case JAUNE -> switch (skillIndex) {
-                case 1 -> "Sụp Đổ Trọng Lực (Gravity Collapse)";
-                case 2 -> "Tia Sáng Hoàng Kim (Golden Breaker)";
-                case 3 -> "Tập Trung Xạ Kích (Abaddon Focus)";
-                case 4 -> "Pháo Hạt Nhân Khởi Nguyên (Nuclear Cannon)";
+                case 1 -> "Bão Đạn Hạt Nhân (Barrage Guns of Abaddon)";
+                case 2 -> "Hố Đen Trọng Lực Sụp Đổ (Gravity Collapse: Event Horizon)";
+                case 3 -> "Cự Pháo Hạt Nhân Xuyên Thấu (Nuclear Cannon: Abaddon Piercer)";
+                case 4 -> "Thần Kiếm Trọng Lực: Bứt Tốc Trảm (Gravitational Blade Dash)";
+                case 5 -> "Cấm Thuật Tận Diệt Hạt Nhân (Abyss Annihilation / Supernova)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
             case VIOLET -> switch (skillIndex) {
