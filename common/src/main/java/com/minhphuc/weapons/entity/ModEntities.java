@@ -62,7 +62,7 @@ public class ModEntities {
                 b -> b.hasTag(BiomeTags.IS_OVERWORLD),
                 (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
                         MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(PRIMORDIAL_DEMON.get(), 5, 1, 1)
+                        new MobSpawnSettings.SpawnerData(PRIMORDIAL_DEMON.get(), 1, 1, 1)
                 )
         );
 

@@ -130,41 +130,52 @@ public class ThoughtAccelerationAbility {
             sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, px, player.getY() + 1.2D, pz, 1, 0, 0.05D, 0, 0.01D);
         }
 
-        // 1. Time Dilation: Làm chậm 80% mọi kẻ thù xung quanh trong 18m
-        AABB slowBox = player.getBoundingBox().inflate(18.0D);
-        List<LivingEntity> enemies = sl.getEntitiesOfClass(LivingEntity.class, slowBox,
-                e -> e != player && e.isAlive() && (e instanceof Enemy || (e instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player)));
-        for (LivingEntity enemy : enemies) {
-            enemy.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 20, 3, false, false, false));
-        }
-
-        // 2. Dự Đoán Quỹ Đạo Đòn Đánh: Vẽ các tia laser holographic dự báo từ quái vật / đạn đạo
-        Vec3 playerHead = player.getEyePosition();
-
-        // (a) Dự đoán đường đạn projectile bay trong không gian
-        AABB projBox = player.getBoundingBox().inflate(28.0D);
-        List<Projectile> projectiles = sl.getEntitiesOfClass(Projectile.class, projBox, p -> p.isAlive());
-        for (Projectile proj : projectiles) {
-            Vec3 vel = proj.getDeltaMovement();
-            if (vel.lengthSqr() > 0.01D) {
-                Vec3 pStart = proj.position();
-                for (double d = 0.5D; d <= 12.0D; d += 1.0D) {
-                    Vec3 beamPoint = pStart.add(vel.normalize().scale(d));
-                    sl.sendParticles(LASER_RED, beamPoint.x, beamPoint.y, beamPoint.z, 1, 0, 0, 0, 0);
-                }
+        // 1. Time Dilation: Làm chậm 80% mọi kẻ thù xung quanh trong 18m (Quét mỗi 5 ticks thay vì mỗi tick)
+        if (player.tickCount % 5 == 0) {
+            AABB slowBox = player.getBoundingBox().inflate(18.0D);
+            List<LivingEntity> enemies = sl.getEntitiesOfClass(LivingEntity.class, slowBox,
+                    e -> e != player && e.isAlive() && (e instanceof Enemy || (e instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player)));
+            for (LivingEntity enemy : enemies) {
+                enemy.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 3, false, false, false));
             }
         }
 
-        // (b) Dự đoán đòn tấn công của kẻ địch đang ngắm người chơi
-        for (LivingEntity enemy : enemies) {
-            Vec3 enemyEye = enemy.getEyePosition();
-            Vec3 aimDir = playerHead.subtract(enemyEye).normalize();
-            double dist = enemyEye.distanceTo(playerHead);
+        // 2. Dự Đoán Quỹ Đạo Đòn Đánh: Vẽ các tia laser holographic dự báo từ quái vật / đạn đạo (Mỗi 2 ticks)
+        if (player.tickCount % 2 == 0) {
+            Vec3 playerHead = player.getEyePosition();
 
-            // Vẽ tia laser đỏ cảnh báo nguy cơ tấn công
-            for (double d = 0.8D; d < dist; d += 1.5D) {
-                Vec3 laserPoint = enemyEye.add(aimDir.scale(d));
-                sl.sendParticles(LASER_RED, laserPoint.x, laserPoint.y, laserPoint.z, 1, 0, 0, 0, 0);
+            // (a) Dự đoán đường đạn projectile bay trong không gian
+            AABB projBox = player.getBoundingBox().inflate(24.0D);
+            List<Projectile> projectiles = sl.getEntitiesOfClass(Projectile.class, projBox, p -> p.isAlive());
+            int projCount = 0;
+            for (Projectile proj : projectiles) {
+                if (++projCount > 5) break; // Giới hạn tối đa 5 đạn để chống tràn hạt
+                Vec3 vel = proj.getDeltaMovement();
+                if (vel.lengthSqr() > 0.01D) {
+                    Vec3 pStart = proj.position();
+                    for (double d = 0.5D; d <= 10.0D; d += 2.0D) {
+                        Vec3 beamPoint = pStart.add(vel.normalize().scale(d));
+                        sl.sendParticles(LASER_RED, beamPoint.x, beamPoint.y, beamPoint.z, 1, 0, 0, 0, 0);
+                    }
+                }
+            }
+
+            // (b) Dự đoán đòn tấn công của kẻ địch gần nhất đang ngắm người chơi
+            AABB aimBox = player.getBoundingBox().inflate(16.0D);
+            List<LivingEntity> nearbyAiming = sl.getEntitiesOfClass(LivingEntity.class, aimBox,
+                    e -> e != player && e.isAlive() && (e instanceof Enemy || (e instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player)));
+            int aimCount = 0;
+            for (LivingEntity enemy : nearbyAiming) {
+                if (++aimCount > 4) break; // Giới hạn 4 kẻ thù
+                Vec3 enemyEye = enemy.getEyePosition();
+                Vec3 aimDir = playerHead.subtract(enemyEye).normalize();
+                double dist = enemyEye.distanceTo(playerHead);
+
+                // Vẽ tia laser đỏ cảnh báo nguy cơ tấn công
+                for (double d = 0.8D; d < dist; d += 2.5D) {
+                    Vec3 laserPoint = enemyEye.add(aimDir.scale(d));
+                    sl.sendParticles(LASER_RED, laserPoint.x, laserPoint.y, laserPoint.z, 1, 0, 0, 0, 0);
+                }
             }
         }
 

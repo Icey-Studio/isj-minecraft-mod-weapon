@@ -29,6 +29,11 @@ public class ClientTaisuiHandler {
     // Hạt lõi tinh tú trắng siêu sáng
     private static final DustParticleOptions STAR_CORE_DUST = new DustParticleOptions(new Vector3f(1.0F, 1.0F, 1.0F), 1.6F);
 
+    public static boolean hasTaisui(UUID uuid) {
+        if (uuid == null) return false;
+        return ACTIVE_TAISUI_PLAYERS.getOrDefault(uuid, 0) > 0;
+    }
+
     public static void setTaisuiState(UUID uuid, boolean active, int starsRemaining) {
         if (!active || starsRemaining <= 0) {
             ACTIVE_TAISUI_PLAYERS.remove(uuid);
@@ -47,6 +52,8 @@ public class ClientTaisuiHandler {
             if (ACTIVE_TAISUI_PLAYERS.isEmpty()) return;
 
             long gameTime = mc.level.getGameTime();
+            // Throttling: Cập nhật mỗi 2 ticks để tăng 50% FPS cho máy cấu hình yếu
+            if (gameTime % 2 != 0) return;
 
             ACTIVE_TAISUI_PLAYERS.forEach((uuid, starsRemaining) -> {
                 Player player = mc.level.getPlayerByUUID(uuid);
@@ -65,32 +72,32 @@ public class ClientTaisuiHandler {
                 Vec3 center = player.position().add(0, 1.05D, 0);
 
                 // 1. TẠO LỚP MÀNG MỎNG KHÔNG CHỚP CHỚP (Smooth Celestial Sphere Membrane)
-                // Bán kính màng mỏng 1.95m ôm lấy thân thể
+                // Bán kính màng mỏng 1.95m ôm lấy thân thể (giảm số lượng hạt để bảo vệ FPS)
                 double membraneRadius = 1.95D;
                 double rotAngle = gameTime * 0.035D;
 
-                // Dải xích đạo (Equator)
-                for (int i = 0; i < 14; i++) {
-                    double theta = rotAngle + (i * Math.PI * 2.0D / 14.0D);
+                // Dải xích đạo (Equator) - 8 hạt thay vì 14
+                for (int i = 0; i < 8; i++) {
+                    double theta = rotAngle + (i * Math.PI * 2.0D / 8.0D);
                     double px = center.x + membraneRadius * Math.cos(theta);
                     double pz = center.z + membraneRadius * Math.sin(theta);
                     mc.level.addParticle(MEMBRANE_DUST, px, center.y, pz, 0, 0, 0);
                 }
 
-                // Dải vĩ độ trên (+45 độ)
+                // Dải vĩ độ trên (+45 độ) - 6 hạt thay vì 10
                 double rUpper = membraneRadius * 0.707D;
                 double yUpper = center.y + membraneRadius * 0.707D;
-                for (int i = 0; i < 10; i++) {
-                    double theta = -rotAngle + (i * Math.PI * 2.0D / 10.0D);
+                for (int i = 0; i < 6; i++) {
+                    double theta = -rotAngle + (i * Math.PI * 2.0D / 6.0D);
                     double px = center.x + rUpper * Math.cos(theta);
                     double pz = center.z + rUpper * Math.sin(theta);
                     mc.level.addParticle(MEMBRANE_DUST, px, yUpper, pz, 0, 0, 0);
                 }
 
-                // Dải vĩ độ dưới (-45 độ)
+                // Dải vĩ độ dưới (-45 độ) - 6 hạt thay vì 10
                 double yLower = center.y - membraneRadius * 0.707D;
-                for (int i = 0; i < 10; i++) {
-                    double theta = -rotAngle + (i * Math.PI * 2.0D / 10.0D);
+                for (int i = 0; i < 6; i++) {
+                    double theta = -rotAngle + (i * Math.PI * 2.0D / 6.0D);
                     double px = center.x + rUpper * Math.cos(theta);
                     double pz = center.z + rUpper * Math.sin(theta);
                     mc.level.addParticle(MEMBRANE_DUST, px, yLower, pz, 0, 0, 0);

@@ -41,31 +41,21 @@ public class ServerboundCastBeelzebuthPacket {
                 int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
-                int lordSkills = hasCreation ? 15 : 14;
+                int lordSkills = hasCreation ? 18 : 17;
 
                 // Kiểm tra thi triển Kỹ Năng Tiến Hóa Tối Thượng
-                boolean isCastingEvolved = false;
-                if (hasEvolved) {
-                    if (selectedSkill == 99) {
-                        isCastingEvolved = true;
-                    } else if (isTrueDemonLord && isPrimordial && selectedSkill == lordSkills + 5) {
-                        isCastingEvolved = true;
-                    } else if (isTrueDemonLord && selectedSkill == lordSkills) {
-                        isCastingEvolved = true;
-                    } else if (isPrimordial && selectedSkill == 5) {
-                        isCastingEvolved = true;
-                    } else if (isWearingDivineArmor && selectedSkill == 14) {
-                        isCastingEvolved = true;
-                    }
-                }
-
-                if (isCastingEvolved) {
-                    com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.cast(serverLevel, player);
+                int evolvedSkillToCast = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getSelectedEvolvedSkillId(player);
+                if (evolvedSkillToCast != -1) {
+                    com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.castSkill(serverLevel, player, evolvedSkillToCast);
                     return;
                 }
 
-                // Kỹ năng Long Tinh Bộc Viêm Bá (Chiêu 6 - index 5): Không cần hồi năng lượng / ma lực
-                if (selectedSkill != 5) {
+                boolean isZoneTrack = (hasCreation && selectedSkill == 17) || (!hasCreation && selectedSkill == 16);
+                boolean isMultilayerCast = (hasCreation && selectedSkill == 16) || (!hasCreation && selectedSkill == 15);
+                boolean isAntiMagicCast = (hasCreation && selectedSkill == 15) || (!hasCreation && selectedSkill == 14);
+
+                // Kỹ năng Long Tinh Bộc Viêm Bá (5) và Granit Xuyên Phá Zone Track: KHÔNG CẦN HỒI NĂNG LƯỢNG / MA LỰC (ZERO COOLDOWN)!
+                if (selectedSkill != 5 && !isZoneTrack) {
                     // Kiểm tra hồi chiêu kỹ năng (1.5 giây)
                     if (player.getCooldowns().isOnCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get())) {
                         return;
@@ -98,7 +88,13 @@ public class ServerboundCastBeelzebuthPacket {
                     return;
                 }
 
-                if (hasCreation && selectedSkill == 14) {
+                if (isZoneTrack) {
+                    com.minhphuc.weapons.content.tensura.ZoneTrackAbility.cast(serverLevel, player);
+                } else if (isMultilayerCast) {
+                    com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(serverLevel, player);
+                } else if (isAntiMagicCast) {
+                    com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.castPlayerBarrier(serverLevel, player);
+                } else if (hasCreation && selectedSkill == 14) {
                     // Chiêu 15: Sáng Tạo Vật Chất - Mở Giao Diện Ngưng Tụ Thần Khí
                     ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
                 } else if (selectedSkill == 13) {

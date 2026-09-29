@@ -39,7 +39,29 @@ public class TensuraEvents {
         InteractionEvent.RIGHT_CLICK_BLOCK.register(TensuraEvents::onRightClickBlock);
         InteractionEvent.LEFT_CLICK_BLOCK.register((player, hand, pos, face) -> {
             if (player instanceof ServerPlayer sp) {
+                if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.dispelByPunch(sp, pos)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.dispelByPunch(sp, pos)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
                 if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.divine.PurificationPillarAbility.dispelByPunch(sp, pos)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.divine.PurificationPillarAbility.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.tensura.DomainBarrierBlock.isAnyDomainBarrier(sp.level().getBlockState(pos).getBlock())) {
+                    com.minhphuc.weapons.content.tensura.DomainBarrierBlock.shatterDomain(sp, (ServerLevel) sp.level(), pos);
                     return EventResult.interruptTrue();
                 }
             }
@@ -47,6 +69,7 @@ public class TensuraEvents {
         });
         InteractionEvent.INTERACT_ENTITY.register(TensuraEvents::onInteractEntity);
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(TensuraEvents::onPlayerJoin);
+        dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(player -> DEMON_GREETING_TIMESTAMPS.remove(player.getUUID()));
         dev.architectury.event.events.common.TickEvent.PLAYER_POST.register(TensuraEvents::onPlayerTick);
         dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
             JaunePlayerSkillManager.tick(level);
@@ -61,6 +84,8 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.evolution.RegaliaDominionAbility.tickDominatedEntities(level);
             com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.tickPrisons(level);
             com.minhphuc.weapons.content.evolution.VillageHealingCircleManager.tick(level);
+            com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.tickBarriers(level);
+            com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.tick(level);
         });
     }
 
@@ -244,6 +269,8 @@ public class TensuraEvents {
             dropStone(level, victim, ModItems.MIND_STONE.get(), "§e[Đá Tâm Trí] vừa rơi ra từ pháp sư Evoker!");
         } else if (victim instanceof net.minecraft.world.entity.monster.piglin.PiglinBrute && level.random.nextFloat() <= 0.25F) {
             dropStone(level, victim, ModItems.REALITY_STONE.get(), "§c[Đá Thực Tại] vừa rơi ra từ chiến binh Piglin Brute!");
+        } else if (victim instanceof net.minecraft.world.entity.animal.IronGolem golem) {
+            com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.onIronGolemDeath(level, golem);
         }
     }
 
@@ -399,6 +426,11 @@ public class TensuraEvents {
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
         if (victim == null || victim.level().isClientSide()) return EventResult.pass();
+
+        // Chặn hoàn toàn nếu đòn đánh trúng Đa Trùng Kết Giới (Multilayer Barrier)
+        if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.isDamageBlockedByBarrier(victim, source)) {
+            return EventResult.interruptFalse();
+        }
 
         // 1. Phù thủy, Dân làng, Kẻ cướp (Raider) hy sinh triệu hồi ác ma khi máu còn dưới 20%
         if (victim instanceof net.minecraft.world.entity.monster.Witch ||

@@ -1,0 +1,7 @@
+{
+  "parent": "minecraft:block/cube_all",
+  "textures": {
+    "all": "weapons:block/multilayer_barrier"
+  },
+  "render_type": "translucent"
+}

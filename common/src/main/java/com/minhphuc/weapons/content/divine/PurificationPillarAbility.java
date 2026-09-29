@@ -7,6 +7,8 @@ import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.world.level.block.Blocks;
+import java.util.Collections;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -69,16 +71,15 @@ public class PurificationPillarAbility {
         public final ServerLevel level;
         public final ServerPlayer caster;
         public final Vec3 center;
+        public final BlockPos lightPos;
         public Display.ItemDisplay pillarDisplay;
-        public int ticksRemaining;
-        public final int totalTicks;
+        public int ticksAlive = 0;
 
-        public ActivePurification(ServerLevel level, ServerPlayer caster, Vec3 center, int durationTicks) {
+        public ActivePurification(ServerLevel level, ServerPlayer caster, Vec3 center, BlockPos lightPos) {
             this.level = level;
             this.caster = caster;
             this.center = center;
-            this.ticksRemaining = durationTicks;
-            this.totalTicks = durationTicks;
+            this.lightPos = lightPos;
         }
 
         public void cleanupDisplays() {
@@ -86,10 +87,13 @@ public class PurificationPillarAbility {
                 pillarDisplay.discard();
                 pillarDisplay = null;
             }
+            if (lightPos != null && level.getBlockState(lightPos).is(Blocks.LIGHT)) {
+                level.setBlock(lightPos, Blocks.AIR.defaultBlockState(), 3);
+            }
         }
     }
 
-    private static final List<ActivePurification> ACTIVE_PURIFICATIONS = new ArrayList<>();
+    private static final List<ActivePurification> ACTIVE_PURIFICATIONS = Collections.synchronizedList(new ArrayList<>());
 
     public static void cast(ServerLevel level, ServerPlayer player, ItemStack sword) {
         Vec3 eyePos = player.getEyePosition(1.0F);
@@ -125,8 +129,17 @@ public class PurificationPillarAbility {
             }
         }
 
-        // Tạo cột sáng thánh tẩy xanh ngọc bích cứu rỗi
-        ActivePurification ap = new ActivePurification(level, player, targetCenter, 100); // 5 giây duy trì
+        // Đặt khối ánh sáng phát quang vô hình Light Level 15 để chiếu sáng rực rỡ trong đêm
+        BlockPos lightPos = BlockPos.containing(targetCenter);
+        if (level.getBlockState(lightPos).isAir()) {
+            level.setBlock(lightPos, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15), 3);
+        } else if (level.getBlockState(lightPos.above()).isAir()) {
+            lightPos = lightPos.above();
+            level.setBlock(lightPos, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15), 3);
+        }
+
+        // Tạo cột sáng Phép Màu Của Thần Linh vĩnh viễn (cho phép người chơi tạo không giới hạn số lượng cột)
+        ActivePurification ap = new ActivePurification(level, player, targetCenter, lightPos);
         ap.pillarDisplay = createPillarDisplay(level, targetCenter, 5.0F, 50.0F, 5.0F, 0x55FFAA);
 
         ACTIVE_PURIFICATIONS.add(ap);
@@ -143,7 +156,7 @@ public class PurificationPillarAbility {
                 SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 2.5F, 1.5F);
 
         player.displayClientMessage(
-                Component.literal("§a§l[ĐẠI THÁNH TẨY] §fĐã triệu hồi Thánh Trụ Cứu Rỗi! Thanh tẩy tà niệm & Hồi sinh sinh linh! ✨🕊️"),
+                Component.literal("§e§l[PHÉP MÀU CỦA THẦN LINH] §fĐã triệu hồi Thánh Trụ Cứu Rỗi vĩnh viễn! Phát sáng rực rỡ và hồi sinh vạn vật! ✨🕊️"),
                 true
         );
 
@@ -157,16 +170,18 @@ public class PurificationPillarAbility {
                             EvolvedSkillHelper.getEvolvedSkillTier(player)
                     ), player);
 
-            player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§a§l【 ĐẠI THÁNH TẨY CỨU RỖI 】")));
-            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e✦ Toàn bộ kỹ năng đã mất đã được hồi phục nguyên vẹn! ✦")));
+            player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§e§l【 PHÉP MÀU CỦA THẦN LINH 】")));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a✦ Toàn bộ kỹ năng đã mất đã được thần linh phục hồi! ✦")));
 
             player.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
-            player.sendSystemMessage(Component.literal("§e✨ ĐẠI THÁNH TẨY: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
-            player.sendSystemMessage(Component.literal("§7(Giờ đây bạn có thể mở Sách Kết Hợp Kỹ Năng để tiếp tục sử dụng hoặc dung hợp)"));
+            player.sendSystemMessage(Component.literal("§e✨ PHÉP MÀU CỦA THẦN LINH: §aCột Sáng Thánh Tích đã được ban xuống! Toàn bộ kỹ năng nguyên liệu được phục hồi nguyên vẹn."));
+            player.sendSystemMessage(Component.literal("§7(Cột sáng sẽ chiếu sáng và tồn tại vĩnh viễn cho đến khi bạn đấm vào nó để hóa giải)"));
             player.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
         }
 
-        player.getCooldowns().addCooldown(sword.getItem(), 160); // 8 giây cooldown
+        if (!sword.isEmpty()) {
+            player.getCooldowns().addCooldown(sword.getItem(), 160); // 8 giây cooldown nếu cầm kiếm
+        }
     }
 
     private static Vec3 findGroundBelow(ServerLevel level, Vec3 pos) {
@@ -201,8 +216,8 @@ public class PurificationPillarAbility {
             ActivePurification p = it.next();
             if (p.level != serverLevel) continue;
 
-            p.ticksRemaining--;
-            int elapsed = p.totalTicks - p.ticksRemaining;
+            p.ticksAlive++;
+            int elapsed = p.ticksAlive;
             double groundY = p.center.y;
 
             // Hạt thánh quang ngọc bích rơi từ trời xuống đất
@@ -349,6 +364,16 @@ public class PurificationPillarAbility {
                     e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 1, false, false, true));
                     e.addEffect(new MobEffectInstance(MobEffects.SATURATION, 40, 1, false, false, true));
 
+                    // Trị thương và hồi phục toàn diện cho Người Sắt (Iron Golem)
+                    if (e instanceof net.minecraft.world.entity.animal.IronGolem golem) {
+                        golem.heal(30.0F); // Hồi 15 tim, tự động xóa mờ các vết nứt trên cơ thể Iron Golem
+                        golem.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 3, false, false, true));
+                        golem.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 2, false, false, true));
+                        golem.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 160, 2, false, false, true));
+                        p.level.sendParticles(ParticleTypes.HEART, golem.getX(), golem.getY() + 2.5D, golem.getZ(), 4, 0.3D, 0.2D, 0.3D, 0.05D);
+                        p.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, golem.getX(), golem.getY() + 1.5D, golem.getZ(), 8, 0.4D, 0.4D, 0.4D, 0.05D);
+                    }
+
                     p.level.sendParticles(ParticleTypes.HEART, e.getX(), e.getY() + e.getBbHeight() + 0.3D, e.getZ(), 1, 0.2D, 0.1D, 0.2D, 0.02D);
 
                     // =============================================================
@@ -376,26 +401,16 @@ public class PurificationPillarAbility {
                             p.level.sendParticles(ParticleTypes.GLOW, sp.getX(), sp.getY() + 1.0, sp.getZ(), 50, 0.5, 0.8, 0.5, 0.05);
                             p.level.sendParticles(ParticleTypes.END_ROD, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 0.5, 0.8, 0.5, 0.05);
 
-                            sp.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§a§l【 ĐẠI THÁNH TẨY CỨU RỖI 】")));
-                            sp.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e✦ Toàn bộ kỹ năng đã mất đã được hồi phục nguyên vẹn! ✦")));
+                            sp.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§e§l【 PHÉP MÀU CỦA THẦN LINH 】")));
+                            sp.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a✦ Toàn bộ kỹ năng đã mất đã được thần linh phục hồi! ✦")));
 
                             sp.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
-                            sp.sendSystemMessage(Component.literal("§e✨ ĐẠI THÁNH TẨY: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
-                            sp.sendSystemMessage(Component.literal("§7(Giờ đây bạn có thể mở Sách Kết Hợp Kỹ Năng để tiếp tục sử dụng hoặc dung hợp)"));
+                            sp.sendSystemMessage(Component.literal("§e✨ PHÉP MÀU CỦA THẦN LINH: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
+                            sp.sendSystemMessage(Component.literal("§7(Cột sáng sẽ chiếu sáng và tồn tại vĩnh viễn cho đến khi bạn đấm vào nó để hóa giải)"));
+                            sp.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
                         }
                     }
                 }
-            }
-
-            // =========================================================================
-            // GIAI ĐOẠN KẾT THÚC (Tick >= 100)
-            // =========================================================================
-            if (elapsed >= 100) {
-                p.level.sendParticles(ParticleTypes.POOF, p.center.x, groundY + 1.0D, p.center.z, 10, 1.2D, 0.4D, 1.2D, 0.04D);
-                p.level.playSound(null, p.center.x, groundY + 1.0D, p.center.z,
-                        SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 2.0F, 1.8F);
-                p.cleanupDisplays();
-                it.remove();
             }
         }
     }
@@ -425,7 +440,7 @@ public class PurificationPillarAbility {
             displayAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
             display.setGlowingTag(true);
             displayAcc.weapons$setGlowColorOverride(glowColor);
-            displayAcc.weapons$setViewRange(10.0F);
+            displayAcc.weapons$setViewRange(14.0F);
 
             displayAcc.weapons$setTransformation(new Transformation(
                     new Vector3f(0.0F, scaleY / 2.0F, 0.0F),
@@ -437,6 +452,50 @@ public class PurificationPillarAbility {
             level.addFreshEntity(display);
         }
         return display;
+    }
+
+    /**
+     * Người chơi tung cú đấm vào Cột Sáng Thánh Tích để hóa giải
+     */
+    public static boolean dispelByPunch(ServerPlayer player, BlockPos pos) {
+        ActivePurification found = null;
+        synchronized (ACTIVE_PURIFICATIONS) {
+            for (ActivePurification p : ACTIVE_PURIFICATIONS) {
+                if (p.level == player.level()) {
+                    double dx = pos.getX() + 0.5D - p.center.x;
+                    double dz = pos.getZ() + 0.5D - p.center.z;
+                    double dy = pos.getY() + 0.5D - p.center.y;
+                    if (dx * dx + dz * dz <= 5.5D * 5.5D && dy >= -3.0D && dy <= 55.0D) {
+                        found = p;
+                        break;
+                    }
+                }
+            }
+            if (found != null) {
+                found.cleanupDisplays();
+                ACTIVE_PURIFICATIONS.remove(found);
+            }
+        }
+        if (found != null) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 2.5F, 1.4F);
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 2.0F, 1.5F);
+            if (player.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.POOF, found.center.x, found.center.y + 1.0D, found.center.z, 20, 1.5D, 0.5D, 1.5D, 0.05D);
+            }
+            player.displayClientMessage(
+                    Component.literal("§e§l[PHÉP MÀU CỦA THẦN LINH] §aBạn đã hóa giải Cột Sáng Thánh Tích!"),
+                    true
+            );
+            return true;
+        }
+        return false;
+    }
+
+    public static boolean checkEmptyHandPunch(ServerPlayer player) {
+        if (!player.getMainHandItem().isEmpty()) return false;
+        return dispelByPunch(player, player.blockPosition());
     }
 
 

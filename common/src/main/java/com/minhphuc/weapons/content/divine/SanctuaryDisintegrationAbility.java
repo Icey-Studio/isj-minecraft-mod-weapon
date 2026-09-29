@@ -487,7 +487,7 @@ public class SanctuaryDisintegrationAbility {
                 if (s.cageSpawned) {
                     for (int i = 0; i < 12; i++) {
                         updateCagePillarHeight(s.cagePillars[i], 4.15F);
-                        if (elapsed % 2 == 0 && s.cagePillars[i] != null) {
+                        if (elapsed % 4 == 0 && s.cagePillars[i] != null) {
                             double theta = i * (2.0 * Math.PI / 12.0);
                             double px = s.center.x + Math.cos(theta) * 4.2D;
                             double pz = s.center.z + Math.sin(theta) * 4.2D;
@@ -496,13 +496,15 @@ public class SanctuaryDisintegrationAbility {
                     }
                 }
 
-                // Triệt tiêu mọi đạn đạo bay vào cột sáng (Vùng Linh Tử Băng Hoại xóa sổ đạn đạo)
-                AABB beamBox = new AABB(s.center.x - 6.0D, groundY - 1.0D, s.center.z - 6.0D,
-                        s.center.x + 6.0D, groundY + 70.0D, s.center.z + 6.0D);
-                List<Projectile> projectiles = s.level.getEntitiesOfClass(Projectile.class, beamBox);
-                for (Projectile p : projectiles) {
-                    s.level.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY(), p.getZ(), 1, 0, 0, 0, 0);
-                    p.discard();
+                // Triệt tiêu mọi đạn đạo bay vào cột sáng (quét mỗi 3 ticks thay vì mỗi tick)
+                if (elapsed % 3 == 0) {
+                    AABB beamBox = new AABB(s.center.x - 6.0D, groundY - 1.0D, s.center.z - 6.0D,
+                            s.center.x + 6.0D, groundY + 70.0D, s.center.z + 6.0D);
+                    List<Projectile> projectiles = s.level.getEntitiesOfClass(Projectile.class, beamBox);
+                    for (Projectile p : projectiles) {
+                        s.level.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY(), p.getZ(), 1, 0, 0, 0, 0);
+                        p.discard();
+                    }
                 }
 
                 // Sát thương Linh Tử Băng Hoại (Thực hiện đúng 1 lần tại tick 45 khi cột giáng thế)
@@ -898,22 +900,27 @@ public class SanctuaryDisintegrationAbility {
                 s.center.x + radius, s.center.y + 9.5D, s.center.z + radius
         );
 
-        List<LivingEntity> inArea = s.level.getEntitiesOfClass(LivingEntity.class, box, e -> e != s.caster && e.isAlive());
-        for (LivingEntity e : inArea) {
-            double distSq = e.position().distanceToSqr(s.center);
-            if (distSq <= radius * radius) {
-                s.trappedVictimUuids.add(e.getUUID());
+        // Throttling: Quét entity mới mỗi 5 ticks thay vì mỗi tick
+        if (s.ticksRemaining % 5 == 0) {
+            List<LivingEntity> inArea = s.level.getEntitiesOfClass(LivingEntity.class, box, e -> e != s.caster && e.isAlive());
+            for (LivingEntity e : inArea) {
+                double distSq = e.position().distanceToSqr(s.center);
+                if (distSq <= radius * radius) {
+                    s.trappedVictimUuids.add(e.getUUID());
+                }
             }
         }
 
         if (s.trappedVictimUuids.isEmpty()) return;
 
         Vec3 lockCenter = new Vec3(s.center.x, s.center.y + 1.8D, s.center.z);
+        boolean shouldRefreshEffects = (s.ticksRemaining % 15 == 0);
         Iterator<UUID> uuidIt = s.trappedVictimUuids.iterator();
         while (uuidIt.hasNext()) {
             UUID uuid = uuidIt.next();
             Entity entity = s.level.getEntity(uuid);
             if (!(entity instanceof LivingEntity victim) || !victim.isAlive() || victim.isRemoved()) {
+                uuidIt.remove();
                 continue;
             }
 
@@ -925,7 +932,9 @@ public class SanctuaryDisintegrationAbility {
 
             // Nếu xuất lực thấp (hụt lực), chỉ làm chậm nhẹ chứ không giam giữ đơ cứng hoàn toàn
             if (s.powerRoll.isLow()) {
-                victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 2, false, false, true));
+                if (shouldRefreshEffects) {
+                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, false, true));
+                }
                 Vec3 pullVec = lockCenter.subtract(victimPos);
                 if (pullVec.length() > 0.5D) {
                     victim.setDeltaMovement(pullVec.normalize().scale(0.12D));
@@ -952,17 +961,19 @@ public class SanctuaryDisintegrationAbility {
             victim.hasImpulse = true;
             victim.fallDistance = 0.0F;
 
-            // Áp dụng các hiệu ứng phong ấn toàn diện
-            victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 255, false, false, true));
-            victim.addEffect(new MobEffectInstance(MobEffects.JUMP, 30, -255, false, false, true));
-            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 30, 255, false, false, true));
-            victim.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 30, 255, false, false, true));
-            victim.addEffect(new MobEffectInstance(MobEffects.GLOWING, 30, 0, false, false, true));
+            // Áp dụng các hiệu ứng phong ấn (làm mới mỗi 15 ticks thay vì mỗi tick để triệt tiêu spam packet)
+            if (shouldRefreshEffects) {
+                victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 255, false, false, true));
+                victim.addEffect(new MobEffectInstance(MobEffects.JUMP, 40, -255, false, false, true));
+                victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 40, 255, false, false, true));
+                victim.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 40, 255, false, false, true));
+                victim.addEffect(new MobEffectInstance(MobEffects.GLOWING, 40, 0, false, false, true));
 
-            if (victim instanceof ServerPlayer playerVictim) {
-                playerVictim.getCooldowns().addCooldown(Items.ENDER_PEARL, 40);
-                playerVictim.getCooldowns().addCooldown(Items.CHORUS_FRUIT, 40);
-                playerVictim.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 30, 0, false, false, false));
+                if (victim instanceof ServerPlayer playerVictim) {
+                    playerVictim.getCooldowns().addCooldown(Items.ENDER_PEARL, 40);
+                    playerVictim.getCooldowns().addCooldown(Items.CHORUS_FRUIT, 40);
+                    playerVictim.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 40, 0, false, false, false));
+                }
             }
         }
     }
