@@ -119,7 +119,7 @@ public class MoonlightSwordItem extends Item {
                 BeelzebuthAbility.executeBeelzebuth(serverLevel, serverPlayer);
                 player.getCooldowns().addCooldown(this, 30);
             } else if (skill == 5) {
-                // Chiêu 6: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Chân Ma Vương + Giáp Thần Linh)
+                // Chiêu 6: Long Tinh Bộc Viêm Bá: Dragon Nova (Yêu cầu Giáp Thần Thoại, không cần hồi năng lượng)
                 com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(serverLevel, serverPlayer);
             } else if (skill == 6) {
                 // Chiêu 7: Phẫn Nộ Vương - Tuyệt Diệt Tinh Tú (Extinction Stars - Thái Tuế Tinh Quân)
