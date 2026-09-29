@@ -40,11 +40,42 @@ public class TensuraDialogueManager {
     }
 
     // ==========================================
-    // 3. PRIMORDIAL DEMONS DIALOGUES
+    // 3. MA VƯƠNG MILIM NAVA DIALOGUES
+    // ==========================================
+    public static void sayMilim(Entity milim, String dialogueKey, Object... args) {
+        if (milim.level().isClientSide()) return;
+        Component message = Component.literal("§d§l[MILIM NAVA] §f").append(Component.translatable(dialogueKey, args));
+        broadcastToArea((ServerLevel) milim.level(), milim.getX(), milim.getY(), milim.getZ(), 48.0D, message);
+    }
+
+    public static void sayMilimGreeting(Entity milim, ServerPlayer player, String dialogueKey, Object... args) {
+        if (milim.level().isClientSide()) return;
+        Component message = Component.literal("§d§l[MILIM NAVA] §f").append(Component.translatable(dialogueKey, args));
+        player.displayClientMessage(message, false);
+        player.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 1.0F, 1.3F);
+    }
+
+    // ==========================================
+    // 4. PRIMORDIAL DEMONS DIALOGUES & GREETINGS
     // ==========================================
     public static void sayDemon(Entity demon, DemonType type, String dialogueKey, Object... args) {
         if (demon.level().isClientSide()) return;
-        String prefixColor = switch (type) {
+        String prefixColor = getDemonPrefix(type);
+        Component message = Component.literal(prefixColor).append(Component.translatable(dialogueKey, args));
+        broadcastToArea((ServerLevel) demon.level(), demon.getX(), demon.getY(), demon.getZ(), 36.0D, message);
+    }
+
+    public static void sayDemonGreeting(Entity demon, DemonType speakerType, ServerPlayer player, String greetingKey, Object... args) {
+        if (demon.level().isClientSide()) return;
+        String prefixColor = getDemonPrefix(speakerType);
+        Component message = Component.literal(prefixColor).append(Component.translatable(greetingKey, args));
+        player.displayClientMessage(message, false);
+        player.playNotifySound(SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.NEUTRAL, 1.0F, 1.1F);
+    }
+
+    public static String getDemonPrefix(DemonType type) {
+        if (type == null) return "§8§l[ÁC MA] §f";
+        return switch (type) {
             case ROUGE -> "§c§l[GUY CRIMSON] §f";
             case NOIR -> "§8§l[DIABLO] §f";
             case BLANC -> "§f§l[TESTAROSSA] §f";
@@ -53,8 +84,6 @@ public class TensuraDialogueManager {
             case BLEU -> "§9§l[RAIN] §f";
             case VERT -> "§a§l[MISERY] §f";
         };
-        Component message = Component.literal(prefixColor).append(Component.translatable(dialogueKey, args));
-        broadcastToArea((ServerLevel) demon.level(), demon.getX(), demon.getY(), demon.getZ(), 36.0D, message);
     }
 
     private static void broadcastToArea(ServerLevel level, double x, double y, double z, double radius, Component message) {

@@ -96,6 +96,21 @@ public class ModMessages {
                 ServerboundSelectPrimordialRebirthPacket::encode,
                 ServerboundSelectPrimordialRebirthPacket::new,
                 ServerboundSelectPrimordialRebirthPacket::handle);
+
+        CHANNEL.register(ServerboundEvolveSkillPacket.class,
+                ServerboundEvolveSkillPacket::encode,
+                ServerboundEvolveSkillPacket::new,
+                ServerboundEvolveSkillPacket::handle);
+
+        CHANNEL.register(ClientboundSyncEvolutionPacket.class,
+                ClientboundSyncEvolutionPacket::encode,
+                ClientboundSyncEvolutionPacket::new,
+                ClientboundSyncEvolutionPacket::handle);
+
+        CHANNEL.register(ClientboundOpenSkillEvolutionScreenPacket.class,
+                ClientboundOpenSkillEvolutionScreenPacket::encode,
+                ClientboundOpenSkillEvolutionScreenPacket::new,
+                ClientboundOpenSkillEvolutionScreenPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

@@ -19,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
@@ -30,8 +31,13 @@ import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.item.Item;
+import com.minhphuc.weapons.content.tensura.DeathStreakAbility;
+import com.minhphuc.weapons.content.tensura.PentagramCelestialPillarAbility;
+import com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
@@ -283,6 +289,14 @@ public class TaisuiExtinctionStarsAbility {
                                     SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 2.0F, 1.8F);
                         }
                     }
+
+                    // Hào quang hộ thể phá vỡ các vòng ma thuật lơ lửng nếu người chơi áp sát trong phạm vi 3.5m
+                    AABB circleAuraBox = caster.getBoundingBox().inflate(3.5D);
+                    List<Entity> nearbyCircles = level.getEntities((Entity) null, circleAuraBox,
+                            e -> e.isAlive() && e != caster && e != state.eyePlanetDisplay && isMagicCircleEntity(e));
+                    for (Entity circle : nearbyCircles) {
+                        shatterMagicCircle(level, circle, caster);
+                    }
                 }
 
                 // Hết thời gian 3 phút
@@ -342,10 +356,13 @@ public class TaisuiExtinctionStarsAbility {
     /**
      * Thi triển chùm tia Tinh Tú xuyên thấu địa hình và hủy diệt mục tiêu
      */
+    /**
+     * Thi triển chùm tia Tinh Tú xuyên thấu địa hình và hủy diệt mục tiêu & bắn phá vòng ma thuật lơ lửng
+     */
     public static void fireStarBeam(ServerLevel level, ServerPlayer player) {
         Vec3 eyePos = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        double maxDist = 45.0D;
+        double maxDist = 90.0D;
         Vec3 targetEnd = eyePos.add(look.scale(maxDist));
 
         // Raycast kiểm tra va chạm block
@@ -385,11 +402,185 @@ public class TaisuiExtinctionStarsAbility {
             level.sendParticles(ParticleTypes.FLASH, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 2, 0, 0, 0, 0);
         }
 
-        // 4. Âm thanh phóng đạn tinh tú
+        // 4. BẮN PHÁ TOÀN BỘ VÒNG MA THUẬT LƠ LỬNG TRÊN ĐƯỜNG ĐẠN VÀ KHU VỰC TRÚNG
+        destroyMagicCirclesOnPath(level, player, eyePos, targetEnd);
+
+        // 5. Âm thanh phóng đạn tinh tú
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.FIREWORK_ROCKET_BLAST, SoundSource.PLAYERS, 3.5F, 1.8F);
         level.playSound(null, hitPos.x, hitPos.y, hitPos.z,
                 SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 2.5F, 1.9F);
+    }
+
+    /**
+     * Kiểm tra thực thể có phải là một vòng ma thuật lơ lửng hay không
+     */
+    public static boolean isMagicCircleEntity(Entity entity) {
+        if (entity == null || !entity.isAlive()) return false;
+
+        // 1. Kiểm tra nếu là Display.ItemDisplay
+        if (entity instanceof Display.ItemDisplay itemDisplay) {
+            // Kiểm tra thẻ tag
+            for (String tag : itemDisplay.getTags()) {
+                String lower = tag.toLowerCase();
+                if (lower.contains("circle") || lower.contains("demon") ||
+                    lower.contains("streak") || lower.contains("disintegration") ||
+                    lower.contains("pillar") || lower.contains("array") ||
+                    lower.contains("halo") || lower.contains("magic")) {
+                    return true;
+                }
+            }
+
+            ItemStack stack = ((ItemDisplayAccessor) itemDisplay).weapons$getItemStack();
+            if (!stack.isEmpty()) {
+                Item item = stack.getItem();
+                if (item == ModItems.MAGIC_CIRCLE_NOIR.get() ||
+                    item == ModItems.MAGIC_CIRCLE_ROUGE.get() ||
+                    item == ModItems.MAGIC_CIRCLE_BLANC.get() ||
+                    item == ModItems.MAGIC_CIRCLE_JAUNE.get() ||
+                    item == ModItems.MAGIC_CIRCLE_JAUNE_DESTRUCTION.get() ||
+                    item == ModItems.MAGIC_CIRCLE_JAUNE_NUCLEAR.get() ||
+                    item == ModItems.MAGIC_CIRCLE_VIOLET.get() ||
+                    item == ModItems.MAGIC_CIRCLE_BLEU.get() ||
+                    item == ModItems.MAGIC_CIRCLE_VERT.get() ||
+                    item == ModItems.DEMON_SUMMONING_CIRCLE.get() ||
+                    item == ModItems.DISINTEGRATION_MAGIC_CIRCLE.get() ||
+                    item == ModItems.BEELZEBUTH_MAGIC_CIRCLE.get() ||
+                    item == ModItems.DISINTEGRATION_VERTICAL_CREST.get() ||
+                    item == ModItems.DISINTEGRATION_LIGHT_BEAM.get() ||
+                    item == ModItems.DISINTEGRATION_SHOCKWAVE.get() ||
+                    item == ModItems.JACOB_LIGHT_PILLAR.get() ||
+                    item == ModItems.LIUREN_MAGIC_ARRAY.get() ||
+                    item == ModItems.BEELZEBUTH_DRAGON_MAW.get() ||
+                    item == ModItems.ALKAID_SPHERE.get() ||
+                    item == ModItems.ALKAID_VORTEX.get()) {
+                    return true;
+                }
+                String path = BuiltInRegistries.ITEM.getKey(item).getPath().toLowerCase();
+                if (path.contains("circle") || path.contains("magic") ||
+                    path.contains("pillar") || path.contains("array") ||
+                    path.contains("crest") || path.contains("halo") ||
+                    path.contains("disintegration") || path.contains("beam") ||
+                    path.contains("streak")) {
+                    return true;
+                }
+            }
+
+            if (ResidualMagicCircleManager.isResidualMagicCircle(itemDisplay)) {
+                return true;
+            }
+        }
+
+        // 2. Kiểm tra nếu là bất kỳ Display nào mang nhãn ma thuật
+        if (entity instanceof Display display) {
+            for (String tag : display.getTags()) {
+                String lower = tag.toLowerCase();
+                if (lower.contains("circle") || lower.contains("magic") || lower.contains("demon") ||
+                    lower.contains("disintegration") || lower.contains("streak") || lower.contains("pillar")) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Bắn nổ tung và vỡ vụn vòng ma thuật
+     */
+    public static void shatterMagicCircle(ServerLevel level, Entity circle, ServerPlayer player) {
+        if (circle == null || !circle.isAlive()) return;
+
+        Vec3 pos = circle.position();
+
+        // 1. Hiệu ứng hạt nổ tung vỡ nát ma pháp trận cực kỳ hoành tráng
+        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y, pos.z, 2, 0.2D, 0.2D, 0.2D, 0.0D);
+        level.sendParticles(ParticleTypes.SONIC_BOOM, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
+        level.sendParticles(ParticleTypes.FLASH, pos.x, pos.y, pos.z, 2, 0, 0, 0, 0);
+        level.sendParticles(ParticleTypes.END_ROD, pos.x, pos.y, pos.z, 45, 1.5D, 1.5D, 1.5D, 0.25D);
+        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.x, pos.y, pos.z, 35, 1.2D, 1.2D, 1.2D, 0.15D);
+        level.sendParticles(STARLIGHT_WHITE_DUST, pos.x, pos.y, pos.z, 60, 2.0D, 2.0D, 2.0D, 0.2D);
+        level.sendParticles(ParticleTypes.FIREWORK, pos.x, pos.y, pos.z, 30, 1.0D, 1.0D, 1.0D, 0.2D);
+
+        // 2. Âm thanh kính vỡ ma thuật và bộc nổ rền vang
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 3.5F, 0.6F);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GENERIC_EXPLODE, SoundSource.PLAYERS, 3.0F, 1.4F);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_BREAK, SoundSource.PLAYERS, 3.0F, 0.5F);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 2.5F, 1.8F);
+
+        // 3. Huỷ thực thể trong các trình quản lý kỹ năng
+        if (circle instanceof Display.ItemDisplay itemDisplay) {
+            ResidualMagicCircleManager.removeCircle(itemDisplay);
+            DeathStreakAbility.destroyCircleIfMatches(itemDisplay);
+            PentagramCelestialPillarAbility.destroyCircleIfMatches(itemDisplay);
+        }
+
+        // 4. Xóa sổ entity khỏi thế giới
+        circle.discard();
+    }
+
+    /**
+     * Quét và bắn phá các vòng ma thuật trên đường bay của chùm tia Tinh Tú
+     */
+    public static int destroyMagicCirclesOnPath(ServerLevel level, ServerPlayer player, Vec3 eyePos, Vec3 targetEnd) {
+        // Phá hủy Ma Pháp Trận Chữa Lành của Làng nếu tia Tuyệt Diệt Tinh Tú bắn trúng
+        com.minhphuc.weapons.content.evolution.VillageHealingCircleManager.destroyCirclesOnPath(level, player, eyePos, targetEnd);
+
+        AABB searchBox = new AABB(eyePos, targetEnd).inflate(16.0D);
+        List<Entity> entities = level.getEntities((Entity) null, searchBox, e -> e.isAlive() && e != player);
+
+        Vec3 ab = targetEnd.subtract(eyePos);
+        double abLenSq = ab.lengthSqr();
+        if (abLenSq < 1.0E-4) return 0;
+
+        List<Entity> directHits = new ArrayList<>();
+        ActiveTaisuiState casterState = ACTIVE_TAISUI.get(player.getUUID());
+
+        for (Entity e : entities) {
+            if (casterState != null && e == casterState.eyePlanetDisplay) continue;
+
+            if (isMagicCircleEntity(e)) {
+                Vec3 p = e.position();
+                Vec3 ap = p.subtract(eyePos);
+                double t = ap.dot(ab) / abLenSq;
+                t = Math.max(0.0, Math.min(1.0, t));
+                Vec3 closestPoint = eyePos.add(ab.scale(t));
+                double dist = closestPoint.distanceTo(p);
+
+                // Nếu tia đạn bắn qua trong cự ly 8.5m quanh tâm vòng ma thuật
+                if (dist <= 8.5D) {
+                    directHits.add(e);
+                }
+            }
+        }
+
+        if (directHits.isEmpty()) return 0;
+
+        // Kích hoạt phản ứng nổ liên hoàn: Vòng bị bắn vỡ sẽ phát nổ lan sang các vòng ma thuật lân cận trong bán kính 12m
+        Set<Entity> allCirclesToDestroy = new HashSet<>(directHits);
+        for (Entity c : directHits) {
+            AABB chainBox = c.getBoundingBox().inflate(12.0D);
+            List<Entity> neighbors = level.getEntities((Entity) null, chainBox,
+                    ne -> ne.isAlive() && ne != player && (casterState == null || ne != casterState.eyePlanetDisplay));
+            for (Entity ne : neighbors) {
+                if (isMagicCircleEntity(ne)) {
+                    allCirclesToDestroy.add(ne);
+                }
+            }
+        }
+
+        int count = 0;
+        for (Entity circle : allCirclesToDestroy) {
+            shatterMagicCircle(level, circle, player);
+            count++;
+        }
+
+        player.displayClientMessage(
+            Component.literal("§e§l✦ Tuyệt Diệt Tinh Tú đã bắn tan nát " + count + " Ma Pháp Trận!"),
+            true
+        );
+
+        return count;
     }
 
     /**

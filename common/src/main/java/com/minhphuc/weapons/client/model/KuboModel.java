@@ -126,20 +126,25 @@ public class KuboModel extends EntityModel<KuboEntity> {
         this.eyePupil.x = glanceX;
         this.eyePupil.y = glanceY;
 
+        // Tốc độ uốn lượn và xoay xúc tu tăng mạnh theo dạng thể
+        boolean isUltimateOrComplete = entity.isUltimateOrComplete();
+        float speedMult = isUltimateOrComplete ? 1.75F : 1.0F;
+        float ampMult = isUltimateOrComplete ? 1.35F : 1.0F;
+
         // Các vật thể xung quanh uốn lượn lúc nhúc lúc nhúc (Sinusoidal wave writhing animation)
         for (int i = 0; i < 12; i++) {
             float phase = i * 0.52F;
             ModelPart app = this.appendages[i];
 
             // Dao động uốn éo theo 3 trục tạo chuyển động sống động ghê rợn
-            app.zRot = this.baseZRot[i] + Mth.sin(ageInTicks * 0.14F + phase) * 0.45F;
-            app.xRot = this.baseXRot[i] + Mth.cos(ageInTicks * 0.12F + phase * 1.3F) * 0.40F;
-            app.yRot = this.baseYRot[i] + Mth.sin(ageInTicks * 0.16F + phase * 0.8F) * 0.35F;
+            app.zRot = this.baseZRot[i] + Mth.sin(ageInTicks * 0.14F * speedMult + phase) * (0.45F * ampMult);
+            app.xRot = this.baseXRot[i] + Mth.cos(ageInTicks * 0.12F * speedMult + phase * 1.3F) * (0.40F * ampMult);
+            app.yRot = this.baseYRot[i] + Mth.sin(ageInTicks * 0.16F * speedMult + phase * 0.8F) * (0.35F * ampMult);
 
             // Đốt đuôi xúc tu
             ModelPart tip = app.getChild("tip");
-            tip.zRot = Mth.sin(ageInTicks * 0.20F + phase * 1.5F) * 0.50F;
-            tip.xRot = Mth.cos(ageInTicks * 0.18F + phase * 1.2F) * 0.40F;
+            tip.zRot = Mth.sin(ageInTicks * 0.20F * speedMult + phase * 1.5F) * (0.50F * ampMult);
+            tip.xRot = Mth.cos(ageInTicks * 0.18F * speedMult + phase * 1.2F) * (0.40F * ampMult);
         }
     }
 

@@ -46,6 +46,17 @@ public class ModBlocks {
     public static final RegistrySupplier<Block> DOMAIN_BARRIER_VERT = BLOCKS.register("domain_barrier_vert",
             () -> new Block(createBarrierProperties(MapColor.COLOR_LIGHT_GREEN, 14)));
 
+    public static final RegistrySupplier<Block> DRAGON_PRISON_BARRIER = BLOCKS.register("dragon_prison_barrier",
+            () -> new com.minhphuc.weapons.content.evolution.DragonPrisonBarrierBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_YELLOW)
+                            .strength(-1.0F, 3600000.0F)
+                            .noLootTable()
+                            .lightLevel(state -> 15)
+                            .sound(SoundType.AMETHYST)
+                            .noOcclusion()
+            ));
+
     public static final RegistrySupplier<Block> INCUBATION_CAPSULE = BLOCKS.register("incubation_capsule",
             () -> new com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock(
                     BlockBehaviour.Properties.of()

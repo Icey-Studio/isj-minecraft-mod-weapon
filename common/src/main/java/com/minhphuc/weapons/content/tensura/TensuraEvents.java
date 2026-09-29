@@ -27,7 +27,9 @@ import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import java.util.List;
 
 public class TensuraEvents {
 
@@ -35,16 +37,78 @@ public class TensuraEvents {
         EntityEvent.LIVING_DEATH.register(TensuraEvents::onLivingDeath);
         EntityEvent.LIVING_HURT.register(TensuraEvents::onLivingHurt);
         InteractionEvent.RIGHT_CLICK_BLOCK.register(TensuraEvents::onRightClickBlock);
+        InteractionEvent.LEFT_CLICK_BLOCK.register((player, hand, pos, face) -> {
+            if (player instanceof ServerPlayer sp) {
+                if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
+            }
+            return EventResult.pass();
+        });
         InteractionEvent.INTERACT_ENTITY.register(TensuraEvents::onInteractEntity);
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(TensuraEvents::onPlayerJoin);
+        dev.architectury.event.events.common.TickEvent.PLAYER_POST.register(TensuraEvents::onPlayerTick);
         dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
+            JaunePlayerSkillManager.tick(level);
             CarreraBulletLogic.tickVortices();
             PrimordialSummonRitual.tickRituals(level);
             VelgryndSummonRitual.tickRituals(level);
             IncubationCapsuleManager.tickCapsules(level);
             ResidualMagicCircleManager.tickResidualCircles(level);
             DeathStreakAbility.tickStreaks(level);
+            PentagramCelestialPillarAbility.tickPillars(level);
+            HorizontalHolyBeamAbility.tickBeams(level);
+            com.minhphuc.weapons.content.evolution.RegaliaDominionAbility.tickDominatedEntities(level);
+            com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.tickPrisons(level);
+            com.minhphuc.weapons.content.evolution.VillageHealingCircleManager.tick(level);
         });
+    }
+
+    private static final java.util.Map<java.util.UUID, java.util.Map<java.util.UUID, Long>> DEMON_GREETING_TIMESTAMPS = new java.util.HashMap<>();
+
+    public static void onPlayerTick(Player rawPlayer) {
+        if (rawPlayer.level().isClientSide() || !(rawPlayer instanceof ServerPlayer sp)) return;
+
+        // 1. CƠ CHẾ BAY (FLIGHT) CHO NGƯỜI CHƠI LÀ ÁC MA HOẶC MA VƯƠNG
+        boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(sp) || PrimordialPlayerDataHelper.isDemonLord(sp);
+        if (canFlyTensura) {
+            if (!sp.getAbilities().mayfly) {
+                sp.getAbilities().mayfly = true;
+                sp.onUpdateAbilities();
+            }
+        }
+
+        // 2. TƯƠNG TÁC CHÀO HỎI KHI NGƯỜI CHƠI BIẾN THÀNH ÁC MA GẶP CÁC ÁC MA KHÁC (Mỗi 40 ticks = 2s)
+        if (sp.tickCount % 40 == 0 && PrimordialPlayerDataHelper.isPrimordial(sp)) {
+            DemonType playerType = PrimordialPlayerDataHelper.getPrimordialType(sp);
+            if (playerType != null && sp.level() instanceof ServerLevel sl) {
+                List<PrimordialDemonEntity> nearbyDemons = sl.getEntitiesOfClass(
+                        PrimordialDemonEntity.class,
+                        sp.getBoundingBox().inflate(10.0D),
+                        d -> d.isAlive() && d.getDemonType() != playerType
+                );
+
+                long gameTime = sl.getGameTime();
+                for (PrimordialDemonEntity demon : nearbyDemons) {
+                    var playerMap = DEMON_GREETING_TIMESTAMPS.computeIfAbsent(sp.getUUID(), k -> new java.util.HashMap<>());
+                    long lastGreet = playerMap.getOrDefault(demon.getUUID(), 0L);
+
+                    // Cooldown chào hỏi 60 giây (1200 ticks) tránh spam
+                    if (gameTime - lastGreet >= 1200L) {
+                        playerMap.put(demon.getUUID(), gameTime);
+                        demon.getLookControl().setLookAt(sp, 30.0F, 30.0F);
+
+                        String greetingKey = "dialogue.weapons.demon.greet_" + playerType.name().toLowerCase();
+                        TensuraDialogueManager.sayDemonGreeting(demon, demon.getDemonType(), sp, greetingKey);
+                        break; // Mỗi lần quét chỉ chào 1 câu
+                    }
+                }
+            }
+        }
+
+        // 3. XỬ LÝ TICK KỸ NĂNG TRÍ HUỆ CHI VƯƠNG (Gia Tốc Tư Duy & Thẩm Định Vạn Vật)
+        ThoughtAccelerationAbility.tickPlayer(sp);
+        AllOfCreationAbility.tickPlayer(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -201,14 +265,57 @@ public class TensuraEvents {
         }
     }
 
+    private static void handleSoulDrop(LivingEntity victim) {
+        if (victim == null || victim.level().isClientSide()) return;
+        if (victim instanceof net.minecraft.world.entity.monster.Creeper) return; // Trừ Creeper theo yêu cầu
+        if (victim instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return;
+
+        net.minecraft.world.item.Item soulItem = null;
+        if (victim instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            soulItem = ModItems.MILIM_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity) {
+            soulItem = ModItems.VELGRYND_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity) {
+            soulItem = ModItems.PRIMORDIAL_DEMON_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.monster.warden.Warden) {
+            soulItem = ModItems.WARDEN_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) {
+            soulItem = ModItems.ENDER_DRAGON_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss) {
+            soulItem = ModItems.WITHER_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.monster.Monster || victim instanceof net.minecraft.world.entity.monster.Enemy) {
+            soulItem = ModItems.MOB_SOUL.get();
+        }
+
+        if (soulItem != null) {
+            net.minecraft.world.entity.item.ItemEntity soulEntity = new net.minecraft.world.entity.item.ItemEntity(
+                    victim.level(), victim.getX(), victim.getY() + 0.5D, victim.getZ(),
+                    new ItemStack(soulItem)
+            );
+            soulEntity.setGlowingTag(true);
+            victim.level().addFreshEntity(soulEntity);
+
+            if (victim.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.SOUL, victim.getX(), victim.getY() + 0.8D, victim.getZ(), 12, 0.25D, 0.25D, 0.25D, 0.03D);
+                sl.sendParticles(ParticleTypes.GLOW, victim.getX(), victim.getY() + 0.8D, victim.getZ(), 8, 0.2D, 0.2D, 0.2D, 0.02D);
+            }
+        }
+    }
+
     public static EventResult onLivingDeath(LivingEntity victim, DamageSource source) {
         if (victim.level().isClientSide()) return EventResult.pass();
 
-        // Nếu người chơi chết: Reset toàn bộ thân phận Thủy Tổ Ác Ma theo luật chơi
+        // Nếu người chơi chết: Reset toàn bộ thân phận Thủy Tổ Ác Ma & Kỹ Năng Tiến Hóa theo luật chơi
         if (victim instanceof ServerPlayer deadPlayer) {
-            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer)) {
+            com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.resetOnDeath(deadPlayer);
+            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer) || PrimordialPlayerDataHelper.isDemonLord(deadPlayer)) {
                 PrimordialPlayerDataHelper.resetOnDeath(deadPlayer);
-                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Cá thể đã tử trận! Toàn bộ căn nguyên Thủy Tổ Ác Ma đã tan biến.");
+                if (!deadPlayer.isCreative() && !deadPlayer.isSpectator()) {
+                    deadPlayer.getAbilities().mayfly = false;
+                    deadPlayer.getAbilities().flying = false;
+                    deadPlayer.onUpdateAbilities();
+                }
+                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Cá thể đã tử trận! Toàn bộ căn nguyên Thủy Tổ Ác Ma & Ma Vương đã tan biến.");
             }
             return EventResult.pass();
         }
@@ -224,6 +331,9 @@ public class TensuraEvents {
             // Bao gồm quái bị người chơi đánh trúng rồi chết bởi cháy, rơi, hiệu ứng đòn quét...
             player = sp;
         }
+
+        // Rơi Linh Hồn cho Không Vong & người chơi thu thập (Ác ma, Milim, Long chủng, Boss, Mob - Trừ Creeper)
+        handleSoulDrop(victim);
 
         if (player != null) {
             handleMobDeathDrop(player, victim);
@@ -358,8 +468,14 @@ public class TensuraEvents {
         }
 
         // =========================================================================
-        // 2. CƠ CHẾ MIỄN NHIỄM SÁT THƯƠNG KHI NGƯỜI CHƠI LÀ THỦY TỔ ÁC MA (VICTIM)
+        // 2. CƠ CHẾ TỰ ĐỘNG NÉ ĐÒN CỦA TRÍ HUỆ CHI VƯƠNG & MIỄN NHIỄM SÁT THƯƠNG
         // =========================================================================
+        if (victim instanceof ServerPlayer player) {
+            if (ThoughtAccelerationAbility.handleIncomingAttack(player, source, amount)) {
+                return EventResult.interruptFalse();
+            }
+        }
+
         if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isPrimordial(player)) {
             // Miễn nhiễm hoàn toàn sát thương ngã (Fall damage)
             if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) {
@@ -439,6 +555,71 @@ public class TensuraEvents {
                     if (amount < 48.0F) {
                         victim.hurt(attackerPlayer.damageSources().magic(), 48.0F);
                         return EventResult.interruptFalse();
+                    }
+                }
+            }
+        }
+
+        // =========================================================================
+        // 4. MA VƯƠNG: ĐẤM THƯỜNG BỘC PHÁ SIÊU THANH & THỔI BAY KẺ ĐỊCH NHƯ MILIM
+        // =========================================================================
+        Entity rawAttacker = source.getEntity();
+        if (rawAttacker instanceof ServerPlayer demonLordPlayer && !victim.getTags().contains("DemonLordExplosivePunch")) {
+            boolean isTrueDemonLord = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(demonLordPlayer).getBoolean("TensuraTrueDemonLord");
+            boolean isPrimordialLord = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isDemonLord(demonLordPlayer);
+
+            if (isTrueDemonLord || isPrimordialLord) {
+                // Kiểm tra loại sát thương là đòn đánh trực tiếp của người chơi
+                if (source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK) || source.getDirectEntity() == demonLordPlayer) {
+                    if (victim.level() instanceof ServerLevel sl) {
+                        victim.addTag("DemonLordExplosivePunch");
+
+                        // 1. ÂM THANH BỘC PHÁ UY LỰC MILIM
+                        sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 1.2F);
+                        sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.5F, 1.6F);
+                        sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.5F, 1.8F);
+
+                        // 2. HẠT BÙNG NỔ & SÓNG XUNG KÍCH SIÊU THANH
+                        sl.sendParticles(ParticleTypes.SONIC_BOOM, victim.getX(), victim.getY() + victim.getBbHeight() * 0.5D, victim.getZ(), 1, 0, 0, 0, 0);
+                        sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, victim.getX(), victim.getY() + 0.8D, victim.getZ(), 2, 0.2D, 0.2D, 0.2D, 0);
+                        sl.sendParticles(ParticleTypes.FLASH, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 2, 0.1D, 0.1D, 0.1D, 0);
+                        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, victim.getX(), victim.getY() + 0.5D, victim.getZ(), 25, 0.8D, 0.8D, 0.8D, 0.05D);
+                        sl.sendParticles(ParticleTypes.LARGE_SMOKE, victim.getX(), victim.getY() + 0.5D, victim.getZ(), 20, 0.6D, 0.6D, 0.6D, 0.08D);
+                        sl.sendParticles(ParticleTypes.DRAGON_BREATH, victim.getX(), victim.getY() + 0.8D, victim.getZ(), 35, 0.7D, 0.7D, 0.7D, 0.1D);
+
+                        // 3. THỔI BAY MOB ĐI CỰC XA NHƯ CÚ ĐẤM MILIM
+                        Vec3 punchDir = victim.position().subtract(demonLordPlayer.position());
+                        if (punchDir.lengthSqr() < 0.001D) {
+                            punchDir = demonLordPlayer.getLookAngle();
+                        }
+                        punchDir = punchDir.normalize();
+
+                        // Hất văng cực mạnh với vận tốc 3.5 khối/tick và tung lên không trung
+                        victim.setDeltaMovement(punchDir.scale(3.5D).add(0, 1.35D, 0));
+                        victim.hasImpulse = true;
+
+                        // 4. SÁT THƯƠNG NỔ CHẤN ĐỘNG & BỘC PHÁ DIỆN RỘNG (AOE) CHO CÁC QUÁI XUNG QUANH
+                        AABB splashBox = victim.getBoundingBox().inflate(5.0D);
+                        List<LivingEntity> nearby = sl.getEntitiesOfClass(
+                                LivingEntity.class, splashBox,
+                                e -> e != victim && e != demonLordPlayer && e.isAlive() && !(e instanceof Player p && (p.isCreative() || p.isSpectator()))
+                        );
+                        for (LivingEntity nearbyMob : nearby) {
+                            Vec3 splashDir = nearbyMob.position().subtract(victim.position());
+                            if (splashDir.lengthSqr() < 0.001D) splashDir = punchDir;
+                            splashDir = splashDir.normalize();
+
+                            nearbyMob.setDeltaMovement(splashDir.scale(2.0D).add(0, 0.8D, 0));
+                            nearbyMob.hasImpulse = true;
+                            nearbyMob.addTag("DemonLordExplosivePunch");
+                            nearbyMob.hurt(demonLordPlayer.damageSources().explosion(demonLordPlayer, demonLordPlayer), 60.0F);
+                            nearbyMob.removeTag("DemonLordExplosivePunch");
+                        }
+
+                        victim.removeTag("DemonLordExplosivePunch");
                     }
                 }
             }

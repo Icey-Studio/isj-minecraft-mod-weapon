@@ -5,6 +5,7 @@ import com.minhphuc.weapons.content.infinitygauntlet.InfinityGauntletItem;
 import com.minhphuc.weapons.content.tensura.VoiceOfTheWorld;
 import com.minhphuc.weapons.content.tensura.PrimordialPactItem;
 import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
+import com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility;
 import com.minhphuc.weapons.init.ModBlocks;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
@@ -1695,6 +1696,37 @@ public class PrimordialDemonEntity extends TamableAnimal {
     }
 
     // =========================================================================
+    // KỸ NĂNG MỚI: LINH TỬ BỘC PHÁT (SPIRITRON OUTBURST - GRANITE BLAST THEO MÀU)
+    // =========================================================================
+    public void executeSpiritronOutburst(LivingEntity target, DemonType type) {
+        if (!(this.level() instanceof ServerLevel level)) return;
+        Vec3 eyePos = this.getEyePosition(1.0F);
+        Vec3 tPos = target.getEyePosition(1.0F);
+        Vec3 dir = tPos.subtract(eyePos).normalize();
+
+        announceSkill(type.getColorName() + ": Linh Tử Bộc Phát (Spiritron Outburst)");
+
+        // 1. Triệu hồi ma pháp trận xoay trước nòng bắn
+        Vec3 circlePos = eyePos.add(dir.scale(1.8D));
+        spawnRotatingCircle(level, circlePos, 5.0F, 14.0F, 35, false, type.getGlowColor());
+        spawnRotatingCircle(level, circlePos.add(dir.scale(0.35D)), 3.8F, -18.0F, 35, false, 0xFFFFFF);
+
+        // 2. Phát âm thanh đại bác siêu thanh và sấm rền
+        level.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.5F, 0.7F);
+        level.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 4.0F, 1.1F);
+        level.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 3.5F, 1.4F);
+        level.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 3.5F, 1.5F);
+
+        // 3. Khai hỏa chùm pháo Granit / Linh Tử Bộc Phát theo màu sắc
+        float dmg = hasPhysicalBody() ? 560.0F : 400.0F;
+        HorizontalHolyBeamAbility.fireSpiritronOutburst(level, this, eyePos, dir, type, 56.0D, dmg);
+    }
+
+    // =========================================================================
     // KỸ NĂNG MỚI 3: CHIÊU ĐỘC BẢN 1 CỦA TỪNG ÁC MA
     // =========================================================================
     public void executeSignatureSkillOne(LivingEntity target, DemonType type) {
@@ -2035,11 +2067,12 @@ public class PrimordialDemonEntity extends TamableAnimal {
             case 3 -> executeSkillThree(target, type);
             case 4 -> executeChromaticLightPillar(target, type);
             case 5 -> executeDisintegration(target, type);
-            case 6 -> executeSignatureSkillOne(target, type);
-            case 7 -> executeSignatureSkillTwo(target, type);
-            case 8 -> executeSignatureSkillThree(target, type);
-            case 9 -> executeSkillFourDomain(target, type);
-            default -> executeSkillOne(target, type);
+            case 6 -> executeSpiritronOutburst(target, type);
+            case 7 -> executeSignatureSkillOne(target, type);
+            case 8 -> executeSignatureSkillTwo(target, type);
+            case 9 -> executeSignatureSkillThree(target, type);
+            case 10 -> executeSkillFourDomain(target, type);
+            default -> executeSpiritronOutburst(target, type);
         }
         this.triggerSkillCooldown(40);
     }
@@ -2235,13 +2268,15 @@ public class PrimordialDemonEntity extends TamableAnimal {
             if (isBoss) {
                 // ƯU TIÊN SÁT THƯƠNG DIỆT BOSS
                 float bossRoll = random.nextFloat();
-                if (bossRoll < 0.30F) {
+                if (bossRoll < 0.25F) {
+                    demon.executeSpiritronOutburst(target, type); // Linh tử bộc phát (Granite Blast uy lực cực đại)
+                } else if (bossRoll < 0.45F) {
                     demon.executeDisintegration(target, type); // Linh tử băng hoại
-                } else if (bossRoll < 0.55F) {
+                } else if (bossRoll < 0.65F) {
                     demon.executeChromaticLightPillar(target, type); // Thất sắc thần trụ
-                } else if (bossRoll < 0.75F) {
+                } else if (bossRoll < 0.82F) {
                     demon.executeSignatureSkillThree(target, type); // Chiêu độc bản 3
-                } else if (bossRoll < 0.90F) {
+                } else if (bossRoll < 0.92F) {
                     demon.executeSkillThree(target, type); // Song trùng / Tam trùng ma trận
                 } else {
                     demon.executeSignatureSkillOne(target, type); // Chiêu độc bản 1
@@ -2251,16 +2286,16 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
             // Đối đầu mục tiêu thường:
             if (dist > 12.0D) {
-                // TẦM XA: Tung ma pháo, tốc biến áp sát hoặc chùm tia
+                // TẦM XA: Tung ma pháo, pháo Linh Tử Bộc Phát, tốc biến áp sát hoặc chùm tia
                 float farRoll = random.nextFloat();
-                if (farRoll < 0.25F) {
+                if (farRoll < 0.28F) {
+                    demon.executeSpiritronOutburst(target, type); // Khai hỏa đại pháo Linh Tử Bộc Phát xuyên tầm xa
+                } else if (farRoll < 0.48F) {
                     demon.executeSkillOne(target, type); // Pháp trận ma pháo tầm xa
-                } else if (farRoll < 0.50F) {
+                } else if (farRoll < 0.68F) {
                     demon.executeSignatureSkillOne(target, type); // Chiêu độc bản 1 tầm xa
-                } else if (farRoll < 0.70F) {
-                    demon.executeSkillTwo(target, type); // Tốc biến / lướt áp sát mục tiêu
                 } else if (farRoll < 0.85F) {
-                    demon.executeSkillThree(target, type); // Cột ma trận từ trên trời
+                    demon.executeSkillTwo(target, type); // Tốc biến / lướt áp sát mục tiêu
                 } else {
                     demon.executeChromaticLightPillar(target, type); // Cột sáng 60m
                 }
@@ -2280,16 +2315,17 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 }
             } else {
                 // TẦM TRUNG (4.5m - 12m): Phối hợp toàn diện ngẫu nhiên
-                int choice = random.nextInt(9);
+                int choice = random.nextInt(10);
                 switch (choice) {
                     case 0 -> demon.executeSkillOne(target, type);
                     case 1 -> demon.executeSignatureSkillOne(target, type);
                     case 2 -> demon.executeSkillTwo(target, type);
                     case 3 -> demon.executeSignatureSkillTwo(target, type);
                     case 4 -> demon.executeSkillThree(target, type);
-                    case 5 -> demon.executeChromaticLightPillar(target, type);
-                    case 6 -> demon.executeSignatureSkillThree(target, type);
-                    case 7 -> demon.executeDisintegration(target, type);
+                    case 5 -> demon.executeSpiritronOutburst(target, type); // Linh tử bộc phát
+                    case 6 -> demon.executeChromaticLightPillar(target, type);
+                    case 7 -> demon.executeSignatureSkillThree(target, type);
+                    case 8 -> demon.executeDisintegration(target, type);
                     default -> demon.executeNormalAttack(target, type);
                 }
             }

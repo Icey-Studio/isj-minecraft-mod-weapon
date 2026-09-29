@@ -42,11 +42,21 @@ public class ModEntities {
                             .build("kubo")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.MilimEntity>> MILIM =
+            ENTITY_TYPES.register("milim", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.MilimEntity::new, MobCategory.MONSTER)
+                            .sized(0.6F, 1.85F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("milim")
+            );
+
     public static void register() {
         ENTITY_TYPES.register();
         EntityAttributeRegistry.register(PRIMORDIAL_DEMON, PrimordialDemonEntity::createAttributes);
         EntityAttributeRegistry.register(VELGRYND, com.minhphuc.weapons.entity.tensura.VelgryndEntity::createAttributes);
         EntityAttributeRegistry.register(KUBO, com.minhphuc.weapons.entity.darkgathering.KuboEntity::createAttributes);
+        EntityAttributeRegistry.register(MILIM, com.minhphuc.weapons.entity.tensura.MilimEntity::createAttributes);
 
         BiomeModifications.addProperties(
                 b -> b.hasTag(BiomeTags.IS_OVERWORLD),
@@ -62,6 +72,24 @@ public class ModEntities {
                 (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
                         MobCategory.MONSTER,
                         new MobSpawnSettings.SpawnerData(VELGRYND.get(), 1, 1, 1)
+                )
+        );
+
+        // Tỷ lệ xuất hiện tự nhiên của Ma Vương Milim Nava: Tương đương Chước Nhiệt Long để giảm lag
+        BiomeModifications.addProperties(
+                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
+                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
+                        MobCategory.MONSTER,
+                        new MobSpawnSettings.SpawnerData(MILIM.get(), 1, 1, 1)
+                )
+        );
+
+        // Tỷ lệ xuất hiện tự nhiên của Không Vong (Kūbō): Bay trên cao trong đêm Overworld
+        BiomeModifications.addProperties(
+                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
+                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
+                        MobCategory.MONSTER,
+                        new MobSpawnSettings.SpawnerData(KUBO.get(), 8, 1, 2)
                 )
         );
     }

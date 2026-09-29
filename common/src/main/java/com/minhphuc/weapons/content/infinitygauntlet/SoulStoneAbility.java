@@ -24,9 +24,8 @@ public class SoulStoneAbility {
             // Shift + Chuột phải: Tách Linh Hồn Mục Tiêu
             executeSoulExtraction(level, player, gauntlet);
         } else {
-            // Chuột phải: Gặt Hái Linh Hồn & Tử Linh Phục Sinh
+            // Chuột phải: Gặt Hái Linh Hồn
             executeSoulHarvest(level, player, gauntlet);
-            executeSoulResurrection(level, player, gauntlet);
         }
     }
 
@@ -153,137 +152,5 @@ public class SoulStoneAbility {
         );
 
         player.getCooldowns().addCooldown(gauntlet.getItem(), 20);
-    }
-
-    /**
-     * Chế độ 4: 🧟 Kỹ Năng: Tử Linh Phục Sinh - Hồi sinh đúng sinh vật tương ứng từ vật phẩm rớt ra
-     */
-    private static void executeSoulResurrection(ServerLevel level, ServerPlayer player, ItemStack gauntlet) {
-        BlockPos center = player.blockPosition();
-        int radius = 10;
-
-        AABB area = new AABB(center).inflate(radius);
-        List<net.minecraft.world.entity.item.ItemEntity> itemEntities = level.getEntitiesOfClass(
-            net.minecraft.world.entity.item.ItemEntity.class,
-            area,
-            e -> e.isAlive()
-        );
-
-        if (itemEntities.isEmpty()) {
-            player.displayClientMessage(
-                Component.literal("§6[ĐÁ LINH HỒN - TỬ LINH PHỤC SINH] Báo cáo. Không tìm thấy vật phẩm/cá thể tử trận trong 10 blocks!"),
-                true
-            );
-            return;
-        }
-
-        int resurrectedCount = 0;
-        for (net.minecraft.world.entity.item.ItemEntity itemEntity : itemEntities) {
-            Vec3 pos = itemEntity.position();
-            net.minecraft.world.item.Item item = itemEntity.getItem().getItem();
-            net.minecraft.world.entity.EntityType<?> entityType = getResurrectedEntityType(item);
-
-            itemEntity.discard(); // Tiêu thụ vật phẩm rớt ra
-
-            net.minecraft.world.entity.Entity spawnedEntity = entityType.create(level);
-            if (spawnedEntity instanceof LivingEntity living) {
-                living.moveTo(pos.x, pos.y, pos.z, level.random.nextFloat() * 360.0F, 0.0F);
-                living.setHealth(living.getMaxHealth());
-                living.setCustomName(Component.literal("§6Tử Linh Phục Sinh §7(" + living.getDisplayName().getString() + ")"));
-                living.setCustomNameVisible(true);
-                living.addEffect(new MobEffectInstance(MobEffects.GLOWING, 1200, 0, false, false, true));
-                living.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 1200, 2, false, false, true));
-
-                if (living instanceof Mob mob) {
-                    List<Mob> enemies = level.getEntitiesOfClass(Mob.class, mob.getBoundingBox().inflate(15.0D), e -> e != mob && !(e.getCustomName() != null && e.getCustomName().getString().contains("Tử Linh Phục Sinh")));
-                    if (!enemies.isEmpty()) {
-                        mob.setTarget(enemies.get(0));
-                    }
-                }
-
-                level.addFreshEntity(living);
-                resurrectedCount++;
-
-                // Hiệu ứng hồi sinh rực rỡ
-                level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, pos.x, pos.y + 1.0D, pos.z, 25, 0.3D, 0.5D, 0.3D, 0.1D);
-                level.sendParticles(ParticleTypes.SOUL, pos.x, pos.y + 1.0D, pos.z, 15, 0.2D, 0.4D, 0.2D, 0.05D);
-            }
-        }
-
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.5F, 1.0F);
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 1.0F, 1.2F);
-
-        player.displayClientMessage(
-            Component.literal("§6§l[ĐÁ LINH HỒN] §fBáo cáo. Kỹ năng: Tử linh phục sinh! Đã hồi sinh " + resurrectedCount + " cá thể từ vật phẩm rớt ra! 🧟✨"),
-            true
-        );
-
-        player.getCooldowns().addCooldown(gauntlet.getItem(), 20);
-    }
-
-    private static net.minecraft.world.entity.EntityType<?> getResurrectedEntityType(net.minecraft.world.item.Item item) {
-        if (item == net.minecraft.world.item.Items.CHICKEN || item == net.minecraft.world.item.Items.COOKED_CHICKEN || item == net.minecraft.world.item.Items.FEATHER) {
-            return net.minecraft.world.entity.EntityType.CHICKEN;
-        }
-        if (item == net.minecraft.world.item.Items.PORKCHOP || item == net.minecraft.world.item.Items.COOKED_PORKCHOP) {
-            return net.minecraft.world.entity.EntityType.PIG;
-        }
-        if (item == net.minecraft.world.item.Items.BEEF || item == net.minecraft.world.item.Items.COOKED_BEEF || item == net.minecraft.world.item.Items.LEATHER) {
-            return net.minecraft.world.entity.EntityType.COW;
-        }
-        if (item == net.minecraft.world.item.Items.MUTTON || item == net.minecraft.world.item.Items.COOKED_MUTTON || item.toString().contains("wool")) {
-            return net.minecraft.world.entity.EntityType.SHEEP;
-        }
-        if (item == net.minecraft.world.item.Items.ROTTEN_FLESH) {
-            return net.minecraft.world.entity.EntityType.ZOMBIE;
-        }
-        if (item == net.minecraft.world.item.Items.BONE || item == net.minecraft.world.item.Items.ARROW) {
-            return net.minecraft.world.entity.EntityType.SKELETON;
-        }
-        if (item == net.minecraft.world.item.Items.SPIDER_EYE || item == net.minecraft.world.item.Items.STRING) {
-            return net.minecraft.world.entity.EntityType.SPIDER;
-        }
-        if (item == net.minecraft.world.item.Items.GUNPOWDER) {
-            return net.minecraft.world.entity.EntityType.CREEPER;
-        }
-        if (item == net.minecraft.world.item.Items.ENDER_PEARL) {
-            return net.minecraft.world.entity.EntityType.ENDERMAN;
-        }
-        if (item == net.minecraft.world.item.Items.BLAZE_ROD || item == net.minecraft.world.item.Items.BLAZE_POWDER) {
-            return net.minecraft.world.entity.EntityType.BLAZE;
-        }
-        if (item == net.minecraft.world.item.Items.SLIME_BALL) {
-            return net.minecraft.world.entity.EntityType.SLIME;
-        }
-        if (item == net.minecraft.world.item.Items.MAGMA_CREAM) {
-            return net.minecraft.world.entity.EntityType.MAGMA_CUBE;
-        }
-        if (item == net.minecraft.world.item.Items.PHANTOM_MEMBRANE) {
-            return net.minecraft.world.entity.EntityType.PHANTOM;
-        }
-        if (item == net.minecraft.world.item.Items.GHAST_TEAR) {
-            return net.minecraft.world.entity.EntityType.GHAST;
-        }
-        if (item == net.minecraft.world.item.Items.RABBIT || item == net.minecraft.world.item.Items.COOKED_RABBIT || item == net.minecraft.world.item.Items.RABBIT_FOOT || item == net.minecraft.world.item.Items.RABBIT_HIDE) {
-            return net.minecraft.world.entity.EntityType.RABBIT;
-        }
-        if (item == net.minecraft.world.item.Items.COD || item == net.minecraft.world.item.Items.COOKED_COD) {
-            return net.minecraft.world.entity.EntityType.COD;
-        }
-        if (item == net.minecraft.world.item.Items.SALMON || item == net.minecraft.world.item.Items.COOKED_SALMON) {
-            return net.minecraft.world.entity.EntityType.SALMON;
-        }
-        if (item == net.minecraft.world.item.Items.INK_SAC || item == net.minecraft.world.item.Items.GLOW_INK_SAC) {
-            return net.minecraft.world.entity.EntityType.SQUID;
-        }
-        if (item == net.minecraft.world.item.Items.EMERALD) {
-            return net.minecraft.world.entity.EntityType.VILLAGER;
-        }
-        if (item == net.minecraft.world.item.Items.IRON_INGOT) {
-            return net.minecraft.world.entity.EntityType.IRON_GOLEM;
-        }
-        return net.minecraft.world.entity.EntityType.ZOMBIE;
     }
 }

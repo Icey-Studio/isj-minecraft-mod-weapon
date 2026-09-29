@@ -164,6 +164,32 @@ public class SanctuaryDisintegrationAbility {
 
     private static final List<ActiveSanctuary> ACTIVE_SANCTUARIES = new ArrayList<>();
 
+    public static boolean isNearActiveSanctuary(ServerLevel level, Vec3 pos, double radius) {
+        double rSq = radius * radius;
+        for (ActiveSanctuary s : ACTIVE_SANCTUARIES) {
+            if (s.level == level && s.center.distanceToSqr(pos) <= rSq) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Vec3 getClosestSanctuaryCenter(ServerLevel level, Vec3 pos, double radius) {
+        double rSq = radius * radius;
+        double closestDist = Double.MAX_VALUE;
+        Vec3 closest = null;
+        for (ActiveSanctuary s : ACTIVE_SANCTUARIES) {
+            if (s.level == level) {
+                double d = s.center.distanceToSqr(pos);
+                if (d <= rSq && d < closestDist) {
+                    closestDist = d;
+                    closest = s.center;
+                }
+            }
+        }
+        return closest;
+    }
+
     public static void clearAllSanctuaries() {
         for (ActiveSanctuary s : ACTIVE_SANCTUARIES) {
             s.cleanupDisplays();
@@ -964,6 +990,7 @@ public class SanctuaryDisintegrationAbility {
                 }
                 level.sendParticles(ParticleTypes.SOUL, target.getX(), target.getY() + 1.0D, target.getZ(), 8, 0.2D, 0.3D, 0.2D, 0.02D);
 
+                target.addTag("DisintegrationDamage");
                 if (roll != null && roll.isOverdrive()) {
                     // BẠO KÍCH CỰC HẠN (20%): Phân rã 100% linh tử, tất sát cả Boss
                     target.hurt(dmgSource, 100000.0F);
@@ -980,6 +1007,7 @@ public class SanctuaryDisintegrationAbility {
                     target.hurt(dmgSource, damage);
                     target.setRemainingFireTicks(120);
                 }
+                target.removeTag("DisintegrationDamage");
                 destroyedCount++;
             }
         }

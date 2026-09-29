@@ -116,35 +116,79 @@ public class DivineWeaponEvents {
                 }
             }
 
-            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương
+            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
             if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
-                if (isTrueDemonLord) {
+                boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
+                boolean hasEvolved = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.hasEvolvedSkill(serverPlayer);
+                boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
+
+                if (isTrueDemonLord || isWearingDivineArmor || hasEvolved) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
-                    if (selectedSkill != 3 && selectedSkill != 5 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
+                    boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
+                    int lordSkills = hasCreation ? 15 : 14;
+
+                    boolean isCastingEvolved = false;
+                    if (hasEvolved) {
+                        if (selectedSkill == 99) {
+                            isCastingEvolved = true;
+                        } else if (isTrueDemonLord && isPrimordial && selectedSkill == lordSkills + 5) {
+                            isCastingEvolved = true;
+                        } else if (isTrueDemonLord && selectedSkill == lordSkills) {
+                            isCastingEvolved = true;
+                        } else if (isPrimordial && selectedSkill == 5) {
+                            isCastingEvolved = true;
+                        } else if (isWearingDivineArmor && selectedSkill == 14) {
+                            isCastingEvolved = true;
+                        }
+                    }
+
+                    if (isCastingEvolved) {
+                        com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.cast((ServerLevel) serverPlayer.level(), serverPlayer);
+                        return EventResult.interruptTrue();
+                    }
+
+                    if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
                         serverPlayer.displayClientMessage(
-                            Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục!"),
+                            Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
                             true
                         );
                         return EventResult.interruptTrue();
                     }
 
-                    if (serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
+                    // Kỹ năng Long Tinh Bộc Viêm Bá (Chiêu 6 - index 5): Không cần hồi năng lượng / ma lực
+                    if (selectedSkill != 5 && serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
                         return EventResult.interruptTrue();
                     }
                     ServerLevel sl = (ServerLevel) serverPlayer.level();
-                    if (selectedSkill == 5) {
+                    if (selectedSkill == 13) {
+                        com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 12) {
+                        com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 11) {
+                        com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 10) {
+                        com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 9) {
+                        com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(sl, serverPlayer);
+                    } else if (selectedSkill == 8) {
                         com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 4) {
+                    } else if (selectedSkill == 7) {
                         com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.toggleBarrier(sl, serverPlayer);
-                    } else if (selectedSkill == 3) {
+                    } else if (selectedSkill == 6) {
                         com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 2) {
+                    } else if (selectedSkill == 5) {
                         com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 1) {
-                        BeelzebuthAbility.executeCorrosion(sl, serverPlayer);
-                    } else {
+                    } else if (selectedSkill == 4) {
                         BeelzebuthAbility.executeBeelzebuth(sl, serverPlayer);
+                    } else if (selectedSkill == 3) {
+                        PurificationPillarAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else if (selectedSkill == 2) {
+                        HeavenlyJudgmentArrayAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else if (selectedSkill == 1) {
+                        JacobsLadderAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    } else {
+                        SanctuaryDisintegrationAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
                     }
                     return EventResult.interruptTrue();
                 }
@@ -159,9 +203,18 @@ public class DivineWeaponEvents {
         // =========================================================================
         if (victim instanceof Player player) {
             if (com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.isBarrierActive(player)) {
-                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
-                return EventResult.interruptFalse();
+                Entity attacker = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
+                if (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo && kubo.isUltimateOrComplete()) {
+                    // Không Vong Tối Thượng hoặc Hoàn Chỉnh đánh xuyên thủng cả Trận Đồ Cưỡng Chế Tai Ương!
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§4§l[CẢNH BÁO TỐI THƯỢNG] §cKhông Vong Tối Thượng đã xé rách kết giới Trận Đồ Cưỡng Chế Tai Ương!"),
+                            true
+                    );
+                } else {
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
+                    return EventResult.interruptFalse();
+                }
             }
         }
 
@@ -178,8 +231,12 @@ public class DivineWeaponEvents {
                 boolean isVoid = source.is(DamageTypes.FELL_OUT_OF_WORLD);
                 // Ngoại lệ 4: Hỏa diễm Chước Nhiệt Long Velgrynd xuyên phá Thánh Giáp (mỗi 3 đòn gây 30% HP)
                 boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage");
+                // Ngoại lệ 5: Không Vong (Kūbō) đánh xuyên qua Giáp Thần Thoại (Trừ Trận Đồ Cưỡng Chế Tai Ương)
+                boolean isKuboPenetration = source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
+                        || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
+                        || player.getTags().contains("KuboPenetrationDamage");
 
-                if (!isPoison && !isDrowning && !isVoid && !isVelgryndPenetration) {
+                if (!isPoison && !isDrowning && !isVoid && !isVelgryndPenetration && !isKuboPenetration) {
                     // Miễn nhiễm hoàn toàn mọi sát thương từ quái vật, người chơi, rơi, lửa, nổ, v.v.
                     return EventResult.interruptFalse();
                 }

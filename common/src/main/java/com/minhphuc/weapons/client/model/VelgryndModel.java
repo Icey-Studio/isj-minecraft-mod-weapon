@@ -175,6 +175,18 @@ public class VelgryndModel extends HumanoidModel<VelgryndEntity> {
             this.leftLeg.xRot = 0.8F;
             this.longHairBack.xRot = 0.65F;
             this.sashRibbon.xRot = 0.7F;
+        } else if (castState == 4) {
+            // 4: Tụ lực Gia tốc chước nhiệt long (Ngưng tụ hỏa long khí quyển - 7 giây)
+            this.body.xRot = -0.15F;
+            this.head.xRot = -0.25F;
+            this.rightArm.xRot = -1.6F;
+            this.rightArm.yRot = -0.35F;
+            this.rightArm.zRot = 0.5F;
+            this.leftArm.xRot = -1.6F;
+            this.leftArm.yRot = 0.35F;
+            this.leftArm.zRot = -0.5F;
+            this.longHairBack.xRot = 0.3F + Mth.sin(ageInTicks * 0.2F) * 0.15F;
+            this.sashRibbon.xRot = 0.25F + Mth.cos(ageInTicks * 0.2F) * 0.15F;
         }
     }
 }

@@ -12,6 +12,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
+import com.minhphuc.weapons.network.ClientboundSyncEvolutionPacket;
+import com.minhphuc.weapons.network.ModMessages;
+import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
+import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
@@ -126,6 +131,9 @@ public class PurificationPillarAbility {
 
         ACTIVE_PURIFICATIONS.add(ap);
 
+        // Thanh tẩy tức thì các vòng tròn ma thuật tàn dư tại vị trí chiếu tới
+        com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager.purgeCirclesInArea(level, targetCenter, 6.0D, 50.0D);
+
         // Âm thanh thánh tích cứu rỗi vang dội
         level.playSound(null, targetCenter.x, targetCenter.y + 5.0D, targetCenter.z,
                 SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 4.0F, 1.7F);
@@ -138,6 +146,25 @@ public class PurificationPillarAbility {
                 Component.literal("§a§l[ĐẠI THÁNH TẨY] §fĐã triệu hồi Thánh Trụ Cứu Rỗi! Thanh tẩy tà niệm & Hồi sinh sinh linh! ✨🕊️"),
                 true
         );
+
+        // Hồi phục toàn bộ kỹ năng đã mất/tiêu hao do dung hợp cho người thi triển
+        if (EvolvedSkillHelper.hasConsumedSkills(player)) {
+            EvolvedSkillHelper.restoreAllConsumedSkills(player);
+            ModMessages.sendToPlayer(
+                    new ClientboundSyncEvolutionPacket(
+                            new java.util.ArrayList<>(),
+                            EvolvedSkillHelper.getEvolvedSkillId(player),
+                            EvolvedSkillHelper.getEvolvedSkillTier(player)
+                    ), player);
+
+            player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§a§l【 ĐẠI THÁNH TẨY CỨU RỖI 】")));
+            player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e✦ Toàn bộ kỹ năng đã mất đã được hồi phục nguyên vẹn! ✦")));
+
+            player.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
+            player.sendSystemMessage(Component.literal("§e✨ ĐẠI THÁNH TẨY: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
+            player.sendSystemMessage(Component.literal("§7(Giờ đây bạn có thể mở Sách Kết Hợp Kỹ Năng để tiếp tục sử dụng hoặc dung hợp)"));
+            player.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
+        }
 
         player.getCooldowns().addCooldown(sword.getItem(), 160); // 8 giây cooldown
     }
@@ -189,6 +216,15 @@ public class PurificationPillarAbility {
 
             // Quét và thực hiện cứu rỗi mỗi 8 ticks (0.4 giây)
             if (elapsed % 8 == 0) {
+                // Thanh tẩy và xóa sạch toàn bộ các vòng tròn ma thuật tàn dư do mob để lại
+                int purgedCircles = com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager.purgeCirclesInArea(p.level, p.center, 5.5D, 40.0D);
+                if (purgedCircles > 0 && p.caster != null) {
+                    p.caster.displayClientMessage(
+                            Component.literal("§a§l[ĐẠI THÁNH TẨY] §eĐã thanh tẩy & hóa giải " + purgedCircles + " vòng tròn ma thuật tàn dư của ma quái! ✨🕊️"),
+                            true
+                    );
+                }
+
                 AABB salvationBox = new AABB(p.center.x - 4.5D, groundY - 1.0D, p.center.z - 4.5D,
                         p.center.x + 4.5D, groundY + 40.0D, p.center.z + 4.5D);
 
@@ -197,6 +233,28 @@ public class PurificationPillarAbility {
                 for (LivingEntity e : entities) {
                     // =============================================================
                     // 1. CỰ TUYỆT SINH VẬT QUÁ TÀ ÁC (BOSSES TÀ ÁC)
+                    // =============================================================
+                    // 1.5. ĐẠI THÁNH TẨY TIÊU DIỆT TỨC THÌ KHÔNG VONG (INSTAKILL KŪBŌ)
+                    // =============================================================
+                    if (e instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+                        p.level.sendParticles(ParticleTypes.FLASH, kubo.getX(), kubo.getY() + 1.0D, kubo.getZ(), 5, 0.2D, 0.2D, 0.2D, 0.0D);
+                        p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, kubo.getX(), kubo.getY() + 1.0D, kubo.getZ(), 50, 0.6D, 0.6D, 0.6D, 0.25D);
+                        p.level.playSound(null, kubo.getX(), kubo.getY(), kubo.getZ(), SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 2.5F, 1.4F);
+                        kubo.addTag("PurificationDamage");
+                        kubo.hurt(p.caster != null ? p.level.damageSources().playerAttack(p.caster) : p.level.damageSources().magic(), kubo.getMaxHealth() * 3.0F);
+                        kubo.removeTag("PurificationDamage");
+                        if (kubo.isAlive()) {
+                            kubo.discard();
+                        }
+                        if (p.caster != null) {
+                            p.caster.displayClientMessage(
+                                    Component.literal("§a§l[ĐẠI THÁNH TẨY] §6Ánh sáng thần thánh đã thanh tẩy tức thì Tà Thần Không Vong! ✨🕊️"),
+                                    true
+                            );
+                        }
+                        continue;
+                    }
+
                     // =============================================================
                     if (isIrredeemablyEvil(e)) {
                         // Không hồi máu, đẩy lùi ra khỏi cột sáng
@@ -292,6 +350,40 @@ public class PurificationPillarAbility {
                     e.addEffect(new MobEffectInstance(MobEffects.SATURATION, 40, 1, false, false, true));
 
                     p.level.sendParticles(ParticleTypes.HEART, e.getX(), e.getY() + e.getBbHeight() + 0.3D, e.getZ(), 1, 0.2D, 0.1D, 0.2D, 0.02D);
+
+                    // =============================================================
+                    // 4. HỒI PHỤC TOÀN BỘ KỸ NĂNG ĐÃ MẤT / TIÊU HAO DO DUNG HỢP
+                    // =============================================================
+                    if (e instanceof ServerPlayer sp) {
+                        if (EvolvedSkillHelper.hasConsumedSkills(sp)) {
+                            EvolvedSkillHelper.restoreAllConsumedSkills(sp);
+
+                            ModMessages.sendToPlayer(
+                                    new ClientboundSyncEvolutionPacket(
+                                            new java.util.ArrayList<>(),
+                                            EvolvedSkillHelper.getEvolvedSkillId(sp),
+                                            EvolvedSkillHelper.getEvolvedSkillTier(sp)
+                                    ), sp);
+
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.6F);
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.5F, 1.2F);
+                            p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                                    SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.0F, 1.2F);
+
+                            p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.0, sp.getZ(), 80, 0.6, 1.0, 0.6, 0.3);
+                            p.level.sendParticles(ParticleTypes.GLOW, sp.getX(), sp.getY() + 1.0, sp.getZ(), 50, 0.5, 0.8, 0.5, 0.05);
+                            p.level.sendParticles(ParticleTypes.END_ROD, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 0.5, 0.8, 0.5, 0.05);
+
+                            sp.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§a§l【 ĐẠI THÁNH TẨY CỨU RỖI 】")));
+                            sp.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e✦ Toàn bộ kỹ năng đã mất đã được hồi phục nguyên vẹn! ✦")));
+
+                            sp.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
+                            sp.sendSystemMessage(Component.literal("§e✨ ĐẠI THÁNH TẨY: §aToàn bộ kỹ năng nguyên liệu đã tiêu hao đã được quang minh thanh tẩy & hồi phục nguyên vẹn!"));
+                            sp.sendSystemMessage(Component.literal("§7(Giờ đây bạn có thể mở Sách Kết Hợp Kỹ Năng để tiếp tục sử dụng hoặc dung hợp)"));
+                        }
+                    }
                 }
             }
 

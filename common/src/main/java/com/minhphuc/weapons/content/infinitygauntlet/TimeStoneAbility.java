@@ -22,53 +22,12 @@ import java.util.List;
 public class TimeStoneAbility {
 
     public static void executeTimeStone(ServerLevel level, ServerPlayer player, ItemStack gauntlet) {
-        if (player.isShiftKeyDown()) {
-            // Shift + Chuột phải: Tua Ngược Sinh Lực & Trạng Thái
-            executeTimeRewind(level, player, gauntlet);
-        } else {
-            // Chuột phải: Lãnh Địa Dừng Thời Gian (Time Freeze Domain)
-            executeTimeFreezeDomain(level, player, gauntlet);
-        }
-    }
-
-
-    /**
-     * Chế độ 1: ⌛ Time Rewind - Tua ngược thời gian, khôi phục 100% sinh lực & trạng thái tối thượng
-     */
-    private static void executeTimeRewind(ServerLevel level, ServerPlayer player, ItemStack gauntlet) {
-        player.setHealth(player.getMaxHealth());
-        player.removeAllEffects();
-        player.clearFire();
-        player.setAirSupply(player.getMaxAirSupply());
-
-        int duration = 300; // 15 seconds
-        player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, duration, 9, false, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, duration, 4, false, false, true));
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, duration, 2, false, false, true));
-
-        // Vòng quay hạt xanh lục thời gian xoay quanh người chơi
-        for (int i = 0; i < 360; i += 15) {
-            double rad = Math.toRadians(i);
-            double px = player.getX() + Math.cos(rad) * 2.5D;
-            double pz = player.getZ() + Math.sin(rad) * 2.5D;
-            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, px, player.getY() + 1.0D, pz, 3, 0.1D, 0.3D, 0.1D, 0.05D);
-            level.sendParticles(ParticleTypes.END_ROD, px, player.getY() + 0.5D, pz, 1, 0.05D, 0.05D, 0.05D, 0.02D);
-        }
-        level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1.0D, player.getZ(), 1, 0, 0, 0, 0);
-
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.5F, 1.4F);
-
-        player.displayClientMessage(
-            Component.literal("§a§l[ĐÁ THỜI GIAN - TIME REWIND] §fBáo cáo. Đã tua ngược thời gian, khôi phục 100% sinh lực & trạng thái tối thượng cho cá thể! ⌛"),
-            true
-        );
-
-        player.getCooldowns().addCooldown(gauntlet.getItem(), 30);
+        // Kỹ Năng: Lão Hóa Quái Vật & Thúc Đẩy Mùa Màng Sinh Trưởng
+        executeAgeDecay(level, player, gauntlet);
     }
 
     /**
-     * Chế độ 2: 🌿 Age Decay & Growth - Tua thời gian: Lão hóa quái vật & Thúc đẩy vạn vật sinh trưởng
+     * Chế độ: 🌿 Age Decay & Growth - Tua thời gian: Lão hóa quái vật & Thúc đẩy vạn vật sinh trưởng
      */
     private static void executeAgeDecay(ServerLevel level, ServerPlayer player, ItemStack gauntlet) {
         BlockPos center = player.blockPosition();
@@ -111,50 +70,7 @@ public class TimeStoneAbility {
         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, player.getX(), player.getY() + 1.0D, player.getZ(), 20, 1.5D, 1.0D, 1.5D, 0.05D);
 
         player.displayClientMessage(
-            Component.literal("§a§l[ĐÁ THỜI GIAN - AGE DECAY] §fBáo cáo. Đã tua thời gian: Lão hóa " + mobs.size() + " cá thể quái vật & thúc đẩy " + grownCrops + " cây trồng sinh trưởng! 🌿"),
-            true
-        );
-
-        player.getCooldowns().addCooldown(gauntlet.getItem(), 30);
-    }
-
-    /**
-     * Chế độ 3: 🛑 Time Freeze Domain - Đóng băng dòng thời gian của sinh vật trong 20 blocks
-     */
-    private static void executeTimeFreezeDomain(ServerLevel level, ServerPlayer player, ItemStack gauntlet) {
-        BlockPos center = player.blockPosition();
-        int radius = 20;
-
-        AABB area = new AABB(center).inflate(radius);
-        List<Mob> mobs = level.getEntitiesOfClass(Mob.class, area, Mob::isAlive);
-
-        for (Mob mob : mobs) {
-            mob.setDeltaMovement(0, 0, 0);
-            mob.hasImpulse = true;
-            mob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, -255, false, false, true));
-            mob.addEffect(new MobEffectInstance(MobEffects.JUMP, 300, -255, false, false, true));
-            mob.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 300, 255, false, false, true));
-            level.sendParticles(ParticleTypes.END_ROD, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 10, 0.3D, 0.5D, 0.3D, 0.02D);
-            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 5, 0.2D, 0.3D, 0.2D, 0.02D);
-        }
-
-        // Người chơi nhận tốc độ di chuyển siêu tốc
-        player.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 4, false, false, true));
-
-        // Thiên cầu thời gian đóng băng rực rỡ
-        for (int i = 0; i < 360; i += 20) {
-            double rad = Math.toRadians(i);
-            double px = player.getX() + Math.cos(rad) * 4.0D;
-            double pz = player.getZ() + Math.sin(rad) * 4.0D;
-            level.sendParticles(ParticleTypes.HAPPY_VILLAGER, px, player.getY() + 1.0D, pz, 5, 0.2D, 0.5D, 0.2D, 0.05D);
-        }
-        level.sendParticles(ParticleTypes.FLASH, player.getX(), player.getY() + 1.0D, player.getZ(), 1, 0, 0, 0, 0);
-
-        level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.5F, 0.5F);
-
-        player.displayClientMessage(
-            Component.literal("§a§l[ĐÁ THỜI GIAN - TIME FREEZE DOMAIN] §fBáo cáo. Đã dừng hoàn toàn chuyển động của " + mobs.size() + " cá thể trong 20 blocks! 🛑"),
+            Component.literal("§a§l[ĐÁ THỜI GIAN - AGE DECAY & GROWTH] §fBáo cáo. Đã tua thời gian: Lão hóa " + mobs.size() + " cá thể quái vật & thúc đẩy " + grownCrops + " cây trồng sinh trưởng! 🌿"),
             true
         );
 

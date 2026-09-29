@@ -36,6 +36,55 @@ public class ResidualMagicCircleManager {
         }
     }
 
+    public static void removeCircle(Display.ItemDisplay display) {
+        if (display != null) {
+            ACTIVE_CIRCLES.remove(display);
+        }
+    }
+
+    /**
+     * Thanh tẩy và xóa sạch toàn bộ các vòng tròn ma thuật tàn dư của mob trong vùng
+     */
+    public static int purgeCirclesInArea(ServerLevel level, Vec3 center, double radius, double height) {
+        int purged = 0;
+        AABB box = new AABB(center.x - radius, center.y - 2.0D, center.z - radius,
+                            center.x + radius, center.y + height, center.z + radius);
+
+        Iterator<Display.ItemDisplay> it = ACTIVE_CIRCLES.iterator();
+        while (it.hasNext()) {
+            Display.ItemDisplay circle = it.next();
+            if (circle != null && circle.isAlive() && circle.level() == level && box.contains(circle.position())) {
+                spawnPurgeEffect(level, circle.position());
+                circle.discard();
+                it.remove();
+                purged++;
+            }
+        }
+
+        List<Display.ItemDisplay> nearbyDisplays = level.getEntitiesOfClass(
+                Display.ItemDisplay.class, box,
+                ResidualMagicCircleManager::isResidualMagicCircle
+        );
+        for (Display.ItemDisplay d : nearbyDisplays) {
+            if (d.isAlive()) {
+                spawnPurgeEffect(level, d.position());
+                d.discard();
+                ACTIVE_CIRCLES.remove(d);
+                purged++;
+            }
+        }
+
+        return purged;
+    }
+
+    private static void spawnPurgeEffect(ServerLevel level, Vec3 pos) {
+        level.sendParticles(ParticleTypes.END_ROD, pos.x, pos.y + 0.5D, pos.z, 25, 0.5D, 0.5D, 0.5D, 0.08D);
+        level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, pos.x, pos.y + 0.5D, pos.z, 30, 0.6D, 0.6D, 0.6D, 0.2D);
+        level.sendParticles(ParticleTypes.HAPPY_VILLAGER, pos.x, pos.y + 0.5D, pos.z, 15, 0.4D, 0.4D, 0.4D, 0.05D);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 2.0F, 1.6F);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.5F, 1.8F);
+    }
+
     public static boolean isMagicCircleItem(Item item) {
         return item == ModItems.MAGIC_CIRCLE_NOIR.get() ||
                item == ModItems.MAGIC_CIRCLE_ROUGE.get() ||

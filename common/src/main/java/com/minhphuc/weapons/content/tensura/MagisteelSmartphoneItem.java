@@ -37,6 +37,15 @@ public class MagisteelSmartphoneItem extends Item {
     }
 
     @Override
+    public InteractionResult useOn(net.minecraft.world.item.context.UseOnContext context) {
+        if (!context.getLevel().isClientSide() && context.getPlayer() instanceof net.minecraft.server.level.ServerPlayer sp && context.getLevel() instanceof net.minecraft.server.level.ServerLevel sl) {
+            AllOfCreationAbility.appraiseBlock(sl, sp, context.getClickedPos());
+            return InteractionResult.SUCCESS;
+        }
+        return InteractionResult.sidedSuccess(context.getLevel().isClientSide());
+    }
+
+    @Override
     public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
         ItemStack stack = player.getItemInHand(hand);
         if (level.isClientSide()) {
@@ -45,6 +54,8 @@ public class MagisteelSmartphoneItem extends Item {
                 target = player;
             }
             ClientPhoneOpener.openScreen(target);
+        } else if (player instanceof net.minecraft.server.level.ServerPlayer sp && level instanceof net.minecraft.server.level.ServerLevel sl) {
+            AllOfCreationAbility.appraiseTarget(sl, sp);
         }
         player.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.0F, 1.5F);
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());

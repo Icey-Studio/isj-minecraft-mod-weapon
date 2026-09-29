@@ -61,6 +61,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> DEMON_LORD_SOUL = ITEMS.register("demon_lord_soul",
             () -> new com.minhphuc.weapons.content.tensura.DemonLordSoulItem(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> MILIM_DRAGON_CONTRACT = ITEMS.register("milim_dragon_contract",
+            () -> new com.minhphuc.weapons.content.tensura.MilimDragonContractItem(new Item.Properties()));
+
     public static final DeferredRegister<net.minecraft.world.item.ArmorMaterial> ARMOR_MATERIALS =
             DeferredRegister.create(WeaponsMod.MOD_ID, Registries.ARMOR_MATERIAL);
 
@@ -175,10 +178,34 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.tensura.PrimordialClawItem(new Item.Properties(), "Vuốt Hư Vô Tai Ương", "Void Claw of Calamity"));
 
     // ==========================================
-    // MODULE: DARK GATHERING - KHÔNG VONG
+    // MODULE: DARK GATHERING - KHÔNG VONG & THỰC THỂ LINH HỒN
     // ==========================================
     public static final RegistrySupplier<Item> KUBO_SPAWN_EGG = ITEMS.register("kubo_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.KUBO, 0x0A0512, 0x9333EA, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> KUBO_SUMMON_CORE = ITEMS.register("kubo_summon_core",
+            () -> new com.minhphuc.weapons.content.darkgathering.KuboSummonItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> MILIM_SOUL = ITEMS.register("milim_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MILIM, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VELGRYND_SOUL = ITEMS.register("velgrynd_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.VELGRYND, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> PRIMORDIAL_DEMON_SOUL = ITEMS.register("primordial_demon_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.PRIMORDIAL_DEMON, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> WARDEN_SOUL = ITEMS.register("warden_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.WARDEN, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> ENDER_DRAGON_SOUL = ITEMS.register("ender_dragon_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.ENDER_DRAGON, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> WITHER_SOUL = ITEMS.register("wither_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.WITHER, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> MOB_SOUL = ITEMS.register("mob_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MOB, new Item.Properties()));
 
     // ==========================================
     // MODULE: CARRERA'S GOLDEN GUN & MA ĐẠN (TENSURA LN)
@@ -206,6 +233,9 @@ public class ModItems {
 
     public static final RegistrySupplier<Item> PRIMORDIAL_REBIRTH_TOME = ITEMS.register("primordial_rebirth_tome",
             () -> new com.minhphuc.weapons.content.tensura.PrimordialRebirthTomeItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> SKILL_EVOLUTION_TOME = ITEMS.register("skill_evolution_tome",
+            () -> new com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem(new Item.Properties()));
 
     public static final RegistrySupplier<Item> DEMON_SUMMONING_CIRCLE = ITEMS.register("demon_summoning_circle",
             () -> new Item(new Item.Properties()));
@@ -263,6 +293,8 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_BLEU.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DOMAIN_BARRIER_VERT = ITEMS.register("domain_barrier_vert",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
 
     // ==========================================
     // MODULE: CHƯỚC NHIỆT LONG VELGRYND (SCORCH DRAGON)
@@ -374,6 +406,7 @@ public class ModItems {
                         output.accept(DEMON_LORD_SOUL.get());
                         output.accept(PRIMORDIAL_GRIMOIRE.get());
                         output.accept(PRIMORDIAL_REBIRTH_TOME.get());
+                        output.accept(SKILL_EVOLUTION_TOME.get());
 
                         // Khế Ước Thủy Tổ
                         output.accept(PRIMORDIAL_PACT_NOIR.get());
@@ -392,6 +425,7 @@ public class ModItems {
                         output.accept(DOMAIN_BARRIER_VIOLET.get());
                         output.accept(DOMAIN_BARRIER_BLEU.get());
                         output.accept(DOMAIN_BARRIER_VERT.get());
+                        output.accept(DRAGON_PRISON_BARRIER.get());
 
                         output.accept(DIVINE_HELMET.get());
                         output.accept(DIVINE_CHESTPLATE.get());
@@ -453,11 +487,20 @@ public class ModItems {
                         output.accept(DRAGON_SEED.get());
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
+                        output.accept(MILIM_DRAGON_CONTRACT.get());
 
                         // Vũ Khí Móng Vuốt & Thực Thể Dark Gathering
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());
                         output.accept(VOID_CLAW_CALAMITY.get());
                         output.accept(KUBO_SPAWN_EGG.get());
+                        output.accept(KUBO_SUMMON_CORE.get());
+                        output.accept(MILIM_SOUL.get());
+                        output.accept(VELGRYND_SOUL.get());
+                        output.accept(PRIMORDIAL_DEMON_SOUL.get());
+                        output.accept(WARDEN_SOUL.get());
+                        output.accept(ENDER_DRAGON_SOUL.get());
+                        output.accept(WITHER_SOUL.get());
+                        output.accept(MOB_SOUL.get());
                     })
             ));
 

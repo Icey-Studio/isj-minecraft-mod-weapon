@@ -330,6 +330,9 @@ public class MagisteelPhoneScreen extends Screen {
                 return (body && named) ? 8500000L : 1500000L;
             }
         }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) {
+            return 12500000L;
+        }
         if (entity instanceof Player) {
             return 1250000L; // Player with advanced armaments
         }
@@ -354,6 +357,18 @@ public class MagisteelPhoneScreen extends Screen {
 
     private List<String> getEntitySkills(LivingEntity entity) {
         List<String> list = new ArrayList<>();
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            list.add("§0§lHắc Nhật Quang Trụ: §5Cột sáng giống Milim 60m (Không phá khối)");
+            list.add("§4Xuyên Giáp Thần Thoại: §cXuyên qua giáp Thần (Trừ Trận Đồ Cưỡng Chế)");
+            list.add("§6Tập Tính Săn Mồi: §eBay cao xà xuống đánh / Dưới 30% bỏ chạy");
+            if (kubo.hasAbsorbedSoul()) {
+                list.add("§d§lDung Hợp Linh Hồn 70%: §e" + kubo.getAbsorbedSkillName());
+                list.add("§aCường Hóa Thuộc Tính: §f+70% Máu & Kháng từ " + kubo.getAbsorbedEntityName());
+            } else {
+                list.add("§7Bản Năng Thôn Phệ: §fĐang tìm kiếm linh hồn rơi rớt để nuốt chửng");
+            }
+            return list;
+        }
         if (entity instanceof VelgryndEntity) {
             list.add("§cThao Túng Thời Không: §eĐóng băng 3s & chém thứ nguyên");
             list.add("§6Gia Tốc Cardinal: §eMach 5 Hỏa Long đục thủng địa hình");
