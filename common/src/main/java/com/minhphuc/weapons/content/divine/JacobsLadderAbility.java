@@ -87,6 +87,32 @@ public class JacobsLadderAbility {
 
     private static final List<ActiveLadder> ACTIVE_LADDERS = new ArrayList<>();
 
+    public static boolean isNearActiveLadder(ServerLevel level, Vec3 pos, double radius) {
+        double rSq = radius * radius;
+        for (ActiveLadder l : ACTIVE_LADDERS) {
+            if (l.level == level && l.center.distanceToSqr(pos) <= rSq) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static Vec3 getClosestLadderCenter(ServerLevel level, Vec3 pos, double radius) {
+        double rSq = radius * radius;
+        double closestDist = Double.MAX_VALUE;
+        Vec3 closest = null;
+        for (ActiveLadder l : ACTIVE_LADDERS) {
+            if (l.level == level) {
+                double d = l.center.distanceToSqr(pos);
+                if (d <= rSq && d < closestDist) {
+                    closestDist = d;
+                    closest = l.center;
+                }
+            }
+        }
+        return closest;
+    }
+
     /**
      * Kích hoạt tuyệt kĩ: Tà Khứ Vũ Thê Tử (Jacob's Ladder)
      */
@@ -322,6 +348,7 @@ public class JacobsLadderAbility {
                             com.minhphuc.weapons.content.tensura.TensuraEvents.handleMobDeathDrop(l.caster, victim);
                         }
 
+                        victim.addTag("JacobsLadderDamage");
                         // Tính toán lượng sát thương Xuất Lực Tối Đa
                         if (l.powerRoll != null && l.powerRoll.isOverdrive()) {
                             // BẠO KÍCH CỰC ĐẠI: 5000 sát thương + xóa sổ thực thể Undead/Boss lớn
@@ -338,6 +365,7 @@ public class JacobsLadderAbility {
                             float damage = 300.0F * (l.powerRoll != null ? l.powerRoll.multiplier : 0.35F);
                             victim.hurt(dmgSource, damage);
                         }
+                        victim.removeTag("JacobsLadderDamage");
 
                         l.level.sendParticles(ParticleTypes.SOUL, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 8, 0.2D, 0.3D, 0.2D, 0.05D);
                     }

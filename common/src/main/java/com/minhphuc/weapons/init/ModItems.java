@@ -178,10 +178,34 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.tensura.PrimordialClawItem(new Item.Properties(), "Vuốt Hư Vô Tai Ương", "Void Claw of Calamity"));
 
     // ==========================================
-    // MODULE: DARK GATHERING - KHÔNG VONG
+    // MODULE: DARK GATHERING - KHÔNG VONG & THỰC THỂ LINH HỒN
     // ==========================================
     public static final RegistrySupplier<Item> KUBO_SPAWN_EGG = ITEMS.register("kubo_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.KUBO, 0x0A0512, 0x9333EA, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> KUBO_SUMMON_CORE = ITEMS.register("kubo_summon_core",
+            () -> new com.minhphuc.weapons.content.darkgathering.KuboSummonItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> MILIM_SOUL = ITEMS.register("milim_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MILIM, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VELGRYND_SOUL = ITEMS.register("velgrynd_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.VELGRYND, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> PRIMORDIAL_DEMON_SOUL = ITEMS.register("primordial_demon_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.PRIMORDIAL_DEMON, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> WARDEN_SOUL = ITEMS.register("warden_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.WARDEN, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> ENDER_DRAGON_SOUL = ITEMS.register("ender_dragon_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.ENDER_DRAGON, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> WITHER_SOUL = ITEMS.register("wither_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.WITHER, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> MOB_SOUL = ITEMS.register("mob_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MOB, new Item.Properties()));
 
     // ==========================================
     // MODULE: CARRERA'S GOLDEN GUN & MA ĐẠN (TENSURA LN)
@@ -462,6 +486,14 @@ public class ModItems {
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());
                         output.accept(VOID_CLAW_CALAMITY.get());
                         output.accept(KUBO_SPAWN_EGG.get());
+                        output.accept(KUBO_SUMMON_CORE.get());
+                        output.accept(MILIM_SOUL.get());
+                        output.accept(VELGRYND_SOUL.get());
+                        output.accept(PRIMORDIAL_DEMON_SOUL.get());
+                        output.accept(WARDEN_SOUL.get());
+                        output.accept(ENDER_DRAGON_SOUL.get());
+                        output.accept(WITHER_SOUL.get());
+                        output.accept(MOB_SOUL.get());
                     })
             ));
 

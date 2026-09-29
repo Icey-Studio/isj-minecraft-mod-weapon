@@ -176,6 +176,69 @@ public class AllOfCreationAbility {
         // Nhược điểm / Khắc chế
         String weakness = target.fireImmune() ? "§cKháng Lửa (Nên dùng Sét hoặc Ma Pháp Thần Thánh)" : "§aYếu Lửa & Ma Pháp Bạo Thực";
         player.displayClientMessage(Component.literal("§a  Khắc Chế Chiến Thuật: §f" + weakness), false);
+
+        // PHÂN TÍCH ĐẶC BIỆT DÀNH CHO KHÔNG VONG (KŪBŌ)
+        if (target instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            player.displayClientMessage(Component.literal("§0§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§4§l║   ✦ CHI TIẾT KỸ NĂNG & THUỘC TÍNH KHÔNG VONG ✦   §4§l║"), false);
+            player.displayClientMessage(Component.literal("§0§l╠════════════════════════════════════════════════╣"), false);
+            
+            // 1. Thể trạng hiện tại
+            if (kubo.isComplete()) {
+                player.displayClientMessage(Component.literal("§f  Thể Trạng: §e§lKHÔNG VONG HOÀN CHỈNH (Bạch Nhật Tà Thần)"), false);
+                player.displayClientMessage(Component.literal("§e  Nguồn Gốc: §fĐã hấp thụ Hạt Giống Ma Vương, đạt tới đỉnh cao thần thánh"), false);
+            } else if (kubo.isUltimate()) {
+                player.displayClientMessage(Component.literal("§4  Thể Trạng: §c§lKHÔNG VONG TỐI THƯỢNG (Vực Thẳm Tiến Hóa)"), false);
+                player.displayClientMessage(Component.literal("§e  Nguồn Gốc: §fĐã nuốt chửng linh hồn Milim Nava hoặc Long Chủng Velgrynd"), false);
+            } else {
+                player.displayClientMessage(Component.literal("§7  Thể Trạng: §8Phôi Thai Hắc Nhật (Dạng Thường)"), false);
+            }
+
+            // 2. Thống kê linh hồn đã nuốt (Không hiện trên tên, chỉ hiện qua Thẩm Định Vạn Vật)
+            int mobSouls = kubo.getMobSoulsCount();
+            int demonSouls = kubo.getDemonSoulsCount();
+            player.displayClientMessage(Component.literal("§d  Linh Hồn Thường Đã Nuốt: §a" + mobSouls + " §7(+ " + (mobSouls * 30) + "% HP & DMG)"), false);
+            player.displayClientMessage(Component.literal("§5  Linh Hồn Ác Ma Đã Nuốt: §e" + demonSouls + " §7(+ " + (demonSouls * 60) + "% HP & DMG)"), false);
+
+            // 3. Kỹ năng Thủy Tổ Ác Ma mở khóa
+            int demonId = kubo.getSpecificDemon();
+            if (demonId >= 0) {
+                String demonSkill = switch (demonId) {
+                    case 0 -> "Bleu (Rain) - Băng Cực Tuyệt Đối (Đóng băng & Làm chậm)";
+                    case 1 -> "Rouge (Guy Crimson) - Hỏa Ngục Hồng Liên (Cột lửa hư vô)";
+                    case 2 -> "Jaune (Carrera) - Súng Ma Đạn Hạt Nhân";
+                    case 3 -> "Noir (Diablo) - Trảm Kích Hư Không Đoạt Mệnh";
+                    case 4 -> "Blanc (Testarossa) - Bạch Viêm Thần Thánh";
+                    case 5 -> "Violet (Ultima) - Hư Vô Tử Độc Ăn Mòn";
+                    case 6 -> "Vert (Misery) - Phong Bạo Cuồng Phong";
+                    default -> "Kỹ Năng Ác Ma Bí Ẩn";
+                };
+                player.displayClientMessage(Component.literal("§6  Tuyệt Kỹ Thủy Tổ Mở Khóa: §b" + demonSkill), false);
+            }
+
+            // 4. Kỹ năng cơ bản & Linh hồn dung hợp khác
+            player.displayClientMessage(Component.literal("§e  Kỹ Năng Bản Thân: §fHắc Nhật Quang Trụ (Cột sáng hư vô 60m)"), false);
+            if (kubo.hasAbsorbedSoul()) {
+                player.displayClientMessage(Component.literal("§d  Linh Hồn Ký Sinh Bổ Trợ: §e" + kubo.getAbsorbedEntityName()), false);
+                player.displayClientMessage(Component.literal("§6  Kỹ Năng Bổ Trợ (70%): §b" + kubo.getAbsorbedSkillName()), false);
+                player.displayClientMessage(Component.literal("§a  Chỉ Số Cộng Thêm: §f+" + String.format("%.0f", kubo.getBonusHp()) + " HP §7| §f+" + String.format("%.1f", kubo.getBonusArmor()) + " Giáp"), false);
+            }
+
+            // 5. Kháng tính phòng ngự & Khắc chế chiến thuật
+            if (kubo.isComplete()) {
+                player.displayClientMessage(Component.literal("§c  Kháng Tính: §f§lKHÁNG 100% MỌI ĐÒN TẤN CÔNG §4(BẤT TỬ TUYỆT ĐỐI)"), false);
+                player.displayClientMessage(Component.literal("§a  Khắc Chế Duy Nhất: §b§lLinh Tử Băng Hoại (Disintegration)"), false);
+                player.displayClientMessage(Component.literal("§e  Cảnh Báo AI: §cThực thể có trí tuệ cao, sẽ tự giác tháo chạy né tránh khi pháp trận kích hoạt!"), false);
+            } else if (kubo.isUltimate()) {
+                player.displayClientMessage(Component.literal("§c  Kháng Tính: §4Miễn nhiễm sát thương Milim, Long Chủng, Ác Ma, Boss"), false);
+                player.displayClientMessage(Component.literal("§c  Phòng Ngự: §7Kháng 95% sát thương người chơi (5% tỷ lệ trúng điểm yếu)"), false);
+                player.displayClientMessage(Component.literal("§c  Đặc Tính Đòn Đánh: §4Xé rách Trận Đồ Cưỡng Chế & Đánh Xuyên Giáp Thần Thoại"), false);
+                player.displayClientMessage(Component.literal("§a  Khắc Chế Chiến Thuật: §fĐại Thánh Tẩy§7 (1 hit), §dDragon Nova§7 (Full DMG), §bLinh Tử Băng Hoại§7 & §eNấc Thang Jacob§7 (1 hit nhưng nó sẽ né)"), false);
+            } else {
+                player.displayClientMessage(Component.literal("§c  Đặc Tính Đòn Đánh: §4XUYÊN GIÁP THẦN THOẠI §7(Chỉ bị chặn bởi Trận Đồ Cưỡng Chế)"), false);
+                player.displayClientMessage(Component.literal("§a  Khắc Chế Chiến Thuật: §fĐại Thánh Tẩy hoặc tiêu diệt trước khi nó kịp ăn thêm linh hồn"), false);
+            }
+        }
         player.displayClientMessage(Component.literal("§b§l╚════════════════════════════════════════════════╝"), false);
 
         player.serverLevel().playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -304,6 +367,7 @@ public class AllOfCreationAbility {
     }
 
     private static String determineSpecies(LivingEntity entity) {
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return "Tà Thần Hư Vô (Dark Gathering)";
         if (entity instanceof VelgryndEntity) return "Long Chủng Tối Thượng (True Dragon)";
         if (entity instanceof PrimordialDemonEntity demon) return "Thủy Tổ Ác Ma (" + demon.getDemonType().name() + ")";
         if (entity instanceof Player) return "Nhân Loại Thức Tỉnh (Awakened Human / Demon Lord)";
@@ -315,6 +379,7 @@ public class AllOfCreationAbility {
     }
 
     private static long estimateEP(LivingEntity entity) {
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return 12500000L;
         if (entity instanceof VelgryndEntity) return 74350000L;
         if (entity instanceof PrimordialDemonEntity demon) {
             return (demon.hasPhysicalBody() && demon.isNamed()) ? 40000000L : 2800000L;

@@ -119,8 +119,12 @@ public class DivineWeaponEvents {
             // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
             if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
-                if (isTrueDemonLord) {
+                boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
+                boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
+
+                if (isTrueDemonLord || isWearingDivineArmor) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
+
                     if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
                         serverPlayer.displayClientMessage(
                             Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
@@ -129,7 +133,8 @@ public class DivineWeaponEvents {
                         return EventResult.interruptTrue();
                     }
 
-                    if (serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
+                    // Kỹ năng Long Tinh Bộc Viêm Bá (Chiêu 6 - index 5): Không cần hồi năng lượng / ma lực
+                    if (selectedSkill != 5 && serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
                         return EventResult.interruptTrue();
                     }
                     ServerLevel sl = (ServerLevel) serverPlayer.level();
@@ -175,9 +180,18 @@ public class DivineWeaponEvents {
         // =========================================================================
         if (victim instanceof Player player) {
             if (com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.isBarrierActive(player)) {
-                player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                        SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
-                return EventResult.interruptFalse();
+                Entity attacker = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
+                if (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo && kubo.isUltimateOrComplete()) {
+                    // Không Vong Tối Thượng hoặc Hoàn Chỉnh đánh xuyên thủng cả Trận Đồ Cưỡng Chế Tai Ương!
+                    player.displayClientMessage(
+                            net.minecraft.network.chat.Component.literal("§4§l[CẢNH BÁO TỐI THƯỢNG] §cKhông Vong Tối Thượng đã xé rách kết giới Trận Đồ Cưỡng Chế Tai Ương!"),
+                            true
+                    );
+                } else {
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
+                    return EventResult.interruptFalse();
+                }
             }
         }
 
@@ -194,8 +208,12 @@ public class DivineWeaponEvents {
                 boolean isVoid = source.is(DamageTypes.FELL_OUT_OF_WORLD);
                 // Ngoại lệ 4: Hỏa diễm Chước Nhiệt Long Velgrynd xuyên phá Thánh Giáp (mỗi 3 đòn gây 30% HP)
                 boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage");
+                // Ngoại lệ 5: Không Vong (Kūbō) đánh xuyên qua Giáp Thần Thoại (Trừ Trận Đồ Cưỡng Chế Tai Ương)
+                boolean isKuboPenetration = source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
+                        || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
+                        || player.getTags().contains("KuboPenetrationDamage");
 
-                if (!isPoison && !isDrowning && !isVoid && !isVelgryndPenetration) {
+                if (!isPoison && !isDrowning && !isVoid && !isVelgryndPenetration && !isKuboPenetration) {
                     // Miễn nhiễm hoàn toàn mọi sát thương từ quái vật, người chơi, rơi, lửa, nổ, v.v.
                     return EventResult.interruptFalse();
                 }

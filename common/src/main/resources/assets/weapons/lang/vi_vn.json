@@ -362,5 +362,13 @@
   "tensura.voice.world_alert_5": "Báo cáo. Pháo Quang Trụ Ngang đã được kích hoạt, sóng xung kích thánh quang đang lan tỏa!",
   "tensura.voice.world_alert_6": "Thông báo. Lễ Hội Thu Hoạch đã ghi nhận thêm biến đổi ma tố trong khu vực!",
   "tensura.voice.world_alert_7": "Báo cáo. Năng lực kháng cự thần thánh đã giảm thiểu tối đa sát thương từ đòn đánh thường!",
-  "tensura.voice.world_alert_8": "Cảnh báo khẩn cấp. Mục tiêu đã tiến vào trạng thái Cuồng Nộ, hạn chế phá hủy địa hình đã bị dỡ bỏ!"
+  "tensura.voice.world_alert_8": "Cảnh báo khẩn cấp. Mục tiêu đã tiến vào trạng thái Cuồng Nộ, hạn chế phá hủy địa hình đã bị dỡ bỏ!",
+  "item.weapons.kubo_summon_core": "Hắc Nhật Hư Vô (Triệu Hồi Không Vong)",
+  "item.weapons.milim_soul": "Linh Hồn Ma Vương Milim Nava",
+  "item.weapons.velgrynd_soul": "Linh Hồn Chước Nhiệt Long Velgrynd",
+  "item.weapons.primordial_demon_soul": "Linh Hồn Ác Ma Thủy Tổ",
+  "item.weapons.warden_soul": "Linh Hồn Giám Sát Cổ Đại Warden",
+  "item.weapons.ender_dragon_soul": "Linh Hồn Long Vương The End",
+  "item.weapons.wither_soul": "Linh Hồn Chúa Tể Wither",
+  "item.weapons.mob_soul": "Linh Hồn Quái Vật Tử Trận"
 }
