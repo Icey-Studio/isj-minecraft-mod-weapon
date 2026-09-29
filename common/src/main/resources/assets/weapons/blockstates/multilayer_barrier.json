@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "weapons:block/multilayer_barrier"
+    }
+  }
+}

@@ -29,6 +29,15 @@ public class ServerboundFireTaisuiStarPacket {
                 if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.checkEmptyHandPunch(player)) {
                     return;
                 }
+                if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.checkEmptyHandPunch(player)) {
+                    return;
+                }
+                if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.checkEmptyHandPunch(player)) {
+                    return;
+                }
+                if (com.minhphuc.weapons.content.divine.PurificationPillarAbility.checkEmptyHandPunch(player)) {
+                    return;
+                }
                 TaisuiExtinctionStarsAbility.fireStar(serverLevel, player);
             }
         });

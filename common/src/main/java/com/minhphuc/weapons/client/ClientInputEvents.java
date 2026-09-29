@@ -16,6 +16,7 @@ import net.minecraft.world.item.ItemStack;
 
 public class ClientInputEvents {
     private static long lastJumpPressTime = 0;
+    private static long lastTaisuiFireTime = 0;
 
     public static void register() {
         ClientTickEvent.CLIENT_POST.register(mc -> {
@@ -70,10 +71,16 @@ public class ClientInputEvents {
         });
 
         InteractionEvent.CLIENT_LEFT_CLICK_AIR.register((player, hand) -> {
-            if (player == null) return;
+            if (player == null || hand != net.minecraft.world.InteractionHand.MAIN_HAND) return;
 
-            // Bắn Tinh Tú Tuyệt Diệt khi nhấn Chuột Trái
-            ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundFireTaisuiStarPacket());
+            // Bắn Tinh Tú Tuyệt Diệt khi nhấn Chuột Trái (Chỉ gửi nếu có trạng thái Thái Tuế Tinh Tú)
+            if (ClientTaisuiHandler.hasTaisui(player.getUUID())) {
+                long now = System.currentTimeMillis();
+                if (now - lastTaisuiFireTime >= 250) { // Cooldown 250ms tránh spam gói tin
+                    lastTaisuiFireTime = now;
+                    ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundFireTaisuiStarPacket());
+                }
+            }
 
             ItemStack heldStack = player.getItemInHand(hand);
             if (heldStack.getItem() instanceof InfinityGauntletItem) {

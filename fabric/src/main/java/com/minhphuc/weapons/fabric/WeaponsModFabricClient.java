@@ -19,5 +19,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_VIOLET.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_BLEU.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_VERT.get(), RenderType.translucent());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.ANTI_MAGIC_BARRIER.get(), RenderType.translucent());
+        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.MULTILAYER_BARRIER.get(), RenderType.translucent());
     }
 }
