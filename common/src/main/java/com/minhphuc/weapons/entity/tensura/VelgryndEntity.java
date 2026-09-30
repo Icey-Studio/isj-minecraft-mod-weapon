@@ -3,7 +3,9 @@ package com.minhphuc.weapons.entity.tensura;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.entity.ModEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
+import org.joml.Vector3f;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetEntityMotionPacket;
@@ -61,6 +63,10 @@ public class VelgryndEntity extends Monster {
             SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
     private static final EntityDataAccessor<String> DATA_OWNER_UUID =
             SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.STRING);
+    public static final EntityDataAccessor<Boolean> DATA_IS_FLYING =
+            SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_IS_ENRAGED =
+            SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final ServerBossEvent bossEvent;
 
@@ -68,12 +74,15 @@ public class VelgryndEntity extends Monster {
     private int timeCollapseCooldown = 200;
     private int heatBladeCooldown = 80;
     private int cardinalAccelCooldown = 280;
+    private int meteorRainCooldown = 260; // 13s cooldown (Thiên Hỏa Lạc Lôi)
+    private int meteorTelegraphTicks = 0; // 30 ticks (1.5s telegraph)
+    private final List<Vec3> meteorTargetPositions = new ArrayList<>();
     private int alliedSafeTicks = 0;
     private int alliedPlayerSkillCooldown = 60;
 
     // Quản lý trạng thái đang thi triển kỹ năng
     private int activeSkillTicks = 0;
-    private int activeSkillId = 0; // 1 = Time, 2 = Blade, 3 = Accel
+    private int activeSkillId = 0; // 1 = Time, 2 = Blade, 3 = Accel, 5 = Meteor
     private Vec3 accelDirection = null;
 
     // Quản lý tấn công nhiều đối thủ & Tồn Tại Song Song
@@ -91,13 +100,23 @@ public class VelgryndEntity extends Monster {
                 BossEvent.BossBarColor.RED,
                 BossEvent.BossBarOverlay.NOTCHED_10
         );
+        this.moveControl = new net.minecraft.world.entity.ai.control.FlyingMoveControl(this, 18, true);
         this.setNoGravity(false);
+    }
+
+    @Override
+    protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
+        net.minecraft.world.entity.ai.navigation.FlyingPathNavigation nav = new net.minecraft.world.entity.ai.navigation.FlyingPathNavigation(this, level);
+        nav.setCanOpenDoors(false);
+        nav.setCanFloat(true);
+        return nav;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 5000.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.42D)
+                .add(Attributes.FLYING_SPEED, 0.55D)
                 .add(Attributes.ATTACK_DAMAGE, 55.0D)
                 .add(Attributes.ARMOR, 30.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
@@ -113,14 +132,19 @@ public class VelgryndEntity extends Monster {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
+                // Tối ưu chống lag: Kiểm tra trong phạm vi 128 blocks nếu đã có Velgrynd thì không spawn thêm
+                AABB checkArea = new AABB(this.blockPosition()).inflate(128.0D);
+                if (!sl.getEntitiesOfClass(VelgryndEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
             }
             // 2. Phải là vị trí lộ thiên ngoài trời (thấy bầu trời, Y >= 60)
             BlockPos pos = this.blockPosition();
             if (!level.canSeeSky(pos) || pos.getY() < 60) {
                 return false;
             }
-            // 3. Tăng tối đa độ hiếm: Chỉ có 5% cơ hội thành công khi hệ thống chọn spawn Velgrynd (giảm 95%)
-            if (this.random.nextFloat() > 0.05F) {
+            // 3. Tỷ lệ xuất hiện tự nhiên tương đương Ác Ma Thủy Tổ (4% cơ hội khi chọn)
+            if (this.random.nextFloat() > 0.04F) {
                 return false;
             }
         }
@@ -140,15 +164,6 @@ public class VelgryndEntity extends Monster {
                 this.discard();
                 return spawnData;
             }
-            BlockPos pos = this.blockPosition();
-            if (!level.canSeeSky(pos) || pos.getY() < 60) {
-                this.discard();
-                return spawnData;
-            }
-            if (this.random.nextFloat() > 0.05F) {
-                this.discard();
-                return spawnData;
-            }
         }
         return spawnData;
     }
@@ -162,6 +177,8 @@ public class VelgryndEntity extends Monster {
         builder.define(DATA_IS_CLONE, false);
         builder.define(DATA_IS_ALLIED, false);
         builder.define(DATA_OWNER_UUID, "");
+        builder.define(DATA_IS_FLYING, false);
+        builder.define(DATA_IS_ENRAGED, false);
     }
 
     @Override
@@ -261,6 +278,22 @@ public class VelgryndEntity extends Monster {
 
     public void setHoldingFan(boolean holding) {
         this.entityData.set(DATA_HOLDING_FAN, holding);
+    }
+
+    public boolean isFlyingAnim() {
+        return this.entityData.get(DATA_IS_FLYING);
+    }
+
+    public void setFlyingAnim(boolean flying) {
+        this.entityData.set(DATA_IS_FLYING, flying);
+    }
+
+    public boolean isEnraged() {
+        return this.entityData.get(DATA_IS_ENRAGED);
+    }
+
+    public void setEnraged(boolean enraged) {
+        this.entityData.set(DATA_IS_ENRAGED, enraged);
     }
 
     public int getCastingState() {
@@ -378,6 +411,31 @@ public class VelgryndEntity extends Monster {
                         sLevel.sendParticles(ParticleTypes.HEART, owner.getX(), owner.getY() + 1.0D, owner.getZ(), 3, 0.3D, 0.5D, 0.3D, 0.05D);
                     }
                 } catch (Exception ignored) {}
+            }
+        }
+
+        // Quản lý trạng thái bay lượn trên không trung
+        LivingEntity curCombatTarget = this.getTarget();
+        if (curCombatTarget != null && curCombatTarget.isAlive()) {
+            setFlyingAnim(true);
+            this.setNoGravity(true);
+            double desiredY = curCombatTarget.getY() + 3.5D;
+            if (this.getY() < desiredY) {
+                this.setDeltaMovement(this.getDeltaMovement().add(0, 0.04D, 0));
+            }
+        } else {
+            setFlyingAnim(false);
+            this.setNoGravity(false);
+        }
+
+        // Quản lý Nhiệt Huyết Bạo Tẩu (Phase 2 Enrage < 30% HP)
+        boolean enraged = this.getHealth() <= (this.getMaxHealth() * 0.30F);
+        if (enraged != isEnraged()) {
+            setEnraged(enraged);
+            if (enraged) {
+                this.broadcastDialogue("Toàn bộ hỏa diễm bộc phát... Chước Nhiệt Thăng Hoa!");
+                sLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
+                        SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 5.0F, 1.2F);
             }
         }
 
@@ -710,6 +768,9 @@ public class VelgryndEntity extends Monster {
                     sLevel.sendParticles(ParticleTypes.LAVA, curPos.x, curPos.y + 0.5D, curPos.z, 8, 0.8D, 0.8D, 0.8D, 0.05D);
                     sLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, curPos.x, curPos.y + 0.8D, curPos.z, 1, 0, 0, 0, 0);
 
+                    // Phá hủy hoàn toàn Đa Trùng Kết Giới trên đường lao
+                    com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.shatterBarrierNear(sLevel, curPos, 5.0D, "Gia Tốc Chước Nhiệt Long của Velgrynd");
+
                     // Đào hầm phá hủy block bán kính 2.5 blocks trên đường lao
                     BlockPos centerBp = BlockPos.containing(curPos);
                     int r = 2;
@@ -752,6 +813,39 @@ public class VelgryndEntity extends Monster {
                     this.accelDirection = null;
                 }
             }
+        } else if (activeSkillId == 5) {
+            // --- KỸ NĂNG 5: MƯA THIÊN HỎA (METEOR STORM RAIN) ---
+            // Báo hiệu vòng tròn đỏ dưới mặt đất trong 30 ticks (1.5s)
+            if (activeSkillTicks > 1 && !meteorTargetPositions.isEmpty()) {
+                DustParticleOptions RED_TELEGRAPH = new DustParticleOptions(new Vector3f(1.0F, 0.15F, 0.1F), 1.6F);
+                for (Vec3 pos : meteorTargetPositions) {
+                    for (int i = 0; i < 8; i++) {
+                        double ang = (i * 45.0D) * Math.PI / 180.0D;
+                        double px = pos.x + Math.cos(ang) * 3.5D;
+                        double pz = pos.z + Math.sin(ang) * 3.5D;
+                        sLevel.sendParticles(RED_TELEGRAPH, px, pos.y + 0.15D, pz, 1, 0, 0.02D, 0, 0);
+                    }
+                }
+            }
+
+            if (activeSkillTicks == 1) {
+                // Khai hỏa thiên thạch rơi xuống các vị trí
+                for (Vec3 pos : meteorTargetPositions) {
+                    sLevel.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 3.5F, 0.8F);
+                    sLevel.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y + 1.0D, pos.z, 2, 0.5D, 0.5D, 0.5D, 0);
+                    sLevel.sendParticles(ParticleTypes.LAVA, pos.x, pos.y + 0.5D, pos.z, 20, 1.5D, 0.5D, 1.5D, 0.1D);
+
+                    AABB blastBox = new AABB(pos.x - 3.5D, pos.y - 1.0D, pos.z - 3.5D,
+                            pos.x + 3.5D, pos.y + 3.0D, pos.z + 3.5D);
+                    List<LivingEntity> list = sLevel.getEntitiesOfClass(LivingEntity.class, blastBox, e -> e != this && e.isAlive());
+                    for (LivingEntity v : list) {
+                        applyDamageToTarget(v, 45.0F);
+                        v.setRemainingFireTicks(120);
+                    }
+                }
+                this.setCastingState(0);
+                this.meteorTargetPositions.clear();
+            }
         }
     }
 
@@ -768,6 +862,29 @@ public class VelgryndEntity extends Monster {
         this.heatBladeCooldown = 90;
         this.setCastingState(2);
         this.broadcastDialogue("Cắt xé thành trăm mảnh đi — Chước Liệt Tiệt Đoán!");
+    }
+
+    public void startSkillMeteorRain(LivingEntity target) {
+        if (target == null) return;
+        this.activeSkillId = 5;
+        this.activeSkillTicks = 30; // 1.5s telegraph
+        this.meteorRainCooldown = isEnraged() ? 180 : 260;
+        this.setCastingState(1);
+
+        this.broadcastDialogue("Thiên Hỏa Lạc Lôi... Bầu trời này sẽ là mồ chôn của các ngươi!");
+        if (this.level() instanceof ServerLevel sLevel) {
+            sLevel.playSound(null, this.getX(), this.getY(), this.getZ(),
+                    SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 3.5F, 0.8F);
+        }
+
+        // Chọn 5 vị trí: tâm mục tiêu và 4 góc xung quanh
+        this.meteorTargetPositions.clear();
+        Vec3 tPos = target.position();
+        this.meteorTargetPositions.add(tPos);
+        this.meteorTargetPositions.add(tPos.add(-5.0D, 0, -5.0D));
+        this.meteorTargetPositions.add(tPos.add(5.0D, 0, -5.0D));
+        this.meteorTargetPositions.add(tPos.add(-5.0D, 0, 5.0D));
+        this.meteorTargetPositions.add(tPos.add(5.0D, 0, 5.0D));
     }
 
     public void startSkillCardinalAcceleration(LivingEntity target) {
@@ -1060,7 +1177,20 @@ public class VelgryndEntity extends Monster {
                     this.setDragonLayers(this.getDragonLayers() - 1);
                 }
             }
+
+            // Tương tác khi đụng độ Bạch Băng Long Velzard
+            if (attacker instanceof VelzardEntity) {
+                if (this.random.nextFloat() <= 0.25F) {
+                    this.broadcastDialogue("Chị hai Velzard... Rốt cuộc chị cũng ra tay với em sao?!");
+                }
+                if (amount >= 30.0F && this.getDragonLayers() > 1) {
+                    this.setDragonLayers(this.getDragonLayers() - 1);
+                }
+            }
         }
+
+        // Tăng 25% sát thương nhận vào khi ở Phase 2 (Nhiệt Huyết Bạo Tẩu - Glass Cannon)
+        float finalHurtAmount = isEnraged() ? amount * 1.25F : amount;
 
         // 1. KIỂM TRA ĐẶC BIỆT: LONG TINH BỘC VIÊM BÁ (DRAGON NOVA)
         // Năng lượng Tinh Tố bộc phá xuyên thủng vảy rồng và kết liễu ngay lập tức!
@@ -1103,7 +1233,7 @@ public class VelgryndEntity extends Monster {
             }
         }
 
-        return super.hurt(source, amount);
+        return super.hurt(source, finalHurtAmount);
     }
 
     @Override
@@ -1170,6 +1300,7 @@ public class VelgryndEntity extends Monster {
     public int getTimeCollapseCooldown() { return timeCollapseCooldown; }
     public int getHeatBladeCooldown() { return heatBladeCooldown; }
     public int getCardinalAccelCooldown() { return cardinalAccelCooldown; }
+    public int getMeteorRainCooldown() { return meteorRainCooldown; }
     public int getActiveSkillTicks() { return activeSkillTicks; }
 
     /**
@@ -1208,7 +1339,13 @@ public class VelgryndEntity extends Monster {
                 return;
             }
 
-            // 3. Phi đao hỏa diễm (Tầm trung 6m - 25m)
+            // 3. Mưa Thiên Hỏa (Thiên thạch rơi - Tầm trung 10m - 35m)
+            if (velgrynd.getMeteorRainCooldown() <= 0 && distSq <= 35.0D * 35.0D) {
+                velgrynd.startSkillMeteorRain(target);
+                return;
+            }
+
+            // 4. Phi đao hỏa diễm (Tầm trung 6m - 25m)
             if (velgrynd.getHeatBladeCooldown() <= 0 && distSq >= 6.0D * 6.0D) {
                 velgrynd.startSkillHeatBlades();
                 return;

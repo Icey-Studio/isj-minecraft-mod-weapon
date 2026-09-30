@@ -37,15 +37,22 @@ import net.minecraft.world.entity.ai.navigation.FlyingPathNavigation;
 import net.minecraft.world.entity.ai.navigation.PathNavigation;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Monster;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.entity.projectile.WitherSkull;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
+import com.minhphuc.weapons.content.divine.DivineArmorItem;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 /**
  * Không Vong (Kūbō / The Black Sun God Embryo) - Dark Gathering.
@@ -93,6 +100,23 @@ public class KuboEntity extends Monster {
 
     private int beamCooldown = 100; // 5s cooldown
     private int absorbedSkillCooldown = 120; // 6s cooldown
+    private int voidScytheCooldown = 140; // 7s cooldown (Trảm Khí Hư Vô)
+    private int gravityWellCooldown = 280; // 14s cooldown (Hố Đen Hút Linh Hồn)
+    private int screechCooldown = 400; // 20s cooldown (Tiếng Hét Vô Tận)
+    private int screechTelegraphTicks = 0; // 24 ticks (1.2s telegraph)
+
+    public static class ActiveGravityWell {
+        public final ServerLevel level;
+        public final Vec3 center;
+        public int ticksRemaining = 60; // 3s
+        public boolean disrupted = false;
+
+        public ActiveGravityWell(ServerLevel level, Vec3 center) {
+            this.level = level;
+            this.center = center;
+        }
+    }
+    private final List<ActiveGravityWell> activeWells = new ArrayList<>();
 
     public KuboEntity(EntityType<? extends Monster> entityType, Level level) {
         super(entityType, level);
@@ -242,6 +266,74 @@ public class KuboEntity extends Monster {
 
         if (beamCooldown > 0) beamCooldown--;
         if (absorbedSkillCooldown > 0) absorbedSkillCooldown--;
+        if (voidScytheCooldown > 0) voidScytheCooldown--;
+        if (gravityWellCooldown > 0) gravityWellCooldown--;
+        if (screechCooldown > 0) screechCooldown--;
+
+        // Xử lý báo hiệu Tiếng Hét Vô Tận
+        if (screechTelegraphTicks > 0) {
+            screechTelegraphTicks--;
+            if (this.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.SQUID_INK, this.getX(), this.getY() + 1.0D, this.getZ(), 8, 0.5D, 0.5D, 0.5D, 0.1D);
+                if (screechTelegraphTicks == 0) {
+                    finishEldritchScreech(sl);
+                }
+            }
+        }
+
+        // Xử lý Hố Đen Hút Linh Hồn
+        if (!activeWells.isEmpty()) {
+            Iterator<ActiveGravityWell> it = activeWells.iterator();
+            while (it.hasNext()) {
+                ActiveGravityWell well = it.next();
+                well.ticksRemaining--;
+
+                // Hút thực thể trong 10m về tâm
+                AABB pullBox = new AABB(well.center.x - 10.0D, well.center.y - 4.0D, well.center.z - 10.0D,
+                        well.center.x + 10.0D, well.center.y + 6.0D, well.center.z + 10.0D);
+                List<LivingEntity> pulled = well.level.getEntitiesOfClass(LivingEntity.class, pullBox, e -> e != this && e.isAlive());
+                for (LivingEntity e : pulled) {
+                    Vec3 toCenter = well.center.subtract(e.position()).normalize().scale(0.18D);
+                    e.setDeltaMovement(e.getDeltaMovement().add(toCenter));
+                }
+
+                if (this.tickCount % 2 == 0) {
+                    well.level.sendParticles(ParticleTypes.SQUID_INK, well.center.x, well.center.y + 1.0D, well.center.z, 6, 0.4D, 0.4D, 0.4D, 0.05D);
+                    well.level.sendParticles(ParticleTypes.REVERSE_PORTAL, well.center.x, well.center.y + 1.0D, well.center.z, 8, 0.5D, 0.5D, 0.5D, 0.05D);
+                }
+
+                // Kiểm tra tên / đạn ma thuật bắn vào tâm hố đen (< 2.5m)
+                List<net.minecraft.world.entity.projectile.Projectile> projList = well.level.getEntitiesOfClass(
+                        net.minecraft.world.entity.projectile.Projectile.class,
+                        new AABB(well.center.x - 2.5D, well.center.y - 1.5D, well.center.z - 2.5D,
+                                well.center.x + 2.5D, well.center.y + 3.0D, well.center.z + 2.5D));
+                if (!projList.isEmpty()) {
+                    well.disrupted = true;
+                    well.ticksRemaining = 0;
+                }
+
+                if (well.ticksRemaining <= 0) {
+                    if (well.disrupted) {
+                        well.level.playSound(null, well.center.x, well.center.y, well.center.z,
+                                SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.HOSTILE, 3.0F, 1.4F);
+                        well.level.sendParticles(ParticleTypes.POOF, well.center.x, well.center.y + 1.0D, well.center.z, 20, 0.5D, 0.5D, 0.5D, 0.1D);
+                        for (Player p : well.level.getEntitiesOfClass(Player.class, pullBox)) {
+                            p.displayClientMessage(Component.literal("§a§l[HỐ ĐEN BỊ PHÁ HỦY] §fĐã bắn trúng tâm hố đen triệt tiêu vụ nổ!"), true);
+                        }
+                    } else {
+                        well.level.playSound(null, well.center.x, well.center.y, well.center.z,
+                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.8F);
+                        well.level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, well.center.x, well.center.y + 1.0D, well.center.z, 2, 0.5D, 0.5D, 0.5D, 0);
+                        AABB dmgBox = new AABB(well.center.x - 5.0D, well.center.y - 2.0D, well.center.z - 5.0D,
+                                well.center.x + 5.0D, well.center.y + 4.0D, well.center.z + 5.0D);
+                        for (LivingEntity v : well.level.getEntitiesOfClass(LivingEntity.class, dmgBox, e -> e != this && e.isAlive())) {
+                            v.hurt(well.level.damageSources().magic(), 60.0F);
+                        }
+                    }
+                    it.remove();
+                }
+            }
+        }
 
         // Hiệu ứng hạt hư vô màu đen tím toả ra từ mặt trời đen (hoặc trắng tuyết nếu hoàn chỉnh)
         if (this.level() instanceof ServerLevel sl && this.tickCount % 2 == 0) {
@@ -338,10 +430,32 @@ public class KuboEntity extends Monster {
                 this.playSound(SoundEvents.SHIELD_BLOCK, 1.2F, 1.4F);
             }
 
-            return super.hurt(source, finalDamage);
+            float prevHealth = this.getHealth();
+            boolean res = super.hurt(source, finalDamage);
+            if (res && this.isAlive()) {
+                float maxHp = this.getMaxHealth();
+                float currHp = this.getHealth();
+                if ((prevHealth > maxHp * 0.75F && currHp <= maxHp * 0.75F) ||
+                    (prevHealth > maxHp * 0.50F && currHp <= maxHp * 0.50F) ||
+                    (prevHealth > maxHp * 0.25F && currHp <= maxHp * 0.25F)) {
+                    this.startEldritchScreech();
+                }
+            }
+            return res;
         }
 
-        return super.hurt(source, amount);
+        float prevHealth = this.getHealth();
+        boolean res = super.hurt(source, amount);
+        if (res && this.isAlive()) {
+            float maxHp = this.getMaxHealth();
+            float currHp = this.getHealth();
+            if ((prevHealth > maxHp * 0.75F && currHp <= maxHp * 0.75F) ||
+                (prevHealth > maxHp * 0.50F && currHp <= maxHp * 0.50F) ||
+                (prevHealth > maxHp * 0.25F && currHp <= maxHp * 0.25F)) {
+                this.startEldritchScreech();
+            }
+        }
+        return res;
     }
 
     @Override
@@ -364,6 +478,46 @@ public class KuboEntity extends Monster {
             return hurt;
         }
         return super.doHurtTarget(target);
+    }
+
+    // =========================================================================
+    // HỆ THỐNG GÂY SÁT THƯƠNG TRỌNG THƯƠNG CỦA KHÔNG VONG
+    // =========================================================================
+    public void applyKuboAttackDamage(LivingEntity target, float damage) {
+        if (target == null || !target.isAlive() || this.level().isClientSide()) return;
+        ServerLevel sl = (ServerLevel) this.level();
+
+        target.addTag("KuboPenetrationDamage");
+        target.removeEffect(MobEffects.REGENERATION);
+        target.removeEffect(MobEffects.ABSORPTION);
+        target.removeEffect(MobEffects.DAMAGE_RESISTANCE);
+
+        if (target instanceof ServerPlayer sp) {
+            // 1. Phá vỡ giơ khiên lập tức
+            if (sp.isBlocking()) {
+                sp.disableShield();
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.SHIELD_BREAK, SoundSource.PLAYERS, 2.0F, 0.8F);
+                sl.sendParticles(ParticleTypes.CRIT, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 20, 0.4D, 0.4D, 0.4D, 0.1D);
+            }
+
+            // 2. Xuyên qua Giáp Thần Thoại (Divine Armor) hoặc gây sát thương ma pháp xuyên thấu
+            if (DivineArmorItem.isWearingFullSet(sp)) {
+                float divinePercent = isComplete() ? 0.60F : (isUltimate() ? 0.45F : 0.30F);
+                float trueDmg = sp.getMaxHealth() * divinePercent;
+                sp.hurt(sl.damageSources().magic(), trueDmg);
+            } else {
+                sp.hurt(sl.damageSources().magic(), damage);
+            }
+
+            // 3. Hiệu ứng TRỌNG THƯƠNG
+            sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 140, 1, false, false, true));
+            sp.addEffect(new MobEffectInstance(MobEffects.WITHER, 160, isUltimateOrComplete() ? 2 : 1, false, false, true));
+            sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 1, false, false, true));
+            sp.displayClientMessage(Component.literal("§4§l[KHÔNG VONG] §cĐòn đánh Hư Vô đã bắn trọng thương ngươi! (-" + (int)damage + " HP)"), true);
+        } else {
+            target.hurt(sl.damageSources().magic(), damage);
+        }
+        target.removeTag("KuboPenetrationDamage");
     }
 
     // =========================================================================
@@ -391,6 +545,8 @@ public class KuboEntity extends Monster {
         Vec3 cur = eyePos;
         float damage = isComplete() ? 320.0F : (isUltimate() ? 250.0F : 140.0F);
 
+        Set<UUID> hitEntities = new HashSet<>();
+
         for (double d = 0; d < maxDist; d += step) {
             cur = cur.add(dir.scale(step));
 
@@ -403,11 +559,10 @@ public class KuboEntity extends Monster {
             AABB hitBox = new AABB(cur.x - 3.5D, cur.y - 3.5D, cur.z - 3.5D, cur.x + 3.5D, cur.y + 3.5D, cur.z + 3.5D);
             List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, hitBox, e -> e != this && e.isAlive());
             for (LivingEntity v : victims) {
-                v.addTag("KuboPenetrationDamage");
-                v.removeEffect(MobEffects.REGENERATION);
-                v.removeEffect(MobEffects.DAMAGE_RESISTANCE);
-                v.hurt(this.damageSources().mobAttack(this), damage);
-                v.removeTag("KuboPenetrationDamage");
+                if (hitEntities.contains(v.getUUID())) continue;
+                hitEntities.add(v.getUUID());
+
+                applyKuboAttackDamage(v, damage);
 
                 Vec3 kb = dir.scale(2.0D).add(0, 0.35D, 0);
                 v.setDeltaMovement(kb);
@@ -415,7 +570,105 @@ public class KuboEntity extends Monster {
             }
         }
 
-        this.beamCooldown = 110;
+        this.beamCooldown = 100;
+    }
+
+    // =========================================================================
+    // KỸ NĂNG NÂNG CẤP MỚI CỦA KHÔNG VONG (TELEGraphed & CƠ CHẾ NÉ TRÁNH)
+    // =========================================================================
+
+    public void castVoidScythe(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl) || target == null || !target.isAlive()) return;
+        this.voidScytheCooldown = isUltimateOrComplete() ? 100 : 140;
+
+        Vec3 look = target.getLookAngle();
+        Vec3 strikePos = target.position().subtract(look.scale(3.0D)).add(0, 0.5D, 0);
+        this.teleportTo(strikePos.x, strikePos.y, strikePos.z);
+        this.getLookControl().setLookAt(target, 180.0F, 180.0F);
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 3.0F, 1.4F);
+        sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 3.0F, 0.5F);
+
+        for (int i = -4; i <= 4; i++) {
+            double angle = Math.toRadians(target.getYRot() + i * 20.0);
+            double px = target.getX() + Math.cos(angle) * 3.0D;
+            double pz = target.getZ() + Math.sin(angle) * 3.0D;
+            sl.sendParticles(ParticleTypes.SQUID_INK, px, target.getY() + 1.2D, pz, 3, 0.1D, 0.1D, 0.1D, 0.02D);
+            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, px, target.getY() + 1.2D, pz, 1, 0, 0, 0, 0.01D);
+        }
+
+        if (target instanceof Player player) {
+            player.displayClientMessage(Component.literal("§5§l[TRẢM KHÍ HƯ VÔ] §dKūbō đang vung Lưỡi Hái Hư Vô! Cúi người (Shift) đỡ đòn hoặc né ngay!"), true);
+        }
+
+        boolean isCrouching = target.isCrouching();
+        float baseDmg = isComplete() ? 280.0F : (isUltimate() ? 200.0F : 110.0F);
+        if (isCrouching) {
+            baseDmg *= 0.3F;
+            sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 2.5F, 1.2F);
+            sl.sendParticles(ParticleTypes.CRIT, target.getX(), target.getY() + 1.0D, target.getZ(), 15, 0.3D, 0.3D, 0.3D, 0.1D);
+        }
+
+        applyKuboAttackDamage(target, baseDmg);
+    }
+
+    public void castGravityWell(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl) || target == null || !target.isAlive()) return;
+        this.gravityWellCooldown = isUltimateOrComplete() ? 200 : 260;
+
+        Vec3 center = target.position();
+        activeWells.add(new ActiveGravityWell(sl, center));
+
+        sl.playSound(null, center.x, center.y, center.z, SoundEvents.PORTAL_TRIGGER, SoundSource.HOSTILE, 3.5F, 0.7F);
+        sl.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_DEACTIVATE, SoundSource.HOSTILE, 3.0F, 0.5F);
+
+        if (target instanceof Player player) {
+            player.displayClientMessage(Component.literal("§8§l[HỐ ĐEN HÚT LINH HỒN] §fBắn tên/đạn vào tâm hố đen để triệt tiêu hoặc thoát khỏi vùng hút!"), true);
+        }
+    }
+
+    public void startEldritchScreech() {
+        if (!(this.level() instanceof ServerLevel sl) || screechCooldown > 0 || screechTelegraphTicks > 0) return;
+        this.screechCooldown = 400;
+        this.screechTelegraphTicks = 24;
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 4.0F, 0.6F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GHAST_SCREAM, SoundSource.HOSTILE, 3.5F, 0.5F);
+
+        for (Player p : sl.getEntitiesOfClass(Player.class, this.getBoundingBox().inflate(30.0D))) {
+            p.displayClientMessage(Component.literal("§5§l[TIẾNG HÉT VÔ TẬN] §dKūbō đang gầm rú năng lượng Hư Vô! Hãy che chắn hoặc lùi xa!"), true);
+        }
+    }
+
+    public void finishEldritchScreech(ServerLevel sl) {
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 5.0F, 0.7F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.6F);
+
+        double radius = 18.0D;
+        for (int i = 0; i < 36; i++) {
+            double angle = Math.toRadians(i * 10.0);
+            double px = this.getX() + Math.cos(angle) * 6.0D;
+            double pz = this.getZ() + Math.sin(angle) * 6.0D;
+            sl.sendParticles(ParticleTypes.SONIC_BOOM, px, this.getY() + 1.0D, pz, 1, 0, 0, 0, 0);
+        }
+
+        AABB screamBox = this.getBoundingBox().inflate(radius);
+        List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, screamBox, e -> e != this && e.isAlive());
+        for (LivingEntity v : victims) {
+            if (v instanceof ServerPlayer sp) {
+                if (sp.isBlocking()) {
+                    sp.disableShield();
+                    sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.SHIELD_BREAK, SoundSource.PLAYERS, 2.5F, 0.8F);
+                }
+                sp.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 160, 0, false, false, true));
+                sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2, false, false, true));
+                sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false, true));
+            }
+            applyKuboAttackDamage(v, isComplete() ? 180.0F : (isUltimate() ? 120.0F : 60.0F));
+            Vec3 push = v.position().subtract(this.position()).normalize().scale(1.8D).add(0, 0.4D, 0);
+            v.setDeltaMovement(push);
+            v.hasImpulse = true;
+        }
     }
 
     // =========================================================================
@@ -445,11 +698,9 @@ public class KuboEntity extends Monster {
                         sl.sendParticles(ParticleTypes.SNOWFLAKE, target.getX() + ox, target.getY() + oy, target.getZ() + oz, 8, 0, 0, 0, 0.05D);
                         sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, target.getX() + ox, target.getY() + oy, target.getZ() + oz, 3, 0, 0, 0, 0.02D);
                     }
-                    target.addTag("KuboPenetrationDamage");
                     target.setTicksFrozen(240);
                     target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 160, 255, false, false, true));
-                    target.hurt(this.damageSources().mobAttack(this), 220.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 220.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
@@ -461,10 +712,8 @@ public class KuboEntity extends Monster {
                         sl.sendParticles(ParticleTypes.FLAME, target.getX() + ox, target.getY() + 0.5D, target.getZ() + oz, 10, 0, 0.4D, 0, 0.1D);
                         sl.sendParticles(ParticleTypes.LAVA, target.getX() + ox, target.getY() + 0.5D, target.getZ() + oz, 5, 0, 0, 0, 0);
                     }
-                    target.addTag("KuboPenetrationDamage");
                     target.setRemainingFireTicks(240);
-                    target.hurt(this.damageSources().mobAttack(this), 350.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 350.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
@@ -474,38 +723,30 @@ public class KuboEntity extends Monster {
                         Vec3 spread = dir.add((random.nextDouble() - 0.5D) * 0.25D, (random.nextDouble() - 0.5D) * 0.25D, (random.nextDouble() - 0.5D) * 0.25D).normalize();
                         sl.sendParticles(ParticleTypes.SONIC_BOOM, eyePos.x + spread.x * 2.0D, eyePos.y + spread.y * 2.0D, eyePos.z + spread.z * 2.0D, 1, 0, 0, 0, 0);
                     }
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 320.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 320.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
                 case NOIR -> { // Diablo - Móng Vuốt Tuyệt Vọng
                     sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 3.0F, 0.5F);
                     sl.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), target.getY() + 1.0D, target.getZ(), 6, 0.4D, 0.4D, 0.4D, 0);
-                    target.addTag("KuboPenetrationDamage");
                     target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 3));
-                    target.hurt(this.damageSources().mobAttack(this), 280.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 280.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
                 case BLANC -> { // Testarossa - Bạch Viêm Diệt Tuyệt
                     sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 3.0F, 1.2F);
                     sl.sendParticles(ParticleTypes.END_ROD, target.getX(), target.getY() + 1.0D, target.getZ(), 20, 0.6D, 0.6D, 0.6D, 0.05D);
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 260.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 260.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
                 case VIOLET -> { // Ultima - Tử Độc Khởi Nguyên
                     sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.WITCH_DRINK, SoundSource.HOSTILE, 3.0F, 0.7F);
                     sl.sendParticles(ParticleTypes.WITCH, target.getX(), target.getY() + 1.0D, target.getZ(), 25, 0.6D, 0.6D, 0.6D, 0.05D);
-                    target.addTag("KuboPenetrationDamage");
                     target.addEffect(new MobEffectInstance(MobEffects.POISON, 300, 3));
-                    target.hurt(this.damageSources().mobAttack(this), 200.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 200.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
@@ -513,9 +754,7 @@ public class KuboEntity extends Monster {
                     sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.WIND_CHARGE_BURST.value(), SoundSource.HOSTILE, 3.0F, 1.0F);
                     target.setDeltaMovement(0, 1.4D, 0);
                     target.hasImpulse = true;
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 190.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 190.0F);
                     this.absorbedSkillCooldown = 120;
                     return;
                 }
@@ -531,37 +770,35 @@ public class KuboEntity extends Monster {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 3.5F, 0.8F);
                     AABB beamBox = this.getBoundingBox().expandTowards(dir.scale(60.0D)).inflate(4.0D);
                     for (LivingEntity v : sl.getEntitiesOfClass(LivingEntity.class, beamBox, e -> e != this && e.isAlive())) {
-                        v.addTag("KuboPenetrationDamage");
-                        v.hurt(this.damageSources().mobAttack(this), 1260.0F);
-                        v.removeTag("KuboPenetrationDamage");
+                        applyKuboAttackDamage(v, 1260.0F);
                     }
                 }
                 case VELGRYND -> {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.DRAGON_FIREBALL_EXPLODE, SoundSource.HOSTILE, 3.0F, 1.2F);
-                    target.addTag("KuboPenetrationDamage");
                     target.setRemainingFireTicks(300);
-                    target.hurt(this.damageSources().mobAttack(this), 350.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 350.0F);
+                }
+                case VELZARD -> {
+                    sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.5F, 0.6F);
+                    sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.HOSTILE, 3.0F, 1.4F);
+                    sl.sendParticles(ParticleTypes.SNOWFLAKE, target.getX(), target.getY() + 1.0D, target.getZ(), 40, 1.5D, 1.5D, 1.5D, 0.1D);
+                    target.setTicksFrozen(target.getTicksRequiredToFreeze() + 80);
+                    target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 4));
+                    applyKuboAttackDamage(target, 420.0F);
                 }
                 case PRIMORDIAL_DEMON -> {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.EVOKER_CAST_SPELL, SoundSource.HOSTILE, 3.0F, 0.7F);
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 280.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 280.0F);
                 }
                 case WARDEN -> {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 3.0F, 1.0F);
                     sl.sendParticles(ParticleTypes.SONIC_BOOM, target.getX(), target.getY() + 1.0D, target.getZ(), 1, 0, 0, 0, 0);
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 90.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 90.0F);
                 }
                 case ENDER_DRAGON -> {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 2.5F, 0.9F);
                     sl.sendParticles(ParticleTypes.DRAGON_BREATH, target.getX(), target.getY() + 1.0D, target.getZ(), 40, 1.2D, 1.2D, 1.2D, 0.05D);
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 120.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 120.0F);
                 }
                 case WITHER -> {
                     sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_SHOOT, SoundSource.HOSTILE, 2.5F, 1.0F);
@@ -571,9 +808,7 @@ public class KuboEntity extends Monster {
                 }
                 case MOB -> {
                     sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2.0F, 0.5F);
-                    target.addTag("KuboPenetrationDamage");
-                    target.hurt(this.damageSources().mobAttack(this), 45.0F);
-                    target.removeTag("KuboPenetrationDamage");
+                    applyKuboAttackDamage(target, 45.0F);
                 }
             }
         }
@@ -655,7 +890,7 @@ public class KuboEntity extends Monster {
     }
 
     public void absorbSoul(SoulType soulType) {
-        if (soulType == SoulType.MILIM || soulType == SoulType.VELGRYND) {
+        if (soulType == SoulType.MILIM || soulType == SoulType.VELGRYND || soulType == SoulType.VELZARD) {
             evolveToUltimate(soulType);
             return;
         }
@@ -990,31 +1225,38 @@ public class KuboEntity extends Monster {
             double distSq = kubo.distanceToSqr(target);
             boolean strong = isStrongTarget(target);
             boolean lowHp = kubo.getHealth() < kubo.getMaxHealth() * 0.5F;
+            boolean isPlayer = target instanceof Player;
 
-            // TRƯỜNG HỢP 1: THỰC THỂ MẠNH HOẶC MÁU DƯỚI 50% HOẶC Ở DẠNG TỐI THƯỢNG/HOÀN CHỈNH -> TÁC CHIẾN TỪ XA
-            if (strong || lowHp || kubo.isUltimateOrComplete()) {
+            // TRƯỜNG HỢP 1: NGƯỜI CHƠI, THỰC THỂ MẠNH, MÁU DƯỚI 50% HOẶC Ở DẠNG TỐI THƯỢNG/HOÀN CHỈNH -> TÁC CHIẾN TẦM XA BẮN BEAM / SKILL
+            if (isPlayer || strong || lowHp || kubo.isUltimateOrComplete()) {
                 Vec3 targetPos = target.position();
-                double hoverX = targetPos.x + (kubo.getX() > targetPos.x ? 14.0D : -14.0D);
-                double hoverY = targetPos.y + 11.0D;
-                double hoverZ = targetPos.z + (kubo.getZ() > targetPos.z ? 14.0D : -14.0D);
-                kubo.getMoveControl().setWantedPosition(hoverX, hoverY, hoverZ, 1.2D);
+                double hoverX = targetPos.x + (kubo.getX() > targetPos.x ? 12.0D : -12.0D);
+                double hoverY = targetPos.y + 10.0D;
+                double hoverZ = targetPos.z + (kubo.getZ() > targetPos.z ? 12.0D : -12.0D);
+                kubo.getMoveControl().setWantedPosition(hoverX, hoverY, hoverZ, 1.25D);
 
-                if (kubo.hasAbsorbedSoul() && kubo.absorbedSkillCooldown <= 0 && distSq <= 50.0D * 50.0D) {
+                if (kubo.voidScytheCooldown <= 0 && distSq <= 20.0D * 20.0D) {
+                    kubo.castVoidScythe(target);
+                } else if (kubo.gravityWellCooldown <= 0 && distSq <= 35.0D * 35.0D) {
+                    kubo.castGravityWell(target);
+                } else if (kubo.hasAbsorbedSoul() && kubo.absorbedSkillCooldown <= 0 && distSq <= 55.0D * 55.0D) {
                     kubo.castAbsorbedSkill(target);
-                } else if (kubo.beamCooldown <= 0 && distSq <= 60.0D * 60.0D) {
+                } else if (kubo.beamCooldown <= 0 && distSq <= 65.0D * 65.0D) {
                     kubo.fireMilimStyleBeam(target);
                 }
                 return;
             }
 
-            // TRƯỜNG HỢP 2: QUÁI THƯỜNG & NGƯỜI CHƯA MA VƯƠNG (MÁU >= 50%) -> BAY TRÊN CAO XÀ XUỐNG ĐÁNH
+            // TRƯỜNG HỢP 2: QUÁI THƯỜNG (MÁU >= 50%) -> BAY TRÊN CAO BẮN BEAM HOẶC XÀ XUỐNG ĐÁNH
             if (swoopCooldown > 0) swoopCooldown--;
 
             if (!isDiving) {
                 Vec3 targetPos = target.position();
                 kubo.getMoveControl().setWantedPosition(targetPos.x, targetPos.y + 10.0D, targetPos.z, 1.1D);
 
-                if (kubo.beamCooldown <= 0 && kubo.getRandom().nextInt(50) == 0) {
+                if (kubo.voidScytheCooldown <= 0 && distSq <= 16.0D * 16.0D) {
+                    kubo.castVoidScythe(target);
+                } else if (kubo.beamCooldown <= 0 && distSq <= 50.0D * 50.0D) {
                     kubo.fireMilimStyleBeam(target);
                 }
 

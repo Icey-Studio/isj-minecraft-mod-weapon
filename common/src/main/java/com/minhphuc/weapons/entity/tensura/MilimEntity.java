@@ -3,6 +3,7 @@ package com.minhphuc.weapons.entity.tensura;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility;
 import com.minhphuc.weapons.content.tensura.LuciferReplicationAbility;
+import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
 import com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper;
 import com.minhphuc.weapons.content.tensura.TensuraDialogueManager;
 import com.minhphuc.weapons.init.ModItems;
@@ -70,7 +71,14 @@ public class MilimEntity extends Monster {
     // Bộ đếm kỹ năng
     private int dragonNovaCooldown = 400; // 20s cooldown
     private int horizontalBeamCooldown = 120; // 6s cooldown
+    private int phantomDashCooldown = 160; // 8s cooldown (Cuồng Long Thần Tốc)
+    private int wrathStompCooldown = 220;  // 11s cooldown (Địa Chấn Ma Vương)
     private int flightHoverTicks = 0;
+
+    // Quản lý Cuồng Long Thần Tốc (Báo hiệu 0.75s để né tránh)
+    private int phantomDashTelegraphTicks = 0;
+    private Vec3 phantomDashDest = null;
+    private LivingEntity phantomDashTarget = null;
 
     // Quản lý tụ lực Long Tinh Bộc Viêm Bá (10s = 200 ticks)
     private Vec3 lockedTargetDirection = null;
@@ -134,8 +142,8 @@ public class MilimEntity extends Monster {
                 return false;
             }
 
-            // Tỉ lệ spawn tương tự Velgrynd: Chỉ 5% cơ hội thành công
-            if (this.random.nextFloat() > 0.05F) {
+            // Tỷ lệ xuất hiện tự nhiên tương đương Ác Ma Thủy Tổ & Chước Nhiệt Long (4% cơ hội khi chọn)
+            if (this.random.nextFloat() > 0.04F) {
                 return false;
             }
         }
@@ -264,7 +272,10 @@ public class MilimEntity extends Monster {
         // (c) Chước Nhiệt Long (Velgrynd)
         boolean isVelgrynd = (attacker instanceof VelgryndEntity) || (direct instanceof VelgryndEntity);
 
-        if (!isPlayerDemonLord && !isRouge && !isVelgrynd) {
+        // (d) Bạch Băng Long (Velzard)
+        boolean isVelzard = (attacker instanceof VelzardEntity) || (direct instanceof VelzardEntity);
+
+        if (!isPlayerDemonLord && !isRouge && !isVelgrynd && !isVelzard) {
             // Hoàn toàn không thể gây sát thương cho Milim!
             ServerLevel sl = (ServerLevel) this.level();
             sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 2.0F, 0.8F);
@@ -273,12 +284,12 @@ public class MilimEntity extends Monster {
             sl.sendParticles(SPIRITRON_PINK, this.getX(), this.getY() + 1.0D, this.getZ(), 15, 0.5D, 0.5D, 0.5D, 0.1D);
 
             if (attacker instanceof ServerPlayer sp) {
-                sp.displayClientMessage(Component.literal("§c[Milim Nava] Đòn tấn công hoàn toàn vô hiệu! Chỉ Ma Vương Thức Tỉnh, Rouge hoặc Chước Nhiệt Long mới có thể đả thương Milim!"), true);
+                sp.displayClientMessage(Component.literal("§c[Milim Nava] Đòn tấn công hoàn toàn vô hiệu! Chỉ Ma Vương Thức Tỉnh, Rouge hoặc Long Chủng mới có thể đả thương Milim!"), true);
             }
             return false;
         }
 
-        // 3. Sát thương dành cho 3 thực thể được phép đả thương Milim
+        // 3. Sát thương dành cho 4 thực thể được phép đả thương Milim
         float finalDamage;
         if (isPlayerDemonLord) {
             boolean holdsMythicSword = attacker instanceof ServerPlayer player &&
@@ -287,8 +298,10 @@ public class MilimEntity extends Monster {
             finalDamage = holdsMythicSword ? 10.0F : 8.0F; // 5 tim hoặc 4 tim
         } else if (isRouge) {
             finalDamage = 8.0F; // 4 tim (Rouge)
-        } else {
+        } else if (isVelgrynd) {
             finalDamage = 8.0F; // 4 tim (Chước Nhiệt Long)
+        } else {
+            finalDamage = 8.0F; // 4 tim (Bạch Băng Long Velzard)
         }
 
         return super.hurt(source, finalDamage);
@@ -358,16 +371,33 @@ public class MilimEntity extends Monster {
             // Tiến trình Tụ Lực Long Tinh Bộc Viêm Bá
             if (isChannelingDragonNova()) {
                 tickDragonNovaChanneling(sl);
+            } else if (phantomDashTelegraphTicks > 0) {
+                // Xử lý báo hiệu Cuồng Long Thần Tốc (0.75s)
+                phantomDashTelegraphTicks--;
+                if (phantomDashDest != null) {
+                    sl.sendParticles(SPIRITRON_PINK, phantomDashDest.x, phantomDashDest.y + 1.0D, phantomDashDest.z, 3, 0.3D, 0.6D, 0.3D, 0.05D);
+                    sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, phantomDashDest.x, phantomDashDest.y + 1.0D, phantomDashDest.z, 2, 0.2D, 0.4D, 0.2D, 0.1D);
+                }
+                if (phantomDashTelegraphTicks == 0) {
+                    finishPhantomDash(sl);
+                }
             } else {
                 // Cooldowns
                 if (dragonNovaCooldown > 0) dragonNovaCooldown--;
                 if (horizontalBeamCooldown > 0) horizontalBeamCooldown--;
+                if (phantomDashCooldown > 0) phantomDashCooldown--;
+                if (wrathStompCooldown > 0) wrathStompCooldown--;
 
                 // Quyết định dùng kỹ năng
-                if (dragonNovaCooldown <= 0 && this.distanceToSqr(target) <= 45.0D * 45.0D) {
+                double dSq = this.distanceToSqr(target);
+                if (dragonNovaCooldown <= 0 && dSq <= 45.0D * 45.0D) {
                     startDragonNovaChanneling(sl);
-                } else if (horizontalBeamCooldown <= 0 && this.distanceToSqr(target) <= 35.0D * 35.0D) {
-                    executeHorizontalBeam(sl, target);
+                } else if (phantomDashCooldown <= 0 && dSq <= 30.0D * 30.0D && dSq >= 6.0D * 6.0D) {
+                    startPhantomDash(sl, target);
+                } else if (wrathStompCooldown <= 0 && dSq <= 16.0D * 16.0D && this.getY() > target.getY() + 1.5D) {
+                    executeWrathStomp(sl);
+                } else if (horizontalBeamCooldown <= 0 && dSq <= 35.0D * 35.0D) {
+                    executeRadialHolyBeams(sl, target);
                 }
             }
         } else {
@@ -516,6 +546,9 @@ public class MilimEntity extends Monster {
                 v.hasImpulse = true;
             }
 
+            // 2.5 Công phá Đa Trùng Kết Giới
+            MultilayerBarrierAbility.shatterBarrierNear(sl, currentPos, 6.0D, "Long Tinh Bộc Viêm Bá của Milim Nava");
+
             // 3. Phá hủy địa hình mạnh mẽ (khoét rãnh hầm bán kính 4 block)
             BlockPos centerBlock = BlockPos.containing(currentPos);
             int tunnelRadius = 4;
@@ -594,53 +627,137 @@ public class MilimEntity extends Monster {
                 SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 7.0F, 0.4F);
     }
 
-    private void executeHorizontalBeam(ServerLevel sl, LivingEntity target) {
+    private void executeRadialHolyBeams(ServerLevel sl, LivingEntity target) {
         this.setCastingState(2);
         this.horizontalBeamCooldown = 140;
 
         Vec3 startPos = this.position().add(0, 1.4D, 0);
-        Vec3 dir = target.position().add(0, target.getEyeHeight() * 0.5, 0).subtract(startPos).normalize();
+        Vec3 baseDir = target.position().add(0, target.getEyeHeight() * 0.5, 0).subtract(startPos).normalize();
 
         TensuraDialogueManager.sayMilim(this, "dialogue.weapons.milim.cast_horizontal_beam");
-        LuciferReplicationAbility.recordSkillObserved(sl, this.position(), "HORIZONTAL_BEAM", "Cột Sáng Ngang (Milim Nava)");
+        LuciferReplicationAbility.recordSkillObserved(sl, this.position(), "HORIZONTAL_BEAM", "Tà Khứ Vũ Thê Tử Tán Xạ (Milim Nava)");
 
         sl.playSound(null, this.getX(), this.getY(), this.getZ(),
                 SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 3.0F, 1.3F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(),
                 SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.5F, 1.4F);
 
-        // Bắn luồng sáng vuông ngang dài 40m
-        double maxDist = 40.0D;
+        // Bắn 6 tia theo hình cánh quạt, có khoảng trống an toàn ở giữa
+        double[] angleOffsets = {-36.0, -20.0, -6.0, 6.0, 20.0, 36.0};
+        double maxDist = 35.0D;
         double step = 1.2D;
-        Vec3 cur = startPos;
 
-        for (double d = 0; d < maxDist; d += step) {
-            cur = cur.add(dir.scale(step));
+        for (double deg : angleOffsets) {
+            double rad = Math.toRadians(deg);
+            double cos = Math.cos(rad);
+            double sin = Math.sin(rad);
 
-            // Hiệu ứng cột sáng thánh quang phóng ngang
-            sl.sendParticles(ParticleTypes.END_ROD, cur.x, cur.y, cur.z, 2, 0.3, 0.3, 0.3, 0.02);
-            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, cur.x, cur.y, cur.z, 2, 0.4, 0.4, 0.4, 0.04);
-            sl.sendParticles(ParticleTypes.WAX_OFF, cur.x, cur.y, cur.z, 1, 0.2, 0.2, 0.2, 0.01);
+            Vec3 beamDir = new Vec3(
+                    baseDir.x * cos - baseDir.z * sin,
+                    baseDir.y,
+                    baseDir.x * sin + baseDir.z * cos
+            ).normalize();
 
-            AABB box = new AABB(cur.x - 1.5, cur.y - 1.5, cur.z - 1.5,
-                    cur.x + 1.5, cur.y + 1.5, cur.z + 1.5);
+            Vec3 cur = startPos;
+            for (double d = 0; d < maxDist; d += step) {
+                cur = cur.add(beamDir.scale(step));
 
-            for (LivingEntity v : sl.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive())) {
-                v.hurt(this.damageSources().mobAttack(this), 120.0F);
-                v.setRemainingFireTicks(160); // Đốt cháy
-            }
+                sl.sendParticles(ParticleTypes.END_ROD, cur.x, cur.y, cur.z, 1, 0.2, 0.2, 0.2, 0.01);
+                sl.sendParticles(SPIRITRON_PINK, cur.x, cur.y, cur.z, 1, 0.2, 0.2, 0.2, 0.02);
 
-            // Đốt cháy nhẹ các bề mặt đất xung quanh vệt bắn ngang
-            BlockPos groundCheck = BlockPos.containing(cur).below();
-            if (sl.getBlockState(groundCheck).isSolid() && sl.getBlockState(groundCheck.above()).isAir()) {
-                if (sl.random.nextFloat() < 0.25F) {
-                    sl.setBlockAndUpdate(groundCheck.above(), Blocks.FIRE.defaultBlockState());
+                AABB box = new AABB(cur.x - 1.2, cur.y - 1.2, cur.z - 1.2,
+                        cur.x + 1.2, cur.y + 1.2, cur.z + 1.2);
+
+                for (LivingEntity v : sl.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive())) {
+                    v.hurt(this.damageSources().mobAttack(this), 75.0F);
+                    v.setRemainingFireTicks(120);
                 }
             }
         }
 
-        // Trở về idle sau khi phóng beam
         this.setCastingState(0);
+    }
+
+    private void startPhantomDash(ServerLevel sl, LivingEntity target) {
+        this.phantomDashCooldown = 160;
+        this.phantomDashTarget = target;
+
+        Vec3 look = target.getLookAngle();
+        this.phantomDashDest = target.position().subtract(look.x * 2.5D, 0, look.z * 2.5D);
+        this.phantomDashTelegraphTicks = 15; // 0.75s telegraph
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.ENDERMAN_TELEPORT, SoundSource.HOSTILE, 3.0F, 1.2F);
+        sl.playSound(null, phantomDashDest.x, phantomDashDest.y, phantomDashDest.z,
+                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.0F, 2.0F);
+
+        if (target instanceof ServerPlayer sp) {
+            sp.displayClientMessage(Component.literal("§d§l[CUỒNG LONG THẦN TỐC] §cMilim đang lướt ra sau lưng bạn! Hãy chuẩn bị né hoặc giơ khiên!"), true);
+        }
+    }
+
+    private void finishPhantomDash(ServerLevel sl) {
+        if (phantomDashDest == null || phantomDashTarget == null) return;
+
+        this.moveTo(phantomDashDest.x, phantomDashDest.y, phantomDashDest.z);
+        this.getLookControl().setLookAt(phantomDashTarget, 30.0F, 30.0F);
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.HOSTILE, 3.0F, 1.0F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 2.5F, 1.4F);
+
+        sl.sendParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY() + 1.0D, this.getZ(), 2, 0.3, 0.3, 0.3, 0);
+        sl.sendParticles(SPIRITRON_PINK, this.getX(), this.getY() + 1.0D, this.getZ(), 25, 0.8, 0.8, 0.8, 0.1);
+
+        double distSq = this.distanceToSqr(phantomDashTarget);
+        if (distSq <= 12.0D) {
+            float dmg = 65.0F;
+            if (phantomDashTarget.isBlocking()) {
+                dmg = 30.0F;
+                if (phantomDashTarget instanceof Player p) {
+                    p.disableShield();
+                }
+            }
+            phantomDashTarget.hurt(this.damageSources().mobAttack(this), dmg);
+            phantomDashTarget.setDeltaMovement(this.getLookAngle().scale(1.2D).add(0, 0.6D, 0));
+        }
+
+        phantomDashDest = null;
+        phantomDashTarget = null;
+    }
+
+    private void executeWrathStomp(ServerLevel sl) {
+        this.wrathStompCooldown = 220;
+
+        // Lao thẳng xuống đất tạo sóng xung kích
+        this.setDeltaMovement(0, -1.2D, 0);
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.8F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(),
+                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 4.0F, 1.2F);
+
+        sl.sendParticles(ParticleTypes.SONIC_BOOM, this.getX(), this.getY() + 0.3D, this.getZ(), 3, 0.5, 0.1, 0.5, 0);
+        sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, this.getX(), this.getY() + 0.3D, this.getZ(), 2, 1.0, 0.1, 1.0, 0);
+
+        AABB stompArea = this.getBoundingBox().inflate(15.0D, 1.2D, 15.0D);
+        List<LivingEntity> list = sl.getEntitiesOfClass(LivingEntity.class, stompArea, e -> e != this && e.isAlive());
+
+        for (LivingEntity v : list) {
+            // Cơ chế né: nếu người chơi bấm Nhảy (Y > Milim.getY() + 0.7D), né hoàn toàn sóng xung kích!
+            if (v.getY() <= this.getY() + 0.7D) {
+                v.hurt(this.damageSources().mobAttack(this), 50.0F);
+                v.setDeltaMovement(0, 0.85D, 0);
+                if (v instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.literal("§d§l[ĐỊA CHẤN MA VƯƠNG] §cBạn trúng sóng xung kích do không kịp Nhảy né!"), true);
+                }
+            } else {
+                if (v instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.literal("§a§l[NÉ THÀNH CÔNG] §fBạn đã nhảy qua sóng xung kích của Milim!"), true);
+                }
+            }
+        }
     }
 
     private void checkPlayerGreeting(ServerLevel sl) {
