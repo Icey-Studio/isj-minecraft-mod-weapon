@@ -375,5 +375,23 @@
   "item.weapons.warden_soul": "Linh Hồn Giám Sát Cổ Đại Warden",
   "item.weapons.ender_dragon_soul": "Linh Hồn Long Vương The End",
   "item.weapons.wither_soul": "Linh Hồn Chúa Tể Wither",
-  "item.weapons.mob_soul": "Linh Hồn Quái Vật Tử Trận"
+  "item.weapons.mob_soul": "Linh Hồn Quái Vật Tử Trận",
+
+  "entity.weapons.velzard": "Bạch Băng Long Velzard",
+  "item.weapons.frost_dragon_core": "Lõi Băng Long (Triệu Hồi Bạch Băng Long)",
+  "item.weapons.velzard_spawn_egg": "Trứng Sinh Ra Bạch Băng Long Velzard",
+  "item.weapons.velzard_soul": "Linh Hồn Bạch Băng Long Velzard",
+  "item.weapons.velzard_reverse_scale": "Nghịch Lân Bạch Băng: Băng Tinh Vĩnh Cửu",
+  "item.weapons.eternal_frost_crystal": "Băng Tinh Vĩnh Cửu",
+
+  "tensura.velzard.summon_boss": "Gió lạnh vĩnh hằng gào thét... Ai dám làm phiền giấc ngủ của Bạch Băng Long?",
+  "tensura.velzard.attack_normal": "Đông cứng thành bức tượng băng đi!",
+  "tensura.velzard.ice_cluster": "Cụm Gai Băng Kim Cương! Đâm xuyên tất cả!",
+  "tensura.velzard.kinetic_halt": "Ngưng Trệ Động Năng! Mọi chuyển động của ngươi đều vô nghĩa!",
+  "tensura.velzard.dragon_breath": "Hơi Thở Bạch Băng Long! Vạn vật về độ không tuyệt đối!",
+  "tensura.velzard.ice_prison": "Lãnh Ngục Địa Tinh! Trở thành tế phẩm đóng băng vĩnh cửu!",
+  "tensura.velzard.blizzard_domain": "Lĩnh Vực Băng Hà Vĩnh Cửu! Chìm vào giấc ngủ ngàn năm!",
+  "tensura.velzard.flower_stagger": "A... Tam Tầng Băng Hoa Ấn Ký bị đập vỡ... Lớp phòng thủ của ta!",
+  "tensura.velzard.awakened": "Băng Thần Giáng Lâm! Ta sẽ không nương tay nữa đâu!",
+  "tensura.velzard.defeat": "Sức mạnh phi phàm... Không hổ danh là kẻ đã vượt qua cái lạnh vĩnh hằng..."
 }

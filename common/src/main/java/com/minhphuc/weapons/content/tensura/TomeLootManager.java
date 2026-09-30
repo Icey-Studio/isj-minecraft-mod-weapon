@@ -79,5 +79,27 @@ public class TomeLootManager {
                 }
             }
         }
+
+        // 3. Chèn Lõi Băng Long (Frost Dragon Core) triệu hồi Bạch Băng Long Velzard (Rương hiếm 18%, rương thường 7%)
+        float coreChance = isRareStructure ? 0.18F : 0.07F;
+        if (random.nextFloat() <= coreChance) {
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (container.getItem(i).isEmpty()) {
+                    container.setItem(i, new ItemStack(ModItems.FROST_DRAGON_CORE.get()));
+                    break;
+                }
+            }
+        }
+
+        // 4. Chèn Băng Tinh Vĩnh Cửu (Eternal Frost Crystal) (Rương hiếm 25%, rương thường 12%)
+        float crystalChance = isRareStructure ? 0.25F : 0.12F;
+        if (random.nextFloat() <= crystalChance) {
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (container.getItem(i).isEmpty()) {
+                    container.setItem(i, new ItemStack(ModItems.ETERNAL_FROST_CRYSTAL.get(), 1 + random.nextInt(2)));
+                    break;
+                }
+            }
+        }
     }
 }

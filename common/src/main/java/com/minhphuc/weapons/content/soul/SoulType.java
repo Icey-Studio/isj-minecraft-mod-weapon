@@ -17,6 +17,14 @@ public enum SoulType {
             0xFF4500,
             "§6"
     ),
+    VELZARD(
+            "Bạch Băng Long Velzard",
+            "Bão Băng Thâm Uyên Cthulhu (Bản Không Vong 70%)",
+            2500.0F,
+            26.0F,
+            0x66CCFF,
+            "§b"
+    ),
     PRIMORDIAL_DEMON(
             "Ác Ma Thủy Tổ",
             "Linh Tử Băng Hoại (Bản Không Vong 70%)",
