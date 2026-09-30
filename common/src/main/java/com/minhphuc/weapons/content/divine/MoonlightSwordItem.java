@@ -61,16 +61,13 @@ public class MoonlightSwordItem extends Item {
             case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử Thái Tuế (Seer Flesh)";
             case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
             case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
-            case 11 -> "§b§l12. Trí Huệ Chi Vương: Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo (Ciel)";
-            case 12 -> "§a§l13. Trí Huệ Chi Vương: Thẩm Định Vạn Vật (All of Creation)";
-            case 13 -> "§4§l14. Kiêu Ngạo Vương Lucifer: Sao Chép Tuyệt Kỹ (Replication)";
             default -> "§7Chưa chọn";
         };
     }
 
     public static void cycleSkill(ServerPlayer player, ItemStack stack) {
         boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
-        int maxSkills = isTrueDemonLord ? 14 : 4;
+        int maxSkills = isTrueDemonLord ? 11 : 4;
 
         int current = ItemStackDataHelper.getInt(stack, NBT_SKILL);
         int next = (current + 1) % maxSkills;
@@ -136,15 +133,6 @@ public class MoonlightSwordItem extends Item {
             } else if (skill == 10) {
                 // Chiêu 11: Cú Bắn Granit (Granite Blast)
                 com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 11) {
-                // Chiêu 12: Trí Huệ Chi Vương - Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo
-                com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 12) {
-                // Chiêu 13: Trí Huệ Chi Vương - Thẩm Định Vạn Vật
-                com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(serverLevel, serverPlayer);
-            } else if (skill == 13) {
-                // Chiêu 14: Kiêu Ngạo Vương Lucifer - Sao Chép Tuyệt Kỹ
-                com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(serverLevel, serverPlayer);
             }
         }
 

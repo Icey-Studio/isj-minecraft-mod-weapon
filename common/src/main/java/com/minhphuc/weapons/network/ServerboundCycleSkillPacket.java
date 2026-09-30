@@ -87,7 +87,7 @@ public class ServerboundCycleSkillPacket {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F + (next * 0.15F));
                 } else if (isTrueDemonLord) {
-                    int lordSkills = hasCreation ? 18 : 17;
+                    int lordSkills = hasCreation ? 15 : 14;
                     int maxSkills = lordSkills + evolvedCount;
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     int next = (current + 1) % maxSkills;
@@ -127,7 +127,7 @@ public class ServerboundCycleSkillPacket {
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F + (next * 0.25F));
                 } else if (com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player)) {
-                    int lordSkills = 14;
+                    int lordSkills = 11;
                     int maxSkills = lordSkills + evolvedCount;
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     int next = (current + 1) % maxSkills;
@@ -190,19 +190,16 @@ public class ServerboundCycleSkillPacket {
             case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử (Seer Flesh)";
             case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
             case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
-            case 11 -> "§b§l12. Trí Huệ Chi Vương: Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo (Ciel)";
-            case 12 -> "§a§l13. Trí Huệ Chi Vương: Thẩm Định Vạn Vật (All of Creation)";
-            case 13 -> "§4§l14. Kiêu Ngạo Vương Lucifer: Sao Chép Tuyệt Kỹ (Replication)";
-            case 14 -> hasCreation
-                    ? "§6§l15. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)"
-                    : "§a§l15. Kháng Ma Kết Giới (Anti-Magic Barrier)";
-            case 15 -> hasCreation
-                    ? "§a§l16. Kháng Ma Kết Giới (Anti-Magic Barrier)"
-                    : "§b§l16. Đa Trùng Kết Giới (Multilayer Barrier)";
-            case 16 -> hasCreation
-                    ? "§b§l17. Đa Trùng Kết Giới (Multilayer Barrier)"
-                    : "§f§l17. Granit Xuyên Phá: Zone Track (Pure White Beam)";
-            case 17 -> "§f§l18. Granit Xuyên Phá: Zone Track (Pure White Beam)";
+            case 11 -> hasCreation
+                    ? "§6§l12. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)"
+                    : "§a§l12. Kháng Ma Kết Giới (Anti-Magic Barrier)";
+            case 12 -> hasCreation
+                    ? "§a§l13. Kháng Ma Kết Giới (Anti-Magic Barrier)"
+                    : "§b§l13. Đa Trùng Kết Giới (Multilayer Barrier)";
+            case 13 -> hasCreation
+                    ? "§b§l14. Đa Trùng Kết Giới (Multilayer Barrier)"
+                    : "§f§l14. Granit Xuyên Phá: Zone Track (Pure White Beam)";
+            case 14 -> "§f§l15. Granit Xuyên Phá: Zone Track (Pure White Beam)";
             default -> "§7Chưa chọn";
         };
     }

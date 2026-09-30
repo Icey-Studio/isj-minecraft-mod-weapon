@@ -133,10 +133,6 @@ public class TensuraEvents {
                 }
             }
         }
-
-        // 3. XỬ LÝ TICK KỸ NĂNG TRÍ HUỆ CHI VƯƠNG (Gia Tốc Tư Duy & Thẩm Định Vạn Vật)
-        ThoughtAccelerationAbility.tickPlayer(sp);
-        AllOfCreationAbility.tickPlayer(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -502,14 +498,7 @@ public class TensuraEvents {
             }
         }
 
-        // =========================================================================
-        // 2. CƠ CHẾ TỰ ĐỘNG NÉ ĐÒN CỦA TRÍ HUỆ CHI VƯƠNG & MIỄN NHIỄM SÁT THƯƠNG
-        // =========================================================================
-        if (victim instanceof ServerPlayer player) {
-            if (ThoughtAccelerationAbility.handleIncomingAttack(player, source, amount)) {
-                return EventResult.interruptFalse();
-            }
-        }
+
 
         if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isPrimordial(player)) {
             // Miễn nhiễm hoàn toàn sát thương ngã (Fall damage)

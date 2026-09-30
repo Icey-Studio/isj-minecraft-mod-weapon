@@ -38,13 +38,10 @@ public class EvolvedSkillHelper {
             new AvailableSkill("dl_seer_flesh", 9, "9. Thị Nhục - Nhục Thể Bất Tử Thái Tuế", "Seer Flesh Immortality", "Hồi phục toàn vẹn và đẩy lùi kẻ địch", 0x2E8B57),
             new AvailableSkill("dl_alkaid", 10, "10. Diệt Thế Tà Tinh: Alkaid", "Alkaid Annihilation", "Cầu năng lượng tà ác xoắn ốc hủy diệt", 0x8B0000),
             new AvailableSkill("dl_granite_blast", 11, "11. Cú Bắn Granit (Granite Blast)", "Granite Blast", "Chùm năng lượng tầm xa phá vỡ", 0xFFA500),
-            new AvailableSkill("dl_thought_acceleration", 12, "12. Trí Huệ Chi Vương: Gia Tốc Tư Duy", "Thought Acceleration", "Gia tốc ý thức và né tránh tuyệt hảo", 0x00BFFF),
-            new AvailableSkill("dl_all_creation", 13, "13. Trí tuệ Chi Vương: Thẩm Định Vạn Vật", "All of Creation", "Thấu triệt và phân tích mọi hiện tượng", 0x20B2AA),
-            new AvailableSkill("dl_lucifer_replication", 14, "14. Kiêu Ngạo Vương Lucifer: Sao Chép", "Replication", "Sao chép năng lực mục tiêu", 0xDC143C),
-            new AvailableSkill("dl_material_creation", 15, "15. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí", "Material Creation", "Tạo ra khoáng thạch và thần khí", 0xFFD700),
-            new AvailableSkill("dl_anti_magic_barrier", 16, "16. Kháng Ma Kết Giới", "Anti-Magic Barrier", "Mái vòm cấm quái bảo hộ vĩnh viễn", 0x00FF7F),
-            new AvailableSkill("dl_multilayer_barrier", 17, "17. Đa Trùng Kết Giới", "Multilayer Barrier", "Tường chắn và khối cầu bất khả xâm phạm", 0x00FFFF),
-            new AvailableSkill("dl_zone_track", 18, "18. Granit Xuyên Phá (Zone Track)", "Zone Track", "Đại pháo Granit bạch kim hủy diệt không hồi chiêu", 0xFFFFFF)
+            new AvailableSkill("dl_material_creation", 12, "12. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí", "Material Creation", "Tạo ra khoáng thạch và thần khí", 0xFFD700),
+            new AvailableSkill("dl_anti_magic_barrier", 13, "13. Kháng Ma Kết Giới", "Anti-Magic Barrier", "Mái vòm cấm quái bảo hộ vĩnh viễn", 0x00FF7F),
+            new AvailableSkill("dl_multilayer_barrier", 14, "14. Đa Trùng Kết Giới", "Multilayer Barrier", "Tường chắn và khối cầu bất khả xâm phạm", 0x00FFFF),
+            new AvailableSkill("dl_zone_track", 15, "15. Granit Xuyên Phá (Zone Track)", "Zone Track", "Đại pháo Granit bạch kim hủy diệt không hồi chiêu", 0xFFFFFF)
     );
 
     /**
