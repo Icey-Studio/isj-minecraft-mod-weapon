@@ -335,32 +335,44 @@ public class KuboEntity extends Monster {
             }
         }
 
-        // Hiệu ứng hạt hư vô màu đen tím toả ra từ mặt trời đen (hoặc trắng tuyết nếu hoàn chỉnh)
-        if (this.level() instanceof ServerLevel sl && this.tickCount % 2 == 0) {
-            double r = isUltimateOrComplete() ? 2.2D : 1.4D;
-            double ox = (this.random.nextDouble() - 0.5D) * r * 2.0D;
-            double oy = (this.random.nextDouble() - 0.5D) * r * 2.0D;
-            double oz = (this.random.nextDouble() - 0.5D) * r * 2.0D;
+        // Hiệu ứng hạt hư vô màu đen tím toả ra từ mặt trời đen (Throttled & chỉ sinh khi có người chơi gần 48m)
+        if (this.level() instanceof ServerLevel sl && this.tickCount % 4 == 0) {
+            if (sl.hasNearbyAlivePlayer(this.getX(), this.getY(), this.getZ(), 48.0D)) {
+                double r = isUltimateOrComplete() ? 2.2D : 1.4D;
+                double ox = (this.random.nextDouble() - 0.5D) * r * 2.0D;
+                double oy = (this.random.nextDouble() - 0.5D) * r * 2.0D;
+                double oz = (this.random.nextDouble() - 0.5D) * r * 2.0D;
 
-            if (isComplete()) {
-                // Dạng Hoàn Chỉnh: Hạt ánh sáng trắng & Totem thần thánh
-                sl.sendParticles(ParticleTypes.END_ROD, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 2, 0, 0, 0, 0.02D);
-                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.05D);
-            } else if (isUltimate()) {
-                // Dạng Tối Thượng: Khói rồng, hạt mực và lửa đỏ cuồng nộ
-                sl.sendParticles(ParticleTypes.SQUID_INK, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 3, 0, 0, 0, 0.02D);
-                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 2, 0, 0, 0, 0.02D);
-                sl.sendParticles(ParticleTypes.DRAGON_BREATH, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.02D);
-            } else {
-                sl.sendParticles(ParticleTypes.SQUID_INK, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 2, 0, 0, 0, 0.01D);
-                sl.sendParticles(ParticleTypes.DRAGON_BREATH, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.01D);
-            }
+                if (isComplete()) {
+                    sl.sendParticles(ParticleTypes.END_ROD, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.02D);
+                } else if (isUltimate()) {
+                    sl.sendParticles(ParticleTypes.SQUID_INK, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 2, 0, 0, 0, 0.02D);
+                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.02D);
+                } else {
+                    sl.sendParticles(ParticleTypes.SQUID_INK, this.getX() + ox, this.getY() + 1.2D + oy, this.getZ() + oz, 1, 0, 0, 0, 0.01D);
+                }
 
-            int state = this.getEntityData().get(DATA_STATE);
-            if (state == STATE_SWOOPING) {
-                sl.sendParticles(ParticleTypes.SONIC_BOOM, this.getX(), this.getY() + 0.5D, this.getZ(), 1, 0, 0, 0, 0);
+                int state = this.getEntityData().get(DATA_STATE);
+                if (state == STATE_SWOOPING) {
+                    sl.sendParticles(ParticleTypes.SONIC_BOOM, this.getX(), this.getY() + 0.5D, this.getZ(), 1, 0, 0, 0, 0);
+                }
             }
         }
+    }
+
+    @Override
+    public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, net.minecraft.world.entity.MobSpawnType spawnType) {
+        if (spawnType == net.minecraft.world.entity.MobSpawnType.NATURAL || spawnType == net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION) {
+            if (level instanceof ServerLevel sl) {
+                if (sl.dimension() != Level.OVERWORLD) return false;
+                // Chống lag tuyệt đối: Không spawn nếu trong bán kính 160 blocks đã có một Không Vong khác
+                AABB checkArea = new AABB(this.blockPosition()).inflate(160.0D);
+                if (!sl.getEntitiesOfClass(KuboEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
+            }
+        }
+        return super.checkSpawnRules(level, spawnType);
     }
 
     @Override

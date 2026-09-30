@@ -396,9 +396,9 @@ public class AntiMagicBarrierManager {
                 double R = barrier.radius;
                 double H = barrier.height;
 
-                // 1. Hiệu ứng hạt ánh sáng xanh lục bảo dọc theo mái vòm (mỗi 8 ticks)
-                if (barrier.ticksAlive % 8 == 0) {
-                    for (int ang = 0; ang < 360; ang += 30) {
+                // 1. Hiệu ứng hạt ánh sáng xanh lục bảo dọc theo mái vòm (tiết kiệm hiệu năng: chỉ gửi khi có người chơi gần và mỗi 16 ticks)
+                if (barrier.ticksAlive % 16 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, 56.0D)) {
+                    for (int ang = 0; ang < 360; ang += 45) {
                         double rad = Math.toRadians(ang);
                         double x = center.x + Math.cos(rad) * R;
                         double z = center.z + Math.sin(rad) * R;
@@ -413,8 +413,8 @@ public class AntiMagicBarrierManager {
                     level.sendParticles(ParticleTypes.HAPPY_VILLAGER, center.x, center.y + H, center.z, 2, 0.4, 0.1, 0.4, 0);
                 }
 
-                // 2. Quét thực thể trong phạm vi kết giới từ mặt đất tới nóc vòm (Throttling: mỗi 6 ticks)
-                if (barrier.ticksAlive % 6 == 0) {
+                // 2. Quét thực thể trong phạm vi kết giới từ mặt đất tới nóc vòm (Throttling: mỗi 10 ticks)
+                if (barrier.ticksAlive % 10 == 0) {
                     double minY = Math.max(level.getMinBuildHeight(), center.y - barrier.lowestYOffset - 5.0);
                     double maxY = Math.min(level.getMaxBuildHeight(), center.y + H + 3.0);
                     AABB box = new AABB(center.x - R - 3, minY, center.z - R - 3,

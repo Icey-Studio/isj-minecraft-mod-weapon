@@ -103,12 +103,12 @@ public class ModEntities {
                 )
         );
 
-        // Tỷ lệ xuất hiện tự nhiên của Không Vong (Kūbō): Bay trên cao trong đêm Overworld
+        // Tỷ lệ xuất hiện tự nhiên của Không Vong (Kūbō): Siêu hiếm, tương tự các boss khác để chống lag
         BiomeModifications.addProperties(
                 b -> b.hasTag(BiomeTags.IS_OVERWORLD),
                 (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
                         MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(KUBO.get(), 8, 1, 2)
+                        new MobSpawnSettings.SpawnerData(KUBO.get(), 1, 1, 1)
                 )
         );
     }
