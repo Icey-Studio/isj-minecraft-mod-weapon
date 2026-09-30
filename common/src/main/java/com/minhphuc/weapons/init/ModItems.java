@@ -312,6 +312,24 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.tensura.VelgryndReverseScaleItem(new Item.Properties()));
 
     // ==========================================
+    // MODULE: BẠCH BĂNG LONG VELZARD (WHITE ICE DRAGON)
+    // ==========================================
+    public static final RegistrySupplier<Item> FROST_DRAGON_CORE = ITEMS.register("frost_dragon_core",
+            () -> new com.minhphuc.weapons.content.tensura.FrostDragonCoreItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VELZARD_SPAWN_EGG = ITEMS.register("velzard_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.VELZARD, 0xE0F7FA, 0x80DEEA, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VELZARD_SOUL = ITEMS.register("velzard_soul",
+            () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.VELZARD, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VELZARD_REVERSE_SCALE = ITEMS.register("velzard_reverse_scale",
+            () -> new Item(new Item.Properties().rarity(Rarity.EPIC)));
+
+    public static final RegistrySupplier<Item> ETERNAL_FROST_CRYSTAL = ITEMS.register("eternal_frost_crystal",
+            () -> new Item(new Item.Properties().rarity(Rarity.RARE)));
+
+    // ==========================================
     // MODULE: THẦN THIẾT MA THOẠI (MAGISTEEL SMARTPHONE)
     // ==========================================
     public static final RegistrySupplier<Item> MAGISTEEL_PHONE = ITEMS.register("magisteel_phone",
@@ -488,6 +506,13 @@ public class ModItems {
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
                         output.accept(MILIM_DRAGON_CONTRACT.get());
+
+                        // Bạch Băng Long Velzard
+                        output.accept(FROST_DRAGON_CORE.get());
+                        output.accept(VELZARD_SPAWN_EGG.get());
+                        output.accept(VELZARD_SOUL.get());
+                        output.accept(VELZARD_REVERSE_SCALE.get());
+                        output.accept(ETERNAL_FROST_CRYSTAL.get());
 
                         // Vũ Khí Móng Vuốt & Thực Thể Dark Gathering
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());

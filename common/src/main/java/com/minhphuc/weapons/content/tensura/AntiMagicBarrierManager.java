@@ -269,10 +269,13 @@ public class AntiMagicBarrierManager {
      * Kiểm tra xem thực thể có được phép tự do đi xuyên qua kết giới hay không.
      */
     public static boolean canPass(Entity entity, BlockPos pos) {
-        // Người chơi, dân làng, Iron Golem và động vật vô hại luôn được qua lại tự do
+        // Người chơi, dân làng, Iron Golem, động vật vô hại và Long Chủng/Ma Vương Cổ Đại luôn được qua lại tự do
         if (entity instanceof Player ||
             entity instanceof Villager ||
             entity instanceof IronGolem ||
+            entity instanceof VelgryndEntity ||
+            entity instanceof MilimEntity ||
+            entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity ||
             (entity instanceof Animal && !(entity instanceof Enemy))) {
             return true;
         }
@@ -423,6 +426,7 @@ public class AntiMagicBarrierManager {
                     for (LivingEntity e : entities) {
                         if (e instanceof Player || e instanceof Villager || e instanceof IronGolem) continue;
                         if (e instanceof Animal && !(e instanceof Enemy)) continue;
+                        if (e instanceof VelgryndEntity || e instanceof MilimEntity || e instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) continue;
 
                         double dx = (e.getX() - center.x) / R;
                         double dz = (e.getZ() - center.z) / R;

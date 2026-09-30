@@ -48,6 +48,9 @@ public class TensuraEvents {
                 if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.checkEmptyHandPunch(sp)) {
                     return EventResult.interruptTrue();
                 }
+                if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.dispelByPunch(sp, pos)) {
+                    return EventResult.interruptTrue();
+                }
                 if (com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.checkEmptyHandPunch(sp)) {
                     return EventResult.interruptTrue();
                 }
@@ -517,10 +520,13 @@ public class TensuraEvents {
             boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
             boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
 
-            // GIAI ĐOẠN 3: Đã là Ma Vương + có thể xác -> BẤT TỬ TUYỆT ĐỐI, CHỈ chịu sát thương từ Chước Nhiệt Long Velgrynd
+            // GIAI ĐOẠN 3: Đã là Ma Vương + có thể xác -> BẤT TỬ TUYỆT ĐỐI, CHỈ chịu sát thương từ Chước Nhiệt Long Velgrynd & Không Vong (Kūbō)
             if (isDemonLord && hasBody) {
                 boolean isFromVelgrynd = (source.getEntity() instanceof VelgryndEntity) || (source.getDirectEntity() instanceof VelgryndEntity);
-                if (!isFromVelgrynd) {
+                boolean isFromKubo = (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
+                        || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
+                        || player.getTags().contains("KuboPenetrationDamage");
+                if (!isFromVelgrynd && !isFromKubo) {
                     return EventResult.interruptFalse();
                 }
             } else if (!hasBody) {
@@ -533,6 +539,7 @@ public class TensuraEvents {
                 // 4. Các Ác ma khác (PrimordialDemonEntity)
                 // 5. Boss (Wither, Warden, Ender Dragon, Iron Golem, Elder Guardian)
                 // 6. Chước Nhiệt Long (VelgryndEntity)
+                // 7. Không Vong (KuboEntity)
                 Entity attacker = source.getEntity();
                 Entity direct = source.getDirectEntity();
 
@@ -546,8 +553,11 @@ public class TensuraEvents {
                         || (attacker instanceof net.minecraft.world.entity.animal.IronGolem)
                         || (attacker instanceof net.minecraft.world.entity.monster.ElderGuardian);
                 boolean isVelgrynd = (attacker instanceof VelgryndEntity) || (direct instanceof VelgryndEntity);
+                boolean isKubo = (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
+                        || (direct instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
+                        || player.getTags().contains("KuboPenetrationDamage");
 
-                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd) {
+                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd && !isKubo) {
                     // Chặn triệt để sát thương từ quái vật/sinh vật thường
                     return EventResult.interruptFalse();
                 }

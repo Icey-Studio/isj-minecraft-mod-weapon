@@ -375,5 +375,23 @@
   "item.weapons.warden_soul": "Ancient Warden Soul",
   "item.weapons.ender_dragon_soul": "Ender Dragon Soul",
   "item.weapons.wither_soul": "Wither Lord Soul",
-  "item.weapons.mob_soul": "Monster Soul"
+  "item.weapons.mob_soul": "Monster Soul",
+
+  "entity.weapons.velzard": "White Ice Dragon Velzard",
+  "item.weapons.frost_dragon_core": "Frost Dragon Core (Summon White Ice Dragon)",
+  "item.weapons.velzard_spawn_egg": "White Ice Dragon Velzard Spawn Egg",
+  "item.weapons.velzard_soul": "White Ice Dragon Velzard's Soul",
+  "item.weapons.velzard_reverse_scale": "White Ice Reverse Scale: Eternal Frost",
+  "item.weapons.eternal_frost_crystal": "Eternal Frost Crystal",
+
+  "tensura.velzard.summon_boss": "The eternal howling blizzard descends... Who dares disturb the slumber of the White Ice Dragon?",
+  "tensura.velzard.attack_normal": "Freeze into an ice statue!",
+  "tensura.velzard.ice_cluster": "Diamond Icicle Cluster! Pierce through all!",
+  "tensura.velzard.kinetic_halt": "Kinetic Deceleration! All your movements are futile!",
+  "tensura.velzard.dragon_breath": "Breath of the White Ice Dragon! Return all to absolute zero!",
+  "tensura.velzard.ice_prison": "Earth Glacial Prison! Become an eternal frozen offering!",
+  "tensura.velzard.blizzard_domain": "Permafrost Domain! Sink into a thousand-year slumber!",
+  "tensura.velzard.flower_stagger": "Ah... the Tri-Petal Ice Sigil has been shattered... my defense!",
+  "tensura.velzard.awakened": "Ice Goddess Descent! I will hold back no longer!",
+  "tensura.velzard.defeat": "Remarkable strength... You have truly surpassed the eternal cold..."
 }

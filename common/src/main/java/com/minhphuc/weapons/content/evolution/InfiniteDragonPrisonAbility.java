@@ -35,7 +35,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * - Mob bị nhốt sẽ điên loạn tấn công cắn xé lẫn nhau (Infighting / Frenzy).
  * - Mức 1: Bán kính 6m, nhốt Boss & mob thường. Ác ma, Milim, Không Vong, Long Chủng phá được ngay.
  * - Mức 2: Bán kính 12m, nhốt Boss, mob thường, Ác ma. Milim, Không Vong, Long Chủng bị nhốt 30s rồi mới phá.
- * - Mức 3: Bán kính 20m, nhốt TẤT CẢ kể cả Milim, Long Chủng, Ác Ma, Không Vong và chúng TUYỆT ĐỐI KHÔNG THỂ PHÁ ĐƯỢC!
+ * - Mức 3: Bán kính 20m, nhốt vĩnh viễn Boss, Ác Ma, Không Vong. Riêng Milim và Chước Nhiệt Long (Velgrynd) chỉ nhốt được 3 phút (3600 ticks) rồi chúng sẽ phá vỡ lồng giam!
  */
 public class InfiniteDragonPrisonAbility {
 
@@ -64,6 +64,20 @@ public class InfiniteDragonPrisonAbility {
 
     private static final List<ActivePrison> ACTIVE_PRISONS = Collections.synchronizedList(new ArrayList<>());
 
+    private static BlockState getOriginalBlockState(ServerLevel level, BlockPos pos) {
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == level && p.replacedBlocks.containsKey(pos)) {
+                    BlockState s = p.replacedBlocks.get(pos);
+                    if (!s.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+                        return s;
+                    }
+                }
+            }
+        }
+        return net.minecraft.world.level.block.Blocks.AIR.defaultBlockState();
+    }
+
     public static void cast(ServerLevel level, ServerPlayer player, int tier) {
         double radius = switch (tier) {
             case 1 -> 6.0;
@@ -73,9 +87,7 @@ public class InfiniteDragonPrisonAbility {
 
         Vec3 center = player.position().add(0, 1.0, 0);
 
-        // Hóa giải và hoàn nguyên khối lồng cũ của player này nếu có
-        cleanPlayerPrisons(player.getUUID());
-
+        // Cho phép người chơi tạo không giới hạn số lượng Long Giam Vô Hạn (kể cả chồng đè lên nhau)
         ActivePrison prison = new ActivePrison(level, player, center, radius, tier);
 
         // Tạo kết giới vật lý hình cầu bao bọc hoàn toàn cả mặt đất và bên dưới
@@ -90,10 +102,16 @@ public class InfiniteDragonPrisonAbility {
                     if (distSq >= (radius - 0.9) * (radius - 0.9) && distSq <= (radius + 0.9) * (radius + 0.9)) {
                         BlockPos bPos = cPos.offset(x, y, z);
                         BlockState orig = level.getBlockState(bPos);
-                        // Không ghi đè Bedrock hoặc khối kết giới đã có
-                        if (orig.getDestroySpeed(level, bPos) >= 0 && !orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-                            prison.replacedBlocks.put(bPos, orig);
-                            level.setBlock(bPos, barrierState, 2);
+                        // Không ghi đè Bedrock
+                        if (orig.getDestroySpeed(level, bPos) >= 0) {
+                            BlockState realOrig = orig;
+                            if (orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+                                realOrig = getOriginalBlockState(level, bPos);
+                            }
+                            prison.replacedBlocks.put(bPos, realOrig);
+                            if (!orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+                                level.setBlock(bPos, barrierState, 2);
+                            }
                         }
                     }
                 }
@@ -111,19 +129,26 @@ public class InfiniteDragonPrisonAbility {
                 Component.literal("§6§l[LONG GIAM VÔ HẠN] §eĐã triển khai kết giới bao phủ (" + (int) radius + "m - Mức " + tier + ")!"),
                 true
         );
-        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn sẽ tồn tại vĩnh viễn! bạn có muốn phá giải nó."));
+        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Có thể tạo không giới hạn số lượng lồng giam. Tồn tại vĩnh viễn tới khi đấm tay không để hóa giải!"));
     }
 
     /**
      * Cho phép quái/thực thể bên ngoài tự do bước vào lồng giam, nhưng từ trong không thể đi ra.
+     * Khi có nhiều lồng giam, chỉ áp dụng cho lồng chứa khối kết giới pos này.
      */
     public static boolean canEntityPass(Entity entity, BlockPos pos) {
-        for (ActivePrison prison : ACTIVE_PRISONS) {
-            if (prison.level == entity.level()) {
-                double distMob = entity.position().distanceTo(prison.center);
-                // Nếu sinh vật đang ở ngoài hoặc chạm mép ngoài, cho phép bước vào
-                if (distMob >= prison.radius - 0.8) {
-                    return true;
+        Vec3 posCenter = Vec3.atCenterOf(pos);
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison prison : ACTIVE_PRISONS) {
+                if (prison.level == entity.level()) {
+                    // Chỉ kiểm tra lồng giam chứa khối pos này
+                    if (prison.replacedBlocks.containsKey(pos) || Math.abs(posCenter.distanceTo(prison.center) - prison.radius) <= 1.5) {
+                        double distMob = entity.position().distanceTo(prison.center);
+                        // Nếu sinh vật đang ở ngoài hoặc chạm mép ngoài, cho phép bước vào
+                        if (distMob >= prison.radius - 0.8) {
+                            return true;
+                        }
+                    }
                 }
             }
         }
@@ -132,12 +157,32 @@ public class InfiniteDragonPrisonAbility {
 
     /**
      * Hoàn nguyên toàn bộ các khối ban đầu khi lồng bị phá hủy hoặc giải trừ.
+     * Khối chồng lấn với lồng giam khác sẽ không bị xóa, tránh làm thủng lồng giam còn lại.
      */
     public static void cleanPrison(ActivePrison prison) {
         if (prison == null) return;
+        ServerLevel level = prison.level;
+
         for (Map.Entry<BlockPos, BlockState> entry : prison.replacedBlocks.entrySet()) {
-            if (prison.level.getBlockState(entry.getKey()).is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-                prison.level.setBlock(entry.getKey(), entry.getValue(), 2);
+            BlockPos pos = entry.getKey();
+            BlockState orig = entry.getValue();
+
+            // Kiểm tra xem vị trí này có còn nằm trong bất kỳ lồng giam nào KHÁC đang hoạt động không
+            boolean stillUsed = false;
+            synchronized (ACTIVE_PRISONS) {
+                for (ActivePrison other : ACTIVE_PRISONS) {
+                    if (other != prison && other.level == level && other.replacedBlocks.containsKey(pos)) {
+                        stillUsed = true;
+                        break;
+                    }
+                }
+            }
+
+            // Chỉ hoàn nguyên về khối gốc nếu không còn lồng giam nào khác sử dụng khối này
+            if (!stillUsed) {
+                if (level.getBlockState(pos).is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+                    level.setBlock(pos, orig, 2);
+                }
             }
         }
         prison.replacedBlocks.clear();
@@ -149,8 +194,8 @@ public class InfiniteDragonPrisonAbility {
             while (it.hasNext()) {
                 ActivePrison p = it.next();
                 if (p.casterUuid.equals(playerUuid)) {
-                    cleanPrison(p);
                     it.remove();
+                    cleanPrison(p);
                 }
             }
         }
@@ -229,8 +274,36 @@ public class InfiniteDragonPrisonAbility {
                                 }
                                 break;
                             }
+                        } else {
+                            // Mức 3: Nhốt vĩnh viễn Boss, Ác Ma, Không Vong.
+                            // Riêng Milim và Chước Nhiệt Long (Velgrynd) chỉ nhốt được 3 phút (3600 ticks) rồi chúng sẽ phá lồng!
+                            if (isMilim || isVelgrynd) {
+                                // Cảnh báo khi còn 30 giây (tick 3000)
+                                if (prison.ticksAlive == 3000) {
+                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                    if (caster != null) {
+                                        caster.sendSystemMessage(Component.literal("§e⚠️ Sức mạnh của " + e.getName().getString() + " đang cuộn trào dữ dội! Long Giam Vô Hạn (Mức 3) sắp bị phá vỡ sau 30 giây!"));
+                                    }
+                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                            SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.5F, 1.2F);
+                                }
+
+                                if (prison.ticksAlive >= 3600) {
+                                    cageBroken = true;
+                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                            SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.6F);
+                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                            SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.5F, 0.5F);
+                                    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 2, 0, 0, 0, 0);
+                                    level.sendParticles(ParticleTypes.DRAGON_BREATH, e.getX(), e.getY() + 1.0, e.getZ(), 50, 1.2, 1.2, 1.2, 0.08);
+                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                    if (caster != null) {
+                                        caster.sendSystemMessage(Component.literal("§c⚠️ Sau 3 phút bị giam cầm, " + e.getName().getString() + " đã bộc phát thần lực / long uy phá tan Long Giam Vô Hạn (Mức 3)!"));
+                                    }
+                                    break;
+                                }
+                            }
                         }
-                        // Mức 3: Tuyệt đối không thể phá lồng!
 
                         // Đẩy lùi mob bên trong khi cố trườn qua biên giới (Quái chỉ có thể vào, không thể ra)
                         if (dist > r - 1.2) {
@@ -255,8 +328,8 @@ public class InfiniteDragonPrisonAbility {
                 }
 
                 if (cageBroken) {
-                    cleanPrison(prison);
                     it.remove();
+                    cleanPrison(prison);
                 }
             }
         }
@@ -269,16 +342,36 @@ public class InfiniteDragonPrisonAbility {
         if (!player.getMainHandItem().isEmpty()) return false;
 
         ActivePrison found = null;
+        double minDistance = Double.MAX_VALUE;
+
         synchronized (ACTIVE_PRISONS) {
+            // Ưu tiên 1: Lồng giam chứa trực tiếp khối pos này trong replacedBlocks
             for (ActivePrison prison : ACTIVE_PRISONS) {
-                if (prison.replacedBlocks.containsKey(pos) || prison.center.distanceTo(Vec3.atCenterOf(pos)) <= prison.radius + 3.0) {
-                    found = prison;
-                    break;
+                if (prison.level == player.level() && prison.replacedBlocks.containsKey(pos)) {
+                    double dist = prison.center.distanceTo(Vec3.atCenterOf(pos));
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        found = prison;
+                    }
                 }
             }
+
+            // Ưu tiên 2: Nếu không tìm thấy bằng replacedBlocks nhưng nằm trong phạm vi bán kính
+            if (found == null) {
+                for (ActivePrison prison : ACTIVE_PRISONS) {
+                    if (prison.level == player.level() && prison.center.distanceTo(Vec3.atCenterOf(pos)) <= prison.radius + 3.0) {
+                        double dist = prison.center.distanceTo(Vec3.atCenterOf(pos));
+                        if (dist < minDistance) {
+                            minDistance = dist;
+                            found = prison;
+                        }
+                    }
+                }
+            }
+
             if (found != null) {
-                cleanPrison(found);
                 ACTIVE_PRISONS.remove(found);
+                cleanPrison(found);
             }
         }
 
@@ -306,20 +399,22 @@ public class InfiniteDragonPrisonAbility {
 
         Vec3 eyePos = player.getEyePosition();
         ActivePrison found = null;
+        double minDiff = Double.MAX_VALUE;
 
         synchronized (ACTIVE_PRISONS) {
             for (ActivePrison prison : ACTIVE_PRISONS) {
-                if (prison.casterUuid.equals(player.getUUID())) {
+                if (prison.level == player.level() && prison.casterUuid.equals(player.getUUID())) {
                     double dist = eyePos.distanceTo(prison.center);
-                    if (Math.abs(dist - prison.radius) <= 3.0 || dist <= prison.radius + 1.0) {
+                    double diff = Math.abs(dist - prison.radius);
+                    if ((diff <= 3.0 || dist <= prison.radius + 1.0) && diff < minDiff) {
+                        minDiff = diff;
                         found = prison;
-                        break;
                     }
                 }
             }
             if (found != null) {
-                cleanPrison(found);
                 ACTIVE_PRISONS.remove(found);
+                cleanPrison(found);
             }
         }
 
@@ -330,7 +425,7 @@ public class InfiniteDragonPrisonAbility {
                     SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 2.5F, 1.2F);
 
             player.displayClientMessage(
-                    Component.literal("§6§l[LONG GIAM] §aBạn đã hóa giải thành công Lồngg Giam Vô Hạn!"),
+                    Component.literal("§6§l[LONG GIAM] §aBạn đã hóa giải thành công Lồng Giam Vô Hạn!"),
                     true
             );
             return true;
