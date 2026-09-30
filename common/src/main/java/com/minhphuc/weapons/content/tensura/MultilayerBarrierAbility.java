@@ -536,6 +536,59 @@ public class MultilayerBarrierAbility {
     }
 
     /**
+     * Phá hủy toàn bộ Đa Trùng Kết Giới trong phạm vi bị công kích bởi đòn tối thượng.
+     * Áp dụng khi Milim (Dragon Nova), Velgrynd (Cardinal Accel) hoặc Velzard tung đòn tối thượng.
+     */
+    public static boolean shatterBarrierNear(ServerLevel level, Vec3 pos, double range, String cause) {
+        if (ACTIVE_BARRIERS.isEmpty()) return false;
+
+        List<ActiveMultilayer> toShatter = new ArrayList<>();
+        double rangeSq = (range + 6.0) * (range + 6.0);
+
+        synchronized (ACTIVE_BARRIERS) {
+            Iterator<ActiveMultilayer> it = ACTIVE_BARRIERS.iterator();
+            while (it.hasNext()) {
+                ActiveMultilayer b = it.next();
+                if (b.level == level) {
+                    double distSq = b.center.distanceToSqr(pos);
+                    double checkDist = b.isSphere ? (b.radius + range) : (range + 4.0);
+                    if (distSq <= checkDist * checkDist) {
+                        toShatter.add(b);
+                        it.remove();
+                    }
+                }
+            }
+        }
+
+        if (toShatter.isEmpty()) return false;
+
+        for (ActiveMultilayer b : toShatter) {
+            cleanBarrier(b);
+            Vec3 center = b.center;
+            level.playSound(null, center.x, center.y, center.z,
+                    SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 3.0F, 0.8F);
+            level.playSound(null, center.x, center.y, center.z,
+                    SoundEvents.AMETHYST_CLUSTER_BREAK, SoundSource.PLAYERS, 3.0F, 0.9F);
+            level.playSound(null, center.x, center.y, center.z,
+                    SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.5F, 1.2F);
+
+            level.sendParticles(ParticleTypes.EXPLOSION, center.x, center.y, center.z, 2, 0.5, 0.5, 0.5, 0);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y, center.z, 40, 1.5, 1.5, 1.5, 0.25);
+            level.sendParticles(ParticleTypes.ENCHANTED_HIT, center.x, center.y, center.z, 30, 1.2, 1.2, 1.2, 0.2);
+
+            Player caster = level.getPlayerByUUID(b.casterUuid);
+            if (caster != null) {
+                caster.displayClientMessage(
+                        Component.literal("§c§l[ĐA TRÙNG KẾT GIỚI] §4Đã bị công phá vỡ vụn bởi §e" + cause + "§4!"),
+                        false
+                );
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Cập nhật đếm ngược thời gian, cảnh giới quái vật xung quanh và phản hồi/chặn đạn tên trong mỗi tick.
      */
     public static void tick(ServerLevel level) {
