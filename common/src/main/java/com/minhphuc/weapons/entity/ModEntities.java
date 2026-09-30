@@ -51,12 +51,22 @@ public class ModEntities {
                             .build("milim")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.VelzardEntity>> VELZARD =
+            ENTITY_TYPES.register("velzard", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.VelzardEntity::new, MobCategory.MONSTER)
+                            .sized(0.65F, 2.0F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("velzard")
+            );
+
     public static void register() {
         ENTITY_TYPES.register();
         EntityAttributeRegistry.register(PRIMORDIAL_DEMON, PrimordialDemonEntity::createAttributes);
         EntityAttributeRegistry.register(VELGRYND, com.minhphuc.weapons.entity.tensura.VelgryndEntity::createAttributes);
         EntityAttributeRegistry.register(KUBO, com.minhphuc.weapons.entity.darkgathering.KuboEntity::createAttributes);
         EntityAttributeRegistry.register(MILIM, com.minhphuc.weapons.entity.tensura.MilimEntity::createAttributes);
+        EntityAttributeRegistry.register(VELZARD, com.minhphuc.weapons.entity.tensura.VelzardEntity::createAttributes);
 
         BiomeModifications.addProperties(
                 b -> b.hasTag(BiomeTags.IS_OVERWORLD),
@@ -81,6 +91,15 @@ public class ModEntities {
                 (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
                         MobCategory.MONSTER,
                         new MobSpawnSettings.SpawnerData(MILIM.get(), 1, 1, 1)
+                )
+        );
+
+        // Tỷ lệ xuất hiện tự nhiên của Bạch Băng Long Velzard: Siêu hiếm, tương tự Velgrynd
+        BiomeModifications.addProperties(
+                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
+                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
+                        MobCategory.MONSTER,
+                        new MobSpawnSettings.SpawnerData(VELZARD.get(), 1, 1, 1)
                 )
         );
 

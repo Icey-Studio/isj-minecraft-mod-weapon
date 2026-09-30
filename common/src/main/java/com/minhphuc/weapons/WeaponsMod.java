@@ -80,6 +80,15 @@ public class WeaponsMod {
                 com.minhphuc.weapons.client.renderer.MilimRenderer::new
         );
 
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.VelzardModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.VelzardModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.VELZARD,
+                com.minhphuc.weapons.client.renderer.VelzardRenderer::new
+        );
+
         LOGGER.info("Weapons Mod Client Setup complete!");
     }
 }
