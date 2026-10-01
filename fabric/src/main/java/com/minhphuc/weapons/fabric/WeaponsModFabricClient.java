@@ -9,7 +9,7 @@ import net.minecraft.client.renderer.RenderType;
 public class WeaponsModFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
-        WeaponsMod.initClient();
+        com.minhphuc.weapons.client.WeaponsModClient.initClient();
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.INCUBATION_CAPSULE.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DRAGON_PRISON_BARRIER.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_NOIR.get(), RenderType.translucent());

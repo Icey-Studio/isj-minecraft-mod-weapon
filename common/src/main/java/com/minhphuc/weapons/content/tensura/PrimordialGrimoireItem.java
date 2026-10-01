@@ -1,7 +1,6 @@
 package com.minhphuc.weapons.content.tensura;
 
-import com.minhphuc.weapons.client.gui.PrimordialSummonScreen;
-import net.minecraft.client.Minecraft;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
@@ -31,17 +30,13 @@ public class PrimordialGrimoireItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
 
         if (level.isClientSide()) {
-            openSummonScreen();
+            com.minhphuc.weapons.client.gui.ClientPrimordialGuiOpener.openSummonScreen();
         } else {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BOOK_PAGE_TURN, net.minecraft.sounds.SoundSource.PLAYERS, 1.2F, 0.9F);
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-    }
-
-    private void openSummonScreen() {
-        Minecraft.getInstance().setScreen(new PrimordialSummonScreen());
     }
 
     @Override

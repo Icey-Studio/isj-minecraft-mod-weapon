@@ -1,7 +1,6 @@
 package com.minhphuc.weapons.content.tensura;
 
-import com.minhphuc.weapons.client.gui.PrimordialRebirthSelectScreen;
-import net.minecraft.client.Minecraft;
+
 import net.minecraft.network.chat.Component;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
@@ -36,7 +35,7 @@ public class PrimordialRebirthTomeItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
 
         if (level.isClientSide()) {
-            openRebirthScreen();
+            com.minhphuc.weapons.client.gui.ClientPrimordialGuiOpener.openRebirthScreen();
         } else {
             level.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.ENCHANTMENT_TABLE_USE, SoundSource.PLAYERS, 1.4F, 0.8F);
@@ -45,10 +44,6 @@ public class PrimordialRebirthTomeItem extends Item {
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
-    }
-
-    private void openRebirthScreen() {
-        Minecraft.getInstance().setScreen(new PrimordialRebirthSelectScreen());
     }
 
     @Override
