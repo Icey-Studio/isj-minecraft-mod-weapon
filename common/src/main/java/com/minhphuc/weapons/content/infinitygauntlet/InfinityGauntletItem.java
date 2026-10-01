@@ -24,7 +24,6 @@ import net.minecraft.world.phys.AABB;
 import com.minhphuc.weapons.data.ItemStackDataHelper;
 import net.minecraft.world.item.Item.TooltipContext;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 
 public class InfinityGauntletItem extends Item {
     public static final String NBT_MODE = "SelectedMode";
@@ -217,22 +216,18 @@ public class InfinityGauntletItem extends Item {
                     true
                 );
 
-                // Async spatial scan & batch destruction offloaded to worker pool for multi-core optimization
+                // Spatial scan & batch destruction executed safely on main server thread
                 AABB boundingBox = player.getBoundingBox().inflate(100.0D);
+                List<Entity> targetEntities = serverLevel.getEntities((Entity) null, boundingBox, entity -> {
+                    if (entity == player) return false;
+                    return (entity instanceof LivingEntity && entity.isAlive()) || (entity instanceof ItemEntity);
+                });
 
-                CompletableFuture.supplyAsync(() -> {
-                    List<Entity> targetEntities = serverLevel.getEntities((Entity) null, boundingBox, entity -> {
-                        if (entity == player) return false;
-                        return (entity instanceof LivingEntity && entity.isAlive()) || (entity instanceof ItemEntity);
-                    });
-                    return targetEntities;
-                }).thenAcceptAsync(entities -> {
-                    serverLevel.getServer().execute(() -> {
-                        int killedMobs = 0;
-                        int removedItems = 0;
+                int killedMobs = 0;
+                int removedItems = 0;
 
-                        for (Entity entity : entities) {
-                            if (!entity.isAlive() && !(entity instanceof ItemEntity)) continue;
+                for (Entity entity : targetEntities) {
+                    if (!entity.isAlive() && !(entity instanceof ItemEntity)) continue;
 
                             if (entity instanceof LivingEntity living && entity != player) {
                                 // Xử lý rơi Linh Hồn Ma Vương cho cú búng tay SNAP
@@ -274,8 +269,6 @@ public class InfinityGauntletItem extends Item {
                         serverPlayer.sendSystemMessage(
                             Component.literal("§a§l[SNAP SUCCESS] Đã quét sạch " + killedMobs + " sinh vật và xóa " + removedItems + " vật phẩm trong phạm vi 100 blocks!")
                         );
-                    });
-                });
 
                 player.getCooldowns().addCooldown(this, 40); // 2 second cooldown
             }
