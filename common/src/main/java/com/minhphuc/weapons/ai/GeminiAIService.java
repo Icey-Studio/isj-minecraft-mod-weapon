@@ -75,10 +75,10 @@ public class GeminiAIService {
 
                 // Build detailed context prompt for Gemini AI
                 String systemContext = String.format(
-                    "Bạn là Trí Tuệ & Thực Tại của Găng Tay Vô Cực (Infinity Gauntlet AI) trong Minecraft 1.20.1.\n" +
+                    "Bạn là Trí Tuệ & Thực Tại của Găng Tay Vô Cực (Infinity Gauntlet AI) trong Minecraft 1.21.1.\n" +
                     "Người chơi tên '%s' (Tọa độ hiện tại: X=%.1f, Y=%.1f, Z=%.1f, Chiều không gian: %s) đưa ra mệnh lệnh:\n" +
                     "\"%s\"\n\n" +
-                    "Hãy đóng vai Găng tay Vô cực và thực thi ý nguyện này của chủ nhân bằng các lệnh Minecraft 1.20.1 thích hợp.\n" +
+                    "Hãy đóng vai Găng tay Vô cực và thực thi ý nguyện này của chủ nhân bằng các lệnh Minecraft 1.21.1 thích hợp.\n" +
                     "Yêu cầu BẮT BUỘC trả về định dạng JSON hợp lệ duy nhất (không bọc trong triple backticks ```json, không thêm chữ ngoài JSON):\n" +
                     "{\n" +
                     "  \"reply\": \"Lời đáp uy nghiêm, thần thái của Găng tay Vô cực bằng tiếng Việt dành cho chủ nhân\",\n" +

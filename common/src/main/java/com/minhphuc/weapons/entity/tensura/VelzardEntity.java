@@ -434,9 +434,14 @@ public class VelzardEntity extends Monster {
     }
 
     private void tickGlacialBlizzard(ServerLevel sl) {
-        // Sinh hạt bão tuyết tiết kiệm tài nguyên (Throttling: mỗi 3 ticks sinh 4 hạt)
-        if (this.tickCount % 3 == 0) {
-            for (int i = 0; i < 4; i++) {
+        // Chỉ sinh hạt và âm thanh nếu có người chơi sống trong phạm vi 48 block
+        if (!sl.hasNearbyAlivePlayer(this.getX(), this.getY(), this.getZ(), 48.0D)) {
+            return;
+        }
+
+        // Sinh hạt bão tuyết tiết kiệm tài nguyên (Throttling: mỗi 6 ticks sinh 3 hạt)
+        if (this.tickCount % 6 == 0) {
+            for (int i = 0; i < 3; i++) {
                 double rx = this.getX() + (this.random.nextDouble() - 0.5D) * 36.0D;
                 double rz = this.getZ() + (this.random.nextDouble() - 0.5D) * 36.0D;
                 double ry = this.getY() + 2.0D + this.random.nextDouble() * 10.0D;

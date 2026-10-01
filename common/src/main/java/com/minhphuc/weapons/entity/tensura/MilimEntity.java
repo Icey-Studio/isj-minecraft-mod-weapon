@@ -2,7 +2,6 @@ package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility;
-import com.minhphuc.weapons.content.tensura.LuciferReplicationAbility;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
 import com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper;
 import com.minhphuc.weapons.content.tensura.TensuraDialogueManager;
@@ -429,7 +428,6 @@ public class MilimEntity extends Monster {
                 SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 3.0F, 0.8F);
 
         TensuraDialogueManager.sayMilim(this, "dialogue.weapons.milim.cast_dragon_nova");
-        LuciferReplicationAbility.recordSkillObserved(sl, this.position(), "DRAGON_NOVA", "Long Tinh Bộc Viêm Bá (Milim Nava)");
 
         // Broadcast cảnh báo tới người chơi trong phạm vi 64 blocks
         for (ServerPlayer p : sl.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(64.0D))) {
@@ -635,7 +633,6 @@ public class MilimEntity extends Monster {
         Vec3 baseDir = target.position().add(0, target.getEyeHeight() * 0.5, 0).subtract(startPos).normalize();
 
         TensuraDialogueManager.sayMilim(this, "dialogue.weapons.milim.cast_horizontal_beam");
-        LuciferReplicationAbility.recordSkillObserved(sl, this.position(), "HORIZONTAL_BEAM", "Tà Khứ Vũ Thê Tử Tán Xạ (Milim Nava)");
 
         sl.playSound(null, this.getX(), this.getY(), this.getZ(),
                 SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 3.0F, 1.3F);

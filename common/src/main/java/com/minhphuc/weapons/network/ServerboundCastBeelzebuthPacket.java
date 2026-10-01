@@ -41,7 +41,7 @@ public class ServerboundCastBeelzebuthPacket {
                 int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
-                int lordSkills = hasCreation ? 18 : 17;
+                int lordSkills = hasCreation ? 15 : 14;
 
                 // Kiểm tra thi triển Kỹ Năng Tiến Hóa Tối Thượng
                 int evolvedSkillToCast = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getSelectedEvolvedSkillId(player);
@@ -50,9 +50,9 @@ public class ServerboundCastBeelzebuthPacket {
                     return;
                 }
 
-                boolean isZoneTrack = (hasCreation && selectedSkill == 17) || (!hasCreation && selectedSkill == 16);
-                boolean isMultilayerCast = (hasCreation && selectedSkill == 16) || (!hasCreation && selectedSkill == 15);
-                boolean isAntiMagicCast = (hasCreation && selectedSkill == 15) || (!hasCreation && selectedSkill == 14);
+                boolean isZoneTrack = (hasCreation && selectedSkill == 14) || (!hasCreation && selectedSkill == 13);
+                boolean isMultilayerCast = (hasCreation && selectedSkill == 13) || (!hasCreation && selectedSkill == 12);
+                boolean isAntiMagicCast = (hasCreation && selectedSkill == 12) || (!hasCreation && selectedSkill == 11);
 
                 // Kỹ năng Long Tinh Bộc Viêm Bá (5) và Granit Xuyên Phá Zone Track: KHÔNG CẦN HỒI NĂNG LƯỢNG / MA LỰC (ZERO COOLDOWN)!
                 if (selectedSkill != 5 && !isZoneTrack) {
@@ -94,18 +94,9 @@ public class ServerboundCastBeelzebuthPacket {
                     com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(serverLevel, player);
                 } else if (isAntiMagicCast) {
                     com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.castPlayerBarrier(serverLevel, player);
-                } else if (hasCreation && selectedSkill == 14) {
-                    // Chiêu 15: Sáng Tạo Vật Chất - Mở Giao Diện Ngưng Tụ Thần Khí
+                } else if (hasCreation && selectedSkill == 11) {
+                    // Chiêu 12: Sáng Tạo Vật Chất - Mở Giao Diện Ngưng Tụ Thần Khí
                     ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
-                } else if (selectedSkill == 13) {
-                    // Chiêu 14: Kiêu Ngạo Vương Lucifer - Sao Chép Tuyệt Kỹ
-                    com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 12) {
-                    // Chiêu 13: Trí Huệ Chi Vương - Thẩm Định Vạn Vật
-                    com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(serverLevel, player);
-                } else if (selectedSkill == 11) {
-                    // Chiêu 12: Trí Huệ Chi Vương - Gia Tốc Tư Duy & Dự Đoán Quỹ Đạo
-                    com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(serverLevel, player);
                 } else if (selectedSkill == 10) {
                     // Chiêu 11: Cú Bắn Granit (Granite Blast)
                     com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(serverLevel, player);

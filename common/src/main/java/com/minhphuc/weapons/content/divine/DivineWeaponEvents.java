@@ -142,9 +142,9 @@ public class DivineWeaponEvents {
                         return EventResult.interruptTrue();
                     }
 
-                    boolean isZoneTrack = (hasCreation && selectedSkill == 17) || (!hasCreation && selectedSkill == 16);
-                    boolean isMultilayerCast = (hasCreation && selectedSkill == 16) || (!hasCreation && selectedSkill == 15);
-                    boolean isAntiMagicCast = (hasCreation && selectedSkill == 15) || (!hasCreation && selectedSkill == 14);
+                    boolean isZoneTrack = (hasCreation && selectedSkill == 14) || (!hasCreation && selectedSkill == 13);
+                    boolean isMultilayerCast = (hasCreation && selectedSkill == 13) || (!hasCreation && selectedSkill == 12);
+                    boolean isAntiMagicCast = (hasCreation && selectedSkill == 12) || (!hasCreation && selectedSkill == 11);
 
                     // Kỹ năng Long Tinh Bộc Viêm Bá (5) và Granit Xuyên Phá Zone Track: KHÔNG CẦN HỒI NĂNG LƯỢNG / MA LỰC (ZERO COOLDOWN)!
                     if (selectedSkill != 5 && !isZoneTrack) {
@@ -164,15 +164,9 @@ public class DivineWeaponEvents {
                     } else if (isAntiMagicCast) {
                         com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.castPlayerBarrier(sl, serverPlayer);
                         return EventResult.interruptTrue();
-                    } else if (hasCreation && selectedSkill == 14) {
+                    } else if (hasCreation && selectedSkill == 11) {
                         com.minhphuc.weapons.network.ModMessages.sendToPlayer(new com.minhphuc.weapons.network.ClientboundOpenMaterialCreationPacket(), serverPlayer);
                         return EventResult.interruptTrue();
-                    } else if (selectedSkill == 13) {
-                        com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 12) {
-                        com.minhphuc.weapons.content.tensura.AllOfCreationAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 11) {
-                        com.minhphuc.weapons.content.tensura.ThoughtAccelerationAbility.cast(sl, serverPlayer);
                     } else if (selectedSkill == 10) {
                         com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(sl, serverPlayer);
                     } else if (selectedSkill == 9) {

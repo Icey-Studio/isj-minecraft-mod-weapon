@@ -579,7 +579,6 @@ public class VelgryndEntity extends Monster {
             if (activeSkillTicks == 45) {
                 this.broadcastDialogue("Trước mặt Thời Không Thao Túng, vạn vật chỉ là tĩnh chỉ! Vỡ vụn đi!");
                 sLevel.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 4.0F, 0.75F);
-                com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.recordSkillObserved(sLevel, this.position(), "SPACETIME_COLLAPSE", "Thao Túng Thời Không (Velgrynd)");
             }
 
             // Đóng băng thực thể trong 18m mỗi 8 ticks thay vì quét mỗi tick
@@ -738,8 +737,6 @@ public class VelgryndEntity extends Monster {
                     } else {
                         this.accelDirection = this.getLookAngle();
                     }
-
-                    com.minhphuc.weapons.content.tensura.LuciferReplicationAbility.recordSkillObserved(sLevel, this.position(), "CARDINAL_ACCEL", "Gia Tốc Chước Nhiệt Long (Velgrynd)");
 
                     this.broadcastDialogue("Thưởng thức cơn thịnh nộ tuyệt đối của Long Chủng đi — Gia Tốc Chước Nhiệt Long!");
 

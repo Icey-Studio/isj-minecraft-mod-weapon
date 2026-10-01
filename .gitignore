@@ -28,3 +28,7 @@ forge*changelog.txt
 scratch/
 common/src/pictureee/
 picture/
+
+# Agents
+.agents/
+skills-lock.json
