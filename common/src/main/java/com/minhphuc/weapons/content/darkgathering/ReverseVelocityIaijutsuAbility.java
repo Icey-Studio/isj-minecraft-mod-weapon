@@ -4,6 +4,7 @@ import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.network.ClientboundIaiStatePacket;
 import com.minhphuc.weapons.network.ModMessages;
+import dev.architectury.event.EventResult;
 import net.minecraft.core.Rotations;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
@@ -15,8 +16,11 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.Display;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,7 +30,9 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.component.DyedItemColor;
 import net.minecraft.world.item.component.ResolvableProfile;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 
 import java.util.*;
@@ -38,10 +44,10 @@ import java.util.*;
  * 2. Thân xác vật lý: Đứng yên tại điểm xuất phát (100% đúng Skin, Giáp, và Vật phẩm người chơi đang cầm).
  * 3. Linh hồn xuất khiếu: Di chuyển tự do (Góc nhìn F5 thấy dạng bán trong suốt).
  * 4. Chuỗi 5 lần nhấn chuột:
- *    - Lần 1: [-0.04s] (Đánh dấu vết chém 1, hiện khung LED, chưa sát thương)
- *    - Lần 2: [-0.02s] (Đánh dấu vết chém 2, hiện khung LED, chưa sát thương)
- *    - Lần 3: [-0.01s] (Đánh dấu vết chém 3, hiện khung LED, chưa sát thương)
- *    - Lần 4: [ 0.00s] (Đánh dấu vết chém 4, hiện khung LED, chưa sát thương)
+ *    - Lần 1: [-0.04s] (Đánh dấu vết chém 1, hiện khung LED, chặn sát thương gốc)
+ *    - Lần 2: [-0.02s] (Đánh dấu vết chém 2, hiện khung LED, chặn sát thương gốc)
+ *    - Lần 3: [-0.01s] (Đánh dấu vết chém 3, hiện khung LED, chặn sát thương gốc)
+ *    - Lần 4: [ 0.00s] (Đánh dấu vết chém 4, hiện khung LED, chặn sát thương gốc)
  *    - Lần 5: KÍCH HOÀT ĐÒN QUYẾT ĐỊNH (FINISHER):
  *      + Màu sắc trở lại tự nhiên.
  *      + 4 Tàn ảnh đồng loạt xuất hiện tại 4 vị trí đánh dấu.
@@ -71,8 +77,10 @@ public class ReverseVelocityIaijutsuAbility {
         public final ArmorStand physicalBodyStand;
         public final List<MarkedSlash> markedSlashes = new ArrayList<>();
         public final List<ArmorStand> finisherClones = new ArrayList<>();
+        public final List<Display.TextDisplay> activeLedDisplays = new ArrayList<>();
 
         public int clickCount = 0;
+        public long lastClickTimeMs = 0;
         public boolean inFinisher = false;
         public int finisherTick = 0;
         public int timeoutTicks = 600; // Tối đa 30s để người chơi thi triển 5 click
@@ -95,6 +103,13 @@ public class ReverseVelocityIaijutsuAbility {
                 }
             }
             finisherClones.clear();
+
+            for (Display.TextDisplay led : activeLedDisplays) {
+                if (led != null && led.isAlive()) {
+                    led.discard();
+                }
+            }
+            activeLedDisplays.clear();
         }
     }
 
@@ -109,6 +124,33 @@ public class ReverseVelocityIaijutsuAbility {
 
     public static boolean isPlayerInIaiSession(UUID playerUuid) {
         return ACTIVE_SESSIONS.containsKey(playerUuid);
+    }
+
+    public static boolean isEntityFrozenInSession(LivingEntity entity) {
+        if (entity == null || !entity.isAlive()) return false;
+        for (ActiveIaiSession session : ACTIVE_SESSIONS.values()) {
+            if (!session.inFinisher) {
+                if (session.caster.distanceToSqr(entity) <= 48.0D * 48.0D) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * CHẶN ĐÒN ĐÁNH CỦA NGƯỜI CHƠI VÀO SINH VẬT TRONG LÚC XUẤT KHIẾU:
+     * - Ngăn không cho Minecraft gây sát thương cận chiến thông thường
+     * - Chuyển đòn đánh thành một nhấp chuột khắc dấu thời gian
+     */
+    public static EventResult onPlayerAttackEntity(Player player, Level level, Entity target, InteractionHand hand, HitResult hitResult) {
+        if (player instanceof ServerPlayer serverPlayer && isPlayerInIaiSession(player.getUUID())) {
+            Vec3 pos = (target != null) ? target.position().add(0, 0.5D, 0) : player.position().add(player.getLookAngle().scale(3.0D));
+            int targetId = (target != null) ? target.getId() : -1;
+            handleClick(serverPlayer, pos, targetId);
+            return EventResult.interruptFalse(); // CHẶN HOÀN TOÀN SÁT THƯƠNG GỐC CỦA MINECRAFT!
+        }
+        return EventResult.pass();
     }
 
     /**
@@ -156,7 +198,7 @@ public class ReverseVelocityIaijutsuAbility {
             bodyStand.setItemSlot(EquipmentSlot.LEGS, player.getItemBySlot(EquipmentSlot.LEGS).copy());
             bodyStand.setItemSlot(EquipmentSlot.FEET, player.getItemBySlot(EquipmentSlot.FEET).copy());
 
-            // Cầm đúng item người chơi đang cầm trên 2 tay
+            // Cầm đúng item người chơi đang cầm trên 2 tay (không nhất thiết là kiếm)
             bodyStand.setItemSlot(EquipmentSlot.MAINHAND, player.getMainHandItem().copy());
             bodyStand.setItemSlot(EquipmentSlot.OFFHAND, player.getOffhandItem().copy());
 
@@ -189,6 +231,7 @@ public class ReverseVelocityIaijutsuAbility {
         player.connection.send(new ClientboundSetTitlesAnimationPacket(0, 30, 10));
         player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§f§l天外救世権現・抜刀術『逆速度』")));
         player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c[-0.04s] §fNhấp chuột để khắc 4 dấu ấn thời gian...")));
+        player.displayClientMessage(Component.literal("§e👉 Hãy nhấp chuột vào không khí hoặc sinh vật để khắc 4 dấu ấn thời gian!"), true);
 
         ActiveIaiSession session = new ActiveIaiSession(level, player, bodyPos, bodyYaw, bodyStand);
         ACTIVE_SESSIONS.put(player.getUUID(), session);
@@ -196,14 +239,20 @@ public class ReverseVelocityIaijutsuAbility {
     }
 
     /**
-     * XỬ LÝ CLICK TỪ NGƯỜI CHƠI (TỪ 1 ĐẾN 5)
+     * XỬ LÝ CLICK TỪ NGƯỜI CHƠI (TỪ 1 ĐẾN 5) - CÓ DEBOUNCE CHỐNG SPAM
      */
     public static void handleClick(ServerPlayer player, Vec3 clickPos, int targetEntityId) {
         ActiveIaiSession session = ACTIVE_SESSIONS.get(player.getUUID());
         if (session == null || session.inFinisher) return;
 
+        long now = System.currentTimeMillis();
+        // Debounce tối thiểu 350ms giữa 2 lần nhấp chuột để tránh spam / click đúp ngoài ý muốn
+        if (now - session.lastClickTimeMs < 350) {
+            return;
+        }
+        session.lastClickTimeMs = now;
+
         ServerLevel level = session.level;
-        session.clickCount++;
 
         // Tìm thực thể bị đánh (nếu có)
         LivingEntity hitEntity = null;
@@ -214,7 +263,7 @@ public class ReverseVelocityIaijutsuAbility {
             }
         }
 
-        // Nếu click vào không khí mà không chỉ thẳng vào thực thể, tự động quét tìm entity gần điểm click trong 3.5 blocks
+        // Quét tìm entity gần điểm click trong 3.5 blocks nếu không chỉ thẳng
         if (hitEntity == null) {
             AABB search = new AABB(clickPos.x - 3.0, clickPos.y - 3.0, clickPos.z - 3.0,
                     clickPos.x + 3.0, clickPos.y + 3.0, clickPos.z + 3.0);
@@ -227,48 +276,67 @@ public class ReverseVelocityIaijutsuAbility {
 
         Vec3 targetPos = (hitEntity != null) ? hitEntity.position().add(0, 0.6D, 0) : clickPos;
         float slashYaw = player.getYRot();
+        double ledYOffset = (hitEntity != null) ? (hitEntity.getBbHeight() + 0.35D) : 1.3D;
+        Vec3 ledPos = (hitEntity != null) ? hitEntity.position().add(0, ledYOffset, 0) : targetPos.add(0, 1.2D, 0);
+
+        session.clickCount++;
 
         switch (session.clickCount) {
             case 1 -> {
                 // Lần 1: [-0.04s]
                 session.markedSlashes.add(new MarkedSlash(targetPos, hitEntity, "-0.04s", slashYaw));
-                DigitalLedDisplayHelper.spawnLedText(level, targetPos.add(0, 1.8D, 0), "-0.04", 2.6F, 600);
+                var led = DigitalLedDisplayHelper.spawnLedText(level, ledPos, "-0.04", 2.6F, 600);
+                if (led != null) session.activeLedDisplays.add(led);
+
                 level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.8F, 0.8F);
-                level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.5F, 1.8F);
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 1, 0, 0, 0, 0);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.5F, 1.8F);
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 2, 0.2D, 0.2D, 0.2D, 0);
                 SamuraiSpiritDisplayHelper.spawnDigitalBlockCracks(level, player.position(), targetPos);
 
-                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c[-0.04s] §fVết chém 1/4 đã khắc dấu!")));
+                player.displayClientMessage(Component.literal("§c§l[-0.04s] §fĐã khắc dấu vết chém [1/4]! §7(Chưa gây sát thương)"), true);
+                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c[-0.04s] §fVết chém [1/4]")));
             }
             case 2 -> {
                 // Lần 2: [-0.02s]
                 session.markedSlashes.add(new MarkedSlash(targetPos, hitEntity, "-0.02s", slashYaw));
-                DigitalLedDisplayHelper.spawnLedText(level, targetPos.add(0, 1.8D, 0), "-0.02", 2.6F, 600);
+                var led = DigitalLedDisplayHelper.spawnLedText(level, ledPos, "-0.02", 2.6F, 600);
+                if (led != null) session.activeLedDisplays.add(led);
+
                 level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.8F, 1.0F);
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 1, 0, 0, 0, 0);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.5F, 1.9F);
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 2, 0.2D, 0.2D, 0.2D, 0);
                 SamuraiSpiritDisplayHelper.spawnDigitalBlockCracks(level, player.position(), targetPos);
 
-                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e[-0.02s] §fVết chém 2/4 đã khắc dấu!")));
+                player.displayClientMessage(Component.literal("§e§l[-0.02s] §fĐã khắc dấu vết chém [2/4]! §7(Chưa gây sát thương)"), true);
+                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e[-0.02s] §fVết chém [2/4]")));
             }
             case 3 -> {
                 // Lần 3: [-0.01s]
                 session.markedSlashes.add(new MarkedSlash(targetPos, hitEntity, "-0.01s", slashYaw));
-                DigitalLedDisplayHelper.spawnLedText(level, targetPos.add(0, 1.8D, 0), "-0.01", 2.6F, 600);
+                var led = DigitalLedDisplayHelper.spawnLedText(level, ledPos, "-0.01", 2.6F, 600);
+                if (led != null) session.activeLedDisplays.add(led);
+
                 level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.8F, 1.2F);
-                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 1, 0, 0, 0, 0);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.5F, 2.0F);
+                level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 2, 0.2D, 0.2D, 0.2D, 0);
                 SamuraiSpiritDisplayHelper.spawnDigitalBlockCracks(level, player.position(), targetPos);
 
-                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e[-0.01s] §fVết chém 3/4 đã khắc dấu!")));
+                player.displayClientMessage(Component.literal("§e§l[-0.01s] §fĐã khắc dấu vết chém [3/4]! §7(Chưa gây sát thương)"), true);
+                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§e[-0.01s] §fVết chém [3/4]")));
             }
             case 4 -> {
                 // Lần 4: [ 0.00s]
                 session.markedSlashes.add(new MarkedSlash(targetPos, hitEntity, " 0.00s", slashYaw));
-                DigitalLedDisplayHelper.spawnLedText(level, targetPos.add(0, 1.8D, 0), " 0.00", 2.6F, 600);
+                var led = DigitalLedDisplayHelper.spawnLedText(level, ledPos, " 0.00", 2.6F, 600);
+                if (led != null) session.activeLedDisplays.add(led);
+
                 level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 1.8F, 1.4F);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 1.8F, 2.0F);
                 level.sendParticles(ParticleTypes.SWEEP_ATTACK, targetPos.x, targetPos.y + 0.8D, targetPos.z, 2, 0.2D, 0.2D, 0.2D, 0);
                 SamuraiSpiritDisplayHelper.spawnDigitalBlockCracks(level, player.position(), targetPos);
 
-                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a[ 0.00s] §fĐã xong 4 vết chém! Nhấn thêm 1 lần để KẾT LIỄU!")));
+                player.displayClientMessage(Component.literal("§a§l[ 0.00s] §fĐã khắc xong [4/4] vết chém! §d👉 Nhấp lần nữa để KẾT LIỄU!"), true);
+                player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a[ 0.00s] §fNhấp chuột lần nữa để KẾT LIỄU!")));
             }
             default -> {
                 // Lần 5: KÍCH HOÀT ĐÒN QUYẾT ĐỊNH (FINISHER)
@@ -360,11 +428,13 @@ public class ReverseVelocityIaijutsuAbility {
 
             if (!session.inFinisher) {
                 session.timeoutTicks--;
-                // Khóa cứng các mục tiêu đã đánh dấu
-                for (MarkedSlash mark : session.markedSlashes) {
-                    if (mark.hitEntity != null && mark.hitEntity.isAlive()) {
-                        mark.hitEntity.setDeltaMovement(Vec3.ZERO);
-                    }
+
+                // KHÓA CỨNG TOÀN BỘ QUÁI VẬT TRONG PHẠM VI 48 BLOCKS SUỐT THỜI GIAN ĐẾM NGƯỢC
+                AABB freezeBox = session.caster.getBoundingBox().inflate(48.0D);
+                List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, freezeBox,
+                        e -> e != session.caster && e != session.physicalBodyStand && e.isAlive() && !e.isSpectator());
+                for (LivingEntity ent : nearby) {
+                    ent.setDeltaMovement(Vec3.ZERO);
                 }
 
                 // Hết thời gian mà chưa bấm xong 5 click -> Tự động kích hoạt finisher
@@ -401,7 +471,7 @@ public class ReverseVelocityIaijutsuAbility {
                     level.playSound(null, session.caster.getX(), session.caster.getY(), session.caster.getZ(),
                             SoundEvents.BELL_BLOCK, SoundSource.PLAYERS, 2.0F, 1.5F);
 
-                    session.caster.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a[ 0.00s] §fThu Kiếm Vào Vỏ...")));
+                    session.caster.displayClientMessage(Component.literal("§a[ 0.00s] §fThu Kiếm Vào Vỏ..."), true);
                 }
 
                 // Tick 30: ĐẠI BÙNG NỔ SÁT THƯƠNG 75 / ĐÒN (BÂY GIỜ MỚI GÂY SÁT THƯƠNG!)
@@ -442,7 +512,7 @@ public class ReverseVelocityIaijutsuAbility {
                     level.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
                             SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 2.0F, 0.7F);
 
-                    caster.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§6§l[BÙNG NỔ] §fTrảm Kích Hoàn Tất!")));
+                    caster.displayClientMessage(Component.literal("§6§l[BÙNG NỔ] §fTrảm Kích Hoàn Tất!"), true);
                 }
 
                 // Tick 42: DỌN DẸP TOÀN BỘ & KẾT THÚC
@@ -475,4 +545,3 @@ public class ReverseVelocityIaijutsuAbility {
         ACTIVE_SESSIONS.clear();
     }
 }
-

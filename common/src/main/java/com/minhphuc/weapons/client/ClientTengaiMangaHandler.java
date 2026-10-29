@@ -13,6 +13,7 @@ import net.minecraft.resources.ResourceLocation;
  * - Tối ưu tuyệt đối (Zero Lag): Sử dụng pipeline color_convolve gốc của Minecraft engine.
  */
 public class ClientTengaiMangaHandler {
+    private static final ResourceLocation DESATURATE_SHADER = ResourceLocation.fromNamespaceAndPath("minecraft", "shaders/post/desaturate.json");
     private static final ResourceLocation MONOCHROME_SHADER = ResourceLocation.fromNamespaceAndPath("minecraft", "shaders/post/monochrome.json");
     private static final ResourceLocation WEAPONS_MONOCHROME_SHADER = ResourceLocation.fromNamespaceAndPath("weapons", "shaders/post/monochrome.json");
 
@@ -27,12 +28,16 @@ public class ClientTengaiMangaHandler {
         if (!shaderActive && mc.gameRenderer != null) {
             try {
                 try {
-                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(MONOCHROME_SHADER);
-                } catch (Throwable t) {
-                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(WEAPONS_MONOCHROME_SHADER);
+                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(DESATURATE_SHADER);
+                } catch (Throwable t1) {
+                    try {
+                        ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(MONOCHROME_SHADER);
+                    } catch (Throwable t2) {
+                        ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(WEAPONS_MONOCHROME_SHADER);
+                    }
                 }
                 shaderActive = true;
-                WeaponsMod.LOGGER.info("[Tengai Manga Shader] Monochrome shader activated for {} ticks!", durationTicks);
+                WeaponsMod.LOGGER.info("[Tengai Manga Shader] Monochrome/Desaturate shader activated for {} ticks!", durationTicks);
             } catch (Throwable e) {
                 WeaponsMod.LOGGER.error("[Tengai Manga Shader] Failed to load monochrome shader", e);
             }

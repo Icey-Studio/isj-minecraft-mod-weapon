@@ -18,7 +18,7 @@ import net.minecraft.world.phys.Vec3;
  * Xử lý trạng thái Client cho Bạt Đao Thuật Vận Tốc Ngược:
  * - Kích hoạt/tắt Manga Shader trắng đen
  * - Quản lý trạng thái xuất khiếu linh hồn bán trong suốt (Astral Translucency)
- * - Tiếp nhận phím bấm chuột (Attack / Use) gửi lên Server
+ * - Tiếp nhận phím bấm chuột (Attack / Use) gửi lên Server với debounce chuẩn xác
  */
 public class ClientIaiHandler {
     private static boolean astralActive = false;
@@ -53,6 +53,30 @@ public class ClientIaiHandler {
         }
     }
 
+    public static void triggerClickFromInput() {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || !astralActive) return;
+
+        long now = System.currentTimeMillis();
+        // Debounce 350ms ở client để chống gửi nhiều gói tin cùng lúc
+        if (now - lastClickTime < 350) return;
+        lastClickTime = now;
+
+        Vec3 clickPos = mc.player.getEyePosition().add(mc.player.getLookAngle().scale(3.5D));
+        int targetId = -1;
+
+        HitResult hit = mc.hitResult;
+        if (hit instanceof EntityHitResult entHit) {
+            Entity targetEntity = entHit.getEntity();
+            targetId = targetEntity.getId();
+            clickPos = targetEntity.position().add(0, 0.5D, 0);
+        } else if (hit instanceof BlockHitResult blkHit) {
+            clickPos = blkHit.getLocation();
+        }
+
+        ModMessages.sendToServer(new ServerboundIaiClickPacket(clickPos, targetId));
+    }
+
     public static void init() {
         ClientTickEvent.CLIENT_POST.register(mc -> {
             if (mc.player == null || mc.level == null) {
@@ -76,29 +100,11 @@ public class ClientIaiHandler {
                         mc.player.getX() + rx, mc.player.getY() + ry, mc.player.getZ() + rz,
                         0.0D, 0.01D, 0.0D);
 
-                // Lắng nghe chuột trái / chuột phải để gửi tín hiệu khắc dấu
+                // Lắng nghe phím Attack (Chuột trái) hoặc Use (Chuột phải)
                 if (mc.options.keyAttack.consumeClick() || mc.options.keyUse.consumeClick()) {
-                    long now = System.currentTimeMillis();
-                    if (now - lastClickTime >= 150) { // Cooldown nhẹ 150ms chống double-click
-                        lastClickTime = now;
-
-                        HitResult hit = mc.hitResult;
-                        Vec3 clickPos = mc.player.getEyePosition().add(mc.player.getLookAngle().scale(3.5D));
-                        int targetId = -1;
-
-                        if (hit instanceof EntityHitResult entHit) {
-                            Entity targetEntity = entHit.getEntity();
-                            targetId = targetEntity.getId();
-                            clickPos = targetEntity.position().add(0, 0.5D, 0);
-                        } else if (hit instanceof BlockHitResult blkHit) {
-                            clickPos = blkHit.getLocation();
-                        }
-
-                        ModMessages.sendToServer(new ServerboundIaiClickPacket(clickPos, targetId));
-                    }
+                    triggerClickFromInput();
                 }
             }
         });
     }
 }
-

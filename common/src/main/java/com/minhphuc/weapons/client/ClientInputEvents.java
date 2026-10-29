@@ -56,6 +56,11 @@ public class ClientInputEvents {
         InteractionEvent.CLIENT_RIGHT_CLICK_AIR.register((player, hand) -> {
             if (player == null || hand != InteractionHand.MAIN_HAND) return;
 
+            if (ClientIaiHandler.isAstralActive()) {
+                ClientIaiHandler.triggerClickFromInput();
+                return;
+            }
+
             ItemStack heldStack = player.getItemInHand(hand);
             boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
 
@@ -70,6 +75,11 @@ public class ClientInputEvents {
 
         InteractionEvent.CLIENT_LEFT_CLICK_AIR.register((player, hand) -> {
             if (player == null || hand != InteractionHand.MAIN_HAND) return;
+
+            if (ClientIaiHandler.isAstralActive()) {
+                ClientIaiHandler.triggerClickFromInput();
+                return;
+            }
 
             // Bắn Tinh Tú Tuyệt Diệt khi nhấn Chuột Trái (Chỉ gửi nếu có trạng thái Thái Tuế Tinh Tú)
             if (ClientTaisuiHandler.hasTaisui(player.getUUID())) {

@@ -50,6 +50,7 @@ public class DivineWeaponEvents {
 
         // Đánh vào Thị Thực bằng chuột trái: Rạch lấy Con Mắt Thị Thực
         dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.SeerFleshAbility::onAttack);
+        dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility::onPlayerAttackEntity);
 
         // Đồng bộ trạng thái Tuyệt Diệt Tinh Tú khi người chơi tham gia thế giới
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(serverPlayer -> {
@@ -131,6 +132,11 @@ public class DivineWeaponEvents {
     }
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
+        // Kiểm tra nếu mục tiêu đang trong trạng thái ngưng đọng thời gian của Bạt Đao Thuật Vận Tốc Ngược (Chưa tới lúc bộc phát sát thương)
+        if (com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.isEntityFrozenInSession(victim)) {
+            return EventResult.interruptFalse();
+        }
+
         // =========================================================================
         // 1. PHÒNG NGỰ TUYỆT ĐỐI CỦA URIEL & THẦN LINH VŨ TRANG (DIVINE ARMOR)
         // =========================================================================
