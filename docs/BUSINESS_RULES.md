@@ -82,13 +82,14 @@ Toàn bộ các kỹ năng cổ xưa, kỹ năng tiến hóa từ sách cũ đã
 9. **Diệt Thế Tà Tinh: Alkaid**: Mũi khoan vũ trụ 14m xuyên phá địa hình.
 10. **Cú Bắn Granit** (Granite Blast).
 11. **Nghịch Thời Nhất Trảm** (Tengai Kyusei Reverse-Time Slash).
-12. **Sáng Tạo Vật Chất** (Sau khi đánh bại Noir).
-13. **Kháng Ma Kết Giới** (Anti-Magic Barrier).
-14. **Đa Trùng Kết Giới** (Multilayer Barrier).
-15. **Zone Track**: Cảm biến và định vị không gian mục tiêu.
-16. **Cảm Nhận Vạn Năng** (Universal Sense - Cấp 3).
-17. **Lồng Giam Vô Hạn** (Infinite Dragon Prison - Cấp 3).
-18. **Phòng Ngự Tuyệt Đối Của Uriel** (BẬT / TẮT).
+12. **Bạt Đao Thuật Vận Tốc Ngược** (Reverse-Velocity Iaijutsu).
+13. **Sáng Tạo Vật Chất** (Sau khi đánh bại Noir).
+14. **Kháng Ma Kết Giới** (Anti-Magic Barrier).
+15. **Đa Trùng Kết Giới** (Multilayer Barrier).
+16. **Zone Track**: Cảm biến và định vị không gian mục tiêu.
+17. **Cảm Nhận Vạn Năng** (Universal Sense - Cấp 3).
+18. **Lồng Giam Vô Hạn** (Infinite Dragon Prison - Cấp 3).
+19. **Phòng Ngự Tuyệt Đối Của Uriel** (BẬT / TẮT).
 
 *Toàn bộ kỹ năng tiến hóa luôn mặc định ở **Cấp 3**, loại bỏ cơ chế tiêu hao cấp bậc.*
 
@@ -105,6 +106,25 @@ Toàn bộ các kỹ năng cổ xưa, kỹ năng tiến hóa từ sách cũ đã
      * **Đúng tại thời khắc `0.00s`**: Màn hình bừng sáng trở lại màu sắc tự nhiên -> Toàn bộ **150 sát thương cực đại** cùng hiệu ứng Flash, tiếng keng đanh thép và chém nổ diện rộng mới chính thức bộc phát!
   6. **Tối ưu hóa hiệu năng (Zero Lag)**: Phân thân tàn ảnh tự động hủy (`discard()`) sau 16 ticks, không để lại bất kỳ thực thể rác nào trên thế giới.
 
+### 5.2. Quy Tắc Cơ Chế Tuyệt Kỹ: Bạt Đao Thuật Vận Tốc Ngược (Reverse-Velocity Iaijutsu)
+
+* **Thao tác**: Chọn chiêu số 12 qua menu phím **`Z`** rồi nhấn Chuột Phải để kích hoạt.
+* **Cơ chế thi triển bám sát nguyên tác Dark Gathering (Chapter 83)**:
+  1. **Ngưng đọng thời gian & Manga Trắng Đen**: Thế giới chuyển sang màu trắng đen tương phản cao, mọi quái vật trong 48 blocks bị đóng băng tuyệt đối.
+  2. **Thân xác vật lý đứng yên**: Một thực thể mang đúng 100% Skin/Profile, giáp và vật phẩm người chơi đang cầm trên tay đứng bất động tại tọa độ kích hoạt.
+  3. **Linh hồn xuất khiếu di chuyển tự do**: Người chơi tự do di chuyển khám phá, quan sát xung quanh; khi nhấn **F5** sẽ thấy linh hồn ở dạng bán trong suốt (translucent ghost).
+  4. **Chuỗi 4 lần nhấp chuột khắc dấu ấn**:
+     * Nhấn #1: Mốc `[-0.04s]` (Hiện LED 3D, hạt vết cắt không gian, không gây sát thương).
+     * Nhấn #2: Mốc `[-0.02s]` (Hiện LED 3D, không gây sát thương).
+     * Nhấn #3: Mốc `[-0.01s]` (Hiện LED 3D, không gây sát thương).
+     * Nhấn #4: Mốc `[ 0.00s]` (Hiện LED 3D, không gây sát thương).
+  5. **Nhấn chuột lần 5 — Đòn Kết Liễu Điện Ảnh (~2.0s, Pacing chuẩn điện ảnh)**:
+     * Thế giới bừng sáng trở lại màu sắc tự nhiên.
+     * Đồng loạt xuất hiện 4 tàn ảnh phân thân tại đúng 4 vị trí đã đánh dấu.
+     * Chuỗi âm thanh rút kiếm dồn dập "Keng! Keng! Keng! Keng!" nối tiếp nhau ➔ Tra kiếm vào vỏ.
+     * Toàn bộ sát thương bộc phát (**75 sát thương/đòn**, dồn 4 đòn lên tới **300 sát thương cực đại**) kèm hạt Flash trắng lóa và vết chém xé toạc không gian.
+     * Thể xác và linh hồn hòa làm một, dọn sạch toàn bộ thực thể rác (Zero Lag).
+
 ---
 
 ## 6. Danh Mục Tính Năng Bị Loại Bỏ Hoàn Toàn (Removed Features)
@@ -112,6 +132,5 @@ Toàn bộ các kỹ năng cổ xưa, kỹ năng tiến hóa từ sách cũ đã
 1. **Găng Tay Vô Cực & 6 Viên Đá Vô Cực** (Cùng sự kiện rơi đá từ Wither, Warden, Ender Dragon...).
 2. **Bát Môn Thiên Phạt Trận** (Lồng giam 7 cột sáng cũ).
 3. **Trận Đồ Cưỡng Chế Tai Ương (Lục Nhậm Thần Khóa)**.
-4. **Chiêu 13: Bạt Đao Thuật Vận Tốc Ngược**.
-5. **Quyển Thư Tiến Hóa Kỹ Năng (Skill Evolution Tome)**.
-6. **Vương Quyền Chi Phối (Regalia Dominion)**.
+4. **Quyển Thư Tiến Hóa Kỹ Năng (Skill Evolution Tome)**.
+5. **Vương Quyền Chi Phối (Regalia Dominion)**.

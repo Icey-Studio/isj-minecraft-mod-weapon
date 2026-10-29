@@ -39,10 +39,14 @@ public class DivineWeaponEvents {
             com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.tickFleshes(level);
             com.minhphuc.weapons.content.darkgathering.AlkaidAbility.tickAlkaids(level);
             com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.tickAbilities(level);
+            com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.tickAbilities(level);
         });
 
         // Dọn dẹp tàn ảnh khi thế giới dỡ bỏ để chống rò rỉ bộ nhớ
-        dev.architectury.event.events.common.LifecycleEvent.SERVER_LEVEL_UNLOAD.register(com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility::cleanup);
+        dev.architectury.event.events.common.LifecycleEvent.SERVER_LEVEL_UNLOAD.register(level -> {
+            com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.cleanup(level);
+        });
 
         // Đánh vào Thị Thực bằng chuột trái: Rạch lấy Con Mắt Thị Thực
         dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.SeerFleshAbility::onAttack);
