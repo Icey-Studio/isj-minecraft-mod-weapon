@@ -9,4 +9,7 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface TextDisplayAccessor {
     @Invoker("setText")
     void weapons$setText(Component text);
+
+    @Invoker("setBackgroundColor")
+    void weapons$setBackgroundColor(int color);
 }

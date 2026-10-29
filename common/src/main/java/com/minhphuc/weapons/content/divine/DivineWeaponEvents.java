@@ -1,6 +1,7 @@
 package com.minhphuc.weapons.content.divine;
 
 import com.minhphuc.weapons.content.tensura.BeelzebuthAbility;
+import com.minhphuc.weapons.content.tensura.TensuraSkillDispatcher;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.init.ModItems;
 import dev.architectury.event.EventResult;
@@ -14,7 +15,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.damagesource.DamageTypes;
-import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
@@ -26,40 +26,25 @@ public class DivineWeaponEvents {
     public static void register() {
         EntityEvent.LIVING_HURT.register(DivineWeaponEvents::onLivingHurt);
 
-        // Tick cập nhật các Thánh Giới Linh Tử Băng Hoại đang kích hoạt
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(SanctuaryDisintegrationAbility::tickSanctuaries);
+        // Gom toan bo cac tick cap nhat ability vao 1 listener duy nhat de giam overhead dispatch
+        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
+            SanctuaryDisintegrationAbility.tickSanctuaries(level);
+            JacobsLadderAbility.tickLadders(level);
+            PurificationPillarAbility.tickPillars(level);
+            FaithAndGraceAbility.tickFaithAndGraces(level);
+            BeelzebuthAbility.tickDragons(level);
+            com.minhphuc.weapons.content.tensura.HarvestFestival.tickRituals(level);
+            com.minhphuc.weapons.content.tensura.DragonNovaAbility.tickDragonNovas(level);
+            com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.tickTaisuiStates(level);
+            com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.tickFleshes(level);
+            com.minhphuc.weapons.content.darkgathering.AlkaidAbility.tickAlkaids(level);
+            com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.tickAbilities(level);
+        });
 
-        // Tick cập nhật Tà Khứ Vũ Thê Tử (Jacob's Ladder)
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(JacobsLadderAbility::tickLadders);
+        // Dọn dẹp tàn ảnh khi thế giới dỡ bỏ để chống rò rỉ bộ nhớ
+        dev.architectury.event.events.common.LifecycleEvent.SERVER_LEVEL_UNLOAD.register(com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility::cleanup);
 
-        // Tick cập nhật Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(HeavenlyJudgmentArrayAbility::tickArrays);
-
-        // Tick cập nhật Đại Thánh Tẩy - Quang Minh Cứu Rỗi (Great Purification)
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(PurificationPillarAbility::tickPillars);
-
-        // Tick cập nhật Đầu Rồng Hư Không Bạo Thực Vương Beelzebuth
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(BeelzebuthAbility::tickDragons);
-
-        // Tick cập nhật Lễ Hội Thu Hoạch Thức Tỉnh Chân Ma Vương (Harvest Festival)
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.tensura.HarvestFestival::tickRituals);
-
-        // Tick cập nhật Long Tinh Bộc Viêm Bá: Dragon Nova
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.tensura.DragonNovaAbility::tickDragonNovas);
-
-        // Tick cập nhật Thái Tuế Tinh Quân: Tuyệt Diệt Tinh Tú
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility::tickTaisuiStates);
-
-        // Tick cập nhật Thái Tuế Tinh Quân: Lớp Phòng Ngự Lục Nhậm Thần Khóa
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility::tickBarriers);
-
-        // Tick cập nhật Thái Tuế Tinh Quân: Thị Nhục (Seer Flesh)
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.darkgathering.SeerFleshAbility::tickFleshes);
-
-        // Tick cập nhật Thái Tuế Tinh Quân: Diệt Thế Tà Tinh - Alkaid
-        dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(com.minhphuc.weapons.content.darkgathering.AlkaidAbility::tickAlkaids);
-
-        // Đánh vào Thị Nhục bằng chuột trái: Rạch lấy Con Mắt Thị Nhục
+        // Đánh vào Thị Thực bằng chuột trái: Rạch lấy Con Mắt Thị Thực
         dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.SeerFleshAbility::onAttack);
 
         // Đồng bộ trạng thái Tuyệt Diệt Tinh Tú khi người chơi tham gia thế giới
@@ -78,7 +63,7 @@ public class DivineWeaponEvents {
         InteractionEvent.INTERACT_ENTITY.register((player, target, hand) -> {
             if (player.level().isClientSide()) return EventResult.pass();
 
-            // 1. Tương tác chuột phải với khối Thị Nhục (Hồi 100% HP & Giải trừ độc tố)
+            // 1. Tương tác chuột phải với khối Thị Thực (Hồi 100% HP & Giải trừ độc tố)
             EventResult fleshResult = com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.onInteract(player, target, hand);
             if (fleshResult.interruptsFurtherEvaluation()) {
                 return fleshResult;
@@ -108,7 +93,7 @@ public class DivineWeaponEvents {
                     }
 
                     player.displayClientMessage(
-                            Component.literal("§c§l[CON MẮT THỊ NHỤC] §aĐã chữa lành toàn diện cho " + targetLiving.getName().getString() + "! Hồi 100% máu & hóa giải mọi nguyền rủa! ✨👁️"),
+                            Component.literal("§c§l[CON MẮT THỊ THỰC] §aĐã chữa lành toàn diện cho " + targetLiving.getName().getString() + "! Hồi 100% máu & hóa giải mọi nguyền rủa! ✨👁️"),
                             true
                     );
 
@@ -116,79 +101,23 @@ public class DivineWeaponEvents {
                 }
             }
 
-            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương (Không cần cầm kiếm)
+            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương / Thần Linh Vũ Trang (Không có thời gian hồi chiêu)
             if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
                 boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
-                boolean hasEvolved = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.hasEvolvedSkill(serverPlayer);
                 boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
 
-                if (isTrueDemonLord || isWearingDivineArmor || hasEvolved) {
+                if (isTrueDemonLord || isWearingDivineArmor || isPrimordial) {
                     int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
                     boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
-                    int lordSkills = hasCreation ? 18 : 17;
+                    int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
 
-                    int evolvedSkillToCast = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getSelectedEvolvedSkillId(serverPlayer);
-                    if (evolvedSkillToCast != -1) {
-                        com.minhphuc.weapons.content.evolution.EvolvedSkillDispatcher.castSkill((ServerLevel) serverPlayer.level(), serverPlayer, evolvedSkillToCast);
-                        return EventResult.interruptTrue();
-                    }
-
-                    if (selectedSkill != 6 && selectedSkill != 8 && selectedSkill != 9 && com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.isTaisuiActive(serverPlayer)) {
-                        serverPlayer.displayClientMessage(
-                            Component.literal("§c⚠️ Đang trong trạng thái Tuyệt Diệt Tinh Tú! Chỉ có thể kết hợp kích hoạt Thị Nhục hoặc Diệt Thế Tà Tinh (Alkaid)!"),
-                            true
-                        );
-                        return EventResult.interruptTrue();
-                    }
-
-                    boolean isZoneTrack = (hasCreation && selectedSkill == 14) || (!hasCreation && selectedSkill == 13);
-                    boolean isMultilayerCast = (hasCreation && selectedSkill == 13) || (!hasCreation && selectedSkill == 12);
-                    boolean isAntiMagicCast = (hasCreation && selectedSkill == 12) || (!hasCreation && selectedSkill == 11);
-
-                    // Kỹ năng Long Tinh Bộc Viêm Bá (5) và Granit Xuyên Phá Zone Track: KHÔNG CẦN HỒI NĂNG LƯỢNG / MA LỰC (ZERO COOLDOWN)!
-                    if (selectedSkill != 5 && !isZoneTrack) {
-                        if (serverPlayer.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
-                            return EventResult.interruptTrue();
-                        }
-                        serverPlayer.getCooldowns().addCooldown(ModItems.DEMON_LORD_SEED.get(), 25);
-                    }
                     ServerLevel sl = (ServerLevel) serverPlayer.level();
-
-                    if (isZoneTrack) {
-                        com.minhphuc.weapons.content.tensura.ZoneTrackAbility.cast(sl, serverPlayer);
-                        return EventResult.interruptTrue();
-                    } else if (isMultilayerCast) {
-                        com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(sl, serverPlayer);
-                        return EventResult.interruptTrue();
-                    } else if (isAntiMagicCast) {
-                        com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.castPlayerBarrier(sl, serverPlayer);
-                        return EventResult.interruptTrue();
-                    } else if (hasCreation && selectedSkill == 11) {
-                        com.minhphuc.weapons.network.ModMessages.sendToPlayer(new com.minhphuc.weapons.network.ClientboundOpenMaterialCreationPacket(), serverPlayer);
-                        return EventResult.interruptTrue();
-                    } else if (selectedSkill == 10) {
-                        com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 9) {
-                        com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 8) {
-                        com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 7) {
-                        com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.toggleBarrier(sl, serverPlayer);
-                    } else if (selectedSkill == 6) {
-                        com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 5) {
-                        com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(sl, serverPlayer);
-                    } else if (selectedSkill == 4) {
-                        BeelzebuthAbility.executeBeelzebuth(sl, serverPlayer);
-                    } else if (selectedSkill == 3) {
-                        PurificationPillarAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
-                    } else if (selectedSkill == 2) {
-                        HeavenlyJudgmentArrayAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
-                    } else if (selectedSkill == 1) {
-                        JacobsLadderAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
-                    } else {
-                        SanctuaryDisintegrationAbility.cast(sl, serverPlayer, ItemStack.EMPTY);
+                    if (selectedSkill < lordSkills) {
+                        TensuraSkillDispatcher.executeSkill(sl, serverPlayer, selectedSkill, hasCreation);
+                    } else if (isPrimordial) {
+                        int primordialSkillIdx = selectedSkill - lordSkills;
+                        com.minhphuc.weapons.content.tensura.PrimordialSkillDispatcher.castSkill(sl, serverPlayer, primordialSkillIdx);
                     }
                     return EventResult.interruptTrue();
                 }
@@ -199,45 +128,32 @@ public class DivineWeaponEvents {
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
         // =========================================================================
-        // 0. LỚP PHÒNG NGỰ LỤC NHẬM THẦN KHÓA: Bất tử tuyệt đối 100% (kể cả Sonic Boom của Warden)!
+        // 1. PHÒNG NGỰ TUYỆT ĐỐI CỦA URIEL & THẦN LINH VŨ TRANG (DIVINE ARMOR)
         // =========================================================================
         if (victim instanceof Player player) {
-            if (com.minhphuc.weapons.content.darkgathering.LiuRenBarrierAbility.isBarrierActive(player)) {
-                Entity attacker = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
-                if (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo && kubo.isUltimateOrComplete()) {
-                    // Không Vong Tối Thượng hoặc Hoàn Chỉnh đánh xuyên thủng cả Trận Đồ Cưỡng Chế Tai Ương!
-                    player.displayClientMessage(
-                            net.minecraft.network.chat.Component.literal("§4§l[CẢNH BÁO TỐI THƯỢNG] §cKhông Vong Tối Thượng đã xé rách kết giới Trận Đồ Cưỡng Chế Tai Ương!"),
-                            true
-                    );
-                } else {
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
-                    return EventResult.interruptFalse();
-                }
-            }
-        }
+            boolean isWearingFullSet = DivineArmorItem.isWearingFullSet(player);
+            boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
+            boolean hasUriel = isWearingFullSet || isTrueDemonLord;
 
-        // =========================================================================
-        // 1. THẦN LINH VŨ TRANG (DIVINE ARMOR): Kháng gần 100% mọi sát thương trừ Độc & Dưới Nước
-        // =========================================================================
-        if (victim instanceof Player player) {
-            if (DivineArmorItem.isWearingFullSet(player)) {
-                // Ngoại lệ 1: Sát thương trúng độc (Poison)
-                boolean isPoison = source.is(DamageTypes.MAGIC) && player.hasEffect(MobEffects.POISON);
-                // Ngoại lệ 2: Không thở được dưới nước -> Chết đuối (Drown)
-                boolean isDrowning = source.is(DamageTypes.DROWN);
-                // Ngoại lệ 3: Rơi ra khỏi thế giới (Void)
+            if (hasUriel && com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.isUrielDefenseActive(player)) {
+                // Kiểm tra các trường hợp bị đánh xuyên giáp (như Không Vong, Linh Tử, Void...)
                 boolean isVoid = source.is(DamageTypes.FELL_OUT_OF_WORLD);
-                // Ngoại lệ 4: Hỏa diễm Chước Nhiệt Long Velgrynd xuyên phá Thánh Giáp (mỗi 3 đòn gây 30% HP)
-                boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage");
-                // Ngoại lệ 5: Không Vong (Kūbō) đánh xuyên qua Giáp Thần Thoại (Trừ Trận Đồ Cưỡng Chế Tai Ương)
                 boolean isKuboPenetration = source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
                         || player.getTags().contains("KuboPenetrationDamage");
+                boolean isDisintegration = player.getTags().contains("DisintegrationDamage");
+                boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage");
 
-                if (!isPoison && !isDrowning && !isVoid && !isVelgryndPenetration && !isKuboPenetration) {
-                    // Miễn nhiễm hoàn toàn mọi sát thương từ quái vật, người chơi, rơi, lửa, nổ, v.v.
+                if (isKuboPenetration || isDisintegration || isVoid || isVelgryndPenetration) {
+                    player.displayClientMessage(
+                            Component.literal("§c§l[BÁO CÁO] §fBáo cáo: Phòng thủ tuyệt đối của Uriel không thể ngăn chặn tuyệt đối các linh tử."),
+                            true
+                    );
+                    // Để sát thương xuyên qua!
+                } else {
+                    // Miễn nhiễm hoàn toàn 100% mọi sát thương
+                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                            SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.0F, 1.6F);
                     return EventResult.interruptFalse();
                 }
             }
@@ -298,7 +214,7 @@ public class DivineWeaponEvents {
                         );
                         return EventResult.interruptFalse();
                     } else {
-                        // Đòn chém 2: Máu <= 80% max HP (đã qua đòn 1) -> Kết liễu chết luôn!
+                        // Đòn chém 2: Máu <= 80% max HP -> Kết liễu chết luôn!
                         victim.hurt(attacker.level().damageSources().genericKill(), 100000.0F);
                         if (victim.isAlive()) {
                             victim.discard();

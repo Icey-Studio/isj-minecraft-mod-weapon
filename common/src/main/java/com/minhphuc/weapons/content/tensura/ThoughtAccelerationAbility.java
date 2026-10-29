@@ -57,19 +57,6 @@ public class ThoughtAccelerationAbility {
             return false;
         }
 
-        // Hồi chiêu 25 giây
-        if (player.getCooldowns().isOnCooldown(ModItems.MOONLIGHT_SWORD.get())
-                || player.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
-            player.displayClientMessage(
-                    Component.literal("§c⚠️ Quyền năng Trí Huệ Chi Vương đang trong thời gian hồi phục!"),
-                    true
-            );
-            return false;
-        }
-
-        player.getCooldowns().addCooldown(ModItems.MOONLIGHT_SWORD.get(), 500);
-        player.getCooldowns().addCooldown(ModItems.DEMON_LORD_SEED.get(), 500);
-
         // Kích hoạt trong 15 giây (300 ticks)
         EntityDataHelper.getCustomData(player).putInt(NBT_THOUGHT_ACCEL, 300);
 

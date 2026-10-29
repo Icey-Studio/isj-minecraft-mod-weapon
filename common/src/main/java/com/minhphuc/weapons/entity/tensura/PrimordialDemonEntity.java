@@ -1,7 +1,6 @@
 package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
-import com.minhphuc.weapons.content.infinitygauntlet.InfinityGauntletItem;
 import com.minhphuc.weapons.content.tensura.VoiceOfTheWorld;
 import com.minhphuc.weapons.content.tensura.PrimordialPactItem;
 import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
@@ -437,7 +436,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (target instanceof Player player) {
             ItemStack main = player.getMainHandItem();
             ItemStack off = player.getOffhandItem();
-            if (main.getItem() instanceof InfinityGauntletItem || off.getItem() instanceof InfinityGauntletItem) {
+            if (com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isDemonLord(player)) {
                 return true;
             }
             for (ItemStack armor : player.getArmorSlots()) {

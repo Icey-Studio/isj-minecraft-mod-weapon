@@ -410,6 +410,7 @@ public class IncubationCapsuleManager {
     }
 
     public static void tickCapsules(ServerLevel level) {
+        if (ACTIVE_CAPSULES.isEmpty()) return;
         Iterator<Map.Entry<BlockPos, ActiveCapsule>> it = ACTIVE_CAPSULES.entrySet().iterator();
         while (it.hasNext()) {
             Map.Entry<BlockPos, ActiveCapsule> entry = it.next();

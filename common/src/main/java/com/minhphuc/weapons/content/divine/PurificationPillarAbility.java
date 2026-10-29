@@ -15,8 +15,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
-import com.minhphuc.weapons.network.ClientboundSyncEvolutionPacket;
-import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -163,12 +161,6 @@ public class PurificationPillarAbility {
         // Hồi phục toàn bộ kỹ năng đã mất/tiêu hao do dung hợp cho người thi triển
         if (EvolvedSkillHelper.hasConsumedSkills(player)) {
             EvolvedSkillHelper.restoreAllConsumedSkills(player);
-            ModMessages.sendToPlayer(
-                    new ClientboundSyncEvolutionPacket(
-                            new java.util.ArrayList<>(),
-                            EvolvedSkillHelper.getEvolvedSkillId(player),
-                            EvolvedSkillHelper.getEvolvedSkillTier(player)
-                    ), player);
 
             player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§e§l【 PHÉP MÀU CỦA THẦN LINH 】")));
             player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§a✦ Toàn bộ kỹ năng đã mất đã được thần linh phục hồi! ✦")));
@@ -177,10 +169,6 @@ public class PurificationPillarAbility {
             player.sendSystemMessage(Component.literal("§e✨ PHÉP MÀU CỦA THẦN LINH: §aCột Sáng Thánh Tích đã được ban xuống! Toàn bộ kỹ năng nguyên liệu được phục hồi nguyên vẹn."));
             player.sendSystemMessage(Component.literal("§7(Cột sáng sẽ chiếu sáng và tồn tại vĩnh viễn cho đến khi bạn đấm vào nó để hóa giải)"));
             player.sendSystemMessage(Component.literal("§a══════════════════════════════════════════════════"));
-        }
-
-        if (!sword.isEmpty()) {
-            player.getCooldowns().addCooldown(sword.getItem(), 160); // 8 giây cooldown nếu cầm kiếm
         }
     }
 
@@ -382,13 +370,6 @@ public class PurificationPillarAbility {
                     if (e instanceof ServerPlayer sp) {
                         if (EvolvedSkillHelper.hasConsumedSkills(sp)) {
                             EvolvedSkillHelper.restoreAllConsumedSkills(sp);
-
-                            ModMessages.sendToPlayer(
-                                    new ClientboundSyncEvolutionPacket(
-                                            new java.util.ArrayList<>(),
-                                            EvolvedSkillHelper.getEvolvedSkillId(sp),
-                                            EvolvedSkillHelper.getEvolvedSkillTier(sp)
-                                    ), sp);
 
                             p.level.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
                                     SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.6F);

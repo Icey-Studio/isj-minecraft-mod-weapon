@@ -67,49 +67,8 @@ public class ModEntities {
         EntityAttributeRegistry.register(KUBO, com.minhphuc.weapons.entity.darkgathering.KuboEntity::createAttributes);
         EntityAttributeRegistry.register(MILIM, com.minhphuc.weapons.entity.tensura.MilimEntity::createAttributes);
         EntityAttributeRegistry.register(VELZARD, com.minhphuc.weapons.entity.tensura.VelzardEntity::createAttributes);
-
-        BiomeModifications.addProperties(
-                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
-                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
-                        MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(PRIMORDIAL_DEMON.get(), 1, 1, 1)
-                )
-        );
-
-        // Tỷ lệ xuất hiện tự nhiên của Chước Nhiệt Long Velgrynd: Siêu hiếm, chỉ xuất hiện ở Overworld
-        BiomeModifications.addProperties(
-                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
-                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
-                        MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(VELGRYND.get(), 1, 1, 1)
-                )
-        );
-
-        // Tỷ lệ xuất hiện tự nhiên của Ma Vương Milim Nava: Tương đương Chước Nhiệt Long để giảm lag
-        BiomeModifications.addProperties(
-                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
-                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
-                        MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(MILIM.get(), 1, 1, 1)
-                )
-        );
-
-        // Tỷ lệ xuất hiện tự nhiên của Bạch Băng Long Velzard: Siêu hiếm, tương tự Velgrynd
-        BiomeModifications.addProperties(
-                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
-                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
-                        MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(VELZARD.get(), 1, 1, 1)
-                )
-        );
-
-        // Tỷ lệ xuất hiện tự nhiên của Không Vong (Kūbō): Siêu hiếm, tương tự các boss khác để chống lag
-        BiomeModifications.addProperties(
-                b -> b.hasTag(BiomeTags.IS_OVERWORLD),
-                (ctx, mutable) -> mutable.getSpawnProperties().addSpawn(
-                        MobCategory.MONSTER,
-                        new MobSpawnSettings.SpawnerData(KUBO.get(), 1, 1, 1)
-                )
-        );
+        // Tối ưu hóa hiệu năng tối đa (Zero Lag):
+        // Toàn bộ các Đại Boss & Ác Ma Thủy Tổ được triệu hồi thông qua nghi lễ / vật phẩm khế ước,
+        // không spawn tự nhiên ngẫu nhiên trong Overworld để tránh nghẽn CPU & tràn RAM trên máy yếu.
     }
 }

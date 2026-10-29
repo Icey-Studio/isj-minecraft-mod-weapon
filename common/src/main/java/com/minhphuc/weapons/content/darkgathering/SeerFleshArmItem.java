@@ -1,7 +1,6 @@
 package com.minhphuc.weapons.content.darkgathering;
 
 import com.minhphuc.weapons.data.ItemStackDataHelper;
-import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -18,7 +17,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
-import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 
 import java.util.List;
@@ -40,13 +38,7 @@ public class SeerFleshArmItem extends Item {
     }
 
     public static int getEyes(ItemStack stack) {
-        if (stack.has(DataComponents.CUSTOM_DATA)) {
-            CustomData cd = stack.get(DataComponents.CUSTOM_DATA);
-            if (cd != null && cd.contains(NBT_EYES)) {
-                return cd.copyTag().getInt(NBT_EYES);
-            }
-        }
-        return 3;
+        return ItemStackDataHelper.getInt(stack, NBT_EYES);
     }
 
     public static void setEyes(ItemStack stack, int count) {
@@ -101,7 +93,6 @@ public class SeerFleshArmItem extends Item {
                     );
                 }
 
-                player.getCooldowns().addCooldown(this, 20); // 1 giây hồi chiêu
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
             } else {
                 player.displayClientMessage(
@@ -145,11 +136,10 @@ public class SeerFleshArmItem extends Item {
                         true
                 );
 
-                player.getCooldowns().addCooldown(this, 20);
                 return InteractionResult.sidedSuccess(player.level().isClientSide());
             } else {
                 player.displayClientMessage(
-                        Component.literal("§c⚠️ Tất cả 3 con mắt trên bàn tay đã nhắm lại, không thể tiếp tục trị liệu!"),
+                        Component.literal("§c⚠️ không còn đủ thị nhục, không thể tiếp tục trị liệu!"),
                         true
                 );
                 return InteractionResult.FAIL;
@@ -174,8 +164,8 @@ public class SeerFleshArmItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         int eyes = getEyes(stack);
         tooltip.add(Component.literal("§2§l[THÁI TUẾ BẢO VẬT]"));
-        tooltip.add(Component.literal("§a§lThị Nhục Bọc Tay (Seer Flesh Gauntlet)"));
-        tooltip.add(Component.literal("§7Bao bọc cánh tay bởi lớp thịt xanh rêu u linh của Thái Tuế Tinh Quân."));
+        tooltip.add(Component.literal("§a§lThị Nhục"));
+        tooltip.add(Component.literal("§7tích trữ được 3 nhãn cầu."));
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§6⚡ Trạng Thái Nhãn Lực: " + (eyes > 0 ? "§a" + eyes + " / 3 Con Mắt Mở" : "§7Đã Nhắm Nghiền (Không Mắt)")));
         tooltip.add(Component.literal("§7- §a👉 Chuột Phải: §fNuốt nhãn lực, hồi phục §a100% Máu §fvà xóa bỏ sạch mọi độc tố/nguyền rủa."));

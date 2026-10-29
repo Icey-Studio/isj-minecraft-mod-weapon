@@ -85,15 +85,15 @@ public class PrimordialClawItem extends Item {
         switch (currentSkill) {
             case 0 -> {
                 castSkill0Pillar(level, player);
-                player.getCooldowns().addCooldown(this, 60); // 3s hồi chiêu
+                
             }
             case 1 -> {
                 castSkill1DimensionalRend(level, player);
-                player.getCooldowns().addCooldown(this, 50); // 2.5s hồi chiêu
+                
             }
             case 2 -> {
                 castSkill2VoidNovaExplosion(level, player);
-                player.getCooldowns().addCooldown(this, 80); // 4s hồi chiêu
+                
             }
         }
 
@@ -289,3 +289,4 @@ public class PrimordialClawItem extends Item {
         tooltip.add(Component.literal("§6👉 [Shift + Chuột Phải] hoặc nhấn [Z] để đổi Kỹ Năng!"));
     }
 }
+

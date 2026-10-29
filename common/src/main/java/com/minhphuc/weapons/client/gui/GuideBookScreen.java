@@ -15,7 +15,7 @@ import java.net.URI;
 public class GuideBookScreen extends Screen {
 
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 17;
+    private static final int TOTAL_PAGES = 16;
 
     private static final net.minecraft.resources.ResourceLocation DRAGON_NOVA_TEXTURE =
             net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("weapons", "textures/gui/dragon_nova_art.png");
@@ -36,10 +36,7 @@ public class GuideBookScreen extends Screen {
     private Button nextButton;
     private Button closeButton;
 
-    // Các nút chuyển tab Gauntlet (Trang 4)
-    private Button gauntletEmptyBtn;
-    private Button gauntletLoadedBtn;
-    private int selectedGauntletTab = 0; // 0: Empty, 1: Loaded
+
 
     // Các nút chuyển giáp (Trang 5)
     private Button armorHelmBtn;
@@ -58,8 +55,7 @@ public class GuideBookScreen extends Screen {
     // Cache các lưới công thức 3x3
     private final ItemStack[][] moonlightSwordRecipe = new ItemStack[3][3];
     private final ItemStack[][] demonLordSeedRecipe = new ItemStack[3][3];
-    private final ItemStack[][] emptyGauntletRecipe = new ItemStack[3][3];
-    private final ItemStack[][] loadedGauntletRecipe = new ItemStack[3][3];
+
     private final ItemStack[][][] divineArmorRecipes = new ItemStack[4][3][3];
 
     public GuideBookScreen() {
@@ -94,31 +90,7 @@ public class GuideBookScreen extends Screen {
         demonLordSeedRecipe[2][1] = new ItemStack(Items.GHAST_TEAR);
         demonLordSeedRecipe[2][2] = new ItemStack(Items.OBSIDIAN);
 
-        // 3a. Công thức Găng Tay Trống (Empty Gauntlet)
-        emptyGauntletRecipe[0][0] = new ItemStack(Items.GOLD_INGOT);
-        emptyGauntletRecipe[0][1] = new ItemStack(Items.GOLD_BLOCK);
-        emptyGauntletRecipe[0][2] = new ItemStack(Items.GOLD_INGOT);
 
-        emptyGauntletRecipe[1][0] = new ItemStack(Items.GOLD_INGOT);
-        emptyGauntletRecipe[1][1] = new ItemStack(Items.DIAMOND);
-        emptyGauntletRecipe[1][2] = new ItemStack(Items.GOLD_INGOT);
-
-        emptyGauntletRecipe[2][0] = new ItemStack(Items.GOLD_INGOT);
-        emptyGauntletRecipe[2][1] = new ItemStack(Items.NETHERITE_INGOT);
-        emptyGauntletRecipe[2][2] = new ItemStack(Items.GOLD_INGOT);
-
-        // 3b. Công thức Găng Tay Đầy Đủ 6 Đá
-        loadedGauntletRecipe[0][0] = new ItemStack(ModItems.POWER_STONE.get());
-        loadedGauntletRecipe[0][1] = new ItemStack(ModItems.SPACE_STONE.get());
-        loadedGauntletRecipe[0][2] = new ItemStack(ModItems.REALITY_STONE.get());
-
-        loadedGauntletRecipe[1][0] = new ItemStack(ModItems.SOUL_STONE.get());
-        loadedGauntletRecipe[1][1] = new ItemStack(ModItems.EMPTY_INFINITY_GAUNTLET.get());
-        loadedGauntletRecipe[1][2] = new ItemStack(ModItems.TIME_STONE.get());
-
-        loadedGauntletRecipe[2][0] = ItemStack.EMPTY;
-        loadedGauntletRecipe[2][1] = new ItemStack(ModItems.MIND_STONE.get());
-        loadedGauntletRecipe[2][2] = ItemStack.EMPTY;
 
         // 4. Công thức 4 Món Giáp Thần Linh (Mũ, Áo, Quần, Giày)
         ItemStack[] netheriteArmors = new ItemStack[] {
@@ -171,15 +143,7 @@ public class GuideBookScreen extends Screen {
         this.addRenderableWidget(nextButton);
         this.addRenderableWidget(closeButton);
 
-        // --- Nút trang 4 (Găng Tay) ---
-        int gauntletBtnY = top + 80;
-        gauntletEmptyBtn = Button.builder(Component.translatable("gui.weapons.guide.btn.empty_gauntlet"), b -> selectedGauntletTab = 0)
-                .bounds(left + 130, gauntletBtnY, 100, 18).build();
-        gauntletLoadedBtn = Button.builder(Component.translatable("gui.weapons.guide.btn.loaded_gauntlet"), b -> selectedGauntletTab = 1)
-                .bounds(left + 238, gauntletBtnY, 100, 18).build();
 
-        this.addRenderableWidget(gauntletEmptyBtn);
-        this.addRenderableWidget(gauntletLoadedBtn);
 
         // --- Nút trang 5 (4 Món Giáp) ---
         int armorBtnY = top + 80;
@@ -227,17 +191,13 @@ public class GuideBookScreen extends Screen {
         if (prevButton != null) prevButton.active = currentPage > 0;
         if (nextButton != null) nextButton.active = currentPage < TOTAL_PAGES - 1;
 
-        boolean isGauntletPage = (currentPage == 3);
-        if (gauntletEmptyBtn != null) gauntletEmptyBtn.visible = isGauntletPage;
-        if (gauntletLoadedBtn != null) gauntletLoadedBtn.visible = isGauntletPage;
-
-        boolean isArmorPage = (currentPage == 4);
+        boolean isArmorPage = (currentPage == 3);
         if (armorHelmBtn != null) armorHelmBtn.visible = isArmorPage;
         if (armorChestBtn != null) armorChestBtn.visible = isArmorPage;
         if (armorLegsBtn != null) armorLegsBtn.visible = isArmorPage;
         if (armorBootsBtn != null) armorBootsBtn.visible = isArmorPage;
 
-        boolean isAuthorPage = (currentPage == 16);
+        boolean isAuthorPage = (currentPage == 15);
         if (openGithubBtn != null) openGithubBtn.visible = isAuthorPage;
         if (copyGithubBtn != null) copyGithubBtn.visible = isAuthorPage;
     }
@@ -269,20 +229,19 @@ public class GuideBookScreen extends Screen {
             case 0 -> renderPageOverview(guiGraphics, left, top, mouseX, mouseY);
             case 1 -> renderPageMoonlightSword(guiGraphics, left, top, mouseX, mouseY);
             case 2 -> renderPageDemonLord(guiGraphics, left, top, mouseX, mouseY);
-            case 3 -> renderPageInfinityGauntlet(guiGraphics, left, top, mouseX, mouseY);
-            case 4 -> renderPageDivineArmor(guiGraphics, left, top, mouseX, mouseY);
-            case 5 -> renderPageDragonNova(guiGraphics, left, top, mouseX, mouseY);
-            case 6 -> renderPageTaisui(guiGraphics, left, top, mouseX, mouseY);
-            case 7 -> renderPageSeerFlesh(guiGraphics, left, top, mouseX, mouseY);
-            case 8 -> renderPageSeerArmCombo(guiGraphics, left, top, mouseX, mouseY);
-            case 9 -> renderPageAlkaid(guiGraphics, left, top, mouseX, mouseY);
-            case 10 -> renderPageGoldenGun(guiGraphics, left, top, mouseX, mouseY);
-            case 11 -> renderPagePrimordialsOverview(guiGraphics, left, top, mouseX, mouseY);
-            case 12 -> renderPagePrimordialsPowerBoss(guiGraphics, left, top, mouseX, mouseY);
-            case 13 -> renderPagePrimordialsDomain(guiGraphics, left, top, mouseX, mouseY);
-            case 14 -> renderPageVelgrynd(guiGraphics, left, top, mouseX, mouseY);
-            case 15 -> renderPageMagisteelPhone(guiGraphics, left, top, mouseX, mouseY);
-            case 16 -> renderPageAuthor(guiGraphics, left, top, mouseX, mouseY);
+            case 3 -> renderPageDivineArmor(guiGraphics, left, top, mouseX, mouseY);
+            case 4 -> renderPageDragonNova(guiGraphics, left, top, mouseX, mouseY);
+            case 5 -> renderPageTaisui(guiGraphics, left, top, mouseX, mouseY);
+            case 6 -> renderPageSeerFlesh(guiGraphics, left, top, mouseX, mouseY);
+            case 7 -> renderPageSeerArmCombo(guiGraphics, left, top, mouseX, mouseY);
+            case 8 -> renderPageAlkaid(guiGraphics, left, top, mouseX, mouseY);
+            case 9 -> renderPageGoldenGun(guiGraphics, left, top, mouseX, mouseY);
+            case 10 -> renderPagePrimordialsOverview(guiGraphics, left, top, mouseX, mouseY);
+            case 11 -> renderPagePrimordialsPowerBoss(guiGraphics, left, top, mouseX, mouseY);
+            case 12 -> renderPagePrimordialsDomain(guiGraphics, left, top, mouseX, mouseY);
+            case 13 -> renderPageVelgrynd(guiGraphics, left, top, mouseX, mouseY);
+            case 14 -> renderPageMagisteelPhone(guiGraphics, left, top, mouseX, mouseY);
+            case 15 -> renderPageAuthor(guiGraphics, left, top, mouseX, mouseY);
         }
 
         // 3. Render Tooltip nếu đang di chuột qua slot item
@@ -395,53 +354,7 @@ public class GuideBookScreen extends Screen {
         guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p2.perk4").getString(), left + 18, awakenY, 0xFFFF55FF, false);
     }
 
-    /**
-     * TRANG 4: GĂNG TAY VÔ CỰC & 6 VIÊN ĐÁ
-     */
-    private void renderPageInfinityGauntlet(GuiGraphics guiGraphics, int left, int top, int mouseX, int mouseY) {
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.title").getString(), left + 14, top + 11, 0xFFFFFF55, false);
 
-        int gridX = left + 16;
-        int gridY = top + 34;
-
-        if (selectedGauntletTab == 0) {
-            drawCraftingGrid(guiGraphics, gridX, gridY, emptyGauntletRecipe, new ItemStack(ModItems.EMPTY_INFINITY_GAUNTLET.get()), mouseX, mouseY);
-        } else {
-            drawCraftingGrid(guiGraphics, gridX, gridY, loadedGauntletRecipe, new ItemStack(ModItems.INFINITY_GAUNTLET.get()), mouseX, mouseY);
-        }
-
-        int descX = left + 134;
-        int descY = top + 34;
-        if (selectedGauntletTab == 0) {
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.empty_name").getString(), descX, descY, 0xFFFFFF55, false);
-            descY += 12;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.empty_desc1").getString(), descX, descY, 0xFFDDDDDD, false);
-            descY += 11;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.empty_desc2").getString(), descX, descY, 0xFF55FF55, false);
-            descY += 11;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.empty_desc3").getString(), descX, descY, 0xFF888888, false);
-        } else {
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.loaded_name").getString(), descX, descY, 0xFFFFAA00, false);
-            descY += 12;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.loaded_desc1").getString(), descX, descY, 0xFF55FF55, false);
-            descY += 11;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.loaded_desc2").getString(), descX, descY, 0xFF55FFFF, false);
-            descY += 11;
-            guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.loaded_desc3").getString(), descX, descY, 0xFFFFFF55, false);
-        }
-
-        int bossY = top + 104;
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.boss_title").getString(), left + 14, bossY, 0xFFFFAA00, false);
-
-        bossY += 13;
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.boss1").getString(), left + 18, bossY, 0xFFFFFFFF, false);
-        bossY += 11;
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.boss2").getString(), left + 18, bossY, 0xFFFFFFFF, false);
-        bossY += 11;
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.boss3").getString(), left + 18, bossY, 0xFFFFFFFF, false);
-        bossY += 11;
-        guiGraphics.drawString(font, Component.translatable("gui.weapons.guide.p3.backlash_warning").getString(), left + 18, bossY, 0xFFFF5555, false);
-    }
 
     /**
      * TRANG 5: THẦN LINH VŨ TRANG (DIVINE ARMOR)

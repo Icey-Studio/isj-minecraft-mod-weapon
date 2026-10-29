@@ -13,7 +13,8 @@
     "InteractionAccessor"
   ],
   "client": [
-    "ItemPropertiesAccessor"
+    "ItemPropertiesAccessor",
+    "GameRendererAccessor"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -51,12 +51,10 @@ public class TomeLootManager {
 
     private static void insertTomesIntoContainer(Container container, net.minecraft.util.RandomSource random, boolean isRareStructure) {
         boolean hasRebirth = false;
-        boolean hasEvolution = false;
 
         for (int i = 0; i < container.getContainerSize(); i++) {
             ItemStack stack = container.getItem(i);
             if (stack.is(ModItems.PRIMORDIAL_REBIRTH_TOME.get())) hasRebirth = true;
-            if (stack.is(ModItems.SKILL_EVOLUTION_TOME.get())) hasEvolution = true;
         }
 
         // 1. Chèn Sách Cổ Khởi Nguyên Thủy Tổ
@@ -69,12 +67,11 @@ public class TomeLootManager {
             }
         }
 
-        // 2. Chèn Quyển Thư Tiến Hóa Kỹ Năng (Tăng độ hiếm: Di tích cổ đại 25%, rương thường chỉ 8%)
-        float evoChance = isRareStructure ? 0.25F : 0.08F;
-        if (!hasEvolution && random.nextFloat() <= evoChance) {
+        // 2. Chèn Viên Ngọc Thức Tỉnh Ma Vương với tỉ lệ 2% (0.02F)
+        if (random.nextFloat() <= 0.02F) {
             for (int i = 0; i < container.getContainerSize(); i++) {
                 if (container.getItem(i).isEmpty()) {
-                    container.setItem(i, new ItemStack(ModItems.SKILL_EVOLUTION_TOME.get()));
+                    container.setItem(i, new ItemStack(ModItems.DEMON_LORD_AWAKENING_ORB.get()));
                     break;
                 }
             }

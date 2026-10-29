@@ -232,12 +232,10 @@ public class BeelzebuthAbility {
         }
 
         player.displayClientMessage(
-            Component.literal("§d§l[BẠO THỰC VƯƠNG BEELZEBUTH] §fBáo cáo. Đầu Rồng Hư Không 3D đã nuốt chửng " + devouredEntities + " cá thể, "
+            Component.literal("§d§l[BẠO THỰC VƯƠNG] §fBáo cáo. Đầu Rồng Hư Không 3D đã nuốt chửng " + devouredEntities + " cá thể, "
                     + devouredItems + " vật phẩm, " + devouredExplosives + " đạn nổ và " + devouredBlocks + " khối nhà dân! 🐲🌀"),
             true
         );
-
-        player.getCooldowns().addCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get(), 30); // 1.5s cooldown
     }
 
     /**
@@ -433,11 +431,9 @@ public class BeelzebuthAbility {
         }
 
         player.displayClientMessage(
-            Component.literal("§d§l[BẠO THỰC VƯƠNG] §fHãy ăn sạch mọi thứ Beezelbuth!"),
+            Component.literal("§d§l[BẠO THỰC VƯƠNG] §fHãy ăn sạch mọi thứ Beelzebuth!"),
             true
         );
-
-        player.getCooldowns().addCooldown(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SEED.get(), 30); // 1.5s cooldown
     }
 
     /**

@@ -1,9 +1,6 @@
 package com.minhphuc.weapons.network;
 
 import com.minhphuc.weapons.WeaponsMod;
-import com.minhphuc.weapons.content.infinitygauntlet.ServerboundCycleRealitySubModePacket;
-import com.minhphuc.weapons.content.infinitygauntlet.ServerboundSelectModePacket;
-import com.minhphuc.weapons.content.infinitygauntlet.ServerboundSpaceTeleportPacket;
 import dev.architectury.networking.NetworkChannel;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
@@ -12,26 +9,6 @@ public class ModMessages {
     private static final NetworkChannel CHANNEL = NetworkChannel.create(ResourceLocation.fromNamespaceAndPath(WeaponsMod.MOD_ID, "messages"));
 
     public static void register() {
-        CHANNEL.register(ServerboundSelectModePacket.class,
-                ServerboundSelectModePacket::encode,
-                ServerboundSelectModePacket::new,
-                ServerboundSelectModePacket::handle);
-
-        CHANNEL.register(ServerboundCycleRealitySubModePacket.class,
-                ServerboundCycleRealitySubModePacket::encode,
-                ServerboundCycleRealitySubModePacket::new,
-                ServerboundCycleRealitySubModePacket::handle);
-
-        CHANNEL.register(ClientboundOpenSpaceTeleportScreenPacket.class,
-                ClientboundOpenSpaceTeleportScreenPacket::encode,
-                ClientboundOpenSpaceTeleportScreenPacket::new,
-                ClientboundOpenSpaceTeleportScreenPacket::handle);
-
-        CHANNEL.register(ServerboundSpaceTeleportPacket.class,
-                ServerboundSpaceTeleportPacket::encode,
-                ServerboundSpaceTeleportPacket::new,
-                ServerboundSpaceTeleportPacket::handle);
-
         CHANNEL.register(ServerboundCastBeelzebuthPacket.class,
                 ServerboundCastBeelzebuthPacket::encode,
                 ServerboundCastBeelzebuthPacket::new,
@@ -51,11 +28,6 @@ public class ModMessages {
                 ClientboundSyncTaisuiPacket::encode,
                 ClientboundSyncTaisuiPacket::new,
                 ClientboundSyncTaisuiPacket::handle);
-
-        CHANNEL.register(ServerboundExitLiuRenBarrierPacket.class,
-                ServerboundExitLiuRenBarrierPacket::encode,
-                ServerboundExitLiuRenBarrierPacket::new,
-                ServerboundExitLiuRenBarrierPacket::handle);
 
         CHANNEL.register(ServerboundSelectBulletPacket.class,
                 ServerboundSelectBulletPacket::encode,
@@ -97,20 +69,15 @@ public class ModMessages {
                 ServerboundSelectPrimordialRebirthPacket::new,
                 ServerboundSelectPrimordialRebirthPacket::handle);
 
-        CHANNEL.register(ServerboundEvolveSkillPacket.class,
-                ServerboundEvolveSkillPacket::encode,
-                ServerboundEvolveSkillPacket::new,
-                ServerboundEvolveSkillPacket::handle);
+        CHANNEL.register(ServerboundTengaiSwordSkillPacket.class,
+                ServerboundTengaiSwordSkillPacket::encode,
+                ServerboundTengaiSwordSkillPacket::new,
+                ServerboundTengaiSwordSkillPacket::handle);
 
-        CHANNEL.register(ClientboundSyncEvolutionPacket.class,
-                ClientboundSyncEvolutionPacket::encode,
-                ClientboundSyncEvolutionPacket::new,
-                ClientboundSyncEvolutionPacket::handle);
-
-        CHANNEL.register(ClientboundOpenSkillEvolutionScreenPacket.class,
-                ClientboundOpenSkillEvolutionScreenPacket::encode,
-                ClientboundOpenSkillEvolutionScreenPacket::new,
-                ClientboundOpenSkillEvolutionScreenPacket::handle);
+        CHANNEL.register(ClientboundTengaiSlashEffectPacket.class,
+                ClientboundTengaiSlashEffectPacket::encode,
+                ClientboundTengaiSlashEffectPacket::new,
+                ClientboundTengaiSlashEffectPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

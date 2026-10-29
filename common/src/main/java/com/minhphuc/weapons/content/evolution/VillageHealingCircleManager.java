@@ -100,13 +100,6 @@ public class VillageHealingCircleManager {
                     if (EvolvedSkillHelper.hasConsumedSkills(player)) {
                         EvolvedSkillHelper.restoreAllConsumedSkills(player);
 
-                        com.minhphuc.weapons.network.ModMessages.sendToPlayer(
-                                new com.minhphuc.weapons.network.ClientboundSyncEvolutionPacket(
-                                        new java.util.ArrayList<>(),
-                                        EvolvedSkillHelper.getEvolvedSkillId(player),
-                                        EvolvedSkillHelper.getEvolvedSkillTier(player)
-                                ), player);
-
                         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                                 SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.0F, 1.6F);
                         level.playSound(null, player.getX(), player.getY(), player.getZ(),
