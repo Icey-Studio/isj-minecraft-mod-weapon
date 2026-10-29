@@ -71,11 +71,11 @@ public class VelgryndFeatherFanItem extends Item {
         if (currentSkill == 0) {
             // SKILL 1: GIÓ THỔI BAY ĐỐI THỦ
             castBlowAwaySkill(level, player);
-            player.getCooldowns().addCooldown(this, 30); // 1.5s hồi chiêu
+            
         } else {
             // SKILL 2: GIÓ TIÊU DIỆT ĐỐI THỦ
             castAnnihilationWindSkill(level, player);
-            player.getCooldowns().addCooldown(this, 50); // 2.5s hồi chiêu
+            
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
@@ -181,3 +181,4 @@ public class VelgryndFeatherFanItem extends Item {
         tooltip.add(Component.literal("§6👉 [Shift + Chuột Phải] hoặc nhấn [Z] để đổi Skill!"));
     }
 }
+

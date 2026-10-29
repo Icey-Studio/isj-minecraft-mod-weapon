@@ -79,7 +79,6 @@ public class KuboSummonItem extends Item {
         if (!player.isCreative()) {
             stack.shrink(1);
         }
-        player.getCooldowns().addCooldown(this, 100); // 5 giây hồi chiêu
 
         // 1. HIỆU ỨNG TẬP TRUNG HƯ VÔ (TUYỆT ĐỐI KHÔNG DÙNG VÒNG TRÒN MA THUẬT)
         // Bùng nổ hạt mực đen, khói rồng hư vô và sóng xung kích âm thanh

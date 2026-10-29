@@ -9,7 +9,7 @@
   ],
   "contact": {},
   "license": "MIT",
-  "icon": "assets/weapons/textures/item/infinity_gauntlet.png",
+  "icon": "assets/weapons/textures/item/moonlight_sword.png",
   "environment": "*",
   "entrypoints": {
     "main": [

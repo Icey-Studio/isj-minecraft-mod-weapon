@@ -1,7 +1,9 @@
 package com.minhphuc.weapons.network;
 
+import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.divine.MoonlightSwordItem;
 import com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper;
+import com.minhphuc.weapons.content.tensura.TensuraSkillDispatcher;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
@@ -11,7 +13,6 @@ import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.item.ItemStack;
 
-import java.util.List;
 import java.util.function.Supplier;
 
 public class ServerboundCycleSkillPacket {
@@ -50,157 +51,49 @@ public class ServerboundCycleSkillPacket {
                 // Chuyển đổi skill cho Quạt Lông Vũ Velgrynd
                 com.minhphuc.weapons.content.tensura.VelgryndFeatherFanItem.cycleSkill(player, fanStack);
             } else if (!swordStack.isEmpty()) {
-                // 1. Chuyển đổi skill cho Nguyệt Quang Thần Tế Kiếm
+                // 1. Chuyển đổi skill cho Nguyệt Quang Thần Tế Kiếm (Chỉ có 2 skill)
                 MoonlightSwordItem.cycleSkill(player, swordStack);
             } else {
-                // 2. Chuyển đổi skill cho Thủy Tổ Ác Ma & Chân Ma Vương (khi không cầm kiếm/vũ khí)
+                // 2. Chuyển đổi skill cho Chân Ma Vương & Thần Linh Vũ Trang & Thủy Tổ Ác Ma
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
+                boolean isWearingDivine = DivineArmorItem.isWearingAnyPiece(player);
                 boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
                 com.minhphuc.weapons.entity.tensura.DemonType demonType = PrimordialPlayerDataHelper.getPrimordialType(player);
 
-                List<Integer> ownedEvolvedSkills = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getOwnedEvolvedSkills(player);
-                int evolvedCount = ownedEvolvedSkills.size();
+                if (isTrueDemonLord || isWearingDivine || isPrimordial) {
+                    int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
+                    int totalSkills = lordSkills + (isPrimordial ? 7 : 0);
 
-                if (isTrueDemonLord && isPrimordial) {
-                    int lordSkills = hasCreation ? 18 : 17;
-                    int totalSkills = lordSkills + 7 + evolvedCount;
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                     int next = (current + 1) % totalSkills;
                     EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
 
                     String skillName;
-                    if (next >= lordSkills + 7) {
-                        int evolvedSkillId = ownedEvolvedSkills.get(next - (lordSkills + 7));
-                        skillName = getEvolvedDisplay(player, evolvedSkillId);
-                    } else if (next < lordSkills) {
-                        skillName = getLordSkillName(next, hasCreation);
+                    if (next < lordSkills) {
+                        skillName = TensuraSkillDispatcher.getSkillName(player, next, hasCreation);
                     } else {
-                        int primordialSkillIdx = next - lordSkills;
-                        skillName = "§6§l" + (next + 1) + ". " + PrimordialPlayerDataHelper.getSkillName(demonType, primordialSkillIdx);
+                        int primordialIdx = next - lordSkills;
+                        skillName = "§6§l" + (next + 1) + ". " + PrimordialPlayerDataHelper.getSkillName(demonType, primordialIdx);
                     }
 
-                    player.displayClientMessage(
-                        Component.literal("§d§l[MA VƯƠNG THỦY TỔ] §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
-                        true
-                    );
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F + (next * 0.15F));
-                } else if (isTrueDemonLord) {
-                    int lordSkills = hasCreation ? 15 : 14;
-                    int maxSkills = lordSkills + evolvedCount;
-                    int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
-                    int next = (current + 1) % maxSkills;
-                    EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
-
-                    String skillName;
-                    if (next >= lordSkills) {
-                        int evolvedSkillId = ownedEvolvedSkills.get(next - lordSkills);
-                        skillName = getEvolvedDisplay(player, evolvedSkillId);
-                    } else {
-                        skillName = getLordSkillName(next, hasCreation);
-                    }
+                    String roleTag = isTrueDemonLord ? "§d§l[CHÂN MA VƯƠNG]" : (isWearingDivine ? "§6§l[THẦN LINH VŨ TRANG]" : "§5§l[THỦY TỔ ÁC MA]");
 
                     player.displayClientMessage(
-                        Component.literal("§d§l[CHÂN MA VƯƠNG] §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
+                        Component.literal(roleTag + " §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
                         true
                     );
 
-                    float pitch = 1.0F + (next * 0.25F);
+                    float pitch = 1.0F + ((next % 10) * 0.15F);
                     player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                             SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, pitch);
-                } else if (isPrimordial) {
-                    int total = 7 + evolvedCount;
-                    int current = PrimordialPlayerDataHelper.getSelectedSkillIndex(player);
-                    int next = (current + 1) % total;
-                    PrimordialPlayerDataHelper.setSelectedSkillIndex(player, next);
-                    EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
-
-                    String skillName = (next >= 7)
-                            ? getEvolvedDisplay(player, ownedEvolvedSkills.get(next - 7))
-                            : PrimordialPlayerDataHelper.getSkillName(demonType, next);
-
-                    player.displayClientMessage(
-                        Component.literal("§6§l[" + demonType.name() + "] §eKỹ năng " + (next + 1) + ": §f" + skillName + " §7(Chuột Phải để thi triển)"),
-                        true
-                    );
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.0F + (next * 0.25F));
-                } else if (com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player)) {
-                    int lordSkills = 11;
-                    int maxSkills = lordSkills + evolvedCount;
-                    int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
-                    int next = (current + 1) % maxSkills;
-                    EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
-
-                    String skillName = (next >= lordSkills)
-                            ? getEvolvedDisplay(player, ownedEvolvedSkills.get(next - lordSkills))
-                            : getLordSkillName(next, false);
-
-                    player.displayClientMessage(
-                        Component.literal("§6§l[THẦN LINH VŨ TRANG] §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
-                        true
-                    );
-
-                    float pitch = 1.0F + (next * 0.25F);
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, pitch);
-                } else if (evolvedCount > 0) {
-                    int totalSkills = evolvedCount;
-                    int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
-                    int next = (current + 1) % totalSkills;
-                    EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
-
-                    int evolvedSkillId = ownedEvolvedSkills.get(next);
-                    String skillName = getEvolvedDisplay(player, evolvedSkillId);
-
-                    player.displayClientMessage(
-                        Component.literal("§6§l[KỸ NĂNG TỐI THƯỢNG] §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
-                        true
-                    );
-                    player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
-                            SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, 1.5F);
                 } else {
                     player.displayClientMessage(
-                        Component.literal("§c§l[THÔNG BÁO] §fBáo cáo. Cá thể chưa thức tỉnh thành Thủy Tổ Ác Ma / Chân Ma Vương hoặc chưa sở hữu Kỹ Năng Tiến Hóa!"),
+                        Component.literal("§c§l[THÔNG BÁO] §fBáo cáo: Cá thể chưa thức tỉnh thành Chân Ma Vương hoặc chưa trang bị Giáp Thần Linh!"),
                         true
                     );
                 }
             }
         });
-    }
-
-    private static String getEvolvedDisplay(net.minecraft.world.entity.player.Player player, int evolvedSkillId) {
-        int tier = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getEvolvedSkillTier(player, evolvedSkillId);
-        String color = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getEvolvedSkillColor(evolvedSkillId);
-        String name = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.getEvolvedSkillNameVi(evolvedSkillId);
-        return color + "★ [TIẾN HÓA CẤP " + tier + "] " + name;
-    }
-
-    private static String getLordSkillName(int index, boolean hasCreation) {
-        return switch (index) {
-            case 0 -> "§e§l1. Tam Trọng Thánh Giới - Linh Tử Băng Hoại (Multi-Tier Disintegration)";
-            case 1 -> "§b§l2. Tà Khứ Vũ Thê Tử (Jacob's Ladder)";
-            case 2 -> "§6§l3. Bát Môn Thiên Phạt Trận (Heavenly Judgment Array)";
-            case 3 -> "§a§l4. Phép Màu Của Thần Linh (Miracle of the Gods)";
-            case 4 -> "§d§l5. Bạo Thực Vương: Thôn Phệ (Predator)";
-            case 5 -> "§d§l6. Phẫn Nộ Vương:Long Tinh Bộc Viêm Bá: Dragon Nova (竜星爆炎覇)";
-            case 6 -> "§e§l7. Thần Nộ: Tuyệt Diệt Tinh Tú";
-            case 7 -> "§b§l8. Trận Đồ Cưỡng Chế Tai Ương (Lục Nhậm Thần Khóa)";
-            case 8 -> "§c§l9. Thị Nhục - Nhục Thể Bất Tử (Seer Flesh)";
-            case 9 -> "§4§l10. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
-            case 10 -> "§6§l11. Cú Bắn Granit (Granite Blast)";
-            case 11 -> hasCreation
-                    ? "§6§l12. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)"
-                    : "§a§l12. Kháng Ma Kết Giới (Anti-Magic Barrier)";
-            case 12 -> hasCreation
-                    ? "§a§l13. Kháng Ma Kết Giới (Anti-Magic Barrier)"
-                    : "§b§l13. Đa Trùng Kết Giới (Multilayer Barrier)";
-            case 13 -> hasCreation
-                    ? "§b§l14. Đa Trùng Kết Giới (Multilayer Barrier)"
-                    : "§f§l14. Granit Xuyên Phá: Zone Track (Pure White Beam)";
-            case 14 -> "§f§l15. Granit Xuyên Phá: Zone Track (Pure White Beam)";
-            default -> "§7Chưa chọn";
-        };
     }
 }

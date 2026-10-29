@@ -69,16 +69,6 @@ public class LuciferReplicationAbility {
             return false;
         }
 
-        // Hồi chiêu 20 giây
-        if (player.getCooldowns().isOnCooldown(ModItems.MOONLIGHT_SWORD.get())
-                || player.getCooldowns().isOnCooldown(ModItems.DEMON_LORD_SEED.get())) {
-            player.displayClientMessage(
-                    Component.literal("§c⚠️ Kỹ năng Kiêu Ngạo Vương Lucifer đang trong thời gian hồi chiêu!"),
-                    true
-            );
-            return false;
-        }
-
         CompoundTag tag = EntityDataHelper.getCustomData(player);
         String replicatedSkill = tag.getString(NBT_REPLICATED_SKILL);
         String skillName = tag.getString(NBT_REPLICATED_NAME);
@@ -88,9 +78,6 @@ public class LuciferReplicationAbility {
             replicatedSkill = "ABYSS_CORE";
             skillName = "Diệt Thế Hỏa (Abyss Core - Hỏa Long Guy Crimson)";
         }
-
-        player.getCooldowns().addCooldown(ModItems.MOONLIGHT_SWORD.get(), 400);
-        player.getCooldowns().addCooldown(ModItems.DEMON_LORD_SEED.get(), 400);
 
         player.displayClientMessage(
                 Component.literal("§4§l[KIÊU NGẠO VƯƠNG LUCIFER] §c\"Quyền năng của ngươi... đối với ta chỉ là trò trẻ con! Hãy nếm trải chính tuyệt kỹ của ngươi!\""),

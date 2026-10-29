@@ -38,13 +38,11 @@ public class ExtinctionStarItem extends Item {
             if (player.isShiftKeyDown()) {
                 // Kích hoạt Tuyệt Kỹ: Diệt Thế Tà Tinh - Alkaid
                 AlkaidAbility.cast((ServerLevel) level, serverPlayer);
-                player.getCooldowns().addCooldown(this, 40);
                 return InteractionResultHolder.sidedSuccess(stack, false);
             }
 
             // Phóng Tinh Tú Tuyệt Diệt
             TaisuiExtinctionStarsAbility.fireStar((ServerLevel) level, serverPlayer);
-            player.getCooldowns().addCooldown(this, 10);
             return InteractionResultHolder.sidedSuccess(stack, false);
         }
 

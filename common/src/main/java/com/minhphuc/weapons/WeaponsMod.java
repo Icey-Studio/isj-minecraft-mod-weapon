@@ -1,7 +1,5 @@
 package com.minhphuc.weapons;
 
-import com.minhphuc.weapons.config.AIGeminiConfig;
-import com.minhphuc.weapons.content.infinitygauntlet.InfinityGauntletEvents;
 import com.minhphuc.weapons.content.tensura.TensuraEvents;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.network.ModMessages;
@@ -23,11 +21,7 @@ public class WeaponsMod {
         // Đăng ký Network Packets
         ModMessages.register();
 
-        // Nạp cấu hình Gemini AI
-        AIGeminiConfig.loadConfig();
-
         // Đăng ký các sự kiện Gameplay đa nền tảng
-        InfinityGauntletEvents.register();
         TensuraEvents.register();
         com.minhphuc.weapons.content.divine.DivineWeaponEvents.register();
 

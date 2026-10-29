@@ -74,7 +74,6 @@ public class MilimDragonContractItem extends Item {
         if (!player.isCreative()) {
             stack.shrink(1);
         }
-        player.getCooldowns().addCooldown(this, 160); // 8 giây hồi chiêu
 
         // 1. KÍCH HOẠT VÒNG TRÒN MA THUẬT RỰC RỠ 5 TẦNG XẾP DỌC
         PentagramCelestialPillarAbility.spawnPillarAt(serverLevel, (ServerPlayer) player, targetCenter, DemonType.ROUGE, false, true);

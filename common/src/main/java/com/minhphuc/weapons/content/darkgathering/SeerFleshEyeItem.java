@@ -65,8 +65,6 @@ public class SeerFleshEyeItem extends Item {
                 stack.shrink(1);
             }
 
-            player.getCooldowns().addCooldown(this, 30); // 1.5s cooldown
-
             player.displayClientMessage(
                     Component.literal("§c§l[CON MẮT THỊ NHỤC] §aĐã nuốt trọn nhãn lực! Sinh lực phục hồi 100% & Xóa sạch mọi độc tố/nguyền rủa! ✨👁️"),
                     true

@@ -149,11 +149,9 @@ public class SeerFleshAbility {
         level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, groundPos.x, groundPos.y + 0.8D, groundPos.z, 15, 0.4D, 0.4D, 0.4D, 0.03D);
 
         player.displayClientMessage(
-                Component.literal("§c§l[THỊ NHỤC] §fĐã triệu hồi Thị Nhục! §a[Chuột Phải] §fhồi 100% máu, §c[Chuột Trái] §frạch lấy Mắt! §7(Sẽ tan biến nếu đi xa quá 5m)"),
+                Component.literal("§c§l[THỊ THỰC] §fĐã triệu hồi Thị Thực! §a[Chuột Phải] §fhồi 100% máu, §c[Chuột Trái] §frạch lấy Mắt! §7(Sẽ tan biến nếu đi xa quá 5m)"),
                 true
         );
-
-        player.getCooldowns().addCooldown(ModItems.SEER_FLESH_EYE.get(), 60);
 
         // Kiểm tra kích hoạt trạng thái Cộng Hưởng Thái Tuế nếu Tuyệt Diệt Tinh Tú đang bật
         TaisuiExtinctionStarsAbility.checkAndApplySynergy(level, player);

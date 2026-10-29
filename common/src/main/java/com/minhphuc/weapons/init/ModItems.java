@@ -1,7 +1,6 @@
 package com.minhphuc.weapons.init;
 
 import com.minhphuc.weapons.WeaponsMod;
-import com.minhphuc.weapons.content.infinitygauntlet.InfinityGauntletItem;
 import dev.architectury.registry.CreativeTabRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
@@ -26,33 +25,11 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.guide.GuideBookItem(new Item.Properties().stacksTo(1).rarity(Rarity.RARE)));
 
     // ==========================================
-    // MODULE: INFINITY GAUNTLET & STONES
     // ==========================================
-    public static final RegistrySupplier<Item> EMPTY_INFINITY_GAUNTLET = ITEMS.register("empty_infinity_gauntlet",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.EmptyInfinityGauntletItem(new Item.Properties()));
-
-    public static final RegistrySupplier<Item> INFINITY_GAUNTLET = ITEMS.register("infinity_gauntlet",
-            () -> new InfinityGauntletItem(new Item.Properties()));
-
-    public static final RegistrySupplier<Item> POWER_STONE = ITEMS.register("power_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.POWER));
-
-    public static final RegistrySupplier<Item> SPACE_STONE = ITEMS.register("space_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.SPACE));
-
-    public static final RegistrySupplier<Item> REALITY_STONE = ITEMS.register("reality_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.REALITY));
-
-    public static final RegistrySupplier<Item> SOUL_STONE = ITEMS.register("soul_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.SOUL));
-
-    public static final RegistrySupplier<Item> TIME_STONE = ITEMS.register("time_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.TIME));
-
-    public static final RegistrySupplier<Item> MIND_STONE = ITEMS.register("mind_stone",
-            () -> new com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem(com.minhphuc.weapons.content.infinitygauntlet.InfinityStoneItem.StoneType.MIND));
-
+    // MODULE: TENSURA DEMON LORD AWAKENING
     // ==========================================
+    public static final RegistrySupplier<Item> DEMON_LORD_AWAKENING_ORB = ITEMS.register("demon_lord_awakening_orb",
+            () -> new com.minhphuc.weapons.content.tensura.DemonLordAwakeningOrbItem(new Item.Properties().rarity(Rarity.EPIC).stacksTo(16)));
     // MODULE: TENSURA DEMON LORD EVOLUTION
     // ==========================================
     public static final RegistrySupplier<Item> DEMON_LORD_SEED = ITEMS.register("demon_lord_seed",
@@ -234,8 +211,6 @@ public class ModItems {
     public static final RegistrySupplier<Item> PRIMORDIAL_REBIRTH_TOME = ITEMS.register("primordial_rebirth_tome",
             () -> new com.minhphuc.weapons.content.tensura.PrimordialRebirthTomeItem(new Item.Properties()));
 
-    public static final RegistrySupplier<Item> SKILL_EVOLUTION_TOME = ITEMS.register("skill_evolution_tome",
-            () -> new com.minhphuc.weapons.content.evolution.SkillEvolutionTomeItem(new Item.Properties()));
 
     public static final RegistrySupplier<Item> DEMON_SUMMONING_CIRCLE = ITEMS.register("demon_summoning_circle",
             () -> new Item(new Item.Properties()));
@@ -410,21 +385,13 @@ public class ModItems {
     public static final RegistrySupplier<CreativeModeTab> WEAPONS_TAB = CREATIVE_MODE_TABS.register("weapons_tab",
             () -> CreativeTabRegistry.create(builder -> builder
                     .title(Component.translatable("itemGroup.weapons.weapons_tab"))
-                    .icon(() -> new ItemStack(INFINITY_GAUNTLET.get()))
+                    .icon(() -> new ItemStack(MOONLIGHT_SWORD.get()))
                     .displayItems((parameters, output) -> {
-                        output.accept(EMPTY_INFINITY_GAUNTLET.get());
-                        output.accept(INFINITY_GAUNTLET.get());
-                        output.accept(POWER_STONE.get());
-                        output.accept(SPACE_STONE.get());
-                        output.accept(REALITY_STONE.get());
-                        output.accept(SOUL_STONE.get());
-                        output.accept(TIME_STONE.get());
-                        output.accept(MIND_STONE.get());
+                        output.accept(DEMON_LORD_AWAKENING_ORB.get());
                         output.accept(DEMON_LORD_SEED.get());
                         output.accept(DEMON_LORD_SOUL.get());
                         output.accept(PRIMORDIAL_GRIMOIRE.get());
                         output.accept(PRIMORDIAL_REBIRTH_TOME.get());
-                        output.accept(SKILL_EVOLUTION_TOME.get());
 
                         // Khế Ước Thủy Tổ
                         output.accept(PRIMORDIAL_PACT_NOIR.get());
@@ -535,3 +502,4 @@ public class ModItems {
         CREATIVE_MODE_TABS.register();
     }
 }
+

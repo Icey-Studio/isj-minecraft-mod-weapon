@@ -171,8 +171,6 @@ public class JacobsLadderAbility {
                 SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.PLAYERS, 3.5F, 1.6F);
         level.playSound(null, targetCenter.x, targetCenter.y, targetCenter.z,
                 SoundEvents.BEACON_AMBIENT, SoundSource.PLAYERS, 3.0F, 1.5F);
-
-        player.getCooldowns().addCooldown(sword.getItem(), 160); // 8 giây hồi chiêu
     }
 
     /**

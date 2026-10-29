@@ -306,9 +306,9 @@ public class JaunePlayerSkillManager {
     public static final List<ActiveSupernova> ACTIVE_SUPERNOVAS = new ArrayList<>();
 
     public static void tick(ServerLevel level) {
-        ACTIVE_BARRAGES.removeIf(ActiveBarrage::tick);
-        ACTIVE_GRAVITY_HOLES.removeIf(ActiveGravityHole::tick);
-        ACTIVE_SUPERNOVAS.removeIf(ActiveSupernova::tick);
+        if (!ACTIVE_BARRAGES.isEmpty()) ACTIVE_BARRAGES.removeIf(ActiveBarrage::tick);
+        if (!ACTIVE_GRAVITY_HOLES.isEmpty()) ACTIVE_GRAVITY_HOLES.removeIf(ActiveGravityHole::tick);
+        if (!ACTIVE_SUPERNOVAS.isEmpty()) ACTIVE_SUPERNOVAS.removeIf(ActiveSupernova::tick);
     }
 
     // =========================================================================

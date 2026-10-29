@@ -83,6 +83,9 @@ public class DivineArmorItem extends ArmorItem {
         tooltip.add(Component.literal("§7- §aKháng gần như 100% sát thương từ sinh vật, ngã từ trên cao, lửa & dung nham"));
         tooltip.add(Component.literal("§7- §aĐộ bền bất tử, không bao giờ bị phá hủy"));
         tooltip.add(Component.literal("§7- §dKhai mở Tuyệt Kỹ: §eLong Tinh Bộc Viêm Bá (Dragon Nova) §fcủa Milim (Không cần hồi năng lượng)"));
+        tooltip.add(Component.literal("§7- §fThức tỉnh Kiếm Kỹ: §0§l[天外救世権現] §f§lThiên Ngoại Cứu Thế Quyền Hiện (Dark Gathering):"));
+        tooltip.add(Component.literal("§8  • Nhấn [Z] để chọn: Chiêu 12 (Nghịch Thời Nhất Trảm) & Chiêu 13 (Bạt Đao Vận Tốc Ngược)"));
+        tooltip.add(Component.literal("§8  • [Chuột Phải]: Thi triển ngay lập tức - Sát thương xuyên giáp & Phản đòn Causality Parry!"));
         tooltip.add(Component.literal("§7- §cNhược điểm: Vẫn nhận sát thương trúng độc & không thể thở dưới nước"));
     }
 }

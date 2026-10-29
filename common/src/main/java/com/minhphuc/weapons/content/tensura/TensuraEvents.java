@@ -84,7 +84,6 @@ public class TensuraEvents {
             DeathStreakAbility.tickStreaks(level);
             PentagramCelestialPillarAbility.tickPillars(level);
             HorizontalHolyBeamAbility.tickBeams(level);
-            com.minhphuc.weapons.content.evolution.RegaliaDominionAbility.tickDominatedEntities(level);
             com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.tickPrisons(level);
             com.minhphuc.weapons.content.evolution.VillageHealingCircleManager.tick(level);
             com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.tickBarriers(level);
@@ -144,7 +143,7 @@ public class TensuraEvents {
                 player.drop(tome, false);
             }
             player.displayClientMessage(
-                net.minecraft.network.chat.Component.literal("§6§l[WEAPONS MOD] §eChào mừng bạn! Đã nhận §b§lThánh Thư Thần Khí§e. Hãy cầm sách nhấn §a[Chuột Phải] §eđể xem toàn bộ công thức và chiêu thức! 📜✨"),
+                net.minecraft.network.chat.Component.literal("§6§l[WEAPONS MOD] §eChào mừng bạn! Đã nhận §b§lKhởi Nguyên Thần Thư§e. Hãy cầm sách nhấn §a[Chuột Phải] §eđể xem toàn bộ công thức và chiêu thức! 📜✨"),
                 false
             );
         }
@@ -254,43 +253,10 @@ public class TensuraEvents {
                 }
             }
         }
-
-        // 3. Rơi Đá Vô Cực khi tiêu diệt Đại Boss / Quái Vật Cổ Đại (Survival)
-        if (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss) {
-            dropStone(level, victim, ModItems.POWER_STONE.get(), "§d[Đá Sức Mạnh] vừa rơi ra từ tàn tích của Wither!");
-        } else if (victim instanceof net.minecraft.world.entity.monster.warden.Warden) {
-            dropStone(level, victim, ModItems.SOUL_STONE.get(), "§6[Đá Linh Hồn] vừa được giải phóng từ lồng ngực Warden!");
-        } else if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) {
-            dropStone(level, victim, ModItems.SPACE_STONE.get(), "§9[Đá Không Gian] vừa kết tinh từ hư không The End!");
-        } else if (victim instanceof net.minecraft.world.entity.monster.ElderGuardian) {
-            dropStone(level, victim, ModItems.TIME_STONE.get(), "§a[Đá Thời Gian] vừa xuất hiện từ mắt cổ thần Elder Guardian!");
-        } else if (victim instanceof net.minecraft.world.entity.monster.Evoker && level.random.nextFloat() <= 0.35F) {
-            dropStone(level, victim, ModItems.MIND_STONE.get(), "§e[Đá Tâm Trí] vừa rơi ra từ pháp sư Evoker!");
-        } else if (victim instanceof net.minecraft.world.entity.monster.piglin.PiglinBrute && level.random.nextFloat() <= 0.25F) {
-            dropStone(level, victim, ModItems.REALITY_STONE.get(), "§c[Đá Thực Tại] vừa rơi ra từ chiến binh Piglin Brute!");
-        } else if (victim instanceof net.minecraft.world.entity.animal.IronGolem golem) {
+        if (victim instanceof net.minecraft.world.entity.animal.IronGolem golem) {
             com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.onIronGolemDeath(level, golem);
         }
     }
-
-    private static void dropStone(ServerLevel level, LivingEntity victim, net.minecraft.world.item.Item stoneItem, String announcement) {
-        ItemEntity stoneDrop = new ItemEntity(
-                level, victim.getX(), victim.getY() + 0.5D, victim.getZ(),
-                new ItemStack(stoneItem)
-        );
-        stoneDrop.setGlowingTag(true);
-        level.addFreshEntity(stoneDrop);
-
-        level.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
-                net.minecraft.sounds.SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, net.minecraft.sounds.SoundSource.PLAYERS, 1.5F, 1.0F);
-
-        for (ServerPlayer p : level.players()) {
-            if (p.distanceToSqr(victim) <= 64.0 * 64.0) {
-                p.displayClientMessage(net.minecraft.network.chat.Component.literal("§6§l✦ BẢO VẬT VŨ TRỤ ✦ " + announcement), false);
-            }
-        }
-    }
-
     private static void handleSoulDrop(LivingEntity victim) {
         if (victim == null || victim.level().isClientSide()) return;
         if (victim instanceof net.minecraft.world.entity.monster.Creeper) return; // Trừ Creeper theo yêu cầu

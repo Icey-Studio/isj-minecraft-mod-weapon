@@ -131,8 +131,6 @@ public class GoldenGunItem extends Item {
                     case GRAVITY -> 20; // 1 giây
                     case RAPID -> 6; // Bắn liên thanh
                 };
-                player.getCooldowns().addCooldown(this, cooldown);
-
                 return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
             } else {
                 // Thử nạp đạn tự động nếu có đạn trong túi đồ

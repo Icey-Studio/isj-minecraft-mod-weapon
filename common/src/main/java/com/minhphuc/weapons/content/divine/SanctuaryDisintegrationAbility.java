@@ -271,8 +271,6 @@ public class SanctuaryDisintegrationAbility {
 
         // Khóa mục tiêu ban đầu ngay lập tức
         lockAndAnchorVictimsEveryTick(sanctuary);
-
-        player.getCooldowns().addCooldown(sword.getItem(), 180); // 9 giây hồi chiêu
     }
 
     /**

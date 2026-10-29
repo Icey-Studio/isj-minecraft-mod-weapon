@@ -98,6 +98,7 @@ public class CarreraBulletLogic {
     public static final List<ActiveAbyssVortex> ACTIVE_VORTICES = new ArrayList<>();
 
     public static void tickVortices() {
+        if (ACTIVE_VORTICES.isEmpty()) return;
         ACTIVE_VORTICES.removeIf(ActiveAbyssVortex::tick);
     }
 
