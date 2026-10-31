@@ -81,7 +81,24 @@ public class FaithAndGraceAbility {
 
     private static final List<ActiveFaithAndGrace> ACTIVE_INSTANCES = Collections.synchronizedList(new ArrayList<>());
 
+    public static boolean isNearActiveGrace(LivingEntity entity) {
+        if (entity == null || !entity.isAlive() || ACTIVE_INSTANCES.isEmpty()) return false;
+        Vec3 pos = entity.position();
+        net.minecraft.world.level.Level lvl = entity.level();
+        synchronized (ACTIVE_INSTANCES) {
+            for (ActiveFaithAndGrace g : ACTIVE_INSTANCES) {
+                if (g.level == lvl && g.center.distanceToSqr(pos) <= 20.0D * 20.0D) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static void cast(ServerLevel level, ServerPlayer player) {
+        // Hóa giải án tử của Cứu Thế Quyền Hiện ngay khi thi triển Bí Ẩn Của Đức Tin & Ân Sủng
+        com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(player, "Bí Ẩn Của Đức Tin & Ân Sủng");
+
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
         Vec3 targetCenter = eyePos.add(lookVec.scale(8.0D));
@@ -109,6 +126,8 @@ public class FaithAndGraceAbility {
     }
 
     public static void tickFaithAndGraces(ServerLevel level) {
+        if (ACTIVE_INSTANCES.isEmpty()) return;
+
         synchronized (ACTIVE_INSTANCES) {
             Iterator<ActiveFaithAndGrace> it = ACTIVE_INSTANCES.iterator();
             while (it.hasNext()) {
@@ -168,6 +187,12 @@ public class FaithAndGraceAbility {
                         List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box, LivingEntity::isAlive);
 
                         for (LivingEntity e : entities) {
+                            // Cứu Thế Quyền Hiện & Linh Hồn kháng 100% Bí Ẩn Đức Tin & Ân Sủng, tự do đi lại không bị đẩy lùi
+                            if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity
+                                    || e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity) {
+                                continue;
+                            }
+
                             if (isIrredeemablyEvil(e)) {
                                 // Boss tà ác bị cự tuyệt và đẩy lùi ra ngoài vùng thánh quang
                                 Vec3 diff = e.position().subtract(center.x, center.y, center.z);
@@ -207,6 +232,7 @@ public class FaithAndGraceAbility {
                             e.setRemainingFireTicks(0);
 
                             e.heal(6.0F); // Hồi 3 tim mỗi nửa giây
+                            com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(e, "Bí Ẩn Của Đức Tin & Ân Sủng");
                             e.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 3, false, false, true));
                             e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 120, 1, false, false, true));
                             e.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 200, 2, false, false, true));
@@ -231,6 +257,10 @@ public class FaithAndGraceAbility {
     }
 
     private static boolean isIrredeemablyEvil(LivingEntity e) {
+        if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity
+                || e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity) {
+            return false;
+        }
         return e instanceof WitherBoss
                 || e instanceof Warden
                 || e instanceof EnderDragon

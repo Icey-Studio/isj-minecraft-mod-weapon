@@ -78,6 +78,21 @@ public class ModMessages {
                 ClientboundTengaiSlashEffectPacket::encode,
                 ClientboundTengaiSlashEffectPacket::new,
                 ClientboundTengaiSlashEffectPacket::handle);
+
+        CHANNEL.register(ServerboundIaiClickPacket.class,
+                ServerboundIaiClickPacket::encode,
+                ServerboundIaiClickPacket::new,
+                ServerboundIaiClickPacket::handle);
+
+        CHANNEL.register(ClientboundIaiStatePacket.class,
+                ClientboundIaiStatePacket::encode,
+                ClientboundIaiStatePacket::new,
+                ClientboundIaiStatePacket::handle);
+
+        CHANNEL.register(ClientboundSyncRykuzinStatePacket.class,
+                ClientboundSyncRykuzinStatePacket::encode,
+                ClientboundSyncRykuzinStatePacket::new,
+                ClientboundSyncRykuzinStatePacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

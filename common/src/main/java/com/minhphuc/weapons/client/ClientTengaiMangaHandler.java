@@ -13,11 +13,14 @@ import net.minecraft.resources.ResourceLocation;
  * - Tối ưu tuyệt đối (Zero Lag): Sử dụng pipeline color_convolve gốc của Minecraft engine.
  */
 public class ClientTengaiMangaHandler {
+    private static final ResourceLocation DESATURATE_SHADER = ResourceLocation.fromNamespaceAndPath("minecraft", "shaders/post/desaturate.json");
     private static final ResourceLocation MONOCHROME_SHADER = ResourceLocation.fromNamespaceAndPath("minecraft", "shaders/post/monochrome.json");
     private static final ResourceLocation WEAPONS_MONOCHROME_SHADER = ResourceLocation.fromNamespaceAndPath("weapons", "shaders/post/monochrome.json");
 
     private static int activeTicksRemaining = 0;
     private static boolean shaderActive = false;
+
+    private static ResourceLocation cachedShader = null;
 
     public static void triggerMangaEffect(int durationTicks) {
         Minecraft mc = Minecraft.getInstance();
@@ -26,15 +29,14 @@ public class ClientTengaiMangaHandler {
         activeTicksRemaining = durationTicks;
         if (!shaderActive && mc.gameRenderer != null) {
             try {
-                try {
-                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(MONOCHROME_SHADER);
-                } catch (Throwable t) {
-                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(WEAPONS_MONOCHROME_SHADER);
+                if (cachedShader == null) {
+                    // Ưu tiên desaturate gốc của vanilla luôn có sẵn (0 exception, 0 micro-freeze)
+                    cachedShader = DESATURATE_SHADER;
                 }
+                ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(cachedShader);
                 shaderActive = true;
-                WeaponsMod.LOGGER.info("[Tengai Manga Shader] Monochrome shader activated for {} ticks!", durationTicks);
             } catch (Throwable e) {
-                WeaponsMod.LOGGER.error("[Tengai Manga Shader] Failed to load monochrome shader", e);
+                WeaponsMod.LOGGER.error("[Tengai Manga Shader] Failed to load shader", e);
             }
         }
     }

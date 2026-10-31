@@ -126,14 +126,9 @@ public class MilimEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            if (level instanceof ServerLevel sl) {
-                if (sl.dimension() != Level.OVERWORLD) return false;
-
-                // Tối ưu chống lag: Kiểm tra trong phạm vi 128 blocks nếu đã có Milim thì không spawn thêm
-                AABB checkArea = new AABB(this.blockPosition()).inflate(128.0D);
-                if (!sl.getEntitiesOfClass(MilimEntity.class, checkArea).isEmpty()) {
-                    return false;
-                }
+            // Tỷ lệ xuất hiện tự nhiên (4% cơ hội) - Kiểm tra trước để tránh quét thực thể
+            if (this.random.nextFloat() > 0.04F) {
+                return false;
             }
 
             BlockPos pos = this.blockPosition();
@@ -141,9 +136,14 @@ public class MilimEntity extends Monster {
                 return false;
             }
 
-            // Tỷ lệ xuất hiện tự nhiên tương đương Ác Ma Thủy Tổ & Chước Nhiệt Long (4% cơ hội khi chọn)
-            if (this.random.nextFloat() > 0.04F) {
-                return false;
+            if (level instanceof ServerLevel sl) {
+                if (sl.dimension() != Level.OVERWORLD) return false;
+
+                // Tối ưu chống lag: Kiểm tra trong phạm vi 64 blocks nếu đã có Milim thì không spawn thêm
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
+                if (!sl.getEntitiesOfClass(MilimEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
             }
         }
         return super.checkSpawnRules(level, spawnType);

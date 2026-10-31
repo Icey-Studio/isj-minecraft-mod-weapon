@@ -76,9 +76,11 @@ public class DigitalLedDisplayHelper {
     }
 
     /**
-     * Cập nhật đếm lùi thời gian tồn tại và dọn dẹp các LED hết hạn
+     * Cập nhật đếm lùi thời gian tồn tại và dọn dẹp các LED hết hạn (Tối ưu 0 lag khi rỗng)
      */
     public static void tickLeds(ServerLevel level) {
+        if (ACTIVE_LEDS.isEmpty()) return;
+
         Iterator<ActiveLedText> iterator = ACTIVE_LEDS.iterator();
         while (iterator.hasNext()) {
             ActiveLedText led = iterator.next();
@@ -88,6 +90,19 @@ public class DigitalLedDisplayHelper {
                     led.discard();
                     iterator.remove();
                 }
+            }
+        }
+    }
+
+    public static void remove(Display.TextDisplay display) {
+        if (display == null || ACTIVE_LEDS.isEmpty()) return;
+        Iterator<ActiveLedText> iterator = ACTIVE_LEDS.iterator();
+        while (iterator.hasNext()) {
+            ActiveLedText led = iterator.next();
+            if (led.display == display) {
+                led.discard();
+                iterator.remove();
+                break;
             }
         }
     }

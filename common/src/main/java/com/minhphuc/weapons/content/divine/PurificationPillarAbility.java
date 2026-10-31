@@ -93,7 +93,24 @@ public class PurificationPillarAbility {
 
     private static final List<ActivePurification> ACTIVE_PURIFICATIONS = Collections.synchronizedList(new ArrayList<>());
 
+    public static boolean isNearActivePillar(LivingEntity entity) {
+        if (entity == null || !entity.isAlive() || ACTIVE_PURIFICATIONS.isEmpty()) return false;
+        Vec3 pos = entity.position();
+        net.minecraft.world.level.Level lvl = entity.level();
+        synchronized (ACTIVE_PURIFICATIONS) {
+            for (ActivePurification p : ACTIVE_PURIFICATIONS) {
+                if (p.level == lvl && p.center.distanceToSqr(pos) <= 12.0D * 12.0D) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     public static void cast(ServerLevel level, ServerPlayer player, ItemStack sword) {
+        // Hóa giải án tử đoạt tim của Cứu Thế Quyền Hiện ngay khi thi triển Phép Màu Của Thần Linh
+        com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(player);
+
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
         double maxDistance = 26.0D;
@@ -258,6 +275,12 @@ public class PurificationPillarAbility {
                         continue;
                     }
 
+                    // Cứu Thế Quyền Hiện & Linh Hồn kháng 100% Phép Màu Của Thần Linh, tự do bước qua không bị đẩy lùi
+                    if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity
+                            || e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity) {
+                        continue;
+                    }
+
                     // =============================================================
                     if (isIrredeemablyEvil(e)) {
                         // Không hồi máu, đẩy lùi ra khỏi cột sáng
@@ -334,6 +357,9 @@ public class PurificationPillarAbility {
                     // =============================================================
                     // 3. HỒI PHỤC TOÀN DIỆN CHO NGƯỜI CHƠI & SINH VẬT ĐƯỢC CHIẾU VÀO
                     // =============================================================
+                    // Giải trừ án tử đoạt tim của Cứu Thế Quyền Hiện
+                    com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(e);
+
                     // Xóa bỏ mọi debuff nguyền rủa/độc hại
                     e.removeEffect(MobEffects.WITHER);
                     e.removeEffect(MobEffects.POISON);
@@ -400,6 +426,10 @@ public class PurificationPillarAbility {
      * Xác định những sinh vật quá tà ác sẽ không được cứu rỗi
      */
     private static boolean isIrredeemablyEvil(LivingEntity e) {
+        if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity
+                || e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity) {
+            return false;
+        }
         return e instanceof WitherBoss
                 || e instanceof Warden
                 || e instanceof EnderDragon

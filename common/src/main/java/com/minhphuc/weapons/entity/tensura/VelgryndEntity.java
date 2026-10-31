@@ -127,25 +127,26 @@ public class VelgryndEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // 1. TUYỆT ĐỐI KHÔNG spawn dưới Địa Ngục (Nether) hoặc chiều không gian không phải Overworld
-            if (level instanceof ServerLevel sl) {
-                if (sl.dimension() != Level.OVERWORLD) {
-                    return false;
-                }
-                // Tối ưu chống lag: Kiểm tra trong phạm vi 128 blocks nếu đã có Velgrynd thì không spawn thêm
-                AABB checkArea = new AABB(this.blockPosition()).inflate(128.0D);
-                if (!sl.getEntitiesOfClass(VelgryndEntity.class, checkArea).isEmpty()) {
-                    return false;
-                }
+            // Tỷ lệ xuất hiện tự nhiên (1% cơ hội) - Kiểm tra trước để tránh quét thực thể
+            if (this.random.nextFloat() > 0.01F) {
+                return false;
             }
-            // 2. Phải là vị trí lộ thiên ngoài trời (thấy bầu trời, Y >= 60)
+
+            // Phải là vị trí lộ thiên ngoài trời (thấy bầu trời, Y >= 60)
             BlockPos pos = this.blockPosition();
             if (!level.canSeeSky(pos) || pos.getY() < 60) {
                 return false;
             }
-            // 3. Tỷ lệ xuất hiện tự nhiên tương đương Ác Ma Thủy Tổ (4% cơ hội khi chọn)
-            if (this.random.nextFloat() > 0.04F) {
-                return false;
+
+            if (level instanceof ServerLevel sl) {
+                if (sl.dimension() != Level.OVERWORLD) {
+                    return false;
+                }
+                // Tối ưu chống lag: Kiểm tra trong phạm vi 64 blocks nếu đã có Velgrynd thì không spawn thêm
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
+                if (!sl.getEntitiesOfClass(VelgryndEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
             }
         }
         return super.checkSpawnRules(level, spawnType);

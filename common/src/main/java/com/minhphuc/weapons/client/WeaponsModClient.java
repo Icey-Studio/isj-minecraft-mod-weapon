@@ -10,6 +10,7 @@ public class WeaponsModClient {
         ClientInputEvents.register();
         com.minhphuc.weapons.client.ClientTaisuiHandler.init();
         com.minhphuc.weapons.client.ClientTengaiMangaHandler.init();
+        com.minhphuc.weapons.client.ClientIaiHandler.init();
         com.minhphuc.weapons.client.ClientModelProperties.register();
 
         // Đăng ký Model Layers và Entity Renderers cho Ác Ma Thủy Tổ & Chước Nhiệt Long Velgrynd
@@ -56,6 +57,28 @@ public class WeaponsModClient {
         dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
                 com.minhphuc.weapons.entity.ModEntities.VELZARD,
                 com.minhphuc.weapons.client.renderer.VelzardRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.CuuTheQuyenHienModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.CuuTheQuyenHienModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CUU_THE_QUYEN_HIEN,
+                com.minhphuc.weapons.client.renderer.CuuTheQuyenHienRenderer::new
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CUU_THE_SOUL,
+                com.minhphuc.weapons.client.renderer.CuuTheSoulRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.TaKinhDaiTangModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.TaKinhDaiTangModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.TA_KINH_DAI_TANG,
+                com.minhphuc.weapons.client.renderer.TaKinhDaiTangRenderer::new
         );
 
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");

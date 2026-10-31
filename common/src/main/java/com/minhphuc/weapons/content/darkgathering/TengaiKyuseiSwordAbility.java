@@ -276,18 +276,29 @@ public class TengaiKyuseiSwordAbility {
 
         // SÁT THƯƠNG 150 CỰC ĐẠI VÀO MỤC TIÊU CHÍNH (BÂY GIỜ MỚI GÂY SÁT THƯƠNG)
         if (slash.targetEntity != null && slash.targetEntity.isAlive()) {
-            slash.targetEntity.invulnerableTime = 0;
-            slash.targetEntity.hurt(level.damageSources().playerAttack(player), 150.0F);
+            if (slash.targetEntity instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity) {
+                // Kháng 100% với Nghịch Thời Nhất Trảm và thông báo
+                level.playSound(null, slash.targetEntity.getX(), slash.targetEntity.getY(), slash.targetEntity.getZ(),
+                        SoundEvents.ANVIL_PLACE, SoundSource.HOSTILE, 2.0F, 1.4F);
+                level.playSound(null, slash.targetEntity.getX(), slash.targetEntity.getY(), slash.targetEntity.getZ(),
+                        SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 1.8F, 0.8F);
+                level.sendParticles(ParticleTypes.CRIT, slash.targetEntity.getX(), slash.targetEntity.getY() + 1.2D, slash.targetEntity.getZ(), 12, 0.4D, 0.4D, 0.4D, 0.15D);
+                player.sendSystemMessage(Component.literal("§c§l[Báo cáo] §fCá thể Cứu Thế Quyền Hiện đã chặn đứng Nghịch Thời Nhất Trảm!"));
+            } else {
+                slash.targetEntity.invulnerableTime = 0;
+                slash.targetEntity.hurt(level.damageSources().playerAttack(player), 150.0F);
 
-            // Hất văng lùi lại phía sau
-            Vec3 knockback = slash.targetPos.subtract(slash.startPos).normalize().scale(0.8D).add(0, 0.35D, 0);
-            slash.targetEntity.setDeltaMovement(knockback);
+                // Hất văng lùi lại phía sau
+                Vec3 knockback = slash.targetPos.subtract(slash.startPos).normalize().scale(0.8D).add(0, 0.35D, 0);
+                slash.targetEntity.setDeltaMovement(knockback);
+            }
         }
 
         // Sát thương lan xung quanh mục tiêu trong phạm vi 5 blocks
         AABB blastBox = new AABB(tPos.x - 5, tPos.y - 2, tPos.z - 5, tPos.x + 5, tPos.y + 3, tPos.z + 5);
         List<LivingEntity> nearbyMobs = level.getEntitiesOfClass(LivingEntity.class, blastBox,
-                e -> e != player && e != slash.targetEntity && e.isAlive() && !e.isSpectator());
+                e -> e != player && e != slash.targetEntity && e.isAlive() && !e.isSpectator()
+                        && !(e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity));
 
         for (LivingEntity mob : nearbyMobs) {
             mob.hurt(level.damageSources().playerAttack(player), 35.0F);

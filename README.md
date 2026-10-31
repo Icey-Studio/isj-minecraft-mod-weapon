@@ -64,7 +64,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ### ⚡ 5. Hệ Thống Tuyệt Kỹ Bản Thể & Không Hồi Chiêu (Zero Cooldown)
 * **Toàn bộ kỹ năng hoàn toàn không mất thời gian hồi chiêu (0s Cooldown)**, thi triển liên tục và mượt mà.
-* **Phím `[Z]` luân chuyển 18 tuyệt kỹ**:
+* **Phím `[Z]` luân chuyển 19 tuyệt kỹ**:
   1. *Linh Tử Băng Hoại*
   2. *Tà Khứ Vũ Thê Tử (Jacob's Ladder)*
   3. *Phép Màu Của Thần Linh*
@@ -76,13 +76,14 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
   9. *Diệt Thế Tà Tinh: Alkaid*
   10. *Cú Bắn Granit (Granite Blast)*
   11. *Nghịch Thời Nhất Trảm*
-  12. *Sáng Tạo Vật Chất* (Hạ Noir)
-  13. *Kháng Ma Kết Giới*
-  14. *Đa Trùng Kết Giới*
-  15. *Zone Track*
-  16. *Cảm Nhận Vạn Năng (Cấp 3)*
-  17. *Lồng Giam Vô Hạn (Cấp 3)*
-  18. *Phòng Ngự Tuyệt Đối Của Uriel (BẬT / TẮT)*
+  12. *Bạt Đao Thuật Vận Tốc Ngược*
+  13. *Sáng Tạo Vật Chất* (Hạ Noir)
+  14. *Kháng Ma Kết Giới*
+  15. *Đa Trùng Kết Giới*
+  16. *Zone Track*
+  17. *Cảm Nhận Vạn Năng (Cấp 3)*
+  18. *Lồng Giam Vô Hạn (Cấp 3)*
+  19. *Phòng Ngự Tuyệt Đối Của Uriel (BẬT / TẮT)*
 
 ---
 

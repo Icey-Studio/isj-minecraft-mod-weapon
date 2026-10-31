@@ -2,15 +2,12 @@ package com.minhphuc.weapons.entity;
 
 import com.minhphuc.weapons.WeaponsMod;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
-import dev.architectury.registry.level.biome.BiomeModifications;
 import dev.architectury.registry.level.entity.EntityAttributeRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.BiomeTags;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.level.biome.MobSpawnSettings;
 
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
@@ -60,6 +57,33 @@ public class ModEntities {
                             .build("velzard")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity>> CUU_THE_QUYEN_HIEN =
+            ENTITY_TYPES.register("cuu_the_quyen_hien", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity::new, MobCategory.MONSTER)
+                            .sized(0.75F, 2.35F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("cuu_the_quyen_hien")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity>> CUU_THE_SOUL =
+            ENTITY_TYPES.register("cuu_the_soul", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity::new, MobCategory.MISC)
+                            .sized(0.75F, 2.35F)
+                            .clientTrackingRange(16)
+                            .noSave()
+                            .build("cuu_the_soul")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity>> TA_KINH_DAI_TANG =
+            ENTITY_TYPES.register("ta_kinh_dai_tang", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity::new, MobCategory.MONSTER)
+                            .sized(0.7F, 2.2F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("ta_kinh_dai_tang")
+            );
+
     public static void register() {
         ENTITY_TYPES.register();
         EntityAttributeRegistry.register(PRIMORDIAL_DEMON, PrimordialDemonEntity::createAttributes);
@@ -67,8 +91,13 @@ public class ModEntities {
         EntityAttributeRegistry.register(KUBO, com.minhphuc.weapons.entity.darkgathering.KuboEntity::createAttributes);
         EntityAttributeRegistry.register(MILIM, com.minhphuc.weapons.entity.tensura.MilimEntity::createAttributes);
         EntityAttributeRegistry.register(VELZARD, com.minhphuc.weapons.entity.tensura.VelzardEntity::createAttributes);
+        EntityAttributeRegistry.register(CUU_THE_QUYEN_HIEN, com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity::createAttributes);
+        EntityAttributeRegistry.register(CUU_THE_SOUL, com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity::createAttributes);
+        EntityAttributeRegistry.register(TA_KINH_DAI_TANG, com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity::createAttributes);
+
         // Tối ưu hóa hiệu năng tối đa (Zero Lag):
-        // Toàn bộ các Đại Boss & Ác Ma Thủy Tổ được triệu hồi thông qua nghi lễ / vật phẩm khế ước,
-        // không spawn tự nhiên ngẫu nhiên trong Overworld để tránh nghẽn CPU & tràn RAM trên máy yếu.
+        // Toàn bộ các Đại Boss, Ác Ma Thủy Tổ và Tốt Nghiệp Sinh Cấp S được triệu hồi thông qua nghi lễ / vật phẩm khế ước,
+        // hoặc khiêu chiến thông qua Vật Phẩm Phong Ấn (Shift + Chuột Phải) và Trứng Triệu Hồi (Spawn Eggs).
+        // Tuyệt đối không spawn tự nhiên ngẫu nhiên trong Overworld để bảo vệ tuyệt đối CPU, FPS và ngăn chặn tình trạng nghẽn chunk/tràn RAM.
     }
 }

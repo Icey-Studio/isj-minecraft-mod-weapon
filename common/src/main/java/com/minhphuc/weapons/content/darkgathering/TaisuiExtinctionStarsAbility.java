@@ -394,6 +394,13 @@ public class TaisuiExtinctionStarsAbility {
                 e -> e != player && e.isAlive());
 
         for (LivingEntity victim : victims) {
+            // Tương tác đặc biệt với Cứu Thế Quyền Hiện: Đỡ đòn hoặc Né tránh
+            if (victim instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity boss) {
+                if (boss.handleExtinctionStarHit(player, eyePos, look)) {
+                    continue; // Đã chém chặn hoặc né thành công
+                }
+            }
+
             TensuraEvents.handleMobDeathDrop(player, victim);
             victim.hurt(level.damageSources().playerAttack(player), 99999.0F);
             if (victim.isAlive()) {

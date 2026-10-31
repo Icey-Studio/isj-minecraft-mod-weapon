@@ -15,7 +15,7 @@ import java.net.URI;
 public class GuideBookScreen extends Screen {
 
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 16;
+    private static final int TOTAL_PAGES = 19;
 
     private static final net.minecraft.resources.ResourceLocation DRAGON_NOVA_TEXTURE =
             net.minecraft.resources.ResourceLocation.fromNamespaceAndPath("weapons", "textures/gui/dragon_nova_art.png");
@@ -197,7 +197,7 @@ public class GuideBookScreen extends Screen {
         if (armorLegsBtn != null) armorLegsBtn.visible = isArmorPage;
         if (armorBootsBtn != null) armorBootsBtn.visible = isArmorPage;
 
-        boolean isAuthorPage = (currentPage == 15);
+        boolean isAuthorPage = (currentPage == 18);
         if (openGithubBtn != null) openGithubBtn.visible = isAuthorPage;
         if (copyGithubBtn != null) copyGithubBtn.visible = isAuthorPage;
     }
@@ -241,7 +241,10 @@ public class GuideBookScreen extends Screen {
             case 12 -> renderPagePrimordialsDomain(guiGraphics, left, top, mouseX, mouseY);
             case 13 -> renderPageVelgrynd(guiGraphics, left, top, mouseX, mouseY);
             case 14 -> renderPageMagisteelPhone(guiGraphics, left, top, mouseX, mouseY);
-            case 15 -> renderPageAuthor(guiGraphics, left, top, mouseX, mouseY);
+            case 15 -> renderPageCuuTheQuyenHien(guiGraphics, left, top, mouseX, mouseY);
+            case 16 -> renderPageCuuTheSealingAndCurse(guiGraphics, left, top, mouseX, mouseY);
+            case 17 -> renderPageTaKinhDaiTang(guiGraphics, left, top, mouseX, mouseY);
+            case 18 -> renderPageAuthor(guiGraphics, left, top, mouseX, mouseY);
         }
 
         // 3. Render Tooltip nếu đang di chuột qua slot item
@@ -878,6 +881,149 @@ public class GuideBookScreen extends Screen {
         guiGraphics.drawString(font, "§7• §5Kỹ Năng Độc Bản:§7 Liệt kê toàn bộ quyền năng và tuyệt chiêu sinh vật.", left + 22, textY, 0xFFDDDDDD, false);
         textY += 11;
         guiGraphics.drawString(font, "§f• §9Bảng Kháng Tính:§f Kháng lửa, rơi, đuối nước, nổ và ma lực cảm tri.", left + 22, textY, 0xFFFFFFFF, false);
+    }
+
+    private void renderPageCuuTheQuyenHien(GuiGraphics guiGraphics, int left, int top, int mouseX, int mouseY) {
+        guiGraphics.drawString(font, "§4§l✦ THIÊN NGOẠI CỨU THẾ QUYỀN HIỆN (TENGAI GUZE GONGEN) ✦", left + 14, top + 11, 0xFFFF5555, false);
+
+        int iconY = top + 32;
+        guiGraphics.renderItem(new ItemStack(ModItems.THIEN_MA_KATANA.get()), left + 18, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.SHIGARAKI_TANUKI_GONGEN.get()), left + 38, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.CUU_THE_QUYEN_HIEN_SPAWN_EGG.get()), left + 58, iconY);
+
+        if (mouseX >= left + 18 && mouseX <= left + 36 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.THIEN_MA_KATANA.get());
+        } else if (mouseX >= left + 38 && mouseX <= left + 56 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.SHIGARAKI_TANUKI_GONGEN.get());
+        } else if (mouseX >= left + 58 && mouseX <= left + 76 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.CUU_THE_QUYEN_HIEN_SPAWN_EGG.get());
+        }
+
+        guiGraphics.drawString(font, "§6[Oán Linh Cấp S - Tốt Nghiệp Sinh Đệ Nhất Khóa - 1500 HP]", left + 82, iconY + 4, 0xFFFFAA00, false);
+
+        int textY = top + 56;
+        guiGraphics.drawString(font, "§e⚔ 1. Hai Trạng Thái Chiến Đấu:", left + 18, textY, 0xFFFFDD00, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §cDạng Kiếm:§7 Cầm Thiên Ma Katana, tốc độ 0.30, chém 35 sát thương.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §6Võ Thần Tay Không (Brawler):§7 Đổi dạng khi bị Tiên Tri bẻ chiêu 2 lần.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§f  Tốc độ tăng 0.35, sát thương đấm 50, giảm 50% sát thương nhận từ Player.", left + 22, textY, 0xFFFFFFFF, false);
+
+        textY += 14;
+        guiGraphics.drawString(font, "§c⚡ 2. Bộ 3 Kỹ Năng Uy Lực Mới:", left + 18, textY, 0xFFFF5555, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §bKhông Gian Trảm:§7 Vung đao chém sóng chân không tầm xa 18m hất tung kẻ địch.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §dThiên Ngoại Thần Áp:§7 Dậm chân chấn động bán kính 10m ép rạp và cấm nhảy.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §aBát Nhã Kim Cang Thể:§7 Tăng giáp, phản 30% sát thương, siêu tốc hồi 30 HP/s.", left + 22, textY, 0xFFDDDDDD, false);
+
+        textY += 14;
+        guiGraphics.drawString(font, "§a🛡 3. Tương Quan Sức Mạnh & Kháng Tính:", left + 18, textY, 0xFF55FF55, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§f• Thua 100% trước Milim/Long Chủng; §eThắng 70% áp đảo Ác Ma Thủy Tổ§f.", left + 22, textY, 0xFFFFFFFF, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• Kháng 90% Linh Tử Băng Hoại, 70% Jacob, 100% Phép màu & Đức tin.", left + 22, textY, 0xFFDDDDDD, false);
+    }
+
+    private void renderPageCuuTheSealingAndCurse(GuiGraphics guiGraphics, int left, int top, int mouseX, int mouseY) {
+        guiGraphics.drawString(font, "§4§l✦ CHÉM XUYÊN THỜI GIAN & TƯỢNG GỐM SHIGARAKI ✦", left + 14, top + 11, 0xFFFF5555, false);
+
+        int iconY = top + 32;
+        guiGraphics.renderItem(new ItemStack(ModItems.SEVERED_HEART.get()), left + 18, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.SEVERED_BRAIN.get()), left + 38, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.SHIGARAKI_TANUKI_EMPTY.get()), left + 58, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.SHIGARAKI_TANUKI_GONGEN.get()), left + 78, iconY);
+
+        if (mouseX >= left + 18 && mouseX <= left + 36 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.SEVERED_HEART.get());
+        } else if (mouseX >= left + 38 && mouseX <= left + 56 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.SEVERED_BRAIN.get());
+        } else if (mouseX >= left + 58 && mouseX <= left + 76 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.SHIGARAKI_TANUKI_EMPTY.get());
+        } else if (mouseX >= left + 78 && mouseX <= left + 96 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.SHIGARAKI_TANUKI_GONGEN.get());
+        }
+
+        guiGraphics.drawString(font, "§6[Tuyệt Kĩ Cắt Rời Không Thời Gian & Pháp Khí Phong Ấn]", left + 102, iconY + 4, 0xFFFFAA00, false);
+
+        int textY = top + 56;
+        guiGraphics.drawString(font, "§c⏳ 1. Tam Thức Luân Chuyển Đoạt Mệnh:", left + 18, textY, 0xFFFF5555, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §cThức 1 (Đoạt Tim):§7 Rơi Trái Tim mục tiêu. Án tử 20s (Dùng Phép Màu Thần Linh).", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §5Thức 2 (Đoạt Não):§7 Rơi Não. Án tử 15s, mù lòa, choáng (Dùng Bí Ẩn Đức Tin).", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§4• Thức 3 (Song Trảm): Rơi CẢ TIM LẪN NÃO! Án tử kép cực kỳ nguy hiểm!", left + 22, textY, 0xFFFF5555, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§a• PHÁ CHIÊU: Bật Tiên Tri (Rykuzin Sinka) để thấy và đánh tan linh hồn!", left + 22, textY, 0xFF55FF55, false);
+
+        textY += 14;
+        guiGraphics.drawString(font, "§6🏮 2. Khiêu Chiến, Phong Ấn & Triệu Hồi (Tượng Shigaraki):", left + 18, textY, 0xFFFFDD00, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §6Khiêu Chiến:§7 Cầm Tượng Rỗng §e[Shift + Chuột Phải]§7 để gọi hắn giáng lâm.", left + 22, textY, 0xFFFFAA00, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §eĐiều Kiện Phong Ấn:§7 Làm Cứu Thế suy yếu <= 20% HP (<= 300 HP) hoặc làm choáng.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7  Cầm Tượng Rỗng [Chuột Phải] vào hắn để phong ấn thành công.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§f• §aTriệu Hồi & Thu Hồi:§f Chuột phải để thả ra chiến đấu với Kotodama 'Kiwamete'.", left + 22, textY, 0xFFFFFFFF, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§f  Kiểm soát tối đa 90 giây. Dùng Tượng Rỗng chuột phải vào hắn để thu hồi an toàn.", left + 22, textY, 0xFFFFFFFF, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§c• CẢNH BÁO: Hết 90 giây mà chưa thu hồi, hắn sẽ bạo tẩu quay sang đồ sát bạn!", left + 22, textY, 0xFFFF5555, false);
+    }
+
+    private void renderPageTaKinhDaiTang(GuiGraphics guiGraphics, int left, int top, int mouseX, int mouseY) {
+        guiGraphics.drawString(font, "§4§l✦ TÀ KINH ĐẠI TĂNG (JANKYŌBUN DAISŌJŌ) ✦", left + 14, top + 11, 0xFFFF5555, false);
+
+        int iconY = top + 32;
+        guiGraphics.renderItem(new ItemStack(ModItems.TA_KINH_DAI_TANG_SPAWN_EGG.get()), left + 18, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.WARDING_EARPLUGS.get()), left + 38, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.BODHI_EFFIGY_EMPTY.get()), left + 58, iconY);
+        guiGraphics.renderItem(new ItemStack(ModItems.BODHI_EFFIGY_MONK.get()), left + 78, iconY);
+
+        if (mouseX >= left + 18 && mouseX <= left + 36 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.TA_KINH_DAI_TANG_SPAWN_EGG.get());
+        } else if (mouseX >= left + 38 && mouseX <= left + 56 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.WARDING_EARPLUGS.get());
+        } else if (mouseX >= left + 58 && mouseX <= left + 76 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.BODHI_EFFIGY_EMPTY.get());
+        } else if (mouseX >= left + 78 && mouseX <= left + 96 && mouseY >= iconY && mouseY <= iconY + 18) {
+            hoveredTooltipStack = new ItemStack(ModItems.BODHI_EFFIGY_MONK.get());
+        }
+
+        guiGraphics.drawString(font, "§6[Tốt Nghiệp Sinh Cấp S - Nhục Thân Bồ Tát Đọa Lạc - 1200 HP]", left + 102, iconY + 4, 0xFFFFAA00, false);
+
+        int textY = top + 56;
+        guiGraphics.drawString(font, "§c🔔 1. Tà Kinh Tuyệt Mệnh (Deadly Sutra):", left + 18, textY, 0xFFFF5555, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• Đại Tăng gõ mõ tụng kinh trong bán kính §c20m§7. Bất kỳ ai nghe thấy tiếng kinh", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7  sẽ bị rút cạn sinh lực tăng dần, mù lòa, suy yếu và §4tử vong sau 10 giây§7!", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§a• PHÒNG VỆ SỐNG CÒN:§f Bắt buộc dùng §6Bông Bịt Tai Phong Ấn§f để miễn nhiễm 100%!", left + 22, textY, 0xFF55FF55, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§e• Warden có thính giác siêu nhạy: Nhận x2.5 sát thương và tử nạn cực nhanh!", left + 22, textY, 0xFFFFDD00, false);
+
+        textY += 14;
+        guiGraphics.drawString(font, "§d📜 2. Khắc Kinh Văn & Hoàng Tuyền Hóa Độ:", left + 18, textY, 0xFFFF77FF, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §bKhắc Kinh:§7 Bắn dải bùa khóa kỹ năng, cấm hồi máu và làm chậm trong 6s.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• §5Hoàng Tuyền:§7 Dưới 50% HP mở kết giới tro tàn thiêu đốt sinh lực kẻ địch.", left + 22, textY, 0xFFDDDDDD, false);
+
+        textY += 14;
+        guiGraphics.drawString(font, "§6🏮 3. Khiêu Chiến, Phong Ấn & Triệu Hồi (Hình Nhân Gỗ):", left + 18, textY, 0xFFFFDD00, false);
+        textY += 12;
+        guiGraphics.drawString(font, "§7• §6Khiêu Chiến:§7 Cầm Hình Nhân Rỗng §e[Shift + Chuột Phải]§7 để gọi ngài giáng lâm.", left + 22, textY, 0xFFFFAA00, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§7• Phong ấn khi Đại Tăng suy yếu §c<= 20% HP§7 (<= 240 HP) hoặc bị làm choáng.", left + 22, textY, 0xFFDDDDDD, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§f• Chuột phải để thả ra chiến đấu trong §e60 giây§f. Hết giờ sẽ bạo tẩu phản phệ!", left + 22, textY, 0xFFFFFFFF, false);
+        textY += 11;
+        guiGraphics.drawString(font, "§4• CẢNH BÁO: Khi thả ra, CHỦ NHÂN PHẢI ĐEO BÔNG BỊT TAI nếu không sẽ chết!", left + 22, textY, 0xFFFF5555, false);
     }
 
     private void renderPageAuthor(GuiGraphics guiGraphics, int left, int top, int mouseX, int mouseY) {

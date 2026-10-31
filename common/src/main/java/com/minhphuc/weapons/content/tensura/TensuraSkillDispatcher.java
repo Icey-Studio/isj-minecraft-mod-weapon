@@ -1,6 +1,8 @@
 package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.content.darkgathering.AlkaidAbility;
+import com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility;
+import com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility;
 import com.minhphuc.weapons.content.darkgathering.SeerFleshAbility;
 import com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility;
 import com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility;
@@ -21,11 +23,12 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 18 : 17;
+        return hasCreation ? 20 : 19;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
         boolean urielActive = EvolvedSkillHelper.isUrielDefenseActive(player);
+        boolean rykuzinActive = RykuzinSinkaAbility.isActive(player);
         if (hasCreation) {
             return switch (index) {
                 case 0 -> "§e§l1. Linh Tử Băng Hoại (Disintegration)";
@@ -39,13 +42,15 @@ public class TensuraSkillDispatcher {
                 case 8 -> "§4§l9. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
                 case 9 -> "§6§l10. Cú Bắn Granit (Granite Blast)";
                 case 10 -> "§f§l11. Nghịch Thời Nhất Trảm (Reverse-Time Slash)";
-                case 11 -> "§6§l12. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
-                case 12 -> "§a§l13. Kháng Ma Kết Giới (Anti-Magic Barrier)";
-                case 13 -> "§b§l14. Đa Trùng Kết Giới (Multilayer Barrier)";
-                case 14 -> "§f§l15. Zone Track (Pure White Beam)";
-                case 15 -> "§b§l16. Cảm Nhận Vạn Năng (Universal Sense)";
-                case 16 -> "§6§l17. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
-                case 17 -> "§e§l18. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 11 -> "§c§l12. Bạt Đao Thuật Vận Tốc Ngược (Reverse-Velocity Iaijutsu)";
+                case 12 -> "§6§l13. Sáng Tạo Vật Chất: Ngưng Tụ Thần Khí (Material Creation)";
+                case 13 -> "§a§l14. Kháng Ma Kết Giới (Anti-Magic Barrier)";
+                case 14 -> "§b§l15. Đa Trùng Kết Giới (Multilayer Barrier)";
+                case 15 -> "§f§l16. Zone Track (Pure White Beam)";
+                case 16 -> "§b§l17. Cảm Nhận Vạn Năng (Universal Sense)";
+                case 17 -> "§6§l18. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
+                case 18 -> "§e§l19. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 19 -> "§e§l20. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -61,18 +66,31 @@ public class TensuraSkillDispatcher {
                 case 8 -> "§4§l9. Diệt Thế Tà Tinh: Alkaid (ALKAID)";
                 case 9 -> "§6§l10. Cú Bắn Granit (Granite Blast)";
                 case 10 -> "§f§l11. Nghịch Thời Nhất Trảm (Reverse-Time Slash)";
-                case 11 -> "§a§l12. Kháng Ma Kết Giới (Anti-Magic Barrier)";
-                case 12 -> "§b§l13. Đa Trùng Kết Giới (Multilayer Barrier)";
-                case 13 -> "§f§l14. Zone Track (Pure White Beam)";
-                case 14 -> "§b§l15. Cảm Nhận Vạn Năng (Universal Sense)";
-                case 15 -> "§6§l16. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
-                case 16 -> "§e§l17. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 11 -> "§c§l12. Bạt Đao Thuật Vận Tốc Ngược (Reverse-Velocity Iaijutsu)";
+                case 12 -> "§a§l13. Kháng Ma Kết Giới (Anti-Magic Barrier)";
+                case 13 -> "§b§l14. Đa Trùng Kết Giới (Multilayer Barrier)";
+                case 14 -> "§f§l15. Zone Track (Pure White Beam)";
+                case 15 -> "§b§l16. Cảm Nhận Vạn Năng (Universal Sense)";
+                case 16 -> "§6§l17. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
+                case 17 -> "§e§l18. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 18 -> "§e§l19. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 default -> "§7Chưa chọn";
             };
         }
     }
 
     public static void executeSkill(ServerLevel level, ServerPlayer player, int index, boolean hasCreation) {
+        int rykuzinIndex = hasCreation ? 19 : 18;
+
+        // Nếu đang bật Tiên Tri và dùng skill khác -> Tự động tắt Tiên Tri
+        if (index != rykuzinIndex && RykuzinSinkaAbility.isActive(player)) {
+            RykuzinSinkaAbility.deactivate(player);
+            player.displayClientMessage(
+                    Component.literal("§e[TIÊN TRI] §fKỹ năng Tiên Tri đã tự động tắt khi thi triển kỹ năng khác."),
+                    true
+            );
+        }
+
         // Nếu đang kích hoạt Tuyệt Diệt Tinh Tú thì chỉ cho phép kết hợp kích hoạt Thị Thực (Chiêu 8 - index 7) hoặc Alkaid (Chiêu 9 - index 8)
         if (index != 6 && index != 7 && index != 8 && TaisuiExtinctionStarsAbility.isTaisuiActive(player)) {
             player.displayClientMessage(
@@ -95,13 +113,15 @@ public class TensuraSkillDispatcher {
                 case 8 -> AlkaidAbility.cast(level, player);
                 case 9 -> HorizontalHolyBeamAbility.cast(level, player);
                 case 10 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
-                case 11 -> ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
-                case 12 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
-                case 13 -> MultilayerBarrierAbility.cast(level, player);
-                case 14 -> ZoneTrackAbility.cast(level, player);
-                case 15 -> UniversalSenseAbility.cast(level, player, 3);
-                case 16 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
-                case 17 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                case 11 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
+                case 12 -> ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
+                case 13 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
+                case 14 -> MultilayerBarrierAbility.cast(level, player);
+                case 15 -> ZoneTrackAbility.cast(level, player);
+                case 16 -> UniversalSenseAbility.cast(level, player, 3);
+                case 17 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
+                case 18 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                case 19 -> RykuzinSinkaAbility.toggle(level, player);
             }
         } else {
             switch (index) {
@@ -116,12 +136,14 @@ public class TensuraSkillDispatcher {
                 case 8 -> AlkaidAbility.cast(level, player);
                 case 9 -> HorizontalHolyBeamAbility.cast(level, player);
                 case 10 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
-                case 11 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
-                case 12 -> MultilayerBarrierAbility.cast(level, player);
-                case 13 -> ZoneTrackAbility.cast(level, player);
-                case 14 -> UniversalSenseAbility.cast(level, player, 3);
-                case 15 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
-                case 16 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                case 11 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
+                case 12 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
+                case 13 -> MultilayerBarrierAbility.cast(level, player);
+                case 14 -> ZoneTrackAbility.cast(level, player);
+                case 15 -> UniversalSenseAbility.cast(level, player, 3);
+                case 16 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
+                case 17 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                case 18 -> RykuzinSinkaAbility.toggle(level, player);
             }
         }
     }

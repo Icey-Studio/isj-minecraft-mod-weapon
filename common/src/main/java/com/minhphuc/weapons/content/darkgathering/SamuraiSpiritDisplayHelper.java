@@ -125,8 +125,8 @@ public class SamuraiSpiritDisplayHelper {
         double dist = dir.length();
         if (dist <= 0.01D) return;
 
-        Vec3 step = dir.normalize().scale(2.5D); // Bước nhảy lớn 2.5 blocks để tiết kiệm tài nguyên
-        int count = Math.min((int) Math.ceil(dist / 2.5D), 8); // Tối đa 8 điểm nhấn chấn động
+        Vec3 step = dir.normalize().scale(3.0D); // Bước nhảy 3.0 blocks tối ưu cực hạn
+        int count = Math.min((int) Math.ceil(dist / 3.0D), 4); // Tối đa 4 điểm nhấn chấn động
 
         Vec3 current = startPos;
         for (int i = 0; i < count; i++) {
@@ -139,18 +139,20 @@ public class SamuraiSpiritDisplayHelper {
 
             if (!state.isAir()) {
                 level.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, state),
-                        current.x, current.y + 0.1D, current.z, 2, 0.15D, 0.05D, 0.15D, 0.05D);
+                        current.x, current.y + 0.1D, current.z, 1, 0.1D, 0.05D, 0.1D, 0.02D);
             }
-            level.sendParticles(ParticleTypes.WAX_OFF, current.x, current.y + 0.15D, current.z, 1, 0.1D, 0.05D, 0.1D, 0.02D);
+            level.sendParticles(ParticleTypes.WAX_OFF, current.x, current.y + 0.15D, current.z, 1, 0.05D, 0.05D, 0.05D, 0.01D);
 
             current = current.add(step);
         }
     }
 
     /**
-     * Dọn dẹp linh hồn tạm thời khi hết 10 ticks
+     * Dọn dẹp linh hồn tạm thời khi hết 10 ticks (Tối ưu 0 lag khi rỗng)
      */
     public static void tickSpirits(ServerLevel level) {
+        if (ACTIVE_SPIRITS.isEmpty()) return;
+
         Iterator<TemporarySpirit> it = ACTIVE_SPIRITS.iterator();
         while (it.hasNext()) {
             TemporarySpirit s = it.next();

@@ -39,13 +39,41 @@ public class DivineWeaponEvents {
             com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.tickFleshes(level);
             com.minhphuc.weapons.content.darkgathering.AlkaidAbility.tickAlkaids(level);
             com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.tickAbilities(level);
+            com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.tickAbilities(level);
+            com.minhphuc.weapons.content.darkgathering.SeveredHeartCurseManager.tick(level);
+            com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.tickAbilities(level);
+            com.minhphuc.weapons.content.darkgathering.ThienMaCurseManager.tick(level);
+            com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility.tick(level);
+            com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.tick(level);
+            com.minhphuc.weapons.content.darkgathering.WardingEarplugsItem.tickProtection(level);
+            com.minhphuc.weapons.content.darkgathering.DigitalLedDisplayHelper.tickLeds(level);
+            com.minhphuc.weapons.content.darkgathering.SamuraiSpiritDisplayHelper.tickSpirits(level);
         });
 
         // Dọn dẹp tàn ảnh khi thế giới dỡ bỏ để chống rò rỉ bộ nhớ
-        dev.architectury.event.events.common.LifecycleEvent.SERVER_LEVEL_UNLOAD.register(com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility::cleanup);
+        dev.architectury.event.events.common.LifecycleEvent.SERVER_LEVEL_UNLOAD.register(level -> {
+            com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.SeveredHeartCurseManager.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.ThienMaCurseManager.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cleanup(level);
+            com.minhphuc.weapons.content.darkgathering.DigitalLedDisplayHelper.clearAll();
+            com.minhphuc.weapons.content.darkgathering.SamuraiSpiritDisplayHelper.clearAll();
+        });
+
+        // Dọn dẹp session khi người chơi thoát game
+        dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(serverPlayer -> {
+            com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.onPlayerQuit(serverPlayer);
+            com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.onPlayerQuit(serverPlayer);
+            com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility.onPlayerQuit(serverPlayer);
+        });
 
         // Đánh vào Thị Thực bằng chuột trái: Rạch lấy Con Mắt Thị Thực
         dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.SeerFleshAbility::onAttack);
+        dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility::onPlayerAttackEntity);
+        dev.architectury.event.events.common.PlayerEvent.ATTACK_ENTITY.register(com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility::onPlayerAttackEntity);
 
         // Đồng bộ trạng thái Tuyệt Diệt Tinh Tú khi người chơi tham gia thế giới
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(serverPlayer -> {
@@ -127,6 +155,12 @@ public class DivineWeaponEvents {
     }
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
+        // Kiểm tra nếu mục tiêu đang trong trạng thái ngưng đọng thời gian của Bạt Đao Thuật hoặc Thiên Ma Kiếm
+        if (com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.isEntityFrozenInSession(victim)
+                || com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.isEntityFrozenInSession(victim)) {
+            return EventResult.interruptFalse();
+        }
+
         // =========================================================================
         // 1. PHÒNG NGỰ TUYỆT ĐỐI CỦA URIEL & THẦN LINH VŨ TRANG (DIVINE ARMOR)
         // =========================================================================

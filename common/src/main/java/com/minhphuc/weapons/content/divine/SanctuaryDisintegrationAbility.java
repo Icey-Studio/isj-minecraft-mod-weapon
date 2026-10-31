@@ -198,6 +198,25 @@ public class SanctuaryDisintegrationAbility {
     }
 
     /**
+     * Hóa giải và phá hủy toàn bộ Tam Tầng Pháp Trận Ánh Sáng trong phạm vi
+     */
+    public static void cancelNearbySanctuaries(ServerLevel level, Vec3 pos, double radius) {
+        if (ACTIVE_SANCTUARIES.isEmpty()) return;
+        double rSq = radius * radius;
+        Iterator<ActiveSanctuary> it = ACTIVE_SANCTUARIES.iterator();
+        while (it.hasNext()) {
+            ActiveSanctuary s = it.next();
+            if (s.level == level && s.center.distanceToSqr(pos) <= rSq) {
+                s.cleanupDisplays();
+                it.remove();
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.0F, 0.8F);
+                level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 2.5F, 0.6F);
+                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, pos.x, pos.y + 1.0D, pos.z, 2, 0, 0, 0, 0);
+            }
+        }
+    }
+
+    /**
      * Kích hoạt tuyệt kĩ: Tam Trọng Thánh Giới - Linh Tử Băng Hoại
      */
     public static void cast(ServerLevel level, ServerPlayer player, ItemStack sword) {

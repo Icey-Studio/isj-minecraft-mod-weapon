@@ -175,6 +175,12 @@ public class HorizontalHolyBeamAbility {
 
         spawn3DBeamDisplay(level, startPos, dir, range, 3.2F, 0xFFFFFF, 5.5F, 0xFFAA00, 30);
 
+        // Cứu Thế Quyền Hiện phát hiện đại pháo Granit và chủ động né tránh
+        AABB beamWarnArea = new AABB(startPos, startPos.add(dir.scale(range))).inflate(8.0D);
+        for (var boss : level.getEntitiesOfClass(com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity.class, beamWarnArea)) {
+            boss.tryDodgeGranite(startPos, dir);
+        }
+
         // 2. TÍNH TOÁN VA CHẠM, SÁT THƯƠNG & XÉ RÁCH ĐỊA HÌNH
         double step = 1.0D;
         Vec3 cur = startPos;
@@ -212,12 +218,14 @@ public class HorizontalHolyBeamAbility {
                 victim.setDeltaMovement(knockback);
                 victim.hasImpulse = true;
 
+                victim.addTag("GraniteBlastDamage");
                 if (caster instanceof ServerPlayer sp) {
                     victim.hurt(sp.damageSources().playerAttack(sp), damage);
                     TensuraEvents.handleMobDeathDrop(sp, victim);
                 } else {
                     victim.hurt(level.damageSources().magic(), damage);
                 }
+                victim.removeTag("GraniteBlastDamage");
             }
 
             // Thiêu đốt mặt đất và làm vỡ các khối yếu (lá, mạng nhện, băng...)
