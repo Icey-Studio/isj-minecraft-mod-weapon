@@ -46,6 +46,8 @@ public class DivineWeaponEvents {
             com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility.tick(level);
             com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.tick(level);
             com.minhphuc.weapons.content.darkgathering.WardingEarplugsItem.tickProtection(level);
+            com.minhphuc.weapons.content.darkgathering.DigitalLedDisplayHelper.tickLeds(level);
+            com.minhphuc.weapons.content.darkgathering.SamuraiSpiritDisplayHelper.tickSpirits(level);
         });
 
         // Dọn dẹp tàn ảnh khi thế giới dỡ bỏ để chống rò rỉ bộ nhớ

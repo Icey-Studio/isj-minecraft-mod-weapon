@@ -960,8 +960,10 @@ public class GuideBookScreen extends Screen {
         guiGraphics.drawString(font, "§a• PHÁ CHIÊU: Bật Tiên Tri (Rykuzin Sinka) để thấy và đánh tan linh hồn!", left + 22, textY, 0xFF55FF55, false);
 
         textY += 14;
-        guiGraphics.drawString(font, "§6🏮 2. Phong Ấn & Triệu Hồi (Tượng Lửng Shigaraki):", left + 18, textY, 0xFFFFDD00, false);
+        guiGraphics.drawString(font, "§6🏮 2. Khiêu Chiến, Phong Ấn & Triệu Hồi (Tượng Shigaraki):", left + 18, textY, 0xFFFFDD00, false);
         textY += 12;
+        guiGraphics.drawString(font, "§7• §6Khiêu Chiến:§7 Cầm Tượng Rỗng §e[Shift + Chuột Phải]§7 để gọi hắn giáng lâm.", left + 22, textY, 0xFFFFAA00, false);
+        textY += 11;
         guiGraphics.drawString(font, "§7• §eĐiều Kiện Phong Ấn:§7 Làm Cứu Thế suy yếu <= 20% HP (<= 300 HP) hoặc làm choáng.", left + 22, textY, 0xFFDDDDDD, false);
         textY += 11;
         guiGraphics.drawString(font, "§7  Cầm Tượng Rỗng [Chuột Phải] vào hắn để phong ấn thành công.", left + 22, textY, 0xFFDDDDDD, false);
@@ -1013,8 +1015,10 @@ public class GuideBookScreen extends Screen {
         guiGraphics.drawString(font, "§7• §5Hoàng Tuyền:§7 Dưới 50% HP mở kết giới tro tàn thiêu đốt sinh lực kẻ địch.", left + 22, textY, 0xFFDDDDDD, false);
 
         textY += 14;
-        guiGraphics.drawString(font, "§6🏮 3. Phong Ấn & Triệu Hồi (Hình Nhân Gỗ Bồ Đề):", left + 18, textY, 0xFFFFDD00, false);
+        guiGraphics.drawString(font, "§6🏮 3. Khiêu Chiến, Phong Ấn & Triệu Hồi (Hình Nhân Gỗ):", left + 18, textY, 0xFFFFDD00, false);
         textY += 12;
+        guiGraphics.drawString(font, "§7• §6Khiêu Chiến:§7 Cầm Hình Nhân Rỗng §e[Shift + Chuột Phải]§7 để gọi ngài giáng lâm.", left + 22, textY, 0xFFFFAA00, false);
+        textY += 11;
         guiGraphics.drawString(font, "§7• Phong ấn khi Đại Tăng suy yếu §c<= 20% HP§7 (<= 240 HP) hoặc bị làm choáng.", left + 22, textY, 0xFFDDDDDD, false);
         textY += 11;
         guiGraphics.drawString(font, "§f• Chuột phải để thả ra chiến đấu trong §e60 giây§f. Hết giờ sẽ bạo tẩu phản phệ!", left + 22, textY, 0xFFFFFFFF, false);

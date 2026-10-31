@@ -2,21 +2,12 @@ package com.minhphuc.weapons.entity;
 
 import com.minhphuc.weapons.WeaponsMod;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
-import dev.architectury.registry.level.biome.BiomeModifications;
 import dev.architectury.registry.level.entity.EntityAttributeRegistry;
-import dev.architectury.registry.level.entity.SpawnPlacementsRegistry;
 import dev.architectury.registry.registries.DeferredRegister;
 import dev.architectury.registry.registries.RegistrySupplier;
 import net.minecraft.core.registries.Registries;
-import net.minecraft.tags.BiomeTags;
-import net.minecraft.world.Difficulty;
 import net.minecraft.world.entity.EntityType;
-import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobCategory;
-import net.minecraft.world.entity.SpawnPlacementTypes;
-import net.minecraft.world.entity.monster.Monster;
-import net.minecraft.world.level.biome.MobSpawnSettings;
-import net.minecraft.world.level.levelgen.Heightmap;
 
 public class ModEntities {
     public static final DeferredRegister<EntityType<?>> ENTITY_TYPES =
@@ -104,53 +95,9 @@ public class ModEntities {
         EntityAttributeRegistry.register(CUU_THE_SOUL, com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity::createAttributes);
         EntityAttributeRegistry.register(TA_KINH_DAI_TANG, com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity::createAttributes);
 
-        // Đăng ký quy tắc Spawn Placement cho các thực thể xuất hiện tự nhiên
-        SpawnPlacementsRegistry.register(PRIMORDIAL_DEMON, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
-                (type, level, spawnType, pos, random) -> level.getDifficulty() != Difficulty.PEACEFUL && Monster.isDarkEnoughToSpawn(level, pos, random) && Mob.checkMobSpawnRules(type, level, spawnType, pos, random));
-
-        SpawnPlacementsRegistry.register(KUBO, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        SpawnPlacementsRegistry.register(MILIM, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        SpawnPlacementsRegistry.register(CUU_THE_QUYEN_HIEN, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        SpawnPlacementsRegistry.register(TA_KINH_DAI_TANG, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        SpawnPlacementsRegistry.register(VELGRYND, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        SpawnPlacementsRegistry.register(VELZARD, SpawnPlacementTypes.ON_GROUND,
-                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, Monster::checkMonsterSpawnRules);
-
-        // Bổ sung vào Biome theo cấp độ hiếm chuẩn:
-        // Cấp 1: Ác Ma Thủy Tổ & Không Vong (Ít hiếm nhất trong nhóm: weight 6 & 5)
-        // Cấp 2: Milim & Cứu Thế Quyền Hiện (Hiếm hơn: weight 2)
-        // Cấp 3: Long Chủng Velgrynd & Velzard (Hiếm nhất: weight 1)
-        BiomeModifications.addProperties((context, mutable) -> {
-            if (context.hasTag(BiomeTags.IS_OVERWORLD)) {
-                var spawns = mutable.getSpawnProperties();
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(PRIMORDIAL_DEMON.get(), 6, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(KUBO.get(), 5, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(MILIM.get(), 2, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CUU_THE_QUYEN_HIEN.get(), 2, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(TA_KINH_DAI_TANG.get(), 2, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELGRYND.get(), 1, 1, 1));
-                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELZARD.get(), 1, 1, 1));
-
-                // Giới hạn spawn cost chống nghẽn / lag thế giới
-                spawns.setSpawnCost(PRIMORDIAL_DEMON.get(), 0.7D, 0.15D);
-                spawns.setSpawnCost(KUBO.get(), 0.8D, 0.15D);
-                spawns.setSpawnCost(MILIM.get(), 1.0D, 0.15D);
-                spawns.setSpawnCost(CUU_THE_QUYEN_HIEN.get(), 1.0D, 0.15D);
-                spawns.setSpawnCost(TA_KINH_DAI_TANG.get(), 1.0D, 0.15D);
-                spawns.setSpawnCost(VELGRYND.get(), 1.0D, 0.15D);
-                spawns.setSpawnCost(VELZARD.get(), 1.0D, 0.15D);
-            }
-        });
+        // Tối ưu hóa hiệu năng tối đa (Zero Lag):
+        // Toàn bộ các Đại Boss, Ác Ma Thủy Tổ và Tốt Nghiệp Sinh Cấp S được triệu hồi thông qua nghi lễ / vật phẩm khế ước,
+        // hoặc khiêu chiến thông qua Vật Phẩm Phong Ấn (Shift + Chuột Phải) và Trứng Triệu Hồi (Spawn Eggs).
+        // Tuyệt đối không spawn tự nhiên ngẫu nhiên trong Overworld để bảo vệ tuyệt đối CPU, FPS và ngăn chặn tình trạng nghẽn chunk/tràn RAM.
     }
 }

@@ -36,6 +36,40 @@ public class ShigarakiTanukiEmptyItem extends Item {
     }
 
     @Override
+    public net.minecraft.world.InteractionResultHolder<ItemStack> use(net.minecraft.world.level.Level level, Player player, InteractionHand hand) {
+        ItemStack stack = player.getItemInHand(hand);
+        if (player.isShiftKeyDown()) {
+            if (!level.isClientSide()) {
+                ServerLevel sl = (ServerLevel) level;
+                net.minecraft.world.phys.AABB checkArea = player.getBoundingBox().inflate(64.0D);
+                if (!sl.getEntitiesOfClass(CuuTheQuyenHienEntity.class, checkArea).isEmpty()) {
+                    player.displayClientMessage(
+                            Component.literal("§c⚠️ Đã có một Cứu Thế Quyền Hiện đang ở gần! Hãy đánh bại hoặc phong ấn hắn trước!"),
+                            true
+                    );
+                    return net.minecraft.world.InteractionResultHolder.fail(stack);
+                }
+
+                net.minecraft.world.phys.Vec3 spawnPos = player.position().add(player.getLookAngle().scale(6.0D));
+                CuuTheQuyenHienEntity boss = new CuuTheQuyenHienEntity(com.minhphuc.weapons.entity.ModEntities.CUU_THE_QUYEN_HIEN.get(), sl);
+                boss.moveTo(spawnPos.x, spawnPos.y + 0.5D, spawnPos.z, player.getYRot() + 180.0F, 0.0F);
+                sl.addFreshEntity(boss);
+
+                sl.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 2.5F, 0.6F);
+                sl.playSound(null, boss.getX(), boss.getY(), boss.getZ(), SoundEvents.BELL_RESONATE, SoundSource.HOSTILE, 3.0F, 0.5F);
+                sl.sendParticles(ParticleTypes.SOUL, boss.getX(), boss.getY() + 1.2D, boss.getZ(), 30, 0.5D, 0.5D, 0.5D, 0.1D);
+
+                player.displayClientMessage(
+                        Component.literal("§4§l【 KHIÊU CHIẾN 】 §cCứu Thế Quyền Hiện đã giáng lâm! Hãy làm suy yếu xuống dưới 20% HP hoặc làm choáng để phong ấn!"),
+                        false
+                );
+            }
+            return net.minecraft.world.InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
+        }
+        return super.use(level, player, hand);
+    }
+
+    @Override
     public InteractionResult interactLivingEntity(ItemStack stack, Player player, LivingEntity target, InteractionHand hand) {
         if (target instanceof CuuTheQuyenHienEntity gongen && gongen.isAlive()) {
             if (player.level().isClientSide()) {
@@ -108,6 +142,8 @@ public class ShigarakiTanukiEmptyItem extends Item {
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltip, TooltipFlag flag) {
         tooltip.add(Component.literal("§8Vật chứa phong ấn Tốt Nghiệp Sinh — Dark Gathering Chap 83.").withStyle(ChatFormatting.ITALIC));
         tooltip.add(Component.literal("§6§lTượng Lửng Gốm Shigaraki (信楽焼の狸の置物)"));
+        tooltip.add(Component.literal(""));
+        tooltip.add(Component.literal("§6⚡ [Shift + Chuột Phải]§f: Khiêu chiến gọi ra Cứu Thế Quyền Hiện hoang dã."));
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§e👉 Chuột phải vào Cứu Thế Quyền Hiện:"));
         tooltip.add(Component.literal("§7- §aYêu cầu làm suy yếu máu còn §e<= 20% §7(<= 300 HP)"));

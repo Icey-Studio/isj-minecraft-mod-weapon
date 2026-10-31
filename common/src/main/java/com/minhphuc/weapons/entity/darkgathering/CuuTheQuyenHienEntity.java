@@ -1,5 +1,7 @@
 package com.minhphuc.weapons.entity.darkgathering;
 
+import java.util.UUID;
+
 import com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager;
 import com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility;
 import com.minhphuc.weapons.content.darkgathering.SeerFleshAbility;
@@ -231,9 +233,9 @@ public class CuuTheQuyenHienEntity extends Monster {
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, LivingEntity.class, 12.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
-        // Căm thù tất cả sinh vật sống (quét mỗi 10 ticks để tránh lag)
+        // Căm thù tất cả sinh vật sống (quét mỗi 20 ticks = 1s để giảm tải CPU)
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(
-                this, LivingEntity.class, 10, true, false,
+                this, LivingEntity.class, 20, true, false,
                 e -> {
                     if (e instanceof CuuTheQuyenHienEntity || e instanceof CuuTheSoulEntity || !e.isAlive()) return false;
                     // Khi đang được người chơi triệu hồi kiểm soát (chưa bạo tẩu)
@@ -436,18 +438,15 @@ public class CuuTheQuyenHienEntity extends Monster {
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BELL_RESONATE, SoundSource.HOSTILE, 3.0F, 0.7F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.5F, 0.8F);
 
-        // Vòng sóng xung kích trọng lực (radius 3.5, 7.0, 10.0)
+        // Vòng sóng xung kích trọng lực tối ưu (3 vòng, mỗi vòng 8 điểm = 24 hạt nhẹ nhàng)
         double[] radii = {3.5D, 7.0D, 10.0D};
         for (double r : radii) {
-            int points = (int) (r * 6);
+            int points = 8;
             for (int i = 0; i < points; i++) {
                 double angle = (2 * Math.PI / points) * i;
                 double px = this.getX() + r * Math.cos(angle);
                 double pz = this.getZ() + r * Math.sin(angle);
                 sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, this.getY() + 0.1D, pz, 1, 0, 0.05D, 0, 0.01D);
-                if (r == 10.0D && i % 3 == 0) {
-                    sl.sendParticles(ParticleTypes.CRIT, px, this.getY() + 0.3D, pz, 1, 0, 0.1D, 0, 0.02D);
-                }
             }
         }
 
@@ -481,26 +480,29 @@ public class CuuTheQuyenHienEntity extends Monster {
         Vec3 dir = end.subtract(start).normalize();
         double maxDist = Math.min(18.0D, start.distanceTo(end) + 2.0D);
 
-        // Raycast bước nhảy 1 block (Zero Entity Spam)
-        for (double d = 1.0D; d <= maxDist; d += 1.0D) {
+        // Hiệu ứng hạt dọc quỹ đạo trảm kích (bước nhảy 2 blocks tiết kiệm CPU)
+        for (double d = 1.0D; d <= maxDist; d += 2.0D) {
             Vec3 pos = start.add(dir.scale(d));
             sl.sendParticles(ParticleTypes.SWEEP_ATTACK, pos.x, pos.y, pos.z, 1, 0, 0, 0, 0);
-            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.x, pos.y, pos.z, 2, 0.1D, 0.1D, 0.1D, 0.02D);
+            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pos.x, pos.y, pos.z, 1, 0.1D, 0.1D, 0.1D, 0.02D);
+        }
 
-            AABB stepBox = new AABB(pos.x - 1.2D, pos.y - 1.2D, pos.z - 1.2D, pos.x + 1.2D, pos.y + 1.2D, pos.z + 1.2D);
-            for (LivingEntity hit : sl.getEntitiesOfClass(LivingEntity.class, stepBox)) {
-                if (hit == this || hit instanceof CuuTheSoulEntity || !hit.isAlive()) continue;
-                if (this.ownerUuid != null && !this.isRampaging && hit.getUUID().equals(this.ownerUuid)) continue;
+        // Tối ưu hóa: 1 truy vấn AABB duy nhất dọc quỹ đạo thay vì 18 lần lặp
+        AABB lineBox = new AABB(start, start.add(dir.scale(maxDist))).inflate(1.5D);
+        java.util.Set<UUID> hitIds = new java.util.HashSet<>();
+        for (LivingEntity hit : sl.getEntitiesOfClass(LivingEntity.class, lineBox)) {
+            if (hit == this || hit instanceof CuuTheSoulEntity || !hit.isAlive()) continue;
+            if (this.ownerUuid != null && !this.isRampaging && hit.getUUID().equals(this.ownerUuid)) continue;
+            if (!hitIds.add(hit.getUUID())) continue;
 
-                hit.hurt(this.damageSources().mobAttack(this), 55.0F);
-                // Hất tung lên trời
-                hit.setDeltaMovement(dir.x * 0.15D, 0.65D, dir.z * 0.15D);
-                hit.hasImpulse = true;
-                hit.hurtMarked = true;
+            hit.hurt(this.damageSources().mobAttack(this), 55.0F);
+            // Hất tung lên trời
+            hit.setDeltaMovement(dir.x * 0.15D, 0.65D, dir.z * 0.15D);
+            hit.hasImpulse = true;
+            hit.hurtMarked = true;
 
-                if (hit instanceof ServerPlayer sp) {
-                    sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fBạn bị Không Gian Trảm của Cứu Thế Quyền Hiện hất tung!"));
-                }
+            if (hit instanceof ServerPlayer sp) {
+                sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fBạn bị Không Gian Trảm của Cứu Thế Quyền Hiện hất tung!"));
             }
         }
     }

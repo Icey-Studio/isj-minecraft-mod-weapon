@@ -156,9 +156,9 @@ public class TaKinhDaiTangEntity extends Monster {
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, LivingEntity.class, 12.0F));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
-        // Tự động tìm diệt mọi sinh vật sống xung quanh
+        // Tự động tìm diệt mọi sinh vật sống xung quanh (quét mỗi 20 ticks = 1s để giảm tải CPU)
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(
-                this, LivingEntity.class, 10, true, false,
+                this, LivingEntity.class, 20, true, false,
                 e -> {
                     if (e == this || !e.isAlive() || e instanceof TaKinhDaiTangEntity) return false;
                     if (this.ownerUuid != null && !this.isRampaging) {
@@ -421,14 +421,14 @@ public class TaKinhDaiTangEntity extends Monster {
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 2.5F, 0.5F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BELL_RESONATE, SoundSource.HOSTILE, 3.5F, 0.6F);
 
-        // Vòng tro tàn bán kính 14 blocks
+        // Vòng tro tàn bán kính 14 blocks (tối ưu 12 điểm vòng tròn nhẹ nhàng)
         double r = 14.0D;
-        int points = 36;
+        int points = 12;
         for (int i = 0; i < points; i++) {
             double angle = (2 * Math.PI / points) * i;
             double px = this.getX() + r * Math.cos(angle);
             double pz = this.getZ() + r * Math.sin(angle);
-            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, this.getY() + 0.2D, pz, 2, 0, 0.1D, 0, 0.01D);
+            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, px, this.getY() + 0.2D, pz, 1, 0, 0.1D, 0, 0.01D);
             sl.sendParticles(ParticleTypes.SOUL, px, this.getY() + 0.3D, pz, 1, 0, 0.05D, 0, 0.02D);
         }
 
