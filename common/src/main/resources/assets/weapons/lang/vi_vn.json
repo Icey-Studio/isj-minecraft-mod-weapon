@@ -33,6 +33,9 @@
   "item.weapons.shikigami_guardian_11": "Thái Tuế Thần Tướng - Thần Đồ (Shentu)",
   "item.weapons.seer_flesh": "Thị Thực",
   "item.weapons.seer_flesh_eye": "Con Mắt Thị Thực",
+  "item.weapons.severed_heart": "Trái Tim Bị Cắt",
+  "item.weapons.severed_brain": "Bộ Não Bị Cắt",
+  "item.weapons.thien_ma_katana": "Thiên Ma Kiếm",
   "item.weapons.seer_flesh_arm": "Thị Thực Bọc Tay",
   "item.weapons.extinction_star": "Ngôi Sao Tuyệt Diệt",
   "item.weapons.alkaid_sphere": "Độ Nén Thấp Phân Rã - Tà Cầu Alkaid",
@@ -363,5 +366,16 @@
   "tooltip.weapons.demon_lord_awakening_orb.title": "§4§l[NGỌC THẦN THỨC TỈNH]",
   "tooltip.weapons.demon_lord_awakening_orb.desc": "§7Viên ngọc kết tinh 20.000 linh hồn ma vương tinh khiết.",
   "tooltip.weapons.demon_lord_awakening_orb.usage": "§e👉 [Chuột Phải] §aThức tỉnh ngay lập tức thành Chân Ma Vương!",
-  "key.weapons.select_bullet": "Mở Bảng Chọn Ma Đạn Hoàng Kim (PgUp)"
+  "key.weapons.select_bullet": "Mở Bảng Chọn Ma Đạn Hoàng Kim (PgUp)",
+  "entity.weapons.cuu_the_quyen_hien": "Cứu Thế Quyền Hiện",
+  "entity.weapons.cuu_the_soul": "Linh Hồn Cứu Thế Quyền Hiện",
+  "item.weapons.cuu_the_quyen_hien_spawn_egg": "Trứng Sinh Ra Cứu Thế Quyền Hiện",
+  "item.weapons.shigaraki_tanuki_empty": "Tượng Lửng Gốm Shigaraki (Rỗng)",
+  "item.weapons.shigaraki_tanuki_gongen": "Tượng Gốm Tanuki: Cứu Thế Quyền Hiện",
+  "skill.weapons.rykuzin_sinka": "Tiên Tri (Rykuzin Sinka)",
+  "entity.weapons.ta_kinh_dai_tang": "Tà Kinh Đại Tăng",
+  "item.weapons.ta_kinh_dai_tang_spawn_egg": "Trứng Sinh Ra Tà Kinh Đại Tăng",
+  "item.weapons.warding_earplugs": "Bông Bịt Tai Phong Ấn",
+  "item.weapons.bodhi_effigy_empty": "Hình Nhân Gỗ Bồ Đề (Rỗng)",
+  "item.weapons.bodhi_effigy_monk": "Hình Nhân Gỗ: Tà Kinh Đại Tăng"
 }

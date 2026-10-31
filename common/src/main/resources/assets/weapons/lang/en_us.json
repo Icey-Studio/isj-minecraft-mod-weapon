@@ -33,6 +33,9 @@
   "item.weapons.shikigami_guardian_11": "Taisai Shikigami - Shentu",
   "item.weapons.seer_flesh": "Seer Flesh",
   "item.weapons.seer_flesh_eye": "Eye of Seer Flesh",
+  "item.weapons.severed_heart": "Severed Heart",
+  "item.weapons.severed_brain": "Severed Brain",
+  "item.weapons.thien_ma_katana": "Heavenly Demon Katana",
   "item.weapons.seer_flesh_arm": "Seer Flesh Gauntlet",
   "item.weapons.extinction_star": "Extinction Star",
   "item.weapons.alkaid_sphere": "Low Compression Decomposition - Alkaid Sphere",
@@ -363,5 +366,16 @@
   "tooltip.weapons.demon_lord_awakening_orb.title": "§4§l[AWAKENING ORB]",
   "tooltip.weapons.demon_lord_awakening_orb.desc": "§7Crystallized essence of 20,000 pure souls.",
   "tooltip.weapons.demon_lord_awakening_orb.usage": "§e👉 [Right-Click] §aInstantly awaken into True Demon Lord!",
-  "key.weapons.select_bullet": "Open Bullet Selection (PgUp)"
+  "key.weapons.select_bullet": "Open Bullet Selection (PgUp)",
+  "entity.weapons.cuu_the_quyen_hien": "Cuu The Quyen Hien",
+  "entity.weapons.cuu_the_soul": "Cuu The Soul",
+  "item.weapons.cuu_the_quyen_hien_spawn_egg": "Cuu The Quyen Hien Spawn Egg",
+  "item.weapons.shigaraki_tanuki_empty": "Shigaraki Tanuki Figurine (Empty)",
+  "item.weapons.shigaraki_tanuki_gongen": "Shigaraki Tanuki: Tengai Guze Gongen",
+  "skill.weapons.rykuzin_sinka": "Prophecy (Rykuzin Sinka)",
+  "entity.weapons.ta_kinh_dai_tang": "Evil Sutra High Priest",
+  "item.weapons.ta_kinh_dai_tang_spawn_egg": "Evil Sutra High Priest Spawn Egg",
+  "item.weapons.warding_earplugs": "Warding Earplugs",
+  "item.weapons.bodhi_effigy_empty": "Bodhi Effigy (Empty)",
+  "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest"
 }
