@@ -210,16 +210,23 @@ public class VelzardEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
+            // Tỷ lệ xuất hiện tự nhiên (2% cơ hội) - Kiểm tra trước để tránh quét thực thể
+            if (this.random.nextFloat() > 0.02F) {
+                return false;
+            }
+
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
-                // Kiểm tra phạm vi 128 blocks nếu đã có Velzard thì không spawn thêm để chống lag
-                AABB checkArea = new AABB(this.blockPosition()).inflate(128.0D);
-                if (!sl.getEntitiesOfClass(VelzardEntity.class, checkArea).isEmpty()) {
-                    return false;
-                }
-                // Chỉ xuất hiện ở các quần xã lạnh / tuyết
+
+                // Chỉ xuất hiện ở các quần xã lạnh / tuyết (kiểm tra trước khi quét entity)
                 var biome = sl.getBiome(this.blockPosition());
                 if (!biome.value().coldEnoughToSnow(this.blockPosition())) {
+                    return false;
+                }
+
+                // Kiểm tra phạm vi 64 blocks nếu đã có Velzard thì không spawn thêm để chống lag
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
+                if (!sl.getEntitiesOfClass(VelzardEntity.class, checkArea).isEmpty()) {
                     return false;
                 }
             }

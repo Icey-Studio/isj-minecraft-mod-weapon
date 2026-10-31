@@ -363,10 +363,15 @@ public class KuboEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, net.minecraft.world.entity.MobSpawnType spawnType) {
         if (spawnType == net.minecraft.world.entity.MobSpawnType.NATURAL || spawnType == net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION) {
+            // Tỷ lệ xuất hiện tự nhiên (thuộc nhóm ít hiếm nhất: 6% cơ hội) - Kiểm tra trước để tránh quét thực thể
+            if (this.random.nextFloat() > 0.06F) {
+                return false;
+            }
+
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
-                // Chống lag tuyệt đối: Không spawn nếu trong bán kính 160 blocks đã có một Không Vong khác
-                AABB checkArea = new AABB(this.blockPosition()).inflate(160.0D);
+                // Chống lag: Không spawn nếu trong bán kính 64 blocks đã có một Không Vong khác
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
                 if (!sl.getEntitiesOfClass(KuboEntity.class, checkArea).isEmpty()) {
                     return false;
                 }
