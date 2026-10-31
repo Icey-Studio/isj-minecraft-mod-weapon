@@ -248,6 +248,22 @@ public class InfiniteDragonPrisonAbility {
 
                     // Kiểm tra điều kiện phá lồng theo Mức (Tier)
                     if (dist <= r) {
+                        // Cứu Thế Quyền Hiện: Khi bị giam sẽ lập tức chuyển sang dạng võ thần tay không và đấm vỡ lồng giam
+                        if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity ct) {
+                            ct.setBareHanded(true);
+                            cageBroken = true;
+                            level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                    SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 3.5F, 0.7F);
+                            level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                    SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 0.9F);
+                            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY() + 1.0D, e.getZ(), 2, 0, 0, 0, 0);
+                            ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                            if (caster != null) {
+                                caster.sendSystemMessage(Component.literal("§c§l[Báo cáo] §fCá thể Cứu Thế Quyền Hiện đã chuyển sang dạng tay không và phá vỡ Lồng Giam Vô Hạn!"));
+                            }
+                            break;
+                        }
+
                         if (prison.tier == 1) {
                             // Mức 1: Ác ma, Milim, Không Vong, Long Chủng phá được ngay
                             if (isPrimordial || isMilim || isKubo || isVelgrynd) {

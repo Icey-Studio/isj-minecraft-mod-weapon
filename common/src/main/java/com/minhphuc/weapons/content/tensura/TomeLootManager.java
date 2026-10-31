@@ -36,20 +36,21 @@ public class TomeLootManager {
 
                     boolean isRareStructure = path.contains("ancient_city") || path.contains("end_city")
                             || path.contains("bastion") || path.contains("stronghold") || path.contains("mansion");
+                    boolean isMineshaft = path.contains("mineshaft");
 
-                    float chance = isRareStructure ? 0.45F : 0.25F;
+                    float chance = isRareStructure ? 0.45F : (isMineshaft ? 0.50F : 0.25F);
 
                     if (player.level().random.nextFloat() <= chance) {
                         // Unpack rương trước nếu chưa unpack
                         rcbe.unpackLootTable(player);
-                        insertTomesIntoContainer(rcbe, player.level().random, isRareStructure);
+                        insertTomesIntoContainer(rcbe, player.level().random, isRareStructure, isMineshaft);
                     }
                 }
             }
         }
     }
 
-    private static void insertTomesIntoContainer(Container container, net.minecraft.util.RandomSource random, boolean isRareStructure) {
+    private static void insertTomesIntoContainer(Container container, net.minecraft.util.RandomSource random, boolean isRareStructure, boolean isMineshaft) {
         boolean hasRebirth = false;
 
         for (int i = 0; i < container.getContainerSize(); i++) {
@@ -95,6 +96,25 @@ public class TomeLootManager {
                 if (container.getItem(i).isEmpty()) {
                     container.setItem(i, new ItemStack(ModItems.ETERNAL_FROST_CRYSTAL.get(), 1 + random.nextInt(2)));
                     break;
+                }
+            }
+        }
+
+        // 5. CHỈ RIÊNG RƯƠNG HẦM MỎ (MINESHAFT): Chèn Thiên Ma Kiếm (Thiên Ma Katana) với tỉ lệ 25%
+        if (isMineshaft) {
+            boolean hasKatana = false;
+            for (int i = 0; i < container.getContainerSize(); i++) {
+                if (container.getItem(i).is(ModItems.THIEN_MA_KATANA.get())) {
+                    hasKatana = true;
+                    break;
+                }
+            }
+            if (!hasKatana && random.nextFloat() <= 0.25F) {
+                for (int i = 0; i < container.getContainerSize(); i++) {
+                    if (container.getItem(i).isEmpty()) {
+                        container.setItem(i, new ItemStack(ModItems.THIEN_MA_KATANA.get()));
+                        break;
+                    }
                 }
             }
         }

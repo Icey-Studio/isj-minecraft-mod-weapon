@@ -146,8 +146,14 @@ public class ZoneTrackAbility {
                 pTarget.disableShield();
             }
 
+            if (target instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity boss) {
+                boss.tryDodgeGranite(player.position(), dir);
+            }
+
             // Gây sát thương uy lực
+            target.addTag("ZoneTrackDamage");
             target.hurt(level.damageSources().playerAttack(player), finalDamage);
+            target.removeTag("ZoneTrackDamage");
 
             // Gây cháy thiêu đốt 8 giây
             target.setRemainingFireTicks(160);

@@ -32,8 +32,9 @@ public class ServerboundCastBeelzebuthPacket {
             boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
             boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
             boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(player);
+            boolean isCreative = player.isCreative();
 
-            if (isTrueDemonLord || isPrimordial || isWearingDivineArmor) {
+            if (isTrueDemonLord || isPrimordial || isWearingDivineArmor || isCreative) {
                 int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");

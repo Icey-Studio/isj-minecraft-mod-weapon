@@ -50,12 +50,13 @@ public class MoonlightSwordItem extends Item {
         return switch (skillOrdinal) {
             case 0 -> "§4§l1. Hắc Thiểm Bá Vương Trảm (Black Flash)";
             case 1 -> "§e§l2. Linh Tử Băng Hoại (Rainbow Disintegration Orb)";
+            case 2 -> "§b§l3. Tuyệt Kĩ Chém Xuyên Thời Gian (Time-Piercing Slash)";
             default -> "§7Chưa chọn";
         };
     }
 
     public static void cycleSkill(ServerPlayer player, ItemStack stack) {
-        int maxSkills = 2; // Chỉ giữ lại Hắc Thiểm Bá Vương Trảm & Linh Tử Băng Hoại
+        int maxSkills = 3; // Hắc Thiểm, Linh Tử Băng Hoại, Tuyệt Kĩ Chém Xuyên Thời Gian
 
         int current = ItemStackDataHelper.getInt(stack, NBT_SKILL);
         int next = (current + 1) % maxSkills;
@@ -81,9 +82,12 @@ public class MoonlightSwordItem extends Item {
             if (skill == 0) {
                 // Chiêu 1: Hắc Thiểm Bá Vương Trảm (Black Flash Conqueror Slash)
                 executeBlackFlashSlash(serverLevel, serverPlayer);
-            } else {
+            } else if (skill == 1) {
                 // Chiêu 2: Linh Tử Băng Hoại - Viên sáng 7 màu bay thẳng 50 block nổ địa hình & 30 tim
                 shootRainbowDisintegrationOrb(serverLevel, serverPlayer);
+            } else if (skill == 2) {
+                // Chiêu 3: Tuyệt Kĩ Chém Xuyên Thời Gian (Time-Piercing Slash)
+                com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.castTimePiercingSlash(serverLevel, serverPlayer);
             }
         }
 
@@ -106,6 +110,11 @@ public class MoonlightSwordItem extends Item {
         for (LivingEntity e : targets) {
             Vec3 toEntity = e.position().subtract(player.position()).normalize();
             if (toEntity.dot(look) > 0.45D) {
+                if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity) {
+                    level.playSound(null, e.getX(), e.getY(), e.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 1.8F, 0.8F);
+                    level.sendParticles(ParticleTypes.CRIT, e.getX(), e.getY() + 1.2D, e.getZ(), 8, 0.3D, 0.3D, 0.3D, 0.1D);
+                    continue;
+                }
                 e.invulnerableTime = 0;
                 e.hurt(level.damageSources().playerAttack(player), 70.0F);
                 Vec3 knockback = look.scale(1.5D).add(0, 0.3D, 0);
@@ -183,6 +192,11 @@ public class MoonlightSwordItem extends Item {
         AABB blastArea = new AABB(hitPos.x - 6.0D, hitPos.y - 4.0D, hitPos.z - 6.0D, hitPos.x + 6.0D, hitPos.y + 4.0D, hitPos.z + 6.0D);
         List<LivingEntity> blastTargets = level.getEntitiesOfClass(LivingEntity.class, blastArea, e -> e != player && e.isAlive());
         for (LivingEntity victim : blastTargets) {
+            if (victim instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity) {
+                level.playSound(null, victim.getX(), victim.getY(), victim.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 1.8F, 0.8F);
+                level.sendParticles(ParticleTypes.FLASH, victim.getX(), victim.getY() + 1.2D, victim.getZ(), 2, 0, 0, 0, 0);
+                continue;
+            }
             victim.invulnerableTime = 0;
             victim.hurt(level.damageSources().playerAttack(player), 60.0F); // 30 tim!
         }
@@ -204,6 +218,7 @@ public class MoonlightSwordItem extends Item {
         tooltip.add(Component.literal("§7- Nhấn phím §e[Z] §7để chuyển đổi:"));
         tooltip.add(Component.literal("§7   + §41. Hắc Thiểm Bá Vương Trảm: §fSét đen đỏ xé rách không gian"));
         tooltip.add(Component.literal("§7   + §e2. Linh Tử Băng Hoại: §fViên sáng 7 màu bay thẳng 50m, nổ địa hình, sát thương 30 tim"));
+        tooltip.add(Component.literal("§7   + §b3. Tuyệt Kĩ Chém Xuyên Thời Gian: §fĐoạt tim [-0.02s], án tử 5 giây [ 0.00s]"));
         tooltip.add(Component.literal("§7- Nhấn §a[Chuột Phải] §7để thi triển kỹ năng đã chọn (Không hồi chiêu)"));
     }
 }

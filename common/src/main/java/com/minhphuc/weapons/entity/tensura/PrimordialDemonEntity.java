@@ -150,7 +150,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 return false;
             }
             // Tỷ lệ xuất hiện tự nhiên cực thấp: tương đương tìm thấy 1 ngôi làng (chỉ 4% thành công khi kích hoạt spawn)
-            if (this.random.nextFloat() > 0.04F) {
+            if (this.random.nextFloat() > 0.08F) {
                 return false;
             }
         }
@@ -1173,6 +1173,12 @@ public class PrimordialDemonEntity extends TamableAnimal {
         }
 
         // TÍNH TOÁN RỦI RO CHIẾN ĐẤU VỚI BOSS
+        // Riêng Cứu Thế Quyền Hiện: Tỉ lệ thắng 70% áp chế Thủy Tổ, không bị giảm trừ bởi kháng boss thông thường
+        if (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity
+                || source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity) {
+            return super.hurt(source, amount);
+        }
+
         if (source.getEntity() instanceof LivingEntity attacker && isBossTarget(attacker)) {
             DemonType type = getDemonType();
             if (type == DemonType.ROUGE || type == DemonType.NOIR) {

@@ -61,7 +61,9 @@ public class ServerboundCycleSkillPacket {
                 boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
                 com.minhphuc.weapons.entity.tensura.DemonType demonType = PrimordialPlayerDataHelper.getPrimordialType(player);
 
-                if (isTrueDemonLord || isWearingDivine || isPrimordial) {
+                boolean isCreative = player.isCreative();
+
+                if (isTrueDemonLord || isWearingDivine || isPrimordial || isCreative) {
                     int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
                     int totalSkills = lordSkills + (isPrimordial ? 7 : 0);
 
@@ -77,7 +79,7 @@ public class ServerboundCycleSkillPacket {
                         skillName = "§6§l" + (next + 1) + ". " + PrimordialPlayerDataHelper.getSkillName(demonType, primordialIdx);
                     }
 
-                    String roleTag = isTrueDemonLord ? "§d§l[CHÂN MA VƯƠNG]" : (isWearingDivine ? "§6§l[THẦN LINH VŨ TRANG]" : "§5§l[THỦY TỔ ÁC MA]");
+                    String roleTag = isTrueDemonLord ? "§d§l[CHÂN MA VƯƠNG]" : (isWearingDivine ? "§6§l[THẦN LINH VŨ TRANG]" : (isPrimordial ? "§5§l[THỦY TỔ ÁC MA]" : "§b§l[KỸ NĂNG NGƯỜI CHƠI]"));
 
                     player.displayClientMessage(
                         Component.literal(roleTag + " §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),

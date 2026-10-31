@@ -242,6 +242,16 @@ public class DragonNovaAbility {
                     level.sendParticles(ParticleTypes.DRAGON_BREATH, px, py, pz, 1, 0, 0.05D, 0, 0.01D);
                 }
 
+                // Cứu Thế Quyền Hiện nhận diện người chơi tụ chiêu Long Tinh Bộc Viêm Bá và chủ động né tránh
+                if (tick % 6 == 0) {
+                    AABB warnBox = caster.getBoundingBox().inflate(36.0D);
+                    List<com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity> bosses =
+                            level.getEntitiesOfClass(com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity.class, warnBox);
+                    for (var boss : bosses) {
+                        boss.tryDodgeDragonNova(caster.position(), caster.getLookAngle());
+                    }
+                }
+
                 // Âm thanh nén năng lượng & cộng hưởng linh tử tăng dần
                 if (tick % 10 == 0) {
                     level.playSound(null, caster.getX(), caster.getY(), caster.getZ(),
