@@ -83,6 +83,45 @@ public class SeerFleshAbility {
     }
 
     /**
+     * Tìm Thị Thực gần nhất trong phạm vi radius
+     */
+    public static ActiveSeerFlesh getNearbyFlesh(ServerLevel level, Vec3 pos, double radius) {
+        if (ACTIVE_FLESHES.isEmpty()) return null;
+        double rSq = radius * radius;
+        for (ActiveSeerFlesh flesh : ACTIVE_FLESHES.values()) {
+            if (flesh.level == level && flesh.display != null && flesh.display.isAlive()) {
+                if (flesh.spawnPos.distanceToSqr(pos) <= rSq) {
+                    return flesh;
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Tiêu diệt Thị Thực (bị Cứu Thế Quyền Hiện 1 đao chém nát)
+     */
+    public static void destroyFlesh(ActiveSeerFlesh flesh) {
+        if (flesh == null) return;
+        ACTIVE_FLESHES.remove(flesh.ownerUuid);
+        ServerLevel level = flesh.level;
+        Vec3 pos = flesh.spawnPos;
+
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.SLIME_DEATH, SoundSource.HOSTILE, 2.0F, 0.7F);
+        level.playSound(null, pos.x, pos.y, pos.z, SoundEvents.ITEM_BREAK, SoundSource.HOSTILE, 2.0F, 0.5F);
+        level.sendParticles(ParticleTypes.ITEM_SLIME, pos.x, pos.y + 1.0D, pos.z, 35, 0.5D, 0.5D, 0.5D, 0.1D);
+        level.sendParticles(ParticleTypes.SWEEP_ATTACK, pos.x, pos.y + 1.0D, pos.z, 3, 0.3D, 0.3D, 0.3D, 0.0D);
+
+        ServerPlayer owner = level.getServer().getPlayerList().getPlayer(flesh.ownerUuid);
+        if (owner != null) {
+            owner.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fCứu Thế Quyền Hiện đã một đao chém nát Thị Thực của bạn! Bạn cần triệu hồi lại!"));
+            owner.playNotifySound(SoundEvents.WITHER_HURT, SoundSource.PLAYERS, 1.2F, 0.8F);
+        }
+
+        flesh.cleanup();
+    }
+
+    /**
      * Kích hoạt tuyệt kỹ Thị Nhục
      */
     public static void cast(ServerLevel level, ServerPlayer player) {
@@ -301,8 +340,9 @@ public class SeerFleshAbility {
                             player.getFoodData().setFoodLevel(20);
                             player.getFoodData().setSaturation(20.0F);
 
-                            // 2. Xóa sạch mọi hiệu ứng xấu độc hại
+                            // 2. Xóa sạch mọi hiệu ứng xấu độc hại & Hóa giải án tử Cứu Thế Quyền Hiện
                             SeerFleshEyeItem.cleanseHarmfulEffects(player);
+                            CuuTheCurseManager.cure(player, "Thị Thực");
 
                             // 3. Phước lành sinh mệnh
                             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 2, false, false, true));

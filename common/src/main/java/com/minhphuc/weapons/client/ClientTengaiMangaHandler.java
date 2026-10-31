@@ -28,12 +28,12 @@ public class ClientTengaiMangaHandler {
         if (!shaderActive && mc.gameRenderer != null) {
             try {
                 try {
-                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(DESATURATE_SHADER);
+                    ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(MONOCHROME_SHADER);
                 } catch (Throwable t1) {
                     try {
-                        ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(MONOCHROME_SHADER);
-                    } catch (Throwable t2) {
                         ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(WEAPONS_MONOCHROME_SHADER);
+                    } catch (Throwable t2) {
+                        ((GameRendererAccessor) mc.gameRenderer).weapons$loadEffect(DESATURATE_SHADER);
                     }
                 }
                 shaderActive = true;

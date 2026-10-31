@@ -40,8 +40,9 @@ public class SeerFleshEyeItem extends Item {
             player.getFoodData().setFoodLevel(20);
             player.getFoodData().setSaturation(20.0F);
 
-            // 2. Xóa sạch mọi hiệu ứng xấu độc hại
+            // 2. Xóa sạch mọi hiệu ứng xấu độc hại & Hóa giải án tử Cứu Thế Quyền Hiện
             cleanseHarmfulEffects(player);
+            CuuTheCurseManager.cure(player, "Con Mắt Thị Nhục");
 
             // 3. Ban phát phước lành sinh mệnh
             player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 160, 2, false, false, true));

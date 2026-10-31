@@ -40,7 +40,11 @@ public class ServerboundIaiClickPacket {
         context.queue(() -> {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
-            ReverseVelocityIaijutsuAbility.handleClick(player, this.clickPos, this.targetEntityId);
+            if (com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.isPlayerInSession(player.getUUID())) {
+                com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.handleClick(player, this.clickPos, this.targetEntityId);
+            } else {
+                ReverseVelocityIaijutsuAbility.handleClick(player, this.clickPos, this.targetEntityId);
+            }
         });
     }
 }
