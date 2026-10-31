@@ -130,6 +130,15 @@ public class ModItems {
     public static final RegistrySupplier<Item> TAISUI_SEER_FLESH = ITEMS.register("seer_flesh",
             () -> new Item(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> SEVERED_HEART = ITEMS.register("severed_heart",
+            () -> new com.minhphuc.weapons.content.darkgathering.SeveredHeartItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> SEVERED_BRAIN = ITEMS.register("severed_brain",
+            () -> new com.minhphuc.weapons.content.darkgathering.SeveredBrainItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> THIEN_MA_KATANA = ITEMS.register("thien_ma_katana",
+            () -> new com.minhphuc.weapons.content.divine.ThienMaSwordItem(new Item.Properties()));
+
     public static final RegistrySupplier<Item> SEER_FLESH_EYE = ITEMS.register("seer_flesh_eye",
             () -> new com.minhphuc.weapons.content.darkgathering.SeerFleshEyeItem(new Item.Properties().rarity(net.minecraft.world.item.Rarity.RARE).stacksTo(16)));
 
@@ -159,6 +168,27 @@ public class ModItems {
     // ==========================================
     public static final RegistrySupplier<Item> KUBO_SPAWN_EGG = ITEMS.register("kubo_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.KUBO, 0x0A0512, 0x9333EA, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> CUU_THE_QUYEN_HIEN_SPAWN_EGG = ITEMS.register("cuu_the_quyen_hien_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.CUU_THE_QUYEN_HIEN, 0x111318, 0xE5E7EB, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> SHIGARAKI_TANUKI_EMPTY = ITEMS.register("shigaraki_tanuki_empty",
+            () -> new com.minhphuc.weapons.content.darkgathering.ShigarakiTanukiEmptyItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> SHIGARAKI_TANUKI_GONGEN = ITEMS.register("shigaraki_tanuki_gongen",
+            () -> new com.minhphuc.weapons.content.darkgathering.ShigarakiTanukiGongenItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> TA_KINH_DAI_TANG_SPAWN_EGG = ITEMS.register("ta_kinh_dai_tang_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.TA_KINH_DAI_TANG, 0x2A231C, 0xA855F7, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> WARDING_EARPLUGS = ITEMS.register("warding_earplugs",
+            () -> new com.minhphuc.weapons.content.darkgathering.WardingEarplugsItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> BODHI_EFFIGY_EMPTY = ITEMS.register("bodhi_effigy_empty",
+            () -> new com.minhphuc.weapons.content.darkgathering.BodhiEffigyEmptyItem(new Item.Properties()));
+
+    public static final RegistrySupplier<Item> BODHI_EFFIGY_MONK = ITEMS.register("bodhi_effigy_monk",
+            () -> new com.minhphuc.weapons.content.darkgathering.BodhiEffigyMonkItem(new Item.Properties()));
 
     public static final RegistrySupplier<Item> KUBO_SUMMON_CORE = ITEMS.register("kubo_summon_core",
             () -> new com.minhphuc.weapons.content.darkgathering.KuboSummonItem(new Item.Properties()));
@@ -418,6 +448,9 @@ public class ModItems {
                         output.accept(DIVINE_BOOTS.get());
                         output.accept(GUIDE_BOOK.get());
                         output.accept(MOONLIGHT_SWORD.get());
+                        output.accept(THIEN_MA_KATANA.get());
+                        output.accept(SEVERED_HEART.get());
+                        output.accept(SEVERED_BRAIN.get());
                         output.accept(SEER_FLESH_EYE.get());
                         output.accept(SEER_FLESH_ARM.get());
                         output.accept(EXTINCTION_STAR.get());
@@ -486,6 +519,13 @@ public class ModItems {
                         output.accept(VOID_CLAW_CALAMITY.get());
                         output.accept(KUBO_SPAWN_EGG.get());
                         output.accept(KUBO_SUMMON_CORE.get());
+                        output.accept(CUU_THE_QUYEN_HIEN_SPAWN_EGG.get());
+                        output.accept(SHIGARAKI_TANUKI_EMPTY.get());
+                        output.accept(SHIGARAKI_TANUKI_GONGEN.get());
+                        output.accept(TA_KINH_DAI_TANG_SPAWN_EGG.get());
+                        output.accept(WARDING_EARPLUGS.get());
+                        output.accept(BODHI_EFFIGY_EMPTY.get());
+                        output.accept(BODHI_EFFIGY_MONK.get());
                         output.accept(MILIM_SOUL.get());
                         output.accept(VELGRYND_SOUL.get());
                         output.accept(PRIMORDIAL_DEMON_SOUL.get());
@@ -502,4 +542,3 @@ public class ModItems {
         CREATIVE_MODE_TABS.register();
     }
 }
-

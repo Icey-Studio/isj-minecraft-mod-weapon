@@ -88,6 +88,11 @@ public class ModMessages {
                 ClientboundIaiStatePacket::encode,
                 ClientboundIaiStatePacket::new,
                 ClientboundIaiStatePacket::handle);
+
+        CHANNEL.register(ClientboundSyncRykuzinStatePacket.class,
+                ClientboundSyncRykuzinStatePacket::encode,
+                ClientboundSyncRykuzinStatePacket::new,
+                ClientboundSyncRykuzinStatePacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {
