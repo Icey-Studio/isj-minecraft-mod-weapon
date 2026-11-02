@@ -210,11 +210,6 @@ public class VelzardEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên (2% cơ hội) - Kiểm tra trước để tránh quét thực thể
-            if (this.random.nextFloat() > 0.02F) {
-                return false;
-            }
-
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
 
@@ -231,7 +226,8 @@ public class VelzardEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     public void broadcastDialogue(String text) {

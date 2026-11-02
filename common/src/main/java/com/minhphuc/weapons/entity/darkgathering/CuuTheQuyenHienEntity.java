@@ -262,11 +262,6 @@ public class CuuTheQuyenHienEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên hiếm (3%) - Kiểm tra trước để tránh quét thực thể/chunks nặng nề
-            if (this.random.nextFloat() > 0.03F) {
-                return false;
-            }
-
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
 
@@ -276,7 +271,8 @@ public class CuuTheQuyenHienEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     public void stun(int ticks) {

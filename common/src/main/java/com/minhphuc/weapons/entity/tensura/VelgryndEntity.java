@@ -127,11 +127,6 @@ public class VelgryndEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên (1% cơ hội) - Kiểm tra trước để tránh quét thực thể
-            if (this.random.nextFloat() > 0.01F) {
-                return false;
-            }
-
             // Phải là vị trí lộ thiên ngoài trời (thấy bầu trời, Y >= 60)
             BlockPos pos = this.blockPosition();
             if (!level.canSeeSky(pos) || pos.getY() < 60) {
@@ -149,7 +144,8 @@ public class VelgryndEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     @Override

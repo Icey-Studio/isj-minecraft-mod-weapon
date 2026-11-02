@@ -126,11 +126,6 @@ public class MilimEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên (4% cơ hội) - Kiểm tra trước để tránh quét thực thể
-            if (this.random.nextFloat() > 0.04F) {
-                return false;
-            }
-
             BlockPos pos = this.blockPosition();
             if (!level.canSeeSky(pos) || pos.getY() < 60) {
                 return false;
@@ -146,7 +141,8 @@ public class MilimEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     @Override

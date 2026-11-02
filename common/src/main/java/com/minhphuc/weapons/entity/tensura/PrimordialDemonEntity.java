@@ -144,19 +144,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
+                if (!sl.getEntitiesOfClass(PrimordialDemonEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
             }
             BlockPos pos = this.blockPosition();
-            if (!level.canSeeSky(pos) || pos.getY() < 60) {
-                return false;
-            }
-            // Tỷ lệ xuất hiện tự nhiên cực thấp: tương đương tìm thấy 1 ngôi làng (chỉ 4% thành công khi kích hoạt spawn)
-            if (this.random.nextFloat() > 0.08F) {
+            if (pos.getY() < 50) {
                 return false;
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
-
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
