@@ -167,6 +167,21 @@ public class CuuTheQuyenHienModel<T extends LivingEntity> extends HumanoidModel<
                 this.leftArm.xRot = -1.15F;
                 this.leftArm.yRot = 0.55F;
                 this.head.xRot = 0.15F;
+            } else if (action == 4) { // DOWNWARD CLEAVE (Đoạn Thiên Nhất Trảm - Vung kiếm bổ dọc uy lực từ trên xuống)
+                float cleaveCycle = Mth.sin(ageInTicks * 0.45F);
+                this.rightArm.xRot = -2.1F + cleaveCycle * 1.8F;
+                this.rightArm.yRot = 0.1F;
+                this.leftArm.xRot = -2.0F + cleaveCycle * 1.7F;
+                this.leftArm.yRot = -0.1F;
+                this.body.xRot = 0.25F;
+                this.head.xRot = 0.15F;
+            } else if (action == 5) { // LEAP & SLAM (Thiên Ngoại Trụy Lạc - Lao vút lên không trung túm bắt ném đất)
+                this.body.xRot = 0.55F;
+                this.head.xRot = -0.45F;
+                this.rightArm.xRot = -1.6F;
+                this.leftArm.xRot = -1.6F;
+                this.rightLeg.xRot = 0.65F;
+                this.leftLeg.xRot = 0.65F;
             }
         }
     }

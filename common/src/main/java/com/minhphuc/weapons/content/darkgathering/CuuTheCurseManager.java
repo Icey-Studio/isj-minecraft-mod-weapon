@@ -3,6 +3,7 @@ package com.minhphuc.weapons.content.darkgathering;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.entity.tensura.VelzardEntity;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundSetSubtitleTextPacket;
 import net.minecraft.network.protocol.game.ClientboundSetTitleTextPacket;
@@ -43,12 +44,19 @@ public class CuuTheCurseManager {
         public CurseType type;
         public int ticksRemaining;
 
-        public ActiveCuuTheCurse(ServerLevel level, UUID victimUuid, String victimName, CurseType type) {
+        public final boolean isPlayer;
+
+        public ActiveCuuTheCurse(ServerLevel level, UUID victimUuid, String victimName, CurseType type, boolean isPlayer) {
             this.level = level;
             this.victimUuid = victimUuid;
             this.victimName = victimName;
             this.type = type;
-            this.ticksRemaining = (type == CurseType.HEART) ? 400 : 300; // 20s cho tim, 15s cho não hoặc song trùng
+            this.isPlayer = isPlayer;
+            if (isPlayer) {
+                this.ticksRemaining = (type == CurseType.HEART) ? 400 : 300; // 20s cho tim, 15s cho não hoặc song trùng
+            } else {
+                this.ticksRemaining = 140; // Đúng 7.0 giây tử vong cho toàn bộ các mob khác theo thiết kế chuẩn
+            }
         }
     }
 
@@ -70,7 +78,8 @@ public class CuuTheCurseManager {
     public static void applyCurse(ServerLevel level, LivingEntity victim, CurseType type) {
         if (victim == null || !victim.isAlive() || isImmune(victim)) return;
 
-        ACTIVE_CURSES.put(victim.getUUID(), new ActiveCuuTheCurse(level, victim.getUUID(), victim.getName().getString(), type));
+        boolean isPlayer = victim instanceof ServerPlayer;
+        ACTIVE_CURSES.put(victim.getUUID(), new ActiveCuuTheCurse(level, victim.getUUID(), victim.getName().getString(), type, isPlayer));
 
         if (victim instanceof ServerPlayer playerVictim) {
             playerVictim.connection.send(new ClientboundSetTitlesAnimationPacket(0, 50, 15));
@@ -216,28 +225,48 @@ public class CuuTheCurseManager {
 
             curse.ticksRemaining--;
 
-            // Cập nhật debuff liên tục cho trạng thái mất Não
-            if ((curse.type == CurseType.BRAIN || curse.type == CurseType.DUAL) && curse.ticksRemaining % 20 == 0) {
+            // Xử lý hiệu ứng đặc thù cho các Mob thông thường (Non-player)
+            if (!(victim instanceof ServerPlayer)) {
+                if (curse.type == CurseType.BRAIN || curse.type == CurseType.DUAL) {
+                    // Mất phương hướng hoàn toàn: Xoay vòng tròn vô định, hủy mục tiêu, giảm tốc 90%
+                    victim.setDeltaMovement(0, victim.getDeltaMovement().y, 0);
+                    victim.setYRot(victim.getYRot() + 25.0F);
+                    victim.yBodyRot = victim.getYRot();
+                    victim.yHeadRot = victim.getYRot();
+                    if (victim instanceof net.minecraft.world.entity.Mob mob) {
+                        mob.setTarget(null);
+                        mob.getNavigation().stop();
+                    }
+                    victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 40, 0, false, false, false));
+                    victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 4, false, false, false));
+                }
+                if (curse.ticksRemaining % 20 == 0) {
+                    // Hiệu ứng hạt linh hồn rò rỉ và âm thanh nhịp tim đếm ngược
+                    level.sendParticles(ParticleTypes.SOUL, victim.getX(), victim.getY() + victim.getEyeHeight() * 0.8D, victim.getZ(), 4, 0.2D, 0.2D, 0.2D, 0.02D);
+                    level.playSound(null, victim.getX(), victim.getY(), victim.getZ(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 1.2F, 1.8F);
+                }
+            }
+
+            // Cập nhật debuff liên tục cho người chơi bị mất Não
+            if (victim instanceof ServerPlayer && (curse.type == CurseType.BRAIN || curse.type == CurseType.DUAL) && curse.ticksRemaining % 20 == 0) {
                 victim.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 35, 0, false, false, false));
                 victim.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 45, 0, false, false, false));
                 victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 35, 2, false, false, false));
             }
 
-            // Cập nhật cảnh báo định kỳ mỗi 1 giây (20 ticks)
-            if (curse.ticksRemaining % 20 == 0) {
+            // Cập nhật cảnh báo định kỳ mỗi 1 giây (20 ticks) cho người chơi
+            if (curse.ticksRemaining % 20 == 0 && victim instanceof ServerPlayer sp) {
                 int secondsLeft = curse.ticksRemaining / 20;
-                if (victim instanceof ServerPlayer sp) {
-                    String partDesc = switch (curse.type) {
-                        case HEART -> "TIM §7(Dùng Phép Màu Của Thần Linh)";
-                        case BRAIN -> "NÃO §7(Dùng Bí Ẩn Đức Tin & Ân Sủng)";
-                        case DUAL -> "CẢ TIM LẪN NÃO §4§l(CẦN CẤP CỨU KHẨN CẤP!)";
-                    };
-                    sp.displayClientMessage(
-                            Component.literal("§4§l⚠️ BẠN ĐÃ BỊ ĐOẠT " + partDesc + " ÁN TỬ CÒN: §e§l" + secondsLeft + "s"),
-                            true
-                    );
-                    sp.playNotifySound(SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 1.0F, 1.8F);
-                }
+                String partDesc = switch (curse.type) {
+                    case HEART -> "TIM §7(Dùng Phép Màu Của Thần Linh)";
+                    case BRAIN -> "NÃO §7(Dùng Bí Ẩn Đức Tin & Ân Sủng)";
+                    case DUAL -> "CẢ TIM LẪN NÃO §4§l(CẦN CẤP CỨU KHẨN CẤP!)";
+                };
+                sp.displayClientMessage(
+                        Component.literal("§4§l⚠️ BẠN ĐÃ BỊ ĐOẠT " + partDesc + " ÁN TỬ CÒN: §e§l" + secondsLeft + "s"),
+                        true
+                );
+                sp.playNotifySound(SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 1.0F, 1.8F);
             }
 
             // Hết thời gian mà chưa được điều trị -> 100% Tử Vong!
@@ -251,6 +280,10 @@ public class CuuTheCurseManager {
                             Component.literal("§4§l[Án Tử] §f" + sp.getName().getString() + " §cđã tử vong do không kịp điều trị vết thương đoạt mệnh của Cứu Thế Quyền Hiện!"),
                             false
                     );
+                } else {
+                    // Mob khác hết 7 giây -> Nổ tung tuyệt mệnh
+                    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 1, 0, 0, 0, 0);
+                    level.playSound(null, victim.getX(), victim.getY(), victim.getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.6F, 0.8F);
                 }
                 victim.hurt(level.damageSources().fellOutOfWorld(), Float.MAX_VALUE);
             }

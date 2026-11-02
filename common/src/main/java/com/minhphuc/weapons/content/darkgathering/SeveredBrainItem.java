@@ -3,14 +3,22 @@ package com.minhphuc.weapons.content.darkgathering;
 import com.minhphuc.weapons.data.ItemStackDataHelper;
 import com.minhphuc.weapons.init.ModItems;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.core.registries.BuiltInRegistries;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.InteractionResultHolder;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Rarity;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
+import net.minecraft.world.level.Level;
 
 import java.util.List;
 
@@ -51,8 +59,35 @@ public class SeveredBrainItem extends Item {
         }
 
         tooltip.add(Component.literal(""));
-        tooltip.add(Component.literal("§c⚠️ Sinh vật mất não sẽ tử vong sau §43 giây"));
-        tooltip.add(Component.literal("§cnếu không được điều trị bằng Bí Mật Của Đức Tin Và Ân Sủng!"));
+        tooltip.add(Component.literal("§c⚠️ Sinh vật mất não sẽ tử vong sau §415 giây §c(người chơi) hoặc §47 giây §c(quái vật)"));
+        tooltip.add(Component.literal("§cnếu không được điều trị bằng Bí Mật Của Đức Tin hoặc Thị Thực!"));
+        tooltip.add(Component.literal("§e✦ Chuột phải khi cầm trên tay để tự cấy ghép lại não và hóa giải án tử! ✨"));
+    }
+
+    @Override
+    public InteractionResultHolder<ItemStack> use(Level level, Player player, InteractionHand hand) {
+        ItemStack held = player.getItemInHand(hand);
+        if (CuuTheCurseManager.hasCurse(player)) {
+            if (!level.isClientSide()) {
+                CuuTheCurseManager.cure(player, "Tự Cấy Ghép Lại Bộ Não");
+                player.heal(player.getMaxHealth() * 0.50F);
+                player.displayClientMessage(
+                        Component.literal("§d§l[CẤY GHÉP THÀNH CÔNG] §fBạn đã kịp thời cấy ghép lại Bộ Não! Trí óc thanh tỉnh, xóa bỏ án tử & hồi 50% sinh lực! ✨🧠"),
+                        true
+                );
+                if (level instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.ENCHANT, player.getX(), player.getY() + 1.2D, player.getZ(), 25, 0.4D, 0.4D, 0.4D, 0.1D);
+                    sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1.0D, player.getZ(), 20, 0.3D, 0.5D, 0.3D, 0.1D);
+                }
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PLAYER_BURP, SoundSource.PLAYERS, 1.2F, 1.0F);
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 2.0F, 1.4F);
+            }
+            if (!player.getAbilities().instabuild) {
+                held.shrink(1);
+            }
+            return InteractionResultHolder.sidedSuccess(held, level.isClientSide());
+        }
+        return super.use(level, player, hand);
     }
 
     public static ItemStack createForEntity(LivingEntity entity) {
