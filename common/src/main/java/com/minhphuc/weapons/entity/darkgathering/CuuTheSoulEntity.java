@@ -3,6 +3,7 @@ package com.minhphuc.weapons.entity.darkgathering;
 import com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager;
 import com.minhphuc.weapons.content.darkgathering.SeveredBrainItem;
 import com.minhphuc.weapons.content.darkgathering.SeveredHeartItem;
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
@@ -201,10 +202,33 @@ public class CuuTheSoulEntity extends PathfinderMob {
         sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.PLAYERS, 2.0F, 0.6F);
         sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.5F, 1.9F);
 
-        // 2. Tương tác đặc biệt với Ác Ma Thủy Tổ (Primordial Demons)
+        // Xác định loại ấn chú Tam Thức
+        CuuTheCurseManager.CurseType cType = switch (this.strikeMode) {
+            case 1 -> CuuTheCurseManager.CurseType.BRAIN;
+            case 2 -> CuuTheCurseManager.CurseType.DUAL;
+            default -> CuuTheCurseManager.CurseType.HEART;
+        };
+
+        // 2. Tương tác đặc biệt với Ác Ma Thủy Tổ (Primordial Demons) theo ma trận tỷ lệ chuẩn:
+        // Rouge (Guy Crimson) & Noir (Diablo): Cứu Thế thắng 20% | Ác Ma kháng 80%
+        // Blanc (Testarossa): Cứu Thế thắng 40% | Ác Ma kháng 60%
+        // Jaune (Carrera): Cứu Thế thắng 60% | Ác Ma kháng 40%
+        // Violet (Ultima), Vert (Misery), Bleu (Rain): Cứu Thế thắng 80% | Ác Ma kháng 20%
         if (target instanceof PrimordialDemonEntity demon) {
-            if (demon.getRandom().nextFloat() < 0.35F) {
-                // 35% Cơ hội kích hoạt Tái Sinh Thể Linh Hồn Thủy Tổ!
+            DemonType dType = demon.getDemonType();
+            float resistChance;
+            if (dType == DemonType.ROUGE || dType == DemonType.NOIR) {
+                resistChance = 0.80F;
+            } else if (dType == DemonType.BLANC) {
+                resistChance = 0.60F;
+            } else if (dType == DemonType.JAUNE) {
+                resistChance = 0.40F;
+            } else {
+                resistChance = 0.20F;
+            }
+
+            if (demon.getRandom().nextFloat() < resistChance) {
+                // Ác Ma kích hoạt Tái Sinh Thể Linh Hồn Thủy Tổ & Sóng Phản Kích
                 demon.heal(demon.getMaxHealth() * 0.35F);
                 sl.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 1.8F, 1.4F);
                 sl.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2.0F, 1.2F);
@@ -222,28 +246,24 @@ public class CuuTheSoulEntity extends PathfinderMob {
                 }
 
                 sl.getServer().getPlayerList().broadcastSystemMessage(
-                        Component.literal("§c§l[THỦY TỔ MA LỰC] §e" + demon.getDemonType().getColorName() + " §fđã vận dụng Tái Sinh Thể Linh Hồn, hóa giải nhát chém đoạt mệnh của Cứu Thế Quyền Hiện!"),
+                        Component.literal("§c§l[THỦY TỔ MA LỰC] §e" + dType.getColorName() + " §fđã vận dụng Tái Sinh Thể Linh Hồn, hóa giải nhát chém đoạt mệnh của Cứu Thế Quyền Hiện!"),
                         false
                 );
                 return;
             } else {
-                // 65% Thất bại: Chịu 180 sát thương chí mạng
-                demon.hurt(sl.damageSources().mobAttack(this), 180.0F);
+                // Đánh trúng chí mạng: Sát thương khổng lồ và áp dụng án tử 7s cho Ác Ma
+                demon.hurt(sl.damageSources().mobAttack(this), 220.0F);
+                CuuTheCurseManager.applyCurse(sl, demon, cType);
                 return;
             }
         }
 
-        // 3. Kích hoạt án tử cho người chơi
-        if (target instanceof ServerPlayer sp) {
-            CuuTheCurseManager.CurseType cType = switch (this.strikeMode) {
-                case 1 -> CuuTheCurseManager.CurseType.BRAIN;
-                case 2 -> CuuTheCurseManager.CurseType.DUAL;
-                default -> CuuTheCurseManager.CurseType.HEART;
-            };
-            CuuTheCurseManager.applyCurse(sl, sp, cType);
-        } else {
-            // Sinh vật thông thường chịu sát thương cực lớn
-            float dmg = (this.strikeMode == 2) ? 200.0F : 120.0F;
+        // 3. Kích hoạt án tử cho người chơi HOẶC bất kỳ Mob nào khác trong game (Người chơi: 15-20s, Mob: 7s)
+        CuuTheCurseManager.applyCurse(sl, target, cType);
+
+        if (!(target instanceof ServerPlayer)) {
+            // Sát thương va đập trực tiếp kèm án tử
+            float dmg = (this.strikeMode == 2) ? 160.0F : 90.0F;
             target.hurt(sl.damageSources().mobAttack(this), dmg);
         }
     }

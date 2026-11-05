@@ -81,6 +81,15 @@ public class WeaponsModClient {
                 com.minhphuc.weapons.client.renderer.TaKinhDaiTangRenderer::new
         );
 
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.MarbasModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.MarbasModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.MARBAS,
+                com.minhphuc.weapons.client.renderer.MarbasRenderer::new
+        );
+
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");
     }
 }

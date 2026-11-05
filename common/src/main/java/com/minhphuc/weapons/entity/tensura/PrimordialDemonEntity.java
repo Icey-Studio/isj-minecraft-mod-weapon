@@ -92,6 +92,18 @@ public class PrimordialDemonEntity extends TamableAnimal {
     public float wingFlapAngle = 0.0F;
     public float prevWingFlapAngle = 0.0F;
 
+    // Hỗ trợ triệu hồi tổ đội (Rouge gọi Rain & Misery)
+    private boolean isSupportMinion = false;
+    private boolean hasSummonedMinions = false;
+
+    public boolean isSupportMinion() {
+        return this.isSupportMinion;
+    }
+
+    public void setSupportMinion(boolean support) {
+        this.isSupportMinion = support;
+    }
+
     // Lãnh Địa (Domain Expansion)
     public int activeDomainTicks = 0;
     public Vec3 domainCenter = null;
@@ -144,19 +156,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
+                AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
+                if (!sl.getEntitiesOfClass(PrimordialDemonEntity.class, checkArea).isEmpty()) {
+                    return false;
+                }
             }
             BlockPos pos = this.blockPosition();
-            if (!level.canSeeSky(pos) || pos.getY() < 60) {
-                return false;
-            }
-            // Tỷ lệ xuất hiện tự nhiên cực thấp: tương đương tìm thấy 1 ngôi làng (chỉ 4% thành công khi kích hoạt spawn)
-            if (this.random.nextFloat() > 0.08F) {
+            if (pos.getY() < 50) {
                 return false;
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
-
     @Override
     protected void defineSynchedData(SynchedEntityData.Builder builder) {
         super.defineSynchedData(builder);
@@ -1204,8 +1216,35 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
         }
 
+        // Rouge (Guy Crimson) triệu hồi Rain & Misery trợ chiến khi máu tụt xuống <= 80%
+        if (!this.level().isClientSide() && getDemonType() == DemonType.ROUGE && !this.isTame() && !this.hasSummonedMinions) {
+            if (this.getHealth() <= this.getMaxHealth() * 0.80F || (this.getTarget() != null && this.getHealth() <= this.getMaxHealth() * 0.90F)) {
+                this.hasSummonedMinions = true;
+                summonSupportMinions();
+            }
+        }
+
+        // Nếu là Rouge và có hầu cận Misery (Vert) bảo vệ trong 32 block -> Giảm 40% sát thương
+        if (getDemonType() == DemonType.ROUGE && !this.isTame()) {
+            boolean hasMiseryGuard = !this.level().getEntitiesOfClass(PrimordialDemonEntity.class, this.getBoundingBox().inflate(32.0D),
+                    d -> d.isAlive() && d.getDemonType() == DemonType.VERT && d.isSupportMinion()).isEmpty();
+            if (hasMiseryGuard) {
+                amount *= 0.60F;
+            }
+        }
+
         // KHI BỊ ĐÁNH VỀ 0 MÁU
         if (amount >= this.getHealth()) {
+            if (this.isSupportMinion) {
+                if (this.level() instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + 1.0D, this.getZ(), 30, 0.4D, 0.6D, 0.4D, 0.08D);
+                    sl.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.0D, this.getZ(), 20, 0.3D, 0.5D, 0.3D, 0.05D);
+                    sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_DEATH, SoundSource.HOSTILE, 1.5F, 1.4F);
+                }
+                this.discard();
+                return false;
+            }
+
             if (!this.isTame()) {
                 Player conqueror = null;
                 if (source.getEntity() instanceof Player p) {
@@ -1307,6 +1346,8 @@ public class PrimordialDemonEntity extends TamableAnimal {
         tag.putBoolean("IsNamed", isNamed());
         tag.putInt("EvolutionTier", getEvolutionTier());
         tag.putString("CustomDemonName", getCustomDemonName());
+        tag.putBoolean("IsSupportMinion", this.isSupportMinion);
+        tag.putBoolean("HasSummonedMinions", this.hasSummonedMinions);
 
         net.minecraft.nbt.ListTag skillsList = new net.minecraft.nbt.ListTag();
         for (PrimordialSkillPool.SkillEntry entry : randomSkills) {
@@ -1336,6 +1377,12 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (tag.contains("CustomDemonName")) {
             setCustomDemonName(tag.getString("CustomDemonName"));
         }
+        if (tag.contains("IsSupportMinion")) {
+            this.isSupportMinion = tag.getBoolean("IsSupportMinion");
+        }
+        if (tag.contains("HasSummonedMinions")) {
+            this.hasSummonedMinions = tag.getBoolean("HasSummonedMinions");
+        }
         if (tag.contains("PrimordialSkills", 9)) {
             net.minecraft.nbt.ListTag list = tag.getList("PrimordialSkills", 8);
             List<String> ids = new ArrayList<>();
@@ -1346,6 +1393,45 @@ public class PrimordialDemonEntity extends TamableAnimal {
         }
         ensureRandomSkills();
         updateAttributesForType(getDemonType());
+    }
+
+    private void summonSupportMinions() {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.0F, 1.2F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BELL_BLOCK, SoundSource.HOSTILE, 2.5F, 0.8F);
+
+        // Báo hiệu triệu hồi tổ đội của Rouge
+        for (ServerPlayer p : sl.players()) {
+            if (p.position().distanceTo(this.position()) <= 48.0D) {
+                p.displayClientMessage(
+                        Component.literal("§c§l[ROUGE - GUY CRIMSON] §eRa đây, Bleu, Vert! Hãy cho kẻ này thấy thế nào là sức mạnh của Khởi Nguyên!"),
+                        false
+                );
+            }
+        }
+
+        // 1. Triệu hồi Rain (Bleu) - Băng Cực Hỗ Trợ
+        PrimordialDemonEntity rain = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
+        rain.setDemonType(DemonType.BLEU);
+        rain.setSupportMinion(true);
+        rain.setPhysicalBody(true);
+        rain.setWinged(true);
+        rain.moveTo(this.getX() + 3.0D, this.getY(), this.getZ() + 3.0D, this.getYRot(), 0.0F);
+        rain.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+        if (this.getTarget() != null) rain.setTarget(this.getTarget());
+        sl.addFreshEntity(rain);
+
+        // 2. Triệu hồi Misery (Vert) - Kết Giới Hỗ Trợ
+        PrimordialDemonEntity misery = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
+        misery.setDemonType(DemonType.VERT);
+        misery.setSupportMinion(true);
+        misery.setPhysicalBody(true);
+        misery.setWinged(true);
+        misery.moveTo(this.getX() - 3.0D, this.getY(), this.getZ() - 3.0D, this.getYRot(), 0.0F);
+        misery.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+        if (this.getTarget() != null) misery.setTarget(this.getTarget());
+        sl.addFreshEntity(misery);
     }
 
     @Override

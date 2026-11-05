@@ -23,7 +23,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 20 : 19;
+        return hasCreation ? 22 : 21;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -51,6 +51,8 @@ public class TensuraSkillDispatcher {
                 case 17 -> "§6§l18. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
                 case 18 -> "§e§l19. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 19 -> "§e§l20. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 20 -> "§4§l21. Hắc Viêm Ngục (Hellflare)";
+                case 21 -> "§c§l22. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -74,6 +76,8 @@ public class TensuraSkillDispatcher {
                 case 16 -> "§6§l17. Lồng Giam Vô Hạn (Infinite Dragon Prison)";
                 case 17 -> "§e§l18. Phòng Ngự Tuyệt Đối Của Uriel (" + (urielActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 18 -> "§e§l19. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
+                case 19 -> "§4§l20. Hắc Viêm Ngục (Hellflare)";
+                case 20 -> "§c§l21. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -122,6 +126,8 @@ public class TensuraSkillDispatcher {
                 case 17 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
                 case 18 -> EvolvedSkillHelper.toggleUrielDefense(player);
                 case 19 -> RykuzinSinkaAbility.toggle(level, player);
+                case 20 -> HellflareAbility.cast(level, player);
+                case 21 -> DarkFlameShotAbility.cast(level, player);
             }
         } else {
             switch (index) {
@@ -144,6 +150,8 @@ public class TensuraSkillDispatcher {
                 case 16 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
                 case 17 -> EvolvedSkillHelper.toggleUrielDefense(player);
                 case 18 -> RykuzinSinkaAbility.toggle(level, player);
+                case 19 -> HellflareAbility.cast(level, player);
+                case 20 -> DarkFlameShotAbility.cast(level, player);
             }
         }
     }

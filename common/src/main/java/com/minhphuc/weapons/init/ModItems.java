@@ -181,6 +181,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> TA_KINH_DAI_TANG_SPAWN_EGG = ITEMS.register("ta_kinh_dai_tang_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.TA_KINH_DAI_TANG, 0x2A231C, 0xA855F7, new Item.Properties()));
 
+    public static final RegistrySupplier<Item> MARBAS_SPAWN_EGG = ITEMS.register("marbas_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.MARBAS, 0xF8FAFC, 0xDC2626, new Item.Properties()));
+
     public static final RegistrySupplier<Item> WARDING_EARPLUGS = ITEMS.register("warding_earplugs",
             () -> new com.minhphuc.weapons.content.darkgathering.WardingEarplugsItem(new Item.Properties()));
 
@@ -523,6 +526,7 @@ public class ModItems {
                         output.accept(SHIGARAKI_TANUKI_EMPTY.get());
                         output.accept(SHIGARAKI_TANUKI_GONGEN.get());
                         output.accept(TA_KINH_DAI_TANG_SPAWN_EGG.get());
+                        output.accept(MARBAS_SPAWN_EGG.get());
                         output.accept(WARDING_EARPLUGS.get());
                         output.accept(BODHI_EFFIGY_EMPTY.get());
                         output.accept(BODHI_EFFIGY_MONK.get());

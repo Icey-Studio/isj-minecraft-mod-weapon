@@ -173,11 +173,6 @@ public class TaKinhDaiTangEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên hiếm tương đương Cứu Thế Quyền Hiện (3%) - Kiểm tra trước để tránh load chunks/entities
-            if (this.random.nextFloat() > 0.03F) {
-                return false;
-            }
-
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
 
@@ -187,7 +182,8 @@ public class TaKinhDaiTangEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     @Override

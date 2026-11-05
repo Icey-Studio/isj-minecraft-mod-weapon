@@ -8,6 +8,7 @@ import com.minhphuc.weapons.content.darkgathering.SeerFleshAbility;
 import com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
 import com.minhphuc.weapons.entity.ModEntities;
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
@@ -15,6 +16,8 @@ import com.minhphuc.weapons.entity.tensura.VelzardEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.network.ClientboundTengaiSlashEffectPacket;
 import com.minhphuc.weapons.network.ModMessages;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
@@ -32,6 +35,7 @@ import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
@@ -48,11 +52,14 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
 import java.util.EnumSet;
+import java.util.List;
 
 /**
  * THIÊN NGOẠI CỨU THẾ QUYỀN HIỆN (TENGAI GUZE GONGEN)
@@ -94,6 +101,10 @@ public class CuuTheQuyenHienEntity extends Monster {
     private int soulParriedCount = 0;
     private int barrierPunchCount = 0;
     private int antiAirCooldown = 0;
+    private int antiAirLeapCooldown = 0;
+    private int antiAirLeapTicks = 0;
+    private int verticalCleaveCooldown = 60;
+    private UUID slamVictimUuid = null;
 
     // Quản lý kỹ năng mới & Animation State
     private int actionTicks = 0;
@@ -262,11 +273,6 @@ public class CuuTheQuyenHienEntity extends Monster {
     @Override
     public boolean checkSpawnRules(net.minecraft.world.level.LevelAccessor level, MobSpawnType spawnType) {
         if (spawnType == MobSpawnType.NATURAL || spawnType == MobSpawnType.CHUNK_GENERATION) {
-            // Tỷ lệ xuất hiện tự nhiên hiếm (3%) - Kiểm tra trước để tránh quét thực thể/chunks nặng nề
-            if (this.random.nextFloat() > 0.03F) {
-                return false;
-            }
-
             if (level instanceof ServerLevel sl) {
                 if (sl.dimension() != Level.OVERWORLD) return false;
 
@@ -276,7 +282,8 @@ public class CuuTheQuyenHienEntity extends Monster {
                 }
             }
         }
-        return super.checkSpawnRules(level, spawnType);
+        return level.getDifficulty() != net.minecraft.world.Difficulty.PEACEFUL
+                && super.checkSpawnRules(level, spawnType);
     }
 
     public void stun(int ticks) {
@@ -301,6 +308,8 @@ public class CuuTheQuyenHienEntity extends Monster {
 
         if (this.timeSlashCooldown > 0) this.timeSlashCooldown--;
         if (this.antiAirCooldown > 0) this.antiAirCooldown--;
+        if (this.antiAirLeapCooldown > 0) this.antiAirLeapCooldown--;
+        if (this.verticalCleaveCooldown > 0) this.verticalCleaveCooldown--;
         if (this.spatialSlashCooldown > 0) this.spatialSlashCooldown--;
         if (this.gravitationalCrushCooldown > 0) this.gravitationalCrushCooldown--;
         if (this.vajraAegisCooldown > 0) this.vajraAegisCooldown--;
@@ -317,6 +326,69 @@ public class CuuTheQuyenHienEntity extends Monster {
 
         if (this.level().isClientSide()) return;
         ServerLevel sl = (ServerLevel) this.level();
+
+        // Xử lý logic Thiên Ngoại Trụy Lạc (Nhảy lên không bắt ném đất)
+        if (this.antiAirLeapTicks > 0) {
+            this.antiAirLeapTicks--;
+            sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX(), this.getY() + 0.2D, this.getZ(), 2, 0.2D, 0.1D, 0.2D, 0.01D);
+
+            LivingEntity leapTarget = this.getTarget();
+            if (leapTarget != null && leapTarget.isAlive()) {
+                double distToTargetSq = this.distanceToSqr(leapTarget);
+                if (distToTargetSq <= 3.8D * 3.8D || this.getBoundingBox().inflate(1.2D).intersects(leapTarget.getBoundingBox())) {
+                    // Túm lấy mục tiêu và ném cắm thẳng xuống đất!
+                    leapTarget.setDeltaMovement(0, -2.6D, 0);
+                    leapTarget.hasImpulse = true;
+                    leapTarget.hurtMarked = true;
+                    leapTarget.addTag("CuuTheSlamVictim");
+                    this.slamVictimUuid = leapTarget.getUUID();
+                    this.antiAirLeapTicks = 0;
+
+                    sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.0F, 1.6F);
+                    sl.playSound(null, leapTarget.getX(), leapTarget.getY(), leapTarget.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.5F, 1.2F);
+                }
+            }
+        }
+
+        // Xử lý va đập nổ đất khi mục tiêu bị ném tiếp đất
+        if (this.slamVictimUuid != null) {
+            Entity victimEnt = sl.getEntity(this.slamVictimUuid);
+            if (victimEnt instanceof LivingEntity slamVictim && slamVictim.isAlive()) {
+                if (slamVictim.onGround() || slamVictim.verticalCollision || slamVictim.getY() <= this.getY() + 1.0D) {
+                    slamVictim.removeTag("CuuTheSlamVictim");
+                    this.slamVictimUuid = null;
+
+                    sl.playSound(null, slamVictim.getX(), slamVictim.getY(), slamVictim.getZ(), SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 2.2F, 0.8F);
+                    sl.playSound(null, slamVictim.getX(), slamVictim.getY(), slamVictim.getZ(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 2.0F, 1.0F);
+
+                    BlockPos groundPos = slamVictim.blockPosition().below();
+                    BlockState gState = sl.getBlockState(groundPos);
+                    sl.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, gState), slamVictim.getX(), slamVictim.getY() + 0.1D, slamVictim.getZ(), 45, 0.6D, 0.2D, 0.6D, 0.15D);
+                    sl.sendParticles(ParticleTypes.EXPLOSION, slamVictim.getX(), slamVictim.getY() + 0.5D, slamVictim.getZ(), 2, 0, 0, 0, 0);
+
+                    // Sát thương đúng 20% Máu tối đa!
+                    float slamDamage = Math.max(35.0F, slamVictim.getMaxHealth() * 0.20F);
+                    slamVictim.hurt(this.damageSources().mobAttack(this), slamDamage);
+
+                    // Chấn động lan xung quanh 3.5m
+                    AABB shockArea = slamVictim.getBoundingBox().inflate(3.5D);
+                    for (LivingEntity nearby : sl.getEntitiesOfClass(LivingEntity.class, shockArea)) {
+                        if (nearby != this && nearby != slamVictim && nearby.isAlive()) {
+                            nearby.hurt(this.damageSources().mobAttack(this), 25.0F);
+                            Vec3 push = nearby.position().subtract(slamVictim.position()).normalize().scale(0.8D).add(0, 0.25D, 0);
+                            nearby.setDeltaMovement(push);
+                            nearby.hasImpulse = true;
+                        }
+                    }
+
+                    if (slamVictim instanceof ServerPlayer sp) {
+                        sp.sendSystemMessage(Component.literal("§4§l[CẢNH BÁO] §cBị Cứu Thế Quyền Hiện ném nổ đất! Bạn mất 20% lượng máu tối đa!"));
+                    }
+                }
+            } else {
+                this.slamVictimUuid = null;
+            }
+        }
 
         // 0. Quản lý thời gian kiểm soát khi được người chơi triệu hồi (90 giây)
         if (this.summonTicks > 0) {
@@ -382,34 +454,78 @@ public class CuuTheQuyenHienEntity extends Monster {
             }
         }
 
-        LivingEntity target = this.getTarget();
-        if (target != null && target.isAlive()) {
-            double distSq = this.distanceToSqr(target);
-
-            // 3. Kỹ năng Không Chiến (Anti-Air): Kéo giật các sinh vật bay rớt xuống đất
-            if (this.antiAirCooldown <= 0) {
-                double dy = target.getY() - this.getY();
-                double distHorizSq = (target.getX() - this.getX()) * (target.getX() - this.getX()) + (target.getZ() - this.getZ()) * (target.getZ() - this.getZ());
-                if (dy >= 2.0D && dy <= 16.0D && distHorizSq <= 14.0D * 14.0D) {
-                    executeAntiAirPullDown(sl, target);
-                    this.antiAirCooldown = 40;
+        // 2.1. UY ÁP OÁN KHÍ (Bách Quỷ Khiếp Sợ): Quái thường và động vật xung quanh hoảng sợ bỏ chạy
+        if (this.tickCount % 20 == 0) {
+            AABB fearBox = this.getBoundingBox().inflate(8.0D);
+            for (Mob nearbyMob : sl.getEntitiesOfClass(Mob.class, fearBox)) {
+                if (nearbyMob != this && nearbyMob.isAlive() && nearbyMob.getMaxHealth() <= 50.0F && !(nearbyMob instanceof CuuTheSoulEntity)) {
+                    if (nearbyMob.getTarget() != this) {
+                        Vec3 fleeDir = nearbyMob.position().subtract(this.position()).normalize().scale(8.0D);
+                        nearbyMob.getNavigation().moveTo(nearbyMob.getX() + fleeDir.x, nearbyMob.getY(), nearbyMob.getZ() + fleeDir.z, 1.45D);
+                    }
                 }
             }
+        }
 
-            // 4. Bát Nhã Kim Cang Thể: Kích hoạt khi HP <= 55% hoặc ở dạng tay không
+        LivingEntity target = this.getTarget();
+        if (target != null && target.isAlive() && !this.isStunned()) {
+            double distSq = this.distanceToSqr(target);
+            double dy = target.getY() - this.getY();
+            boolean isAirborne = (dy >= 2.0D || target.isFallFlying()
+                    || target instanceof net.minecraft.world.entity.FlyingMob
+                    || target instanceof net.minecraft.world.entity.animal.FlyingAnimal);
+
+            // Bát Nhã Kim Cang Thể: Ưu tiên hộ thể khi HP <= 55% hoặc ở dạng tay không
             if (this.vajraAegisCooldown <= 0 && this.vajraAegisDuration <= 0 && (this.getHealth() <= this.getMaxHealth() * 0.55F || this.isBareHanded())) {
                 activateVajraAegis(sl);
                 this.vajraAegisCooldown = 360;
             }
-            // 5. Thiên Ngoại Thần Áp: Kích hoạt khi cận chiến (distSq <= 10x10)
-            else if (this.gravitationalCrushCooldown <= 0 && distSq <= 10.0D * 10.0D) {
-                executeGravitationalCrush(sl);
-                this.gravitationalCrushCooldown = 240;
+            // Kỹ năng 1: Thiên Ngoại Trụy Lạc (Nhảy lên không bắt ném đất) - Ưu tiên khi mục tiêu bay
+            else if (isAirborne && this.antiAirLeapCooldown <= 0 && distSq <= 24.0D * 24.0D && this.hasLineOfSight(target)) {
+                executeAntiAirLeapAndSlam(sl, target);
             }
-            // 6. Không Gian Trảm: Vung đao chém sóng chân không tầm xa (6 - 18 blocks)
-            else if (this.spatialSlashCooldown <= 0 && distSq >= 6.0D * 6.0D && distSq <= 18.0D * 18.0D && this.hasLineOfSight(target)) {
-                executeSpatialSlash(sl, target);
-                this.spatialSlashCooldown = 160;
+            // Hệ thống luân chuyển kỹ năng linh hoạt theo trọng số (Dynamic Skill Selector)
+            else {
+                List<Runnable> availableSkills = new ArrayList<>();
+                List<Integer> weights = new ArrayList<>();
+
+                // Tầm xa (6m - 18m): Không Gian Trảm
+                if (this.spatialSlashCooldown <= 0 && distSq >= 6.0D * 6.0D && distSq <= 18.0D * 18.0D && this.hasLineOfSight(target)) {
+                    availableSkills.add(() -> {
+                        executeSpatialSlash(sl, target);
+                        this.spatialSlashCooldown = 140;
+                    });
+                    weights.add(70);
+                }
+
+                // Cận chiến (< 5.5m): Đoạn Thiên Nhất Trảm (Bổ dọc vỡ đất)
+                if (this.verticalCleaveCooldown <= 0 && distSq <= 5.5D * 5.5D) {
+                    availableSkills.add(() -> executeVerticalCleave(sl, target));
+                    weights.add(45);
+                }
+
+                // Cận chiến (< 9.0m): Thiên Ngoại Thần Áp (Dậm trọng lực)
+                if (this.gravitationalCrushCooldown <= 0 && distSq <= 9.0D * 9.0D) {
+                    availableSkills.add(() -> {
+                        executeGravitationalCrush(sl);
+                        this.gravitationalCrushCooldown = 200;
+                    });
+                    weights.add(35);
+                }
+
+                // Chọn ngẫu nhiên có trọng số trong các chiêu sẵn sàng
+                if (!availableSkills.isEmpty()) {
+                    int totalWeight = weights.stream().mapToInt(Integer::intValue).sum();
+                    int roll = this.random.nextInt(totalWeight);
+                    int cumulative = 0;
+                    for (int i = 0; i < availableSkills.size(); i++) {
+                        cumulative += weights.get(i);
+                        if (roll < cumulative) {
+                            availableSkills.get(i).run();
+                            break;
+                        }
+                    }
+                }
             }
         }
     }
@@ -528,6 +644,69 @@ public class CuuTheQuyenHienEntity extends Monster {
 
         if (target instanceof ServerPlayer sp) {
             sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fTrảm kích chân không của Cứu Thế Quyền Hiện kéo bạn rơi thẳng xuống đất!"));
+        }
+    }
+
+    /**
+     * KỸ NĂNG 1: THIÊN NGOẠI TRỤY LẠC (Anti-Air Leap & Slam)
+     * Nhảy vọt lên trời tiếp cận mục tiêu bay, I-Frames 100%, túm ném cắm thẳng xuống đất.
+     * Khi mục tiêu chạm đất, gây nổ đất và trừ 20% Máu tối đa!
+     */
+    public void executeAntiAirLeapAndSlam(ServerLevel sl, LivingEntity target) {
+        this.setActionState((byte) 5, 25);
+        this.antiAirLeapTicks = 25;
+        this.antiAirLeapCooldown = 80; // 4s hồi chiêu
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.5F, 1.4F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_FLAP, SoundSource.HOSTILE, 2.5F, 0.8F);
+
+        // Véc tơ phóng thẳng tới mục tiêu trên không
+        Vec3 diff = target.position().add(0, 1.2D, 0).subtract(this.position());
+        double horizontalDist = Math.sqrt(diff.x * diff.x + diff.z * diff.z);
+        double leapY = Math.max(0.65D, diff.y * 0.12D + 0.5D);
+        Vec3 leapVel = new Vec3(diff.x / Math.max(1.0D, horizontalDist) * 1.65D, leapY, diff.z / Math.max(1.0D, horizontalDist) * 1.65D);
+        this.setDeltaMovement(leapVel);
+        this.hasImpulse = true;
+
+        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, this.getX(), this.getY() + 0.2D, this.getZ(), 15, 0.4D, 0.1D, 0.4D, 0.05D);
+        sl.sendParticles(ParticleTypes.SONIC_BOOM, this.getX(), this.getY() + 1.0D, this.getZ(), 1, 0, 0, 0, 0);
+
+        if (target instanceof ServerPlayer sp) {
+            sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fCứu Thế Quyền Hiện bật nhảy vút lên trời bắt sống bạn!"));
+        }
+    }
+
+    /**
+     * KỸ NĂNG 2: ĐOẠN THIÊN NHẤT TRẢM (Vertical Cleave & Ground Shatter)
+     * Vung đao từ đỉnh đầu chém thẳng xuống, áp lực cực lớn làm nứt vỡ đất và gây choáng.
+     */
+    public void executeVerticalCleave(ServerLevel sl, LivingEntity target) {
+        this.setActionState((byte) 4, 20);
+        this.verticalCleaveCooldown = 90; // 4.5s hồi chiêu
+
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_STRONG, SoundSource.HOSTILE, 2.0F, 0.6F);
+        sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 2.2F, 1.1F);
+        sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.STONE_BREAK, SoundSource.HOSTILE, 2.5F, 0.7F);
+
+        // Sát thương 70.0 physical
+        float dmg = isBareHanded() ? 85.0F : 70.0F;
+        target.hurt(this.damageSources().mobAttack(this), dmg);
+
+        // Gây choáng 1.5s và làm chậm 3s
+        if (target instanceof CuuTheQuyenHienEntity ct) {
+            ct.stun(30);
+        }
+        target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 4, false, false, true));
+
+        // Hiệu ứng đất nứt vỡ dưới chân mục tiêu (Không phá block thật để Zero Lag)
+        BlockPos below = target.blockPosition().below();
+        BlockState bState = sl.getBlockState(below);
+        sl.sendParticles(new BlockParticleOption(ParticleTypes.BLOCK, bState), target.getX(), target.getY() + 0.1D, target.getZ(), 35, 0.5D, 0.2D, 0.5D, 0.12D);
+        sl.sendParticles(ParticleTypes.SWEEP_ATTACK, target.getX(), target.getY() + 0.8D, target.getZ(), 3, 0.1D, 0.5D, 0.1D, 0.0D);
+        sl.sendParticles(ParticleTypes.CAMPFIRE_COSY_SMOKE, target.getX(), target.getY() + 0.1D, target.getZ(), 8, 0.3D, 0.1D, 0.3D, 0.03D);
+
+        if (target instanceof ServerPlayer sp) {
+            sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fĐoạn Thiên Nhất Trảm của Cứu Thế Quyền Hiện chém nứt đất dưới chân và làm bạn tê liệt!"));
         }
     }
 
@@ -708,6 +887,9 @@ public class CuuTheQuyenHienEntity extends Monster {
     public boolean hurt(DamageSource source, float amount) {
         if (this.isInvulnerableTo(source)) return false;
 
+        // Bất tử (I-Frames 100%) khi đang nhảy vọt lên không trung bắt mục tiêu
+        if (this.antiAirLeapTicks > 0) return false;
+
         Entity attacker = source.getEntity();
 
         // 1. Tuyệt đối đánh không lại Milim, Velgrynd, Velzard: Chịu sát thương x5
@@ -720,9 +902,22 @@ public class CuuTheQuyenHienEntity extends Monster {
             return super.hurt(source, amount);
         }
 
-        // 2. Kháng 70% sát thương từ Ác Ma Thủy Tổ (Primordial Demon) -> chỉ chịu 30% ảnh hưởng!
-        if (attacker instanceof PrimordialDemonEntity) {
-            amount *= 0.30F;
+        // 2. Kháng sát thương từ Ác Ma Thủy Tổ (Primordial Demon) theo ma trận tỷ lệ:
+        // Rouge & Noir: Cứu Thế thắng 20% -> nhận 85% dmg
+        // Blanc: Cứu Thế thắng 40% -> nhận 60% dmg
+        // Jaune: Cứu Thế thắng 60% -> nhận 40% dmg
+        // Violet, Vert, Bleu: Cứu Thế thắng 80% -> chỉ nhận 20% dmg
+        if (attacker instanceof PrimordialDemonEntity demon) {
+            DemonType dType = demon.getDemonType();
+            if (dType == DemonType.ROUGE || dType == DemonType.NOIR) {
+                amount *= 0.85F;
+            } else if (dType == DemonType.BLANC) {
+                amount *= 0.60F;
+            } else if (dType == DemonType.JAUNE) {
+                amount *= 0.40F;
+            } else {
+                amount *= 0.20F;
+            }
         }
 
         // 3. Kháng 90% Linh Tử Băng Hoại (Disintegration)
@@ -773,10 +968,24 @@ public class CuuTheQuyenHienEntity extends Monster {
             return false;
         }
 
-        // Đấu với Ác Ma Thủy Tổ: Tỉ lệ thắng 70% áp đảo
+        // Đấu với Ác Ma Thủy Tổ: Ma trận tỉ lệ thắng và phân bổ sát thương chuẩn
         if (target instanceof PrimordialDemonEntity demon) {
-            float demonDamage = 65.0F + (this.random.nextFloat() * 20.0F); // 65 - 85 damage
-            this.heal(demonDamage * 0.10F); // Hút 10% sinh lực
+            DemonType dType = demon.getDemonType();
+            float demonDamage;
+            if (dType == DemonType.ROUGE || dType == DemonType.NOIR) {
+                // Thắng 20%: Guy Crimson & Diablo quá mạnh mẽ
+                demonDamage = 45.0F + (this.random.nextFloat() * 15.0F); // 45-60 dmg
+            } else if (dType == DemonType.BLANC) {
+                // Thắng 40%: Testarossa xảo quyệt
+                demonDamage = 60.0F + (this.random.nextFloat() * 15.0F); // 60-75 dmg
+            } else if (dType == DemonType.JAUNE) {
+                // Thắng 60%: Carrera hoang dã
+                demonDamage = 85.0F + (this.random.nextFloat() * 20.0F); // 85-105 dmg
+            } else {
+                // Thắng 80%: Violet, Vert, Bleu
+                demonDamage = 115.0F + (this.random.nextFloat() * 25.0F); // 115-140 dmg
+            }
+            this.heal(demonDamage * 0.15F); // Hút 15% sinh lực
             if (this.level() instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.CRIT, demon.getX(), demon.getY() + 1.2D, demon.getZ(), 12, 0.4D, 0.4D, 0.4D, 0.1D);
                 sl.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.PLAYER_ATTACK_CRIT, SoundSource.HOSTILE, 1.8F, 0.8F);

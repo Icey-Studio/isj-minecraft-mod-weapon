@@ -245,6 +245,16 @@ public class PurificationPillarAbility {
                     );
                 }
 
+                // Tái sinh linh hồn từ item trên đất (mỗi 16 ticks)
+                if (elapsed % 16 == 0) {
+                    DivineSalvationHelper.processSoulResurrection(p.level, p.center, 6.0D, p.caster);
+                }
+
+                // Phục hưng làng mạc bỏ hoang (mỗi 40 ticks)
+                if (elapsed % 40 == 0) {
+                    DivineSalvationHelper.restoreAbandonedVillage(p.level, BlockPos.containing(p.center), 22, p.caster);
+                }
+
                 AABB salvationBox = new AABB(p.center.x - 4.5D, groundY - 1.0D, p.center.z - 4.5D,
                         p.center.x + 4.5D, groundY + 40.0D, p.center.z + 4.5D);
 
@@ -305,52 +315,9 @@ public class PurificationPillarAbility {
                     }
 
                     // =============================================================
-                    // 2. CẢI TÀ QUY CHÁNH: CHUYỂN HÓA CÁC XÁC SỐNG & PHÙ THỦY THÀNH DÂN LÀNG
+                    // 2. CẢI TÀ QUY CHÁNH: MOB THÙ ĐỊCH -> DÂN LÀNG / THÚ CƯNG
                     // =============================================================
-                    if (e instanceof ZombieVillager zv) {
-                        Mob converted = zv.convertTo(EntityType.VILLAGER, true);
-                        if (converted != null) {
-                            p.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 15, 0.3D, 0.4D, 0.3D, 0.05D);
-                            p.level.playSound(null, converted.getX(), converted.getY(), converted.getZ(),
-                                    SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 2.0F, 1.0F);
-                        }
-                        continue;
-                    } else if (e instanceof Zombie z && !(z instanceof ZombifiedPiglin)) {
-                        // Zombie thường, Husk, Drowned -> Hoàn lương thành Dân Làng
-                        Mob converted = z.convertTo(EntityType.VILLAGER, false);
-                        if (converted != null) {
-                            p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 20, 0.3D, 0.4D, 0.3D, 0.1D);
-                            p.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 15, 0.3D, 0.4D, 0.3D, 0.05D);
-                            p.level.playSound(null, converted.getX(), converted.getY(), converted.getZ(),
-                                    SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 2.0F, 1.2F);
-                        }
-                        continue;
-                    } else if (e instanceof Witch witch) {
-                        // Phù Thủy -> Thanh tẩy tà thuật thành Dân Làng Mục Sư
-                        Mob converted = witch.convertTo(EntityType.VILLAGER, false);
-                        if (converted != null) {
-                            p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 25, 0.3D, 0.5D, 0.3D, 0.1D);
-                            p.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 15, 0.3D, 0.4D, 0.3D, 0.05D);
-                            p.level.playSound(null, converted.getX(), converted.getY(), converted.getZ(),
-                                    SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 2.0F, 1.3F);
-                        }
-                        continue;
-                    } else if (e instanceof ZombifiedPiglin zp) {
-                        // Heo Thây Ma -> Thanh tẩy lây nhiễm thành Piglin thuần lương
-                        Mob converted = zp.convertTo(EntityType.PIGLIN, true);
-                        if (converted != null) {
-                            p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, converted.getX(), converted.getY() + 1.0D, converted.getZ(), 15, 0.3D, 0.4D, 0.3D, 0.1D);
-                            p.level.playSound(null, converted.getX(), converted.getY(), converted.getZ(),
-                                    SoundEvents.ZOMBIE_VILLAGER_CURE, SoundSource.PLAYERS, 2.0F, 1.4F);
-                        }
-                        continue;
-                    } else if (e instanceof AbstractSkeleton sk) {
-                        // Giải thoát linh hồn cho Skeleton / Stray
-                        p.level.sendParticles(ParticleTypes.SOUL, sk.getX(), sk.getY() + 1.0D, sk.getZ(), 12, 0.2D, 0.4D, 0.2D, 0.02D);
-                        p.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sk.getX(), sk.getY() + 1.0D, sk.getZ(), 10, 0.2D, 0.3D, 0.2D, 0.1D);
-                        p.level.playSound(null, sk.getX(), sk.getY(), sk.getZ(),
-                                SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 2.0F, 1.6F);
-                        sk.discard();
+                    if (DivineSalvationHelper.tryConvertHostile(p.level, e, p.caster)) {
                         continue;
                     }
 
