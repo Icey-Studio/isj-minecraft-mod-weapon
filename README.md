@@ -64,7 +64,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ### ⚡ 5. Hệ Thống Tuyệt Kỹ Bản Thể & Không Hồi Chiêu (Zero Cooldown)
 * **Toàn bộ kỹ năng hoàn toàn không mất thời gian hồi chiêu (0s Cooldown)**, thi triển liên tục và mượt mà.
-* **Phím `[Z]` luân chuyển 22 tuyệt kỹ**:
+* **Phím `[Z]` luân chuyển 23 tuyệt kỹ**:
   1. *Linh Tử Băng Hoại (Sanctuary Disintegration)*
   2. *Tà Khứ Vũ Thê Tử (Jacob's Ladder)*
   3. *Phép Màu Của Thần Linh (Miracle of the Gods)* — Cải tà quy chính mob thù địch thành dân làng / thú cưng, hồi sinh từ linh hồn
@@ -87,6 +87,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
   20. *Lục Thần Tiến Hóa (Rykuzin Sinka)*
   21. *Hắc Viêm Ngục (Hellflare - Benimaru)* — Giam cầm mục tiêu trong khối lập phương không gian rồi bộc phát lửa đen thiêu cháy
   22. *Hắc Viêm Hỏa Cầu (Dark Flame Shot - Benimaru)* — Bắn cầu lửa đen bất diệt không thể bị dập tắt bởi nước hoặc mưa
+  23. *Hư Vô Băng Hoại (Nihility Collapse)* — Tuyệt kỹ đại hợp nhất 4 hồi điện ảnh, lồng giam 70m, lực hút nghịch chuyển và "I AM ATOMIC"
 
 ---
 
@@ -102,7 +103,25 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ---
 
-### 👁️ 7. Dark Gathering — Thần Linh, Boss Tốt Nghiệp Sinh & Tà Tăng
+### 🌌 7. Tuyệt Kỹ Đại Hợp Nhất: Hư Vô Băng Hoại (Nihility Collapse & Cinematic Camera)
+Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thành một bản giao hưởng hủy diệt 4 hồi liên hoàn (10 giây):
+* **Hồi 1 (0 -> 50 ticks): Lãnh Địa Hắc Ám & Kết Giới Không Gian** (*Lồng Giam Vô Hạn + Hắc Viêm Ngục + Kháng Ma Kết Giới*):
+  * Vùng tối không gian bùng mở cực đại bán kính **70 block**, triệt tiêu ánh sáng, áp đặt Mù & Chậm tuyệt đối, phong tỏa dịch chuyển của mọi quái vật.
+  * *Camera Shot 1 & 2*: Orbit lướt vòng cung tốc độ cao quanh người chơi, chuyển sang góc thấp sát mặt đất nhìn lên bầu trời tối.
+* **Hồi 2 (50 -> 110 ticks): Liệt Không Vũ Trụ & Nghịch Chuyển Trọng Lực** (*Dragon Nova + Alkaid + Beelzebuth*):
+  * Trên độ cao 35m xuất hiện **Vết Rách Không Gian Vũ Trụ** xoay tròn tinh vân kết hợp Quả Cầu Tinh Tú Alkaid.
+  * **Trọng lực nghịch đảo**: Hút toàn bộ quái vật trong bán kính 60m bay lơ lửng ngược lên bầu trời vào miệng xoáy.
+  * *Camera Shot 3*: Bird's Eye View từ trên tầng mây nhìn toàn cảnh mặt đất chìm trong bóng tối và quái vật bị hút lên vết nứt.
+* **Hồi 3 (110 -> 140 ticks): Điểm Tĩnh Lặng Tuyệt Đối** (*Tiên Tri Rykuzin + I Am Atomic*):
+  * Quái vật bị đóng băng lơ lửng trên không, âm thanh im bặt, màn hình chuyển sang góc cận cảnh khuôn mặt / vũ khí người chơi (*Camera Shot 4*).
+  * Tiêu đề rực sáng: **`§8[HƯ VÔ BĂNG HOẠI] §d§lI... AM... ATOMIC.`**
+* **Hồi 4 (140 -> 200 ticks): Đại Bộc Phát Hủy Diệt Đa Tầng** (*Linh Tử Băng Hoại + Long Tinh Bộc Viêm Bá + Tuyệt Diệt Tinh Tú*):
+  * Cột Sáng Linh Tử 256m dội thẳng từ vết nứt xuống tâm đất, quét 3,000 sát thương ma pháp/hư vô bốc hơi quái vật thành Linh Hồn.
+  * *Camera Shot 5*: Giật lùi góc siêu rộng kèm camera shake rung chấn cực mạnh, sau đó trả góc nhìn thứ nhất mượt mà.
+
+---
+
+### 👁️ 8. Dark Gathering — Thần Linh, Boss Tốt Nghiệp Sinh & Tà Tăng
 * **Đại Ác Ma Marbas (Goetia President Marbas - Chap 52)**:
   * Boss quỷ trắng khổng lồ cao 4.2m với sừng cừu và đôi cánh trắng, máu 1500 HP, giáp 22, kháng bật lùi 1.0.
   * **Lãnh Địa Bàn Mổ (Surgical Theater)**: Bóp nát tim kẻ nào sprint/nhảy (sát thương chuẩn), Sóng Dao Mổ tước đoạt não bộ gây mù và suy yếu, Tái Cấu Trúc Sinh Thể hồi máu.

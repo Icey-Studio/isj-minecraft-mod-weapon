@@ -93,6 +93,11 @@ public class ModMessages {
                 ClientboundSyncRykuzinStatePacket::encode,
                 ClientboundSyncRykuzinStatePacket::new,
                 ClientboundSyncRykuzinStatePacket::handle);
+
+        CHANNEL.register(ClientboundNihilityCinematicPacket.class,
+                ClientboundNihilityCinematicPacket::encode,
+                ClientboundNihilityCinematicPacket::new,
+                ClientboundNihilityCinematicPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

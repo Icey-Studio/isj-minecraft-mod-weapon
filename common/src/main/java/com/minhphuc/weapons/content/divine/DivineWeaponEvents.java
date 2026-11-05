@@ -59,6 +59,7 @@ public class DivineWeaponEvents {
             com.minhphuc.weapons.content.darkgathering.ThienMaCurseManager.cleanup(level);
             com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility.cleanup(level);
             com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cleanup(level);
+            com.minhphuc.weapons.content.tensura.NihilityCollapseAbility.cleanupLevel(level);
             com.minhphuc.weapons.content.darkgathering.DigitalLedDisplayHelper.clearAll();
             com.minhphuc.weapons.content.darkgathering.SamuraiSpiritDisplayHelper.clearAll();
         });

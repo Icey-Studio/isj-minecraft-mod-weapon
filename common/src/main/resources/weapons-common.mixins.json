@@ -15,7 +15,8 @@
   "client": [
     "ItemPropertiesAccessor",
     "GameRendererAccessor",
-    "MixinLivingEntityRenderer"
+    "MixinLivingEntityRenderer",
+    "CameraMixin"
   ],
   "injectors": {
     "defaultRequire": 1

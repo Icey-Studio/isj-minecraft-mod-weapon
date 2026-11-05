@@ -11,6 +11,7 @@ public class WeaponsModClient {
         com.minhphuc.weapons.client.ClientTaisuiHandler.init();
         com.minhphuc.weapons.client.ClientTengaiMangaHandler.init();
         com.minhphuc.weapons.client.ClientIaiHandler.init();
+        com.minhphuc.weapons.client.ClientNihilityCinematicHandler.init();
         com.minhphuc.weapons.client.ClientModelProperties.register();
 
         // Đăng ký Model Layers và Entity Renderers cho Ác Ma Thủy Tổ & Chước Nhiệt Long Velgrynd
