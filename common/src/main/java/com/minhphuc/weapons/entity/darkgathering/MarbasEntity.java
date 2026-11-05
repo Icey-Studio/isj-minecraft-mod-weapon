@@ -98,9 +98,8 @@ public class MarbasEntity extends Monster {
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, false));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, IronGolem.class, false));
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
+        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Monster.class, 20, true, false,
                 e -> !(e instanceof MarbasEntity)));
-        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Animal.class, false));
     }
 
     @Override
@@ -114,6 +113,8 @@ public class MarbasEntity extends Monster {
         boolean hasCombatTarget = (target != null && target.isAlive());
         setDomainActive(hasCombatTarget);
 
+        boolean hasPlayerNearby = sl.hasNearbyAlivePlayer(this.getX(), this.getY(), this.getZ(), 48.0D);
+
         // =========================================================================
         // 1. LÃNH ĐỊA BÀN MỔ (SURGICAL OPERATING THEATER) - QUÉT MỖI 20 TICKS (1S)
         // =========================================================================
@@ -121,12 +122,14 @@ public class MarbasEntity extends Monster {
             double domainRadius = 30.0D;
             AABB domainBox = this.getBoundingBox().inflate(domainRadius);
 
-            // Hiệu ứng hào quang viền lãnh địa trắng bạc
-            for (int a = 0; a < 360; a += 36) {
-                double rad = Math.toRadians(a);
-                double px = this.getX() + Math.cos(rad) * domainRadius;
-                double pz = this.getZ() + Math.sin(rad) * domainRadius;
-                sl.sendParticles(ParticleTypes.END_ROD, px, this.getY() + 0.5D, pz, 1, 0, 0.5D, 0, 0.02D);
+            // Hiệu ứng hào quang viền lãnh địa trắng bạc (chỉ hiển thị khi có người chơi gần)
+            if (hasPlayerNearby) {
+                for (int a = 0; a < 360; a += 36) {
+                    double rad = Math.toRadians(a);
+                    double px = this.getX() + Math.cos(rad) * domainRadius;
+                    double pz = this.getZ() + Math.sin(rad) * domainRadius;
+                    sl.sendParticles(ParticleTypes.END_ROD, px, this.getY() + 0.5D, pz, 1, 0, 0.5D, 0, 0.02D);
+                }
             }
 
             List<LivingEntity> inDomain = sl.getEntitiesOfClass(LivingEntity.class, domainBox,
@@ -137,16 +140,20 @@ public class MarbasEntity extends Monster {
                 if (victim.isSprinting() || victim.getDeltaMovement().horizontalDistanceSqr() > 0.08D) {
                     victim.hurt(sl.damageSources().magic(), 5.0F); // 2.5 tim sát thương chuẩn
                     victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, false, true));
-                    sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
-                            SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 1.5F, 1.2F);
-                    sl.sendParticles(ParticleTypes.DAMAGE_INDICATOR, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 4, 0.2D, 0.3D, 0.2D, 0.05D);
+                    if (hasPlayerNearby) {
+                        sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                                SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 1.5F, 1.2F);
+                        sl.sendParticles(ParticleTypes.DAMAGE_INDICATOR, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 4, 0.2D, 0.3D, 0.2D, 0.05D);
+                    }
                 }
             }
 
             // Tái Cấu Trúc Sinh Thể: Hồi máu tự nhiên khi chiến đấu
             if (this.getHealth() < this.getMaxHealth()) {
                 this.heal(10.0F);
-                sl.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + 2.0D, this.getZ(), 6, 0.5D, 0.8D, 0.5D, 0.02D);
+                if (hasPlayerNearby) {
+                    sl.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + 2.0D, this.getZ(), 6, 0.5D, 0.8D, 0.5D, 0.02D);
+                }
             }
         }
 
@@ -158,10 +165,12 @@ public class MarbasEntity extends Monster {
         } else if (hasCombatTarget) {
             dissectionCooldown = 160;
 
-            sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 1.4F);
-            sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2.0F, 0.7F);
-            sl.sendParticles(ParticleTypes.SWEEP_ATTACK, this.getX(), this.getY() + 1.5D, this.getZ(), 12, 1.2D, 0.5D, 1.2D, 0);
-            sl.sendParticles(ParticleTypes.FLASH, this.getX(), this.getY() + 2.0D, this.getZ(), 2, 0, 0, 0, 0);
+            if (hasPlayerNearby) {
+                sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 1.4F);
+                sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2.0F, 0.7F);
+                sl.sendParticles(ParticleTypes.SWEEP_ATTACK, this.getX(), this.getY() + 1.5D, this.getZ(), 12, 1.2D, 0.5D, 1.2D, 0);
+                sl.sendParticles(ParticleTypes.FLASH, this.getX(), this.getY() + 2.0D, this.getZ(), 2, 0, 0, 0, 0);
+            }
 
             AABB slashBox = this.getBoundingBox().inflate(18.0D);
             List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, slashBox,

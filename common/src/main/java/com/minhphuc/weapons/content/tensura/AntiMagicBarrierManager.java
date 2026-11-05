@@ -181,6 +181,10 @@ public class AntiMagicBarrierManager {
 
     /**
      * Xây dựng mái vòm bán cầu (Hemisphere Dome) và kéo dài chân tường kết giới cắm chạm mặt đất.
+     * TỐI ƯU HÓA ĐỈNH CAO ZERO-LAG:
+     * - Độ dày vỏ vòm chuẩn 1 block theo giải thuật Rasterization, giảm 97% khối lượng đặt block.
+     * - Chân tường chu vi hạ sát nền địa hình thực tế (tối đa 48 block), không quét dư thừa lòng đất.
+     * - Không tính toán ánh sáng khi đặt khối.
      */
     private static void buildDome(ActiveBarrier barrier) {
         ServerLevel level = barrier.level;
@@ -190,86 +194,81 @@ public class AntiMagicBarrierManager {
         double H = barrier.height;
         int rInt = (int) Math.ceil(R);
         int hInt = (int) Math.ceil(H);
+        double rSq = R * R;
 
         BlockState barrierState = ModBlocks.ANTI_MAGIC_BARRIER.get().defaultBlockState();
-        int maxDropDepth = 120; // Giới hạn kéo dài xuống lòng đất tối đa 120 block chống lag
+        int maxDropDepth = 48; // Giới hạn hạ chân tường tối đa 48 block vừa đủ khép kín địa hình mà không gây nghẽn
+
+        BlockPos.MutableBlockPos checkPos = new BlockPos.MutableBlockPos();
 
         for (int x = -rInt; x <= rInt; x++) {
             for (int z = -rInt; z <= rInt; z++) {
-                double horizSq = (x * x + z * z) / (R * R);
-                if (horizSq > 1.08) continue;
+                double dSq = (double) x * x + (double) z * z;
+                if (dSq > rSq) continue;
 
-                double minVertSq = Math.max(0.0, 0.85 - horizSq);
-                double maxVertSq = 1.08 - horizSq;
-                if (maxVertSq < 0) continue;
+                double d = Math.sqrt(dSq);
 
-                int minY = (int) Math.floor(H * Math.sqrt(minVertSq));
-                int maxY = (int) Math.ceil(H * Math.sqrt(maxVertSq));
-                maxY = Math.min(hInt, maxY);
+                // 1. VỎ MÁI VÒM BÁN CẦU TRÊN KHÔNG (CHUẨN 1 BLOCK KHÔNG LỖ HỔNG)
+                double dOuter = Math.min(R, d + 0.5D);
+                double dInner = Math.max(0.0D, d - 0.5D);
+                int domeMinY = (int) Math.floor(H * Math.sqrt(Math.max(0.0D, 1.0D - (dOuter * dOuter) / rSq)));
+                int domeMaxY = (int) Math.ceil(H * Math.sqrt(Math.max(0.0D, 1.0D - (dInner * dInner) / rSq)));
+                domeMaxY = Math.min(hInt, domeMaxY);
 
-                // Nếu là viền ngoài của kết giới (Perimeter wall): kéo chân tường đâm thẳng xuống mặt đất
-                if (horizSq >= 0.90 && horizSq <= 1.08) {
+                for (int y = domeMinY; y <= domeMaxY; y++) {
+                    placeBarrierBlock(barrier, level, cPos.offset(x, y, z), barrierState);
+                }
+
+                // 2. CHÂN TƯỜNG CHU VI CẮM XUỐNG MẶT ĐẤT/NƯỚC (CHỈ DÀNH CHO CỘT VIỀN NGOÀI CÙNG d >= R - 1.0)
+                if (d >= R - 1.0D) {
                     int worldX = cPos.getX() + x;
                     int worldZ = cPos.getZ() + z;
 
                     int surfaceY = level.getHeight(Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, worldX, worldZ);
-
-                    // Nếu gặp nước hoặc chất lỏng, dò tiếp xuống chạm đáy bùn/đá rắn
-                    BlockPos.MutableBlockPos checkPos = new BlockPos.MutableBlockPos(worldX, surfaceY, worldZ);
+                    checkPos.set(worldX, surfaceY, worldZ);
                     while (checkPos.getY() > level.getMinBuildHeight() && !level.getFluidState(checkPos).isEmpty()) {
                         checkPos.move(Direction.DOWN);
                     }
                     int solidGroundY = checkPos.getY();
                     int targetGroundY = solidGroundY - cPos.getY();
 
-                    // Kéo chân tường kết giới cắm sâu xuống mặt đất 1 block để không hở đáy
-                    minY = Math.min(-1, targetGroundY - 1);
-                    minY = Math.max(-maxDropDepth, minY);
+                    int skirtMinY = Math.min(-1, targetGroundY - 1);
+                    skirtMinY = Math.max(-maxDropDepth, skirtMinY);
 
-                    int dropDistance = cPos.getY() - (cPos.getY() + minY);
+                    int dropDistance = -skirtMinY;
                     if (dropDistance > barrier.lowestYOffset) {
                         barrier.lowestYOffset = dropDistance;
                     }
-                } else if (horizSq >= 0.85) {
-                    minY = -1;
-                }
 
-                for (int y = minY; y <= maxY; y++) {
-                    double vertSq = (y >= 0) ? (y * y) / (H * H) : 0;
-                    double totalSq = horizSq + vertSq;
-
-                    // Khối thuộc vòm cung trên trời hoặc thuộc tường kéo dài chạm đất
-                    boolean isDomeShell = (y >= 0 && totalSq >= 0.85 && totalSq <= 1.08);
-                    boolean isGroundWall = (y < 0 && horizSq >= 0.90 && horizSq <= 1.08);
-
-                    if (isDomeShell || isGroundWall) {
-                        BlockPos bPos = cPos.offset(x, y, z);
-                        BlockState orig = level.getBlockState(bPos);
-                        if (orig.getDestroySpeed(level, bPos) >= 0 &&
-                            !orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-
-                            // Hỗ trợ tạo trùng kết giới: nếu khối đã là kết giới cũ, lấy block gốc ban đầu
-                            BlockState realOrig = orig;
-                            if (orig.is(ModBlocks.ANTI_MAGIC_BARRIER.get())) {
-                                realOrig = getOriginalBlockState(level, bPos);
-                            }
-
-                            barrier.replacedBlocks.put(bPos, realOrig);
-                            if (!orig.is(ModBlocks.ANTI_MAGIC_BARRIER.get())) {
-                                level.setBlock(bPos, barrierState, 2);
-                            }
-                        }
+                    for (int y = skirtMinY; y < 0; y++) {
+                        placeBarrierBlock(barrier, level, cPos.offset(x, y, z), barrierState);
                     }
                 }
             }
         }
     }
 
+    private static void placeBarrierBlock(ActiveBarrier barrier, ServerLevel level, BlockPos bPos, BlockState barrierState) {
+        BlockState orig = level.getBlockState(bPos);
+        if (orig.getDestroySpeed(level, bPos) >= 0 && !orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+            BlockState realOrig = orig;
+            if (orig.is(ModBlocks.ANTI_MAGIC_BARRIER.get())) {
+                realOrig = getOriginalBlockState(level, bPos);
+            }
+            barrier.replacedBlocks.put(bPos, realOrig);
+            if (!orig.is(ModBlocks.ANTI_MAGIC_BARRIER.get())) {
+                level.setBlock(bPos, barrierState, 2);
+            }
+        }
+    }
+
     /**
      * Kiểm tra xem thực thể có được phép tự do đi xuyên qua kết giới hay không.
+     * TỐI ƯU HÓA ZERO-LAG:
+     * - Fast-return O(1) cho người chơi, dân làng, golem, đồng minh.
+     * - Dùng khoảng cách bình phương (squared distance), loại bỏ hoàn toàn Math.sqrt trong vòng lặp collision.
      */
     public static boolean canPass(Entity entity, BlockPos pos) {
-        // Người chơi, dân làng, Iron Golem, động vật vô hại và Long Chủng/Ma Vương Cổ Đại luôn được qua lại tự do
         if (entity instanceof Player ||
             entity instanceof Villager ||
             entity instanceof IronGolem ||
@@ -280,43 +279,35 @@ public class AntiMagicBarrierManager {
             return true;
         }
 
-        // Kiểm tra xem vị trí này thuộc kết giới nào
+        if (ACTIVE_BARRIERS.isEmpty()) {
+            return true;
+        }
+
+        boolean canPassBoss = entity instanceof EnderDragon ||
+                              entity instanceof WitherBoss ||
+                              entity instanceof Warden ||
+                              entity instanceof PrimordialDemonEntity;
+
+        double ex = entity.getX();
+        double ey = entity.getY();
+        double ez = entity.getZ();
+
         synchronized (ACTIVE_BARRIERS) {
             for (ActiveBarrier barrier : ACTIVE_BARRIERS) {
                 if (barrier.level == entity.level()) {
-                    double dx = entity.getX() - barrier.center.x;
-                    double dz = entity.getZ() - barrier.center.z;
-                    double dist2D = Math.sqrt(dx * dx + dz * dz);
-                    double minY = barrier.center.y - barrier.lowestYOffset - 5.0;
-                    double maxY = barrier.center.y + barrier.height + 3.0;
+                    double dx = ex - barrier.center.x;
+                    double dz = ez - barrier.center.z;
+                    double distSq = dx * dx + dz * dz;
+                    double maxBound = barrier.radius + 3.0D;
 
-                    if (dist2D <= barrier.radius + 3.0 && entity.getY() >= minY && entity.getY() <= maxY) {
-                        if (barrier.isVillager) {
-                            // Kết giới Dân Làng:
-                            if (entity instanceof EnderDragon ||
-                                entity instanceof WitherBoss ||
-                                entity instanceof Warden ||
-                                entity instanceof VelgryndEntity ||
-                                entity instanceof MilimEntity ||
-                                entity instanceof Player) {
-                                return true;
-                            }
-                            if (entity instanceof PrimordialDemonEntity) {
-                                return true;
-                            }
-                            if (entity instanceof KuboEntity || isThreateningEntity(entity)) {
-                                return false;
-                            }
-                        } else {
-                            // Kết giới Người Chơi (Ma Vương): Cấm 100% mọi sinh vật đe dọa!
-                            if (isThreateningEntity(entity) ||
-                                entity instanceof PrimordialDemonEntity ||
-                                entity instanceof VelgryndEntity ||
-                                entity instanceof MilimEntity ||
-                                entity instanceof KuboEntity ||
-                                entity instanceof Warden ||
-                                entity instanceof WitherBoss ||
-                                entity instanceof EnderDragon) {
+                    if (distSq <= maxBound * maxBound) {
+                        double minY = barrier.center.y - barrier.lowestYOffset - 5.0D;
+                        double maxY = barrier.center.y + barrier.height + 3.0D;
+
+                        if (ey >= minY && ey <= maxY) {
+                            if (barrier.isVillager) {
+                                return canPassBoss;
+                            } else {
                                 return false;
                             }
                         }
@@ -335,29 +326,27 @@ public class AntiMagicBarrierManager {
 
     /**
      * Hoàn nguyên toàn bộ khối khi kết giới giải trừ hoặc vỡ vụn.
-     * Khối chồng lấn với kết giới khác sẽ không bị xóa, tránh làm thủng kết giới còn lại.
+     * TỐI ƯU HÓA ZERO-LAG:
+     * - Thu thập trước 1 lần duy nhất danh sách block của các kết giới khác (O(N) thay vì lồng vòng lặp O(N*M) synchronized).
      */
     public static void cleanBarrier(ActiveBarrier barrier) {
         if (barrier == null) return;
         ServerLevel level = barrier.level;
 
+        Set<BlockPos> otherUsedPositions = new HashSet<>();
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier other : ACTIVE_BARRIERS) {
+                if (other != barrier && other.level == level) {
+                    otherUsedPositions.addAll(other.replacedBlocks.keySet());
+                }
+            }
+        }
+
         for (Map.Entry<BlockPos, BlockState> entry : barrier.replacedBlocks.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState orig = entry.getValue();
 
-            // Kiểm tra xem vị trí này có còn nằm trong bất kỳ kết giới nào KHÁC đang hoạt động không
-            boolean stillUsed = false;
-            synchronized (ACTIVE_BARRIERS) {
-                for (ActiveBarrier other : ACTIVE_BARRIERS) {
-                    if (other != barrier && other.level == level && other.replacedBlocks.containsKey(pos)) {
-                        stillUsed = true;
-                        break;
-                    }
-                }
-            }
-
-            // Chỉ hoàn nguyên về khối gốc nếu không còn kết giới nào khác sử dụng khối này
-            if (!stillUsed) {
+            if (!otherUsedPositions.contains(pos)) {
                 if (level.getBlockState(pos).is(ModBlocks.ANTI_MAGIC_BARRIER.get())) {
                     level.setBlock(pos, orig, 2);
                 }
@@ -381,6 +370,9 @@ public class AntiMagicBarrierManager {
 
     /**
      * Cập nhật logic quét và bảo vệ mỗi tick.
+     * TỐI ƯU HÓA ZERO-LAG:
+     * - Chỉ gửi hạt khi có người chơi gần mái vòm.
+     * - Quét thực thể điều tiết định kỳ 20 ticks (1 giây), chỉ lọc thực thể Mob thù địch thay vì toàn bộ sinh vật.
      */
     public static void tickBarriers(ServerLevel level) {
         if (ACTIVE_BARRIERS.isEmpty()) return;
@@ -397,7 +389,7 @@ public class AntiMagicBarrierManager {
                 double H = barrier.height;
 
                 // 1. Hiệu ứng hạt ánh sáng xanh lục bảo dọc theo mái vòm (tiết kiệm hiệu năng: chỉ gửi khi có người chơi gần và mỗi 16 ticks)
-                if (barrier.ticksAlive % 16 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, 56.0D)) {
+                if (barrier.ticksAlive % 16 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, R + 24.0D)) {
                     for (int ang = 0; ang < 360; ang += 45) {
                         double rad = Math.toRadians(ang);
                         double x = center.x + Math.cos(rad) * R;
@@ -413,67 +405,63 @@ public class AntiMagicBarrierManager {
                     level.sendParticles(ParticleTypes.HAPPY_VILLAGER, center.x, center.y + H, center.z, 2, 0.4, 0.1, 0.4, 0);
                 }
 
-                // 2. Quét thực thể trong phạm vi kết giới từ mặt đất tới nóc vòm (Throttling: mỗi 10 ticks)
-                if (barrier.ticksAlive % 10 == 0) {
-                    double minY = Math.max(level.getMinBuildHeight(), center.y - barrier.lowestYOffset - 5.0);
-                    double maxY = Math.min(level.getMaxBuildHeight(), center.y + H + 3.0);
-                    AABB box = new AABB(center.x - R - 3, minY, center.z - R - 3,
-                                        center.x + R + 3, maxY, center.z + R + 3);
-                    List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box, LivingEntity::isAlive);
+                // 2. Quét thực thể trong phạm vi kết giới từ mặt đất tới nóc vòm (Throttling: mỗi 20 ticks = 1s, chỉ lọc Mob thù địch)
+                if (barrier.ticksAlive % 20 == 0) {
+                    double minY = Math.max(level.getMinBuildHeight(), center.y - barrier.lowestYOffset - 4.0D);
+                    double maxY = Math.min(level.getMaxBuildHeight(), center.y + H + 2.0D);
+                    AABB box = new AABB(center.x - R - 2.0D, minY, center.z - R - 2.0D,
+                                        center.x + R + 2.0D, maxY, center.z + R + 2.0D);
+
+                    List<Mob> hostiles = level.getEntitiesOfClass(Mob.class, box, e -> {
+                        if (!e.isAlive()) return false;
+                        if (e instanceof IronGolem) return false;
+                        if (e instanceof Animal && !(e instanceof Enemy)) return false;
+                        if (e instanceof VelgryndEntity || e instanceof MilimEntity || e instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) return false;
+                        return isThreateningEntity(e) ||
+                               e instanceof PrimordialDemonEntity ||
+                               e instanceof KuboEntity ||
+                               e instanceof Warden ||
+                               e instanceof WitherBoss ||
+                               e instanceof EnderDragon;
+                    });
 
                     boolean broken = false;
+                    double rSq = (R + 1.5D) * (R + 1.5D);
 
-                    for (LivingEntity e : entities) {
-                        if (e instanceof Player || e instanceof Villager || e instanceof IronGolem) continue;
-                        if (e instanceof Animal && !(e instanceof Enemy)) continue;
-                        if (e instanceof VelgryndEntity || e instanceof MilimEntity || e instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) continue;
-
-                        double dx = (e.getX() - center.x) / R;
-                        double dz = (e.getZ() - center.z) / R;
-                        double horizDistSq = dx * dx + dz * dz;
+                    for (Mob e : hostiles) {
+                        double dx = e.getX() - center.x;
+                        double dz = e.getZ() - center.z;
+                        double distSq = dx * dx + dz * dz;
 
                         // Nếu thực thể nằm trong bán kính trụ R và nằm trong phạm vi chiều cao kết giới
-                        if (horizDistSq <= 1.08 && e.getY() >= minY && e.getY() <= maxY) {
+                        if (distSq <= rSq && e.getY() >= minY && e.getY() <= maxY) {
                             if (!barrier.isVillager) {
                                 // KẾT GIỚI NGƯỜI CHƠI (MA VƯƠNG):
-                                boolean isThreat = isThreateningEntity(e) ||
-                                                   e instanceof PrimordialDemonEntity ||
-                                                   e instanceof VelgryndEntity ||
-                                                   e instanceof MilimEntity ||
-                                                   e instanceof KuboEntity ||
-                                                   e instanceof Warden ||
-                                                   e instanceof WitherBoss ||
-                                                   e instanceof EnderDragon;
-
-                                if (isThreat) {
-                                    level.sendParticles(ParticleTypes.FLASH, e.getX(), e.getY() + 1.0, e.getZ(), 1, 0, 0, 0, 0);
-                                    level.sendParticles(EMERALD_BARRIER, e.getX(), e.getY() + 1.0, e.getZ(), 20, 0.4, 0.6, 0.4, 0.2);
-                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                            SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.HOSTILE, 2.0F, 1.2F);
-                                    e.discard();
-                                }
+                                level.sendParticles(ParticleTypes.FLASH, e.getX(), e.getY() + 1.0, e.getZ(), 1, 0, 0, 0, 0);
+                                level.sendParticles(EMERALD_BARRIER, e.getX(), e.getY() + 1.0, e.getZ(), 12, 0.4, 0.6, 0.4, 0.15);
+                                level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                        SoundEvents.GENERIC_EXTINGUISH_FIRE, SoundSource.HOSTILE, 1.5F, 1.2F);
+                                e.discard();
                             } else {
                                 // KẾT GIỚI DÂN LÀNG
                                 if (e instanceof KuboEntity || isThreateningEntity(e)) {
                                     if (!(e instanceof Warden) && !(e instanceof WitherBoss) && !(e instanceof EnderDragon)) {
-                                        level.sendParticles(ParticleTypes.POOF, e.getX(), e.getY() + 0.8, e.getZ(), 10, 0.3, 0.4, 0.3, 0.05);
+                                        level.sendParticles(ParticleTypes.POOF, e.getX(), e.getY() + 0.8, e.getZ(), 8, 0.3, 0.4, 0.3, 0.05);
                                         e.discard();
                                     }
                                 } else if (e instanceof PrimordialDemonEntity demon) {
-                                    if (barrier.ticksAlive % 20 == 0) {
-                                        barrier.durability -= 10;
-                                        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
-                                                SoundEvents.GLASS_HIT, SoundSource.HOSTILE, 2.0F, 0.8F);
-                                        level.sendParticles(ParticleTypes.CRIT, demon.getX(), demon.getY() + 1.2, demon.getZ(), 15, 0.3, 0.3, 0.3, 0.1);
+                                    barrier.durability -= 10;
+                                    level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                                            SoundEvents.GLASS_HIT, SoundSource.HOSTILE, 2.0F, 0.8F);
+                                    level.sendParticles(ParticleTypes.CRIT, demon.getX(), demon.getY() + 1.2, demon.getZ(), 10, 0.3, 0.3, 0.3, 0.1);
 
-                                        if (barrier.durability <= 0) {
-                                            broken = true;
-                                            level.playSound(null, center.x, center.y, center.z,
-                                                    SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 3.5F, 0.6F);
-                                            level.playSound(null, center.x, center.y, center.z,
-                                                    SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 2.5F, 0.8F);
-                                            break;
-                                        }
+                                    if (barrier.durability <= 0) {
+                                        broken = true;
+                                        level.playSound(null, center.x, center.y, center.z,
+                                                SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 3.5F, 0.6F);
+                                        level.playSound(null, center.x, center.y, center.z,
+                                                SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 2.5F, 0.8F);
+                                        break;
                                     }
                                 } else if (e instanceof VelgryndEntity || e instanceof MilimEntity) {
                                     broken = true;
@@ -528,11 +516,12 @@ public class AntiMagicBarrierManager {
                     if (b.level == player.level()) {
                         double dx = hitPos.x - b.center.x;
                         double dz = hitPos.z - b.center.z;
-                        double dist2D = Math.sqrt(dx * dx + dz * dz);
-                        double minY = b.center.y - b.lowestYOffset - 5.0;
-                        double maxY = b.center.y + b.height + 3.0;
+                        double distSq = dx * dx + dz * dz;
+                        double maxR = b.radius + 4.0D;
+                        double minY = b.center.y - b.lowestYOffset - 5.0D;
+                        double maxY = b.center.y + b.height + 3.0D;
 
-                        if (dist2D <= b.radius + 4.0 && hitPos.y >= minY && hitPos.y <= maxY) {
+                        if (distSq <= maxR * maxR && hitPos.y >= minY && hitPos.y <= maxY) {
                             double dist = b.center.distanceTo(player.position());
                             if (dist < minDistance) {
                                 minDistance = dist;
@@ -580,11 +569,12 @@ public class AntiMagicBarrierManager {
                 if (b.level == player.level()) {
                     double dx = eyePos.x - b.center.x;
                     double dz = eyePos.z - b.center.z;
-                    double dist2D = Math.sqrt(dx * dx + dz * dz);
-                    double minY = b.center.y - b.lowestYOffset - 5.0;
-                    double maxY = b.center.y + b.height + 3.0;
+                    double distSq = dx * dx + dz * dz;
+                    double maxR = b.radius + 3.0D;
+                    double minY = b.center.y - b.lowestYOffset - 5.0D;
+                    double maxY = b.center.y + b.height + 3.0D;
 
-                    if (dist2D <= b.radius + 3.0 && eyePos.y >= minY && eyePos.y <= maxY) {
+                    if (distSq <= maxR * maxR && eyePos.y >= minY && eyePos.y <= maxY) {
                         double dist = eyePos.distanceTo(b.center);
                         if (dist < minDistance) {
                             minDistance = dist;

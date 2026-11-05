@@ -147,8 +147,8 @@ public class HellflareAbility {
                 Vec3 center = hf.center;
                 double radius = 4.5D;
 
-                // 1. SINH HẠT LỬA ĐEN VÀ KHÓI ĐEN BAO PHỦ MẶT NGOÀI KẾT GIỚI (MỖI 2 TICKS)
-                if (hf.ticksAlive % 2 == 0) {
+                // 1. SINH HẠT LỬA ĐEN VÀ KHÓI ĐEN BAO PHỦ MẶT NGOÀI KẾT GIỚI (MỖI 4 TICKS, CHỈ GỬI KHI CÓ NGƯỜI CHƠI GẦN)
+                if (hf.ticksAlive % 4 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, 48.0D)) {
                     for (int a = 0; a < 360; a += 45) {
                         double rad = Math.toRadians(a);
                         double px = center.x + Math.cos(rad) * radius;

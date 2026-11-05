@@ -63,7 +63,6 @@ public class ModBlocks {
                             .mapColor(MapColor.COLOR_LIGHT_GREEN)
                             .strength(-1.0F, 3600000.0F)
                             .noLootTable()
-                            .lightLevel(state -> 15)
                             .sound(SoundType.AMETHYST)
                             .noOcclusion()
             ));

@@ -6,6 +6,7 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.level.ClipContext;
 import net.minecraft.world.phys.AABB;
@@ -101,8 +102,8 @@ public class DarkFlameShotAbility {
                 UUID uuid = entry.getKey();
                 int remaining = entry.getValue() - 1;
 
-                LivingEntity victim = (LivingEntity) level.getEntity(uuid);
-                if (victim == null || !victim.isAlive() || remaining <= 0) {
+                Entity ent = level.getEntity(uuid);
+                if (!(ent instanceof LivingEntity victim) || !victim.isAlive() || remaining <= 0) {
                     it.remove();
                     continue;
                 }
@@ -115,8 +116,10 @@ public class DarkFlameShotAbility {
                 // Mỗi 10 ticks (0.5 giây): Gây 3 sát thương chuẩn và sinh hiệu ứng lửa đen
                 if (remaining % 10 == 0) {
                     victim.hurt(level.damageSources().inFire(), 3.0F);
-                    level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, victim.getX(), victim.getY() + victim.getBbHeight() * 0.5D, victim.getZ(), 4, 0.3D, 0.4D, 0.3D, 0.02D);
-                    level.sendParticles(ParticleTypes.SMOKE, victim.getX(), victim.getY() + victim.getBbHeight() * 0.5D, victim.getZ(), 2, 0.2D, 0.3D, 0.2D, 0.01D);
+                    if (level.hasNearbyAlivePlayer(victim.getX(), victim.getY(), victim.getZ(), 48.0D)) {
+                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, victim.getX(), victim.getY() + victim.getBbHeight() * 0.5D, victim.getZ(), 3, 0.3D, 0.4D, 0.3D, 0.02D);
+                        level.sendParticles(ParticleTypes.SMOKE, victim.getX(), victim.getY() + victim.getBbHeight() * 0.5D, victim.getZ(), 1, 0.2D, 0.3D, 0.2D, 0.01D);
+                    }
                 }
             }
         }
