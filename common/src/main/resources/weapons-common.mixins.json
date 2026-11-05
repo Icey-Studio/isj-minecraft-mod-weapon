@@ -16,7 +16,10 @@
     "ItemPropertiesAccessor",
     "GameRendererAccessor",
     "MixinLivingEntityRenderer",
-    "CameraMixin"
+    "CameraMixin",
+    "LevelRendererMixin",
+    "PostChainAccessor",
+    "GuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1
