@@ -180,6 +180,14 @@ public class FaithAndGraceAbility {
 
                     // Tác động lên mọi thực thể trong vùng 40x40 block (mỗi 10 ticks = 0.5s)
                     if (instance.ticksAlive % 10 == 0) {
+                        // Tái sinh linh hồn từ item trên đất
+                        DivineSalvationHelper.processSoulResurrection(level, center, 20.0D, instance.caster);
+
+                        // Phục hưng làng mạc bỏ hoang
+                        if (instance.ticksAlive % 20 == 0) {
+                            DivineSalvationHelper.restoreAbandonedVillage(level, BlockPos.containing(center), 22, instance.caster);
+                        }
+
                         AABB box = new AABB(
                                 center.x - areaRadius, center.y - 10, center.z - areaRadius,
                                 center.x + areaRadius, center.y + maxHeight, center.z + areaRadius
@@ -193,7 +201,7 @@ public class FaithAndGraceAbility {
                                 continue;
                             }
 
-                            if (isIrredeemablyEvil(e)) {
+                            if (DivineSalvationHelper.isBoss(e)) {
                                 // Boss tà ác bị cự tuyệt và đẩy lùi ra ngoài vùng thánh quang
                                 Vec3 diff = e.position().subtract(center.x, center.y, center.z);
                                 Vec3 repel = new Vec3(diff.x, 0, diff.z).normalize().scale(1.2D).add(0, 0.25D, 0);
@@ -202,21 +210,8 @@ public class FaithAndGraceAbility {
                                 continue;
                             }
 
-                            // Chuyển hóa Zombie / Witch
-                            if (e instanceof ZombieVillager zv) {
-                                zv.convertTo(EntityType.VILLAGER, true);
-                                continue;
-                            } else if (e instanceof Zombie z && !(z instanceof ZombifiedPiglin)) {
-                                z.convertTo(EntityType.VILLAGER, false);
-                                continue;
-                            } else if (e instanceof Witch w) {
-                                w.convertTo(EntityType.VILLAGER, false);
-                                continue;
-                            } else if (e instanceof ZombifiedPiglin zp) {
-                                zp.convertTo(EntityType.PIGLIN, true);
-                                continue;
-                            } else if (e instanceof AbstractSkeleton sk) {
-                                sk.discard();
+                            // Cải tà quy chính: mob thù địch -> Dân làng / Thú cưng
+                            if (DivineSalvationHelper.tryConvertHostile(level, e, instance.caster)) {
                                 continue;
                             }
 
