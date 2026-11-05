@@ -64,37 +64,59 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ### ⚡ 5. Hệ Thống Tuyệt Kỹ Bản Thể & Không Hồi Chiêu (Zero Cooldown)
 * **Toàn bộ kỹ năng hoàn toàn không mất thời gian hồi chiêu (0s Cooldown)**, thi triển liên tục và mượt mà.
-* **Phím `[Z]` luân chuyển 19 tuyệt kỹ**:
-  1. *Linh Tử Băng Hoại*
+* **Phím `[Z]` luân chuyển 22 tuyệt kỹ**:
+  1. *Linh Tử Băng Hoại (Sanctuary Disintegration)*
   2. *Tà Khứ Vũ Thê Tử (Jacob's Ladder)*
-  3. *Phép Màu Của Thần Linh*
-  4. *Bí Ẩn Của Đức Tin Và Ân Sủng* (Cột sáng khổng lồ từ trời giáng xuống 5s, bán kính 40x40 blocks)
-  5. *Bạo thực vương (Beelzebuth)*
+  3. *Phép Màu Của Thần Linh (Miracle of the Gods)* — Cải tà quy chính mob thù địch thành dân làng / thú cưng, hồi sinh từ linh hồn
+  4. *Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)* — Cột sáng thánh 40x40m giáng từ trời, đại phục hưng làng hoang phế
+  5. *Bạo Thực Vương (Beelzebuth)*
   6. *Long Tinh Bộc Viêm Bá (Dragon Nova)*
-  7. *Thần Nộ: Tuyệt Diệt Tinh Tú*
+  7. *Thần Nộ: Tuyệt Diệt Tinh Tú (Taisui Extinction Stars)*
   8. *Thị Thực (Seer Flesh)*
-  9. *Diệt Thế Tà Tinh: Alkaid*
-  10. *Cú Bắn Granit (Granite Blast)*
-  11. *Nghịch Thời Nhất Trảm*
-  12. *Bạt Đao Thuật Vận Tốc Ngược*
-  13. *Sáng Tạo Vật Chất* (Hạ Noir)
-  14. *Kháng Ma Kết Giới*
-  15. *Đa Trùng Kết Giới*
-  16. *Zone Track*
-  17. *Cảm Nhận Vạn Năng (Cấp 3)*
-  18. *Lồng Giam Vô Hạn (Cấp 3)*
-  19. *Phòng Ngự Tuyệt Đối Của Uriel (BẬT / TẮT)*
+  9. *Diệt Thế Tà Tinh: Alkaid* (`alkaid_sphere` - Quả cầu tinh tú 14m bốc hơi vạn vật)
+  10. *Cú Bắn Granit (Granite Blast / Holy Beam)*
+  11. *Nghịch Thời Nhất Trảm (Reverse Time Slash)*
+  12. *Bạt Đao Thuật Vận Tốc Ngược (Reverse Velocity Iaijutsu)*
+  13. *Sáng Tạo Vật Chất (Material Creation)* (Khi thức tỉnh Noir)
+  14. *Kháng Ma Kết Giới (Anti-Magic Barrier)* — Mái vòm bán kính 110m (cao 70m) bảo hộ tuyệt đối, thanh tẩy quái vật
+  15. *Kết Giới Đa Tầng (Multilayer Barrier)*
+  16. *Cảm Tri Không Gian (Zone Track)*
+  17. *Vạn Năng Cảm Tri (Universal Sense - Cấp 3)*
+  18. *Long Giam Vô Hạn (Infinite Dragon Prison - Cấp 3)*
+  19. *Phòng Ngự Tuyệt Đối Uriel (BẬT / TẮT)*
+  20. *Lục Thần Tiến Hóa (Rykuzin Sinka)*
+  21. *Hắc Viêm Ngục (Hellflare - Benimaru)* — Giam cầm mục tiêu trong khối lập phương không gian rồi bộc phát lửa đen thiêu cháy
+  22. *Hắc Viêm Hỏa Cầu (Dark Flame Shot - Benimaru)* — Bắn cầu lửa đen bất diệt không thể bị dập tắt bởi nước hoặc mưa
 
 ---
 
-### 👁️ 6. Dark Gathering — Không Vong & Thái Tuế Tinh Quân
-* **Bạch Nhật Tà Thần — Không Vong (Kūbō)**: Đại boss 3 giai đoạn, nuốt chửng linh hồn tăng sức mạnh, AI né tránh đòn linh tử.
-* **Thái Tuế Tinh Quân**: Tinh Tú Tuyệt Diệt, Thị Thực hồi sinh, Diệt Thế Tà Tinh Alkaid mũi khoan vũ trụ 14m xuyên thủng địa hình.
+### 🔥 6. Benimaru — Hắc Viêm & Lửa Đen Bất Diệt (Black Flame)
+* **Khối Lửa Đen Thật (`black_fire`)**: Mô hình ngọn lửa 3D của Minecraft với texture hoạt họa ngọn lửa đen tuyền ma thuật (`black_fire.png`), thiêu đốt vạn vật.
+* **Chiêu 1: Hắc Viêm Ngục (Hellflare)**:
+  * *Giai đoạn 1 (0 -> 25 ticks)*: Khối lập phương kính đen trong suốt lập tức khóa chặt mob mục tiêu. Người bên ngoài nhìn vào **thấy rõ mob bị nhốt hoàn toàn bên trong**.
+  * *Giai đoạn 2 (26 -> 79 ticks)*: Lửa Đen Thật bùng cháy dữ dội bao trùm toàn bộ khối vuông, chuyển sang đen tuyền che khuất hoàn toàn tầm nhìn, thiêu đốt liên tục (16 DPS).
+  * *Giai đoạn 3 (Tick 80)*: Bế mạc nén chân không bộc phá 70 sát thương cực hạn. Miễn trừ 100% cho Long Chủng (Velgrynd, Velzard), Thủy Tổ (Guy, Blanc, Noir), Milim, Marbas; Cứu Thế chịu 30%.
+* **Chiêu 2: Hắc Viêm Hỏa Cầu (Dark Flame Shot)**:
+  * Phóng hỏa cầu hắc ám tầm xa 32m, phát nổ diện rộng 35 sát thương và đặt khối Hắc Viêm trên mặt đất.
+  * Gieo rắc Hắc Viêm Bất Diệt trong 8 giây: ngâm mình xuống nước hay trời mưa cũng không thể dập tắt!
+
+---
+
+### 👁️ 7. Dark Gathering — Thần Linh, Boss Tốt Nghiệp Sinh & Tà Tăng
+* **Đại Ác Ma Marbas (Goetia President Marbas - Chap 52)**:
+  * Boss quỷ trắng khổng lồ cao 4.2m với sừng cừu và đôi cánh trắng, máu 1500 HP, giáp 22, kháng bật lùi 1.0.
+  * **Lãnh Địa Bàn Mổ (Surgical Theater)**: Bóp nát tim kẻ nào sprint/nhảy (sát thương chuẩn), Sóng Dao Mổ tước đoạt não bộ gây mù và suy yếu, Tái Cấu Trúc Sinh Thể hồi máu.
+  * Rơi trọn bộ nội tạng thần thoại: Tim, Não, Cánh Tay, Mắt.
+* **Tà Kinh Đại Tăng (Jankyōbun Daisōjō)**:
+  * Có thể phong ấn vào **Hình Nhân Gỗ Bồ Đề (`bodhi_effigy_monk`)** để triệu hồi làm thức thần hộ mệnh trong 60 giây. Bắt buộc người chơi phải đeo **Bông Bịt Tai Phong Ấn (`warding_earplugs`)**!
+* **Bạch Nhật Tà Thần — Không Vong (Kūbō)**: Đại boss 3 giai đoạn, hố đen trọng lực, nuốt chửng linh hồn.
+* **Thái Tuế Tinh Quân**: Tinh Tú Tuyệt Diệt, Thị Thực hồi sinh, Diệt Thế Tà Tinh Alkaid (`alkaid_sphere`) 14m xuyên thủng địa hình.
 * **Thiên Ngoại Cứu Thế — Nghịch Thời Nhất Trảm (`Phím X`)**: Nhát chém đảo ngược thời gian.
 
 ---
 
-### 🐉 7. Tensura — Thất Đại Thủy Tổ & Chân Long Chủng
+### 🐉 8. Tensura — Thất Đại Thủy Tổ & Chân Long Chủng
+* **Guy Crimson (Rouge) & Tổ Đội Hỗ Trợ**: Khi máu dưới 80%, Rouge triệu hồi **Rain (Bleu)** và **Misery (Vert)** ra hỗ trợ chiến đấu; Misery giảm 40% sát thương cho Rouge. Quái triệu hồi không rơi khế ước ác ma chống exploit.
 * **7 Thủy Tổ Ác Ma**: *Noir, Rouge, Blanc, Jaune, Violet, Bleu, Vert* với Pháp Trận, Bồn Nuôi Cấy Thể Xác và Lãnh Địa riêng biệt.
 * **Súng Lục Hoàng Kim Carrera (Golden Gun)**: Bắn 4 loại ma đạn tối thượng (*Judgement, Abyss Core, Gravity, Golden Rapid*).
 * **Đại Boss Chân Long**: *Chước Nhiệt Long Velgrynd*, *Bạch Băng Long Velzard*, *Ma Vương Milim Nava* với hiệu ứng telegraph và chiêu thức bão lửa/băng tuyết cực hạn.
@@ -105,7 +127,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 | Phím Tắt | Thao Tác | Chức Năng |
 | :---: | :--- | :--- |
-| **`Z`** | **Xoay Vòng Tuyệt Kỹ** | Chuyển đổi giữa 18 kỹ năng bản thể & bật/tắt Uriel |
+| **`Z`** | **Xoay Vòng Tuyệt Kỹ** | Chuyển đổi giữa 22 kỹ năng bản thể & bật/tắt Uriel |
 | **`Chuột Phải`** | **Kích Hoạt Kỹ Năng** | Thi triển chiêu thức đã chọn / Bắn Cầu Linh Tử 7 màu (Kiếm) / Mở sách |
 | **`Chuột Trái`** | **Tấn Công / Hắc Thiểm** | Trảm Kích Hắc Thiểm Bá Vương khi cầm Nguyệt Quang Kiếm |
 | **`Page Up`** | **Chọn Ma Đạn Hoàng Kim** | Mở bảng GUI chọn 4 loại ma đạn khi cầm Súng Hoàng Kim |

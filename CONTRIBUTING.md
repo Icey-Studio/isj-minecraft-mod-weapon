@@ -35,25 +35,26 @@ Cảm ơn bạn đã quan tâm và muốn đóng góp phát triển cho **Weapon
      * [Quy Chuẩn Clean Code & Zero Lag](docs/CLEAN_CODE.md)
      * [Nguyên Tắc Thiết Kế](docs/DESIGN_PRINCIPLES.md)
      * [Quy Ước Đặt Tên](docs/NAMING_CONVENTIONS.md)
-   * Không spawn Entity bừa bãi khi tạo hiệu ứng kỹ năng; sử dụng tính toán hình học hạt trực tiếp.
+   * Không spawn Entity bừa bãi khi tạo hiệu ứng kỹ năng; sử dụng tính toán hình học hạt trực tiếp hoặc ItemDisplay/BlockDisplay nhẹ.
+   * Tuyệt đối không gán `lightLevel 15` cho các khối sinh ra diện rộng (như kết giới, tường vòm) để tránh gây nghẽn Lighting Engine của máy chủ.
+   * Mọi vòng lặp định kỳ (aiStep, tick) phải có throttle (10-20 ticks), kiểm tra người chơi ở gần (`hasNearbyAlivePlayer`) trước khi phát hạt và âm thanh.
 5. **Kiểm tra biên dịch & Build**:
-   Trước khi commit, bắt buộc kiểm tra xem dự án có biên dịch 100% không có lỗi:
+   Trước khi commit, bắt buộc kiểm tra xem dự án có biên dịch 100% không có lỗi trên tất cả các module:
    ```bash
-   ./gradlew compileJava
+   ./gradlew build -x test
    ```
-6. **Commit & Push**:
-   Sử dụng [Conventional Commits](https://www.conventionalcommits.org/):
-   * `feat: ...` (Tính năng mới)
-   * `fix: ...` (Sửa lỗi)
-   * `perf: ...` (Tối ưu hiệu năng, giảm lag)
-   * `docs: ...` (Tài liệu)
-   ```bash
-   git add .
-   git commit -m "feat: implement new tensura awakening skill"
-   git push origin feat/ten-tinh-nang-moi
-   ```
-7. **Tạo Pull Request (PR)**:
-   Mở PR trên GitHub về nhánh chính của repository gốc, kèm mô tả chi tiết tính năng và hình ảnh/video minh họa nếu có.
+6. **Quy Chuẩn Commit (Atomic & Conventional Commits in English)**:
+   Toàn bộ commit message phải viết bằng **Tiếng Anh** theo chuẩn [Conventional Commits](https://www.conventionalcommits.org/):
+   * `feat(tensura): implement Benimaru's Hellflare spatial entrapment and unextinguishable Dark Flame Shot`
+   * `feat(darkgathering): introduce Great Demon Marbas boss with surgical domain and organ harvest`
+   * `perf(core): optimize anti-magic barrier rasterization, spatial queries, and boss spawn rates`
+   * `fix(combat): resolve damage exemption check for true dragon entities`
+   * `docs(readme): update guide book and 22 ultimate skills listing`
+   * Mỗi commit phải có tính **Atomic** (chỉ giải quyết duy nhất một vấn đề hoàn chỉnh, build pass độc lập).
+7. **Tạo Pull Request (PR Standard)**:
+   Mở PR trên GitHub bằng công cụ `gh` CLI hoặc Web UI:
+   * Tiêu đề PR tuân thủ Conventional Commits bằng tiếng Anh.
+   * Mô tả PR (PR Body) đầy đủ các phần: `## 📌 Summary`, `## ⚔️ Key Features & Atomic Commits`, `## ⚡ Zero-Lag Architecture`, `## 🧪 Verification & Build Status`.
 
 ---
 
