@@ -92,6 +92,15 @@ public class ModEntities {
                             .build("ta_kinh_dai_tang")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.MarbasEntity>> MARBAS =
+            ENTITY_TYPES.register("marbas", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.MarbasEntity::new, MobCategory.MONSTER)
+                            .sized(1.4F, 4.0F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("marbas")
+            );
+
     public static void register() {
         ENTITY_TYPES.register();
         EntityAttributeRegistry.register(PRIMORDIAL_DEMON, PrimordialDemonEntity::createAttributes);
@@ -102,6 +111,7 @@ public class ModEntities {
         EntityAttributeRegistry.register(CUU_THE_QUYEN_HIEN, com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity::createAttributes);
         EntityAttributeRegistry.register(CUU_THE_SOUL, com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity::createAttributes);
         EntityAttributeRegistry.register(TA_KINH_DAI_TANG, com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity::createAttributes);
+        EntityAttributeRegistry.register(MARBAS, com.minhphuc.weapons.entity.darkgathering.MarbasEntity::createAttributes);
 
         // Đăng ký quy tắc Spawn Placement cho các thực thể thù địch xuất hiện tự nhiên
         SpawnPlacementsRegistry.register(PRIMORDIAL_DEMON, SpawnPlacementTypes.ON_GROUND,
@@ -124,6 +134,10 @@ public class ModEntities {
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) -> level.getDifficulty() != Difficulty.PEACEFUL && Mob.checkMobSpawnRules(type, level, spawnType, pos, random));
 
+        SpawnPlacementsRegistry.register(MARBAS, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
+                (type, level, spawnType, pos, random) -> level.getDifficulty() != Difficulty.PEACEFUL && Mob.checkMobSpawnRules(type, level, spawnType, pos, random));
+
         SpawnPlacementsRegistry.register(VELGRYND, SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES,
                 (type, level, spawnType, pos, random) -> level.getDifficulty() != Difficulty.PEACEFUL && Mob.checkMobSpawnRules(type, level, spawnType, pos, random));
@@ -140,6 +154,7 @@ public class ModEntities {
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(KUBO.get(), 8, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CUU_THE_QUYEN_HIEN.get(), 6, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(TA_KINH_DAI_TANG.get(), 6, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(MARBAS.get(), 5, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(MILIM.get(), 2, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELGRYND.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELZARD.get(), 1, 1, 1));
