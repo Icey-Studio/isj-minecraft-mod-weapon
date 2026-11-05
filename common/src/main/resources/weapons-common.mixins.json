@@ -17,9 +17,7 @@
     "GameRendererAccessor",
     "MixinLivingEntityRenderer",
     "CameraMixin",
-    "LevelRendererMixin",
-    "PostChainAccessor",
-    "GuiMixin"
+    "PostChainAccessor"
   ],
   "injectors": {
     "defaultRequire": 1
