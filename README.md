@@ -103,21 +103,27 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ---
 
-### 🌌 7. Tuyệt Kỹ Đại Hợp Nhất: Hư Vô Băng Hoại (Nihility Collapse & Cinematic Camera)
-Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thành một bản giao hưởng hủy diệt 4 hồi liên hoàn (10 giây):
-* **Hồi 1 (0 -> 50 ticks): Lãnh Địa Hắc Ám & Kết Giới Không Gian** (*Lồng Giam Vô Hạn + Hắc Viêm Ngục + Kháng Ma Kết Giới*):
-  * Vùng tối không gian bùng mở cực đại bán kính **70 block**, triệt tiêu ánh sáng, áp đặt Mù & Chậm tuyệt đối, phong tỏa dịch chuyển của mọi quái vật.
-  * *Camera Shot 1 & 2*: Orbit lướt vòng cung tốc độ cao quanh người chơi, chuyển sang góc thấp sát mặt đất nhìn lên bầu trời tối.
-* **Hồi 2 (50 -> 110 ticks): Liệt Không Vũ Trụ & Nghịch Chuyển Trọng Lực** (*Dragon Nova + Alkaid + Beelzebuth*):
-  * Trên độ cao 35m xuất hiện **Vết Rách Không Gian Vũ Trụ** xoay tròn tinh vân kết hợp Quả Cầu Tinh Tú Alkaid.
-  * **Trọng lực nghịch đảo**: Hút toàn bộ quái vật trong bán kính 60m bay lơ lửng ngược lên bầu trời vào miệng xoáy.
-  * *Camera Shot 3*: Bird's Eye View từ trên tầng mây nhìn toàn cảnh mặt đất chìm trong bóng tối và quái vật bị hút lên vết nứt.
-* **Hồi 3 (110 -> 140 ticks): Điểm Tĩnh Lặng Tuyệt Đối** (*Tiên Tri Rykuzin + I Am Atomic*):
-  * Quái vật bị đóng băng lơ lửng trên không, âm thanh im bặt, màn hình chuyển sang góc cận cảnh khuôn mặt / vũ khí người chơi (*Camera Shot 4*).
-  * Tiêu đề rực sáng: **`§8[HƯ VÔ BĂNG HOẠI] §d§lI... AM... ATOMIC.`**
-* **Hồi 4 (140 -> 200 ticks): Đại Bộc Phát Hủy Diệt Đa Tầng** (*Linh Tử Băng Hoại + Long Tinh Bộc Viêm Bá + Tuyệt Diệt Tinh Tú*):
-  * Cột Sáng Linh Tử 256m dội thẳng từ vết nứt xuống tâm đất, quét 3,000 sát thương ma pháp/hư vô bốc hơi quái vật thành Linh Hồn.
-  * *Camera Shot 5*: Giật lùi góc siêu rộng kèm camera shake rung chấn cực mạnh, sau đó trả góc nhìn thứ nhất mượt mà.
+### 🌌 7. Tuyệt Kỹ Đại Hợp Nhất: Hư Vô Băng Hoại (Nihility Collapse — Authentic "I AM ATOMIC" Engine)
+Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thành một bản giao hưởng hủy diệt 4 hồi liên hoàn (10 giây), được nâng cấp toàn diện với **Engine Đồ Họa & Âm Thanh Chuẩn God Wand**:
+* **Bộ Âm Thanh Gốc Siêu Thực**:
+  * `atomic_charge.ogg`: Lời thì thầm ma mị bí ẩn cùng tiếng gầm trầm hum bass tăng dần theo nhịp tích tụ năng lượng.
+  * `atomic_blast.ogg`: Tiếng nổ hủy diệt cực nặng kèm chấn động sóng hạ âm làm rung chuyển không gian.
+* **Đồ Họa Năng Lượng OpenGL Additive Blending (`AtomicRenderer`)**:
+  * Loại bỏ hoàn toàn khối display thô ráp; thay bằng hình học năng lượng trực tiếp GPU: Vành hào quang đồng tâm, mạch năng lượng phân nhánh, motes năng lượng hội tụ, pháo đài plasma và vết nứt nổ đất phát sáng lan tỏa 98 blocks.
+  * Cột plasma kép (Lõi trắng `0xF5DFFF` + Vành tím `0x932BFF`) vươn cao 1024m với 40 vết sét đa giác nứt rách không gian.
+* **Chuỗi Shaders Post-Processing GLSL (`AtomicPostFx`)**:
+  * Tích hợp pipeline shader chân thực: Bloom tỏa sáng đa tầng, sắc sai tán sắc (Chromatic Aberration), Darkening triệt tiêu bầu trời và hội tụ ánh sáng thể tích (Volumetric Light Beam).
+* **4 Khung Hình Va Chạm Manga / Anime (`CustomImpactFrameOverlay`)**:
+  * 4 Impact Frames đen-trắng âm bản xuất hiện chớp nhoáng tại thời khắc kích nổ (Tick 141), nối tiếp bởi flash trắng dịu êm bộc phát thành cột sáng.
+* **Widescreen Cinematic Letterbox (21:9) & Nghệ Thuật Chữ Phát Sáng**:
+  * Dải đen điện ảnh tự động mở rộng, làm mờ viền màn hình, hiển thị Typography phát sáng tím: **`I... AM... ATOMIC`** đồng bộ hoàn hảo với góc máy cận cảnh.
+* **Choreography 5 Góc Máy Điện Ảnh**:
+  * *Shot 1 (0 -> 25 ticks)*: Orbit lướt vòng cung tốc độ cao quanh người chơi từ dưới hất lên.
+  * *Shot 2 (25 -> 50 ticks)*: Góc thấp sát mặt đất nhìn lên bầu trời tối và kết giới bao trùm.
+  * *Shot 3 (50 -> 110 ticks)*: Bird's Eye View từ trên tầng mây nhìn toàn cảnh lực hút nghịch chuyển hút mob bay lơ lửng.
+  * *Shot 4 (110 -> 141 ticks)*: Zoom cận cảnh kịch tính vào nửa khuôn mặt / vũ khí người chơi.
+  * *Shot 5 (141 -> 180 ticks)*: Cực đại góc rộng từ xa kèm Camera Shake rung chấn cực mạnh khi cột năng lượng dội xuống, trước khi trả góc nhìn mượt mà về góc nhìn thứ nhất (180 -> 200 ticks).
+  * Hỗ trợ phím tắt **`[ESC]`** hoặc **`[F5]`** để bỏ qua cutscene bất cứ lúc nào!
 
 ---
 
