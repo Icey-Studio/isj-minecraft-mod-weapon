@@ -75,6 +75,12 @@ public class DarkFlameShotAbility {
                                   impactPos.x + 3.5D, impactPos.y + 3.5D, impactPos.z + 3.5D);
         List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, blastArea, LivingEntity::isAlive);
 
+        // Đặt khối Hắc Viêm Bất Diệt thật tại điểm tiếp đất
+        net.minecraft.core.BlockPos impactBlock = net.minecraft.core.BlockPos.containing(impactPos);
+        if (level.getBlockState(impactBlock).isAir() && level.getBlockState(impactBlock.below()).isSolidRender(level, impactBlock.below())) {
+            level.setBlock(impactBlock, com.minhphuc.weapons.init.ModBlocks.BLACK_FIRE.get().defaultBlockState(), 3);
+        }
+
         for (LivingEntity target : targets) {
             if (target == player) continue;
 

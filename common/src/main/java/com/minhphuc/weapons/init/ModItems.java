@@ -303,6 +303,8 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> BLACK_FIRE = ITEMS.register("black_fire",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.BLACK_FIRE.get(), new Item.Properties()));
 
     // ==========================================
     // MODULE: CHƯỚC NHIỆT LONG VELGRYND (SCORCH DRAGON)
