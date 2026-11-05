@@ -94,8 +94,8 @@ public class AntiMagicBarrierManager {
         // Kết giới tồn tại vĩnh viễn và chỉ biến mất khi người chơi đấm vào nó
 
         Vec3 center = player.position();
-        double radius = 60.0; // Mở rộng thêm 15 block (từ 45 lên 60)
-        double height = 40.0; // Tăng chiều cao tương xứng giữ tỉ lệ vòm chuẩn
+        double radius = 110.0; // Mở rộng thêm 50 block (từ 60 lên 110)
+        double height = 70.0; // Tăng chiều cao tương xứng giữ tỉ lệ vòm chuẩn
 
         ActiveBarrier barrier = new ActiveBarrier(level, player, center, radius, height, false);
         buildDome(barrier);
@@ -107,7 +107,7 @@ public class AntiMagicBarrierManager {
                 SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2.5F, 1.4F);
 
         player.displayClientMessage(
-                Component.literal("§a§l[KHÁNG MA KẾT GIỚI] §eĐã triển khai mái vòm bảo hộ vĩnh viễn (R:60m, H:40m)!"),
+                Component.literal("§a§l[KHÁNG MA KẾT GIỚI] §eĐã triển khai mái vòm bảo hộ vĩnh viễn (R:110m, H:70m)!"),
                 true
         );
         player.sendSystemMessage(
