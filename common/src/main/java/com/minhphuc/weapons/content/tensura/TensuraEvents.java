@@ -91,6 +91,8 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.HellflareAbility.tickHellflares(level);
             com.minhphuc.weapons.content.tensura.DarkFlameShotAbility.tick(level);
             com.minhphuc.weapons.content.tensura.NihilityCollapseAbility.tickCollapses(level);
+            com.minhphuc.weapons.content.tensura.SupernovaAbility.tickSupernovas(level);
+            com.minhphuc.weapons.content.space.OrbitalStrikeManager.tickStrikes(level);
         });
     }
 

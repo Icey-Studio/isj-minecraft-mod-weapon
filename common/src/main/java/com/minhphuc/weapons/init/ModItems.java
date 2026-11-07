@@ -346,6 +346,12 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.tensura.MagisteelSmartphoneItem(new Item.Properties()));
 
     // ==========================================
+    // MODULE: THE SHOOTING STAR (THE STELLAR REMOTE)
+    // ==========================================
+    public static final RegistrySupplier<Item> STELLAR_REMOTE = ITEMS.register("stellar_remote",
+            () -> new com.minhphuc.weapons.content.space.StellarRemoteItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
+
+    // ==========================================
     // MODULE: BỒN CHỨA & KHUNG XƯƠNG THỂ XÁC NHÂN TẠO
     // ==========================================
     public static final RegistrySupplier<Item> ARTIFICIAL_SKELETON = ITEMS.register("artificial_skeleton",
@@ -510,6 +516,7 @@ public class ModItems {
                         output.accept(DRAGON_SEED.get());
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
+                        output.accept(STELLAR_REMOTE.get());
                         output.accept(MILIM_DRAGON_CONTRACT.get());
 
                         // Bạch Băng Long Velzard

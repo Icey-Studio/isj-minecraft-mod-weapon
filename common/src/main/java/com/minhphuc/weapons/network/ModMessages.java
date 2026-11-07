@@ -98,6 +98,16 @@ public class ModMessages {
                 ClientboundNihilityCinematicPacket::encode,
                 ClientboundNihilityCinematicPacket::new,
                 ClientboundNihilityCinematicPacket::handle);
+
+        CHANNEL.register(ClientboundSupernovaPacket.class,
+                ClientboundSupernovaPacket::encode,
+                ClientboundSupernovaPacket::new,
+                ClientboundSupernovaPacket::handle);
+
+        CHANNEL.register(ClientboundOrbitalStrikePacket.class,
+                ClientboundOrbitalStrikePacket::encode,
+                ClientboundOrbitalStrikePacket::new,
+                ClientboundOrbitalStrikePacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

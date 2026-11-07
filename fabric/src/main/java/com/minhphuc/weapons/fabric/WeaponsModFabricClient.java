@@ -5,6 +5,8 @@ import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
 import com.minhphuc.weapons.client.CustomImpactFrameOverlay;
 import com.minhphuc.weapons.client.renderer.AtomicPostFx;
 import com.minhphuc.weapons.client.renderer.AtomicRenderer;
+import com.minhphuc.weapons.client.renderer.ClientOrbitalStrikeRenderer;
+import com.minhphuc.weapons.client.renderer.SupernovaAccretionRenderer;
 import com.minhphuc.weapons.init.ModBlocks;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.fabricmc.api.ClientModInitializer;
@@ -58,6 +60,8 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             Camera camera = context.camera();
             float tickDelta = context.tickCounter().getGameTimeDeltaPartialTick(false);
             AtomicRenderer.render(matrices, camera, tickDelta);
+            SupernovaAccretionRenderer.render(matrices, camera, tickDelta);
+            ClientOrbitalStrikeRenderer.render(matrices, camera, tickDelta);
         });
 
         // 4. Bắt ma trận và xử lý Shaders GLSL Post-Processing (Bloom, Aberration, Volumetric Beam)
@@ -72,6 +76,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             float partialTick = deltaTracker.getGameTimeDeltaPartialTick(false);
             CustomImpactFrameOverlay.render(graphics, partialTick);
             ClientNihilityCinematicHandler.renderCinematicOverlay(graphics, partialTick);
+            ClientOrbitalStrikeRenderer.renderHudOverlay(graphics, partialTick);
         });
 
         // 6. Tự động dọn dẹp bộ nhớ đồ họa và trạng thái khi thoát thế giới hoặc tắt game
@@ -80,6 +85,8 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             AtomicPostFx.reset();
             CustomImpactFrameOverlay.reset();
             ClientNihilityCinematicHandler.stopCinematic();
+            SupernovaAccretionRenderer.reset();
+            ClientOrbitalStrikeRenderer.reset();
         });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -87,6 +94,8 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             AtomicPostFx.reset();
             CustomImpactFrameOverlay.reset();
             ClientNihilityCinematicHandler.stopCinematic();
+            SupernovaAccretionRenderer.reset();
+            ClientOrbitalStrikeRenderer.reset();
         });
     }
 }

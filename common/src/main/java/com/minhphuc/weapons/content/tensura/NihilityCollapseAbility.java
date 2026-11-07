@@ -54,7 +54,7 @@ public class NihilityCollapseAbility {
         public final ServerPlayer caster;
         public final Vec3 center;
         public int currentTick = 0;
-        public final int maxTicks = 200; // 10.0 giây
+        public final int maxTicks = 295; // ~14.75 giây (Kéo dài hồi 3 cho typography chuẩn điện ảnh)
 
         // Ma Pháp Trận 3D Phát Quang Dưới Mặt Đất (Long Tinh Bộc Viêm Bá)
         public Display.ItemDisplay magicCircleDisplay = null;
@@ -94,7 +94,7 @@ public class NihilityCollapseAbility {
 
         // 3. Gửi Packet kích hoạt Chuỗi Camera & Hiệu ứng Đồ Họa Đỉnh Cao cho người dùng và người xem
         ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                caster.getUUID(), center, 200, ClientboundNihilityCinematicPacket.PHASE_START
+                caster.getUUID(), center, 295, ClientboundNihilityCinematicPacket.PHASE_START
         );
         ModMessages.sendToPlayer(packet, caster);
         for (ServerPlayer nearbyPlayer : level.players()) {
@@ -158,8 +158,8 @@ public class NihilityCollapseAbility {
                     if (c.currentTick < 50) {
                         float p = c.currentTick / 50.0F;
                         circleScale = 3.5F + (p * 22.0F); // 3.5m -> 25.5m
-                    } else if (c.currentTick < 141) {
-                        float p = (c.currentTick - 50.0F) / 91.0F;
+                    } else if (c.currentTick < 225) {
+                        float p = (c.currentTick - 50.0F) / 175.0F;
                         circleScale = 25.5F + (p * 14.5F); // 25.5m -> 40.0m
                     } else {
                         circleScale = 40.0F;
@@ -233,9 +233,9 @@ public class NihilityCollapseAbility {
                 }
 
                 // ==============================================================
-                // HỒI 3 (110 -> 140 ticks / 1.5s): ĐIỂM TĨNH LẶNG TUYỆT ĐỐI ("LỜI CHÚC TỬ VONG")
+                // HỒI 3 (110 -> 224 ticks / ~5.75s): ĐIỂM TĨNH LẶNG TUYỆT ĐỐI ("LỜI CHÚC TỬ VONG")
                 // ==============================================================
-                else if (c.currentTick <= 140) {
+                else if (c.currentTick <= 224) {
                     // Đóng băng toàn bộ mục tiêu đang lơ lửng trên không
                     AABB freezeZone = new AABB(c.center.x - 60, c.center.y - 10, c.center.z - 60,
                             c.center.x + 60, c.center.y + 50, c.center.z + 60);
@@ -249,14 +249,14 @@ public class NihilityCollapseAbility {
                 }
 
                 // ==============================================================
-                // HỒI 4 (141 -> 200 ticks / 3.0s): ĐẠI BỘC PHÁT - PHÁN QUYẾT TUYỆT ĐỐI (INSTANT DEATH)
+                // HỒI 4 (225 -> 295 ticks / ~3.5s): ĐẠI BỘC PHÁT - PHÁN QUYẾT TUYỆT ĐỐI (INSTANT DEATH)
                 // ==============================================================
                 else {
-                    // KÍCH NỔ CỰC ĐẠI TẠI TICK 141
-                    if (c.currentTick == 141) {
+                    // KÍCH NỔ CỰC ĐẠI TẠI TICK 225
+                    if (c.currentTick == 225) {
                         // 1. Gửi Packet Detonate kích hoạt Impact Frames & Plasma Beam Column phía Client
                         ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                                c.caster.getUUID(), c.center, 200, ClientboundNihilityCinematicPacket.PHASE_DETONATE
+                                c.caster.getUUID(), c.center, 295, ClientboundNihilityCinematicPacket.PHASE_DETONATE
                         );
                         ModMessages.sendToPlayer(packet, c.caster);
                         for (ServerPlayer nearbyPlayer : c.level.players()) {
@@ -312,7 +312,7 @@ public class NihilityCollapseAbility {
                     }
                 }
 
-                // Dọn dẹp kết thúc ở tick 200
+                // Dọn dẹp kết thúc ở tick 295
                 if (c.currentTick >= c.maxTicks) {
                     // Cung cấp Slow Falling và Kháng ngã kéo dài để người chơi tự do quan sát trên không hoặc đáp xuống an toàn
                     c.caster.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600, 0, false, false));
@@ -320,7 +320,7 @@ public class NihilityCollapseAbility {
                     c.caster.resetFallDistance();
 
                     ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                            c.caster.getUUID(), c.center, 200, ClientboundNihilityCinematicPacket.PHASE_END
+                            c.caster.getUUID(), c.center, 295, ClientboundNihilityCinematicPacket.PHASE_END
                     );
                     ModMessages.sendToPlayer(packet, c.caster);
                     for (ServerPlayer nearbyPlayer : c.level.players()) {

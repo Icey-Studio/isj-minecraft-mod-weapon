@@ -17,7 +17,8 @@
     "GameRendererAccessor",
     "MixinLivingEntityRenderer",
     "CameraMixin",
-    "PostChainAccessor"
+    "PostChainAccessor",
+    "DeathBlessingPoseMixin"
   ],
   "injectors": {
     "defaultRequire": 1
