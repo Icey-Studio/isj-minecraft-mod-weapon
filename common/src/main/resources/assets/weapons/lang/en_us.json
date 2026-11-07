@@ -211,6 +211,8 @@
   "block.weapons.domain_barrier_vert": "Domain Barrier: Emerald Aegis (Vert)",
   "block.weapons.dragon_prison_barrier": "Dragon Prison Barrier",
   "item.weapons.dragon_prison_barrier": "Dragon Prison Barrier Block",
+  "block.weapons.black_fire": "Unextinguishable Black Fire",
+  "item.weapons.black_fire": "Unextinguishable Black Fire",
   "block.weapons.anti_magic_barrier": "Anti-Magic Barrier",
   "block.weapons.multilayer_barrier": "Multilayer Barrier",
   "entity.weapons.primordial_demon": "Primordial Demon",
@@ -379,5 +381,6 @@
   "item.weapons.marbas_spawn_egg": "Great Demon Marbas Spawn Egg",
   "item.weapons.warding_earplugs": "Warding Earplugs",
   "item.weapons.bodhi_effigy_empty": "Bodhi Effigy (Empty)",
-  "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest"
+  "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest",
+  "item.weapons.stellar_remote": "The Stellar Remote"
 }

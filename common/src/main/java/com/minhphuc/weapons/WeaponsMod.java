@@ -11,9 +11,10 @@ public class WeaponsMod {
     public static final Logger LOGGER = LogUtils.getLogger();
 
     public static void init() {
-        // Đăng ký Blocks & Items
+        // Đăng ký Blocks & Items & Sounds
         com.minhphuc.weapons.init.ModBlocks.register();
         ModItems.register();
+        com.minhphuc.weapons.init.ModSoundEvents.register();
 
         // Đăng ký Entities
         com.minhphuc.weapons.entity.ModEntities.register();

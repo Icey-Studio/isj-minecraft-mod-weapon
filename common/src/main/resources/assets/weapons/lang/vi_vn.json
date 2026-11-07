@@ -211,6 +211,8 @@
   "block.weapons.domain_barrier_vert": "Khối Kết Giới Lãnh Địa: Lục Bảo (Vert)",
   "block.weapons.dragon_prison_barrier": "Khối Kết Giới Long Giam Vô Hạn",
   "item.weapons.dragon_prison_barrier": "Khối Kết Giới Long Giam Vô Hạn",
+  "block.weapons.black_fire": "Hắc Viêm Bất Diệt",
+  "item.weapons.black_fire": "Hắc Viêm Bất Diệt",
   "block.weapons.anti_magic_barrier": "Khối Kháng Ma Kết Giới",
   "block.weapons.multilayer_barrier": "Khối Đa Trùng Kết Giới",
   "entity.weapons.primordial_demon": "Ác Ma Thủy Tổ",
@@ -379,5 +381,6 @@
   "item.weapons.marbas_spawn_egg": "Trứng Sinh Ra Đại Ác Ma Marbas",
   "item.weapons.warding_earplugs": "Bông Bịt Tai Phong Ấn",
   "item.weapons.bodhi_effigy_empty": "Hình Nhân Gỗ Bồ Đề (Rỗng)",
-  "item.weapons.bodhi_effigy_monk": "Hình Nhân Gỗ: Tà Kinh Đại Tăng"
+  "item.weapons.bodhi_effigy_monk": "Hình Nhân Gỗ: Tà Kinh Đại Tăng",
+  "item.weapons.stellar_remote": "Thiết Bị Điều Khiển Quỹ Đạo (The Stellar Remote)"
 }

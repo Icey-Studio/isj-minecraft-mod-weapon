@@ -15,7 +15,10 @@
   "client": [
     "ItemPropertiesAccessor",
     "GameRendererAccessor",
-    "MixinLivingEntityRenderer"
+    "MixinLivingEntityRenderer",
+    "CameraMixin",
+    "PostChainAccessor",
+    "DeathBlessingPoseMixin"
   ],
   "injectors": {
     "defaultRequire": 1

@@ -23,7 +23,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 22 : 21;
+        return hasCreation ? 24 : 23;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -53,6 +53,8 @@ public class TensuraSkillDispatcher {
                 case 19 -> "§e§l20. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 20 -> "§4§l21. Hắc Viêm Ngục (Hellflare)";
                 case 21 -> "§c§l22. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
+                case 22 -> "§4§l23. Lời Chúc Tử Vong (Death Blessing)";
+                case 23 -> "§6§l24. Siêu Tân Tinh (Supernova)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -78,6 +80,8 @@ public class TensuraSkillDispatcher {
                 case 18 -> "§e§l19. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 19 -> "§4§l20. Hắc Viêm Ngục (Hellflare)";
                 case 20 -> "§c§l21. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
+                case 21 -> "§4§l22. Lời Chúc Tử Vong (Death Blessing)";
+                case 22 -> "§6§l23. Siêu Tân Tinh (Supernova)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -128,6 +132,8 @@ public class TensuraSkillDispatcher {
                 case 19 -> RykuzinSinkaAbility.toggle(level, player);
                 case 20 -> HellflareAbility.cast(level, player);
                 case 21 -> DarkFlameShotAbility.cast(level, player);
+                case 22 -> NihilityCollapseAbility.cast(level, player);
+                case 23 -> SupernovaAbility.cast(level, player);
             }
         } else {
             switch (index) {
@@ -152,6 +158,8 @@ public class TensuraSkillDispatcher {
                 case 18 -> RykuzinSinkaAbility.toggle(level, player);
                 case 19 -> HellflareAbility.cast(level, player);
                 case 20 -> DarkFlameShotAbility.cast(level, player);
+                case 21 -> NihilityCollapseAbility.cast(level, player);
+                case 22 -> SupernovaAbility.cast(level, player);
             }
         }
     }

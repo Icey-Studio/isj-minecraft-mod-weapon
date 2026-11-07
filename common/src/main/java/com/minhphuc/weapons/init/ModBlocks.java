@@ -63,7 +63,6 @@ public class ModBlocks {
                             .mapColor(MapColor.COLOR_LIGHT_GREEN)
                             .strength(-1.0F, 3600000.0F)
                             .noLootTable()
-                            .lightLevel(state -> 15)
                             .sound(SoundType.AMETHYST)
                             .noOcclusion()
             ));
@@ -87,6 +86,17 @@ public class ModBlocks {
                             .sound(SoundType.GLASS)
                             .noOcclusion()
                             .lightLevel(state -> 8)
+            ));
+
+    public static final RegistrySupplier<Block> BLACK_FIRE = BLOCKS.register("black_fire",
+            () -> new com.minhphuc.weapons.content.tensura.BlackFireBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_BLACK)
+                            .noCollission()
+                            .instabreak()
+                            .sound(SoundType.WOOL)
+                            .noLootTable()
+                            .noOcclusion()
             ));
 
     public static void register() {

@@ -303,6 +303,8 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> BLACK_FIRE = ITEMS.register("black_fire",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.BLACK_FIRE.get(), new Item.Properties()));
 
     // ==========================================
     // MODULE: CHƯỚC NHIỆT LONG VELGRYND (SCORCH DRAGON)
@@ -342,6 +344,12 @@ public class ModItems {
     // ==========================================
     public static final RegistrySupplier<Item> MAGISTEEL_PHONE = ITEMS.register("magisteel_phone",
             () -> new com.minhphuc.weapons.content.tensura.MagisteelSmartphoneItem(new Item.Properties()));
+
+    // ==========================================
+    // MODULE: THE SHOOTING STAR (THE STELLAR REMOTE)
+    // ==========================================
+    public static final RegistrySupplier<Item> STELLAR_REMOTE = ITEMS.register("stellar_remote",
+            () -> new com.minhphuc.weapons.content.space.StellarRemoteItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // ==========================================
     // MODULE: BỒN CHỨA & KHUNG XƯƠNG THỂ XÁC NHÂN TẠO
@@ -508,6 +516,7 @@ public class ModItems {
                         output.accept(DRAGON_SEED.get());
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
+                        output.accept(STELLAR_REMOTE.get());
                         output.accept(MILIM_DRAGON_CONTRACT.get());
 
                         // Bạch Băng Long Velzard
