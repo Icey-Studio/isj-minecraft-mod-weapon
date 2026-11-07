@@ -264,6 +264,7 @@ public class TensuraEvents {
     }
     private static void handleSoulDrop(LivingEntity victim) {
         if (victim == null || victim.level().isClientSide()) return;
+        if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(victim.level(), victim.position())) return;
         if (victim instanceof net.minecraft.world.entity.monster.Creeper) return; // Trừ Creeper theo yêu cầu
         if (victim instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return;
 
@@ -337,13 +338,20 @@ public class TensuraEvents {
 
             // Ghi nhận hiến tế Dân Làng (Villager Sacrifice) cho Ác Ma Thủy Tổ
             if (victim instanceof net.minecraft.world.entity.npc.Villager) {
-                CompoundTag pData = EntityDataHelper.getCustomData(player);
-                int count = pData.getInt("TensuraVillagersSacrificed") + 1;
-                pData.putInt("TensuraVillagersSacrificed", count);
-                if (count < 10) {
-                    VoiceOfTheWorld.announce(player, "§4Báo cáo. Đã thu hoạch linh hồn Dân Làng hiến tế: §e" + count + "/10§4. Tích đủ 10 linh hồn để thức tỉnh Thể Xác/Danh Xưng cho Ác Ma Thủy Tổ!");
-                } else if (count == 10) {
-                    VoiceOfTheWorld.announce(player, "§6§l[TENSURA] §dĐã hoàn tất 10 linh hồn Dân Làng hiến tế! Khi triệu hồi Ác Ma tiếp theo bằng Khế Ước sẽ kích hoạt thức tỉnh!");
+                if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(player.serverLevel(), victim.position())) {
+                    player.displayClientMessage(
+                            Component.literal("§7[KHÁNG MA KẾT GIỚI] §cLinh hồn dân làng được bảo hộ bởi kết giới, không thể hiến tế cho Ác Ma!"),
+                            true
+                    );
+                } else {
+                    CompoundTag pData = EntityDataHelper.getCustomData(player);
+                    int count = pData.getInt("TensuraVillagersSacrificed") + 1;
+                    pData.putInt("TensuraVillagersSacrificed", count);
+                    if (count < 10) {
+                        VoiceOfTheWorld.announce(player, "§4Báo cáo. Đã thu hoạch linh hồn Dân Làng hiến tế: §e" + count + "/10§4. Tích đủ 10 linh hồn để thức tỉnh Thể Xác/Danh Xưng cho Ác Ma Thủy Tổ!");
+                    } else if (count == 10) {
+                        VoiceOfTheWorld.announce(player, "§6§l[TENSURA] §dĐã hoàn tất 10 linh hồn Dân Làng hiến tế! Khi triệu hồi Ác Ma tiếp theo bằng Khế Ước sẽ kích hoạt thức tỉnh!");
+                    }
                 }
             }
         }
@@ -406,6 +414,11 @@ public class TensuraEvents {
         if (victim instanceof net.minecraft.world.entity.monster.Witch ||
             victim instanceof net.minecraft.world.entity.npc.Villager ||
             victim instanceof net.minecraft.world.entity.raid.Raider) {
+
+            // KHÁNG MA KẾT GIỚI: Không thể triệu hồi Ác Ma khi ở trong kết giới
+            if (victim.level() instanceof ServerLevel sl && com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(sl, victim.position())) {
+                return EventResult.pass();
+            }
 
             float currentHp = victim.getHealth();
             float maxHp = victim.getMaxHealth();

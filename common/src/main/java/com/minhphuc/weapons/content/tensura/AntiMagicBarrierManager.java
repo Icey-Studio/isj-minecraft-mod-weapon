@@ -26,6 +26,8 @@ import net.minecraft.world.entity.monster.Monster;
 import net.minecraft.world.entity.monster.warden.Warden;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.ai.village.poi.PoiManager;
+import net.minecraft.world.entity.ai.village.poi.PoiTypes;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
@@ -77,6 +79,108 @@ public class AntiMagicBarrierManager {
     }
 
     private static final List<ActiveBarrier> ACTIVE_BARRIERS = Collections.synchronizedList(new ArrayList<>());
+    private static final Set<BlockPos> KNOWN_VILLAGE_BELLS = Collections.synchronizedSet(new HashSet<>());
+    private static long lastVillageCheckTick = 0;
+
+    /**
+     * Kiểm tra xem một vị trí có nằm trong bất kỳ Kháng Ma Kết Giới nào không.
+     */
+    public static boolean isInBarrier(net.minecraft.world.level.Level level, Vec3 pos) {
+        if (ACTIVE_BARRIERS.isEmpty() || level == null || pos == null) return false;
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier barrier : ACTIVE_BARRIERS) {
+                if (barrier.level == level) {
+                    double dx = pos.x - barrier.center.x;
+                    double dz = pos.z - barrier.center.z;
+                    double distSq = dx * dx + dz * dz;
+                    double maxBound = barrier.radius + 1.5D;
+                    if (distSq <= maxBound * maxBound) {
+                        double minY = barrier.center.y - barrier.lowestYOffset - 5.0D;
+                        double maxY = barrier.center.y + barrier.height + 3.0D;
+                        if (pos.y >= minY && pos.y <= maxY) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isInBarrier(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (pos == null) return false;
+        return isInBarrier(level, new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+    }
+
+    /**
+     * Tự động quét và kích hoạt Kháng Ma Kết Giới ngẫu nhiên lâu lâu tại các ngôi làng.
+     */
+    public static void checkAndSpawnVillageBarriers(ServerLevel level) {
+        if (level.getGameTime() - lastVillageCheckTick < 200) return;
+        lastVillageCheckTick = level.getGameTime();
+
+        PoiManager poiManager = level.getPoiManager();
+
+        for (ServerPlayer player : level.players()) {
+            BlockPos playerPos = player.blockPosition();
+
+            Optional<BlockPos> meetingPoi = poiManager.find(
+                    poi -> poi.is(PoiTypes.MEETING),
+                    p -> true,
+                    playerPos,
+                    80,
+                    PoiManager.Occupancy.ANY
+            );
+
+            if (meetingPoi.isPresent()) {
+                BlockPos bellPos = meetingPoi.get();
+                if (!KNOWN_VILLAGE_BELLS.contains(bellPos)) {
+                    KNOWN_VILLAGE_BELLS.add(bellPos);
+
+                    // Tỉ lệ xuất hiện lâu lâu (35% cơ hội cho mỗi ngôi làng mới khám phá)
+                    if (level.random.nextFloat() < 0.35F) {
+                        spawnVillageBarrier(level, bellPos);
+                    }
+                }
+            }
+        }
+    }
+
+    public static void spawnVillageBarrier(ServerLevel level, BlockPos centerPos) {
+        Vec3 center = new Vec3(centerPos.getX() + 0.5, centerPos.getY() + 0.5, centerPos.getZ() + 0.5);
+
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier b : ACTIVE_BARRIERS) {
+                if (b.level == level && b.center.distanceTo(center) <= 90.0) {
+                    return;
+                }
+            }
+        }
+
+        double radius = 65.0; // Bán kính 65m bao bọc rộng toàn bộ ngôi làng
+        double height = 40.0;
+        ActiveBarrier barrier = new ActiveBarrier(level, null, center, radius, height, true);
+        barrier.durability = 350;
+        buildDome(barrier);
+        ACTIVE_BARRIERS.add(barrier);
+
+        level.playSound(null, center.x, center.y, center.z,
+                SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 4.0F, 0.7F);
+        level.playSound(null, center.x, center.y, center.z,
+                SoundEvents.BEACON_ACTIVATE, SoundSource.BLOCKS, 3.5F, 1.1F);
+
+        for (ServerPlayer sp : level.players()) {
+            if (sp.position().distanceTo(center) <= 128.0) {
+                sp.displayClientMessage(
+                        Component.literal("§a§l[LÀNG BẢO HỘ] §eNgôi làng này được bao bọc bởi Kháng Ma Kết Giới Cổ Xưa!"),
+                        true
+                );
+                sp.sendSystemMessage(
+                        Component.literal("§a✦ [KHÁNG MA KẾT GIỚI] §fMái vòm kết giới cổ xưa đã kích hoạt: Dân làng & quái vật tử trận bên trong không thể hiến tế gọi Ác Ma; Ác Ma bên trong bị tước đoạt ma pháp, chỉ có thể cận chiến đánh tay không!")
+                );
+            }
+        }
+    }
 
     /**
      * Người chơi Chân Ma Vương thi triển Kháng Ma Kết Giới (Bán kính 60, Cao 40).
@@ -375,6 +479,9 @@ public class AntiMagicBarrierManager {
      * - Quét thực thể điều tiết định kỳ 20 ticks (1 giây), chỉ lọc thực thể Mob thù địch thay vì toàn bộ sinh vật.
      */
     public static void tickBarriers(ServerLevel level) {
+        // Tự động kiểm tra và dựng Kháng Ma Kết Giới ngẫu nhiên tại các ngôi làng
+        checkAndSpawnVillageBarriers(level);
+
         if (ACTIVE_BARRIERS.isEmpty()) return;
 
         List<ActiveBarrier> barriersToBreak = new ArrayList<>();
@@ -450,18 +557,12 @@ public class AntiMagicBarrierManager {
                                         e.discard();
                                     }
                                 } else if (e instanceof PrimordialDemonEntity demon) {
-                                    barrier.durability -= 10;
-                                    level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
-                                            SoundEvents.GLASS_HIT, SoundSource.HOSTILE, 2.0F, 0.8F);
-                                    level.sendParticles(ParticleTypes.CRIT, demon.getX(), demon.getY() + 1.2, demon.getZ(), 10, 0.3, 0.3, 0.3, 0.1);
-
-                                    if (barrier.durability <= 0) {
-                                        broken = true;
-                                        level.playSound(null, center.x, center.y, center.z,
-                                                SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 3.5F, 0.6F);
-                                        level.playSound(null, center.x, center.y, center.z,
-                                                SoundEvents.ANVIL_DESTROY, SoundSource.BLOCKS, 2.5F, 0.8F);
-                                        break;
+                                    // Ác ma ở trong kết giới bị tước đoạt ma pháp, chỉ có thể đánh cận chiến bằng tay không
+                                    level.sendParticles(ParticleTypes.SMOKE, demon.getX(), demon.getY() + 1.2, demon.getZ(), 6, 0.2, 0.4, 0.2, 0.02);
+                                    level.sendParticles(EMERALD_BARRIER, demon.getX(), demon.getY() + 1.0, demon.getZ(), 4, 0.3, 0.5, 0.3, 0.05);
+                                    if (barrier.ticksAlive % 60 == 0) {
+                                        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                                                SoundEvents.FIRE_EXTINGUISH, SoundSource.HOSTILE, 1.2F, 0.8F);
                                     }
                                 } else if (e instanceof VelgryndEntity || e instanceof MilimEntity) {
                                     broken = true;

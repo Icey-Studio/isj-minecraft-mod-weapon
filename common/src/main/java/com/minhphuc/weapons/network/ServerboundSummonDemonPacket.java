@@ -1,9 +1,11 @@
 package com.minhphuc.weapons.network;
 
+import com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager;
 import com.minhphuc.weapons.content.tensura.PrimordialSummonRitual;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.phys.Vec3;
 
@@ -50,6 +52,14 @@ public class ServerboundSummonDemonPacket {
             Vec3 target = new Vec3(targetX, targetY, targetZ);
             if (player.distanceToSqr(target) > 40.0D * 40.0D) {
                 target = player.position().add(player.getLookAngle().scale(4.0D));
+            }
+
+            if (AntiMagicBarrierManager.isInBarrier(player.serverLevel(), target)) {
+                player.displayClientMessage(
+                        Component.literal("§c⚠️ Không thể triệu hồi Ác Ma bên trong Kháng Ma Kết Giới! Nồng độ ma tử đã bị phong ấn!"),
+                        true
+                );
+                return;
             }
 
             DemonType demonType = DemonType.byIndex(demonId);

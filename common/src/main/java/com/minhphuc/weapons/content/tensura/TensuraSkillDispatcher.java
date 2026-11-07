@@ -88,6 +88,19 @@ public class TensuraSkillDispatcher {
     }
 
     public static void executeSkill(ServerLevel level, ServerPlayer player, int index, boolean hasCreation) {
+        // Kháng Ma Kết Giới (Anti-Magic Barrier) triệt tiêu toàn bộ ma pháp & kỹ năng
+        // Ác ma ở trong kết giới chỉ có thể cận chiến bằng tay không
+        if (AntiMagicBarrierManager.isInBarrier(level, player.position())) {
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ Bạn đang nằm trong Kháng Ma Kết Giới! Nồng độ ma tử bằng 0, ác ma chỉ có thể đánh cận chiến bằng tay không, toàn bộ ma pháp bị phong ấn!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+            return;
+        }
+
         int rykuzinIndex = hasCreation ? 19 : 18;
 
         // Nếu đang bật Tiên Tri và dùng skill khác -> Tự động tắt Tiên Tri

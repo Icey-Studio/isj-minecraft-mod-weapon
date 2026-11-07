@@ -1445,6 +1445,9 @@ public class PrimordialDemonEntity extends TamableAnimal {
     }
 
     public boolean canCastSkill() {
+        if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(this.level(), this.position())) {
+            return false;
+        }
         return skillCooldownTicks <= 0 && !isRising();
     }
 
@@ -2329,7 +2332,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
         @Override
         public void tick() {
             LivingEntity target = this.demon.getTarget();
-            if (target == null || !target.isAlive()) return;
+            if (target == null || !target.isAlive() || !this.demon.canCastSkill()) return;
 
             this.demon.getLookControl().setLookAt(target, 40.0F, 40.0F);
             this.warmUpTicks--;
