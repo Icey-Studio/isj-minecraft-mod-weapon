@@ -1,5 +1,6 @@
 package com.minhphuc.weapons.network;
 
+import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
 import com.minhphuc.weapons.client.renderer.ClientOrbitalStrikeRenderer;
 import dev.architectury.networking.NetworkManager;
 import net.minecraft.network.FriendlyByteBuf;
@@ -45,9 +46,18 @@ public class ClientboundOrbitalStrikePacket {
         NetworkManager.PacketContext context = contextSupplier.get();
         context.queue(() -> {
             if (this.phase == PHASE_START) {
-                ClientOrbitalStrikeRenderer.receive(new Vec3(this.x, this.y, this.z), this.mode);
+                Vec3 target = new Vec3(this.x, this.y, this.z);
+                ClientOrbitalStrikeRenderer.receive(target, this.mode);
+                int duration = switch (this.mode) {
+                    case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 65;
+                    case ClientOrbitalStrikeRenderer.MODE_GUNGNIR -> 75;
+                    case ClientOrbitalStrikeRenderer.MODE_SEVEN_STARS -> 100;
+                    default -> 70;
+                };
+                ClientOrbitalCinematicHandler.startCinematic(target, this.mode, duration);
             } else {
                 ClientOrbitalStrikeRenderer.reset();
+                ClientOrbitalCinematicHandler.stopCinematic();
             }
         });
     }

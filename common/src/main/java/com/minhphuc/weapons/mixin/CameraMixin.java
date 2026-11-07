@@ -1,6 +1,7 @@
 package com.minhphuc.weapons.mixin;
 
 import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
+import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
 import net.minecraft.client.Camera;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.level.BlockGetter;
@@ -30,6 +31,18 @@ public abstract class CameraMixin {
         if (pose != null) {
             this.setRotation(pose.yaw(), pose.pitch());
             this.setPosition(pose.position().x, pose.position().y, pose.position().z);
+            return;
+        }
+
+        ClientOrbitalCinematicHandler.Pose orbitalPose = ClientOrbitalCinematicHandler.getCameraPose(
+                partialTicks,
+                this.getPosition(),
+                this.getYRot(),
+                this.getXRot()
+        );
+        if (orbitalPose != null) {
+            this.setRotation(orbitalPose.yaw(), orbitalPose.pitch());
+            this.setPosition(orbitalPose.position().x, orbitalPose.position().y, orbitalPose.position().z);
         }
     }
 }

@@ -2,6 +2,7 @@ package com.minhphuc.weapons.fabric;
 
 import com.minhphuc.weapons.WeaponsMod;
 import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
+import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
 import com.minhphuc.weapons.client.CustomImpactFrameOverlay;
 import com.minhphuc.weapons.client.renderer.AtomicPostFx;
 import com.minhphuc.weapons.client.renderer.AtomicRenderer;
@@ -27,6 +28,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         com.minhphuc.weapons.client.WeaponsModClient.initClient();
+        ClientOrbitalCinematicHandler.init();
 
         // 1. Khai báo RenderType bán trong suốt cho các khối kết giới
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.INCUBATION_CAPSULE.get(), RenderType.translucent());
@@ -77,6 +79,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             CustomImpactFrameOverlay.render(graphics, partialTick);
             ClientNihilityCinematicHandler.renderCinematicOverlay(graphics, partialTick);
             ClientOrbitalStrikeRenderer.renderHudOverlay(graphics, partialTick);
+            ClientOrbitalCinematicHandler.renderOverlay(graphics, partialTick);
         });
 
         // 6. Tự động dọn dẹp bộ nhớ đồ họa và trạng thái khi thoát thế giới hoặc tắt game
@@ -87,6 +90,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             ClientNihilityCinematicHandler.stopCinematic();
             SupernovaAccretionRenderer.reset();
             ClientOrbitalStrikeRenderer.reset();
+            ClientOrbitalCinematicHandler.stopCinematic();
         });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -96,6 +100,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             ClientNihilityCinematicHandler.stopCinematic();
             SupernovaAccretionRenderer.reset();
             ClientOrbitalStrikeRenderer.reset();
+            ClientOrbitalCinematicHandler.stopCinematic();
         });
     }
 }
