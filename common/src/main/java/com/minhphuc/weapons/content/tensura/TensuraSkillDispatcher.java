@@ -53,7 +53,7 @@ public class TensuraSkillDispatcher {
                 case 19 -> "§e§l20. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 20 -> "§4§l21. Hắc Viêm Ngục (Hellflare)";
                 case 21 -> "§c§l22. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
-                case 22 -> "§5§l23. Hư Vô Băng Hoại (Nihility Collapse)";
+                case 22 -> "§4§l23. Lời Chúc Tử Vong (Death Blessing)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -79,7 +79,7 @@ public class TensuraSkillDispatcher {
                 case 18 -> "§e§l19. Tiên Tri: Rykuzin Sinka (" + (rykuzinActive ? "§a§lBẬT§e§l" : "§c§lTẮT§e§l") + ")";
                 case 19 -> "§4§l20. Hắc Viêm Ngục (Hellflare)";
                 case 20 -> "§c§l21. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
-                case 21 -> "§5§l22. Hư Vô Băng Hoại (Nihility Collapse)";
+                case 21 -> "§4§l22. Lời Chúc Tử Vong (Death Blessing)";
                 default -> "§7Chưa chọn";
             };
         }

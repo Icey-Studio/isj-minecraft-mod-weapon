@@ -87,7 +87,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
   20. *Lục Thần Tiến Hóa (Rykuzin Sinka)*
   21. *Hắc Viêm Ngục (Hellflare - Benimaru)* — Giam cầm mục tiêu trong khối lập phương không gian rồi bộc phát lửa đen thiêu cháy
   22. *Hắc Viêm Hỏa Cầu (Dark Flame Shot - Benimaru)* — Bắn cầu lửa đen bất diệt không thể bị dập tắt bởi nước hoặc mưa
-  23. *Hư Vô Băng Hoại (Nihility Collapse)* — Tuyệt kỹ đại hợp nhất 4 hồi điện ảnh, lồng giam 70m, lực hút nghịch chuyển và "I AM ATOMIC"
+  23. *Lời Chúc Tử Vong (Death Blessing)* — Tuyệt kỹ đại hợp nhất 4 hồi điện ảnh, lồng giam 70m, ma pháp trận Long Tinh Bộc Viêm Bá, bay lên cao, instant death và typography tiếng Việt
 
 ---
 
@@ -103,11 +103,14 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
 
 ---
 
-### 🌌 7. Tuyệt Kỹ Đại Hợp Nhất: Hư Vô Băng Hoại (Nihility Collapse — Authentic "I AM ATOMIC" Engine)
+### 🌌 7. Tuyệt Kỹ Đại Hợp Nhất: Lời Chúc Tử Vong (Death Blessing — Authentic Cinematic & Shaders Engine)
 Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thành một bản giao hưởng hủy diệt 4 hồi liên hoàn (10 giây), được nâng cấp toàn diện với **Engine Đồ Họa & Âm Thanh Chuẩn God Wand**:
 * **Bộ Âm Thanh Gốc Siêu Thực**:
   * `atomic_charge.ogg`: Lời thì thầm ma mị bí ẩn cùng tiếng gầm trầm hum bass tăng dần theo nhịp tích tụ năng lượng.
   * `atomic_blast.ogg`: Tiếng nổ hủy diệt cực nặng kèm chấn động sóng hạ âm làm rung chuyển không gian.
+* **Ma Pháp Trận 3D Phát Quang & Bay Lên Cao**:
+  * Người chơi bay bổng lên cao (+28m) lơ lửng trên không trung nhìn xuống toàn cảnh chiến trường.
+  * Ma Pháp Trận Long Tinh Bộc Viêm Bá (`BEELZEBUTH_MAGIC_CIRCLE`) xoay 3D phát quang tím thẫm bành trướng từ 3.5m lên 40m phủ kín mặt đất.
 * **Đồ Họa Năng Lượng OpenGL Additive Blending (`AtomicRenderer`)**:
   * Loại bỏ hoàn toàn khối display thô ráp; thay bằng hình học năng lượng trực tiếp GPU: Vành hào quang đồng tâm, mạch năng lượng phân nhánh, motes năng lượng hội tụ, pháo đài plasma và vết nứt nổ đất phát sáng lan tỏa 98 blocks.
   * Cột plasma kép (Lõi trắng `0xF5DFFF` + Vành tím `0x932BFF`) vươn cao 1024m với 40 vết sét đa giác nứt rách không gian.
@@ -115,14 +118,17 @@ Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thàn
   * Tích hợp pipeline shader chân thực: Bloom tỏa sáng đa tầng, sắc sai tán sắc (Chromatic Aberration), Darkening triệt tiêu bầu trời và hội tụ ánh sáng thể tích (Volumetric Light Beam).
 * **4 Khung Hình Va Chạm Manga / Anime (`CustomImpactFrameOverlay`)**:
   * 4 Impact Frames đen-trắng âm bản xuất hiện chớp nhoáng tại thời khắc kích nổ (Tick 141), nối tiếp bởi flash trắng dịu êm bộc phát thành cột sáng.
-* **Widescreen Cinematic Letterbox (21:9) & Nghệ Thuật Chữ Phát Sáng**:
-  * Dải đen điện ảnh tự động mở rộng, làm mờ viền màn hình, hiển thị Typography phát sáng tím: **`I... AM... ATOMIC`** đồng bộ hoàn hảo với góc máy cận cảnh.
+* **Widescreen Cinematic Letterbox (21:9) & Typography Tiếng Việt Phát Sáng**:
+  * Dải đen điện ảnh tự động mở rộng, làm mờ viền màn hình, hiển thị Typography phát quang tiếng Việt: **`LỜI CHÚC...`** -> phóng to **`TỬ VONG`** rực lửa ma thuật đồng bộ với góc máy cận cảnh.
+* **Phán Quyết Tuyệt Đối (Instant Death)**:
+  * Tại Tick 141, xóa sạch mọi hiệu ứng phòng ngự, one-hit tiêu diệt lập tức mọi sinh vật trong 70m, bốc hơi rớt Linh Hồn (`Mob Soul`).
 * **Choreography 5 Góc Máy Điện Ảnh**:
-  * *Shot 1 (0 -> 25 ticks)*: Orbit lướt vòng cung tốc độ cao quanh người chơi từ dưới hất lên.
-  * *Shot 2 (25 -> 50 ticks)*: Góc thấp sát mặt đất nhìn lên bầu trời tối và kết giới bao trùm.
+  * *Shot 1 (0 -> 25 ticks)*: Orbit lướt vòng cung quanh người chơi từ dưới nâng lên.
+  * *Shot 2 (25 -> 50 ticks)*: Dolly-Out lùi xa bay lên cao (21m) bao quát người chơi và ma pháp trận bành trướng dưới chân.
   * *Shot 3 (50 -> 110 ticks)*: Bird's Eye View từ trên tầng mây nhìn toàn cảnh lực hút nghịch chuyển hút mob bay lơ lửng.
-  * *Shot 4 (110 -> 141 ticks)*: Zoom cận cảnh kịch tính vào nửa khuôn mặt / vũ khí người chơi.
-  * *Shot 5 (141 -> 180 ticks)*: Cực đại góc rộng từ xa kèm Camera Shake rung chấn cực mạnh khi cột năng lượng dội xuống, trước khi trả góc nhìn mượt mà về góc nhìn thứ nhất (180 -> 200 ticks).
+  * *Shot 4 (110 -> 141 ticks)*: Zoom cận cảnh kịch tính vào khuôn mặt / vũ khí người chơi.
+  * *Shot 5 (141 -> 180 ticks)*: Cực đại góc rộng từ xa kèm Camera Shake rung chấn cực mạnh khi cột năng lượng dội xuống.
+  * *180 -> 200 ticks & Kết Thúc*: Giữ nguyên vị thế người chơi trên không trung, chuyển tiếp camera mượt mà về tầm nhìn trên cao bao quát toàn bộ bình địa bị san phẳng.
   * Hỗ trợ phím tắt **`[ESC]`** hoặc **`[F5]`** để bỏ qua cutscene bất cứ lúc nào!
 
 ---

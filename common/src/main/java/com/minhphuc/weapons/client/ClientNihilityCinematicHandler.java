@@ -160,15 +160,17 @@ public class ClientNihilityCinematicHandler {
             camPos = casterCenter.add(offsetX, offsetY, offsetZ);
             lookTarget = casterEye;
         } else if (age < 50.0f) {
-            // === SHOT 2 (25 -> 50): Góc thấp sát đất nhìn lên trời ===
+            // === SHOT 2 (25 -> 50): Cinematic Dolly-Out lùi xa bay lên cao bao quát ma pháp trận ===
             float progress = (age - 25.0f) / 25.0f;
-            float backAngle = (float) Math.toRadians(casterYaw + 180.0f);
-            double dist = 4.2;
+            float ease = progress * progress * (3.0f - 2.0f * progress);
+            float backAngle = (float) Math.toRadians(casterYaw + 180.0f + ease * 30.0f);
+            double dist = 5.0 + ease * 16.0; // Lùi từ 5m ra 21m
             double offsetX = -Math.sin(backAngle) * dist;
             double offsetZ = Math.cos(backAngle) * dist;
+            double height = 2.0 + ease * 12.0; // Nâng từ 2m lên 14m
 
-            camPos = caster.getPosition(partialTicks).add(offsetX, 0.4 + progress * 0.3, offsetZ);
-            lookTarget = casterCenter.add(0, 8.0 + progress * 12.0, 0);
+            camPos = caster.getPosition(partialTicks).add(offsetX, height, offsetZ);
+            lookTarget = casterCenter.add(0, -1.0 * ease, 0); // Nhìn chúc xuống bao quát người chơi và ma pháp trận
         } else if (age < 110.0f) {
             // === SHOT 3 (50 -> 110): Đại Cảnh Vũ Trụ từ Tầng Mây (Bird's Eye / Cosmic View) ===
             float progress = (age - 50.0f) / 60.0f;
@@ -181,7 +183,7 @@ public class ClientNihilityCinematicHandler {
             camPos = new Vec3(centerPos.x + offsetX, height, centerPos.z + offsetZ);
             lookTarget = centerPos.add(0, 15.0, 0);
         } else if (age < 141.0f) {
-            // === SHOT 4 (110 -> 141): Cận Cảnh Kịch Tính Nửa Khuôn Mặt ("I AM ATOMIC") ===
+            // === SHOT 4 (110 -> 141): Cận Cảnh Kịch Tính Nửa Khuôn Mặt ("LỜI CHÚC TỬ VONG") ===
             Vec3 forward = caster.getLookAngle();
             Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
 
@@ -202,15 +204,17 @@ public class ClientNihilityCinematicHandler {
             camPos = new Vec3(centerPos.x + offsetX + shakeX, centerPos.y + 24.0 + shakeY, centerPos.z + offsetZ);
             lookTarget = centerPos.add(0, 4.0, 0);
         } else {
-            // === TRẢ GÓC NHÌN MƯỢT MÀ (180 -> 200) ===
+            // === GIỮ GÓC NHÌN TRÊN CAO & CHUYỂN TIẾP VỀ NGƯỜI CHƠI TRÊN KHÔNG (180 -> 200) ===
             float blend = (age - 180.0f) / 20.0f;
+            float ease = blend * blend * (3.0f - 2.0f * blend);
             float backAngle = (float) Math.toRadians(casterYaw + 135.0f);
             double offsetX = -Math.sin(backAngle) * 65.0;
             double offsetZ = Math.cos(backAngle) * 65.0;
             Vec3 shot5Pos = new Vec3(centerPos.x + offsetX, centerPos.y + 24.0, centerPos.z + offsetZ);
 
-            camPos = shot5Pos.lerp(vanillaPos, blend);
-            lookTarget = centerPos;
+            // Chuyển tiếp mượt mà từ góc nhìn từ xa về vị trí người chơi đang lơ lửng trên không
+            camPos = shot5Pos.lerp(vanillaPos, ease);
+            lookTarget = centerPos.add(0, 1.0, 0); // Nhìn xuống tâm chiến trường
         }
 
         Vec3 dir = lookTarget.subtract(camPos);
@@ -219,8 +223,11 @@ public class ClientNihilityCinematicHandler {
 
         if (age >= 180.0f) {
             float blend = (age - 180.0f) / 20.0f;
-            targetYaw = Mth.rotLerp(blend, targetYaw, vanillaYaw);
-            targetPitch = Mth.lerp(blend, targetPitch, vanillaPitch);
+            float ease = blend * blend * (3.0f - 2.0f * blend);
+            targetYaw = Mth.rotLerp(ease, targetYaw, vanillaYaw);
+            // Giữ góc nhìn chúc nhẹ xuống mặt đất (28° - 35°) để ngắm toàn cảnh khu vực bị phá hủy
+            float aerialPitch = Math.max(vanillaPitch, 28.0f);
+            targetPitch = Mth.lerp(ease, targetPitch, aerialPitch);
         }
 
         return new Pose(camPos, targetYaw, targetPitch);
@@ -254,15 +261,15 @@ public class ClientNihilityCinematicHandler {
             graphics.fill(0, bars, width, height - bars, (a << 24) | 0x05010A);
         }
 
-        // 3. Typography "I... AM... ATOMIC."
+        // 3. Typography Tiếng Việt: "LỜI CHÚC TỬ VONG"
         if (age >= 112.0f && age < 130.0f) {
             float alpha = Math.min(1.0f, (age - 112.0f) / 6.0f);
-            String titleText = age < 120.0f ? "I..." : "I... AM...";
-            renderTitle(graphics, titleText, width * 0.5f, height * 0.82f, Math.min(1.8f, width / 200f), alpha, false);
+            String titleText = age < 120.0f ? "LỜI CHÚC..." : "LỜI CHÚC TỬ VONG...";
+            renderTitle(graphics, titleText, width * 0.5f, height * 0.82f, Math.min(2.0f, width / 180f), alpha, false);
         } else if (age >= 130.0f && age < 141.0f) {
             float alpha = Math.min(1.0f, (age - 130.0f) / 4.0f);
-            float scale = Math.min(width * 0.38f / mc.font.width("ATOMIC"), 5.5f);
-            renderTitle(graphics, "ATOMIC", width * 0.5f, height * 0.40f, scale, alpha, true);
+            float scale = Math.min(width * 0.52f / mc.font.width("TỬ VONG"), 5.5f);
+            renderTitle(graphics, "TỬ VONG", width * 0.5f, height * 0.40f, scale, alpha, true);
         }
 
         // Hint skip ở góc dưới
@@ -285,10 +292,10 @@ public class ClientNihilityCinematicHandler {
         graphics.pose().translate(left, -4, 0);
 
         if (impact) {
-            graphics.drawString(font, letters, -1, 0, (Math.max(4, a / 3) << 24) | 0x9D32FF, false);
-            graphics.drawString(font, letters, 1, 0, (Math.max(4, a / 3) << 24) | 0xDA61FF, false);
+            graphics.drawString(font, letters, -1, 0, (Math.max(4, a / 3) << 24) | 0x9D0022, false);
+            graphics.drawString(font, letters, 1, 0, (Math.max(4, a / 3) << 24) | 0xDA1155, false);
         }
-        graphics.drawString(font, letters, 0, 0, (a << 24) | 0xFFF0FF, false);
+        graphics.drawString(font, letters, 0, 0, (a << 24) | 0xFFF0F5, false);
         graphics.pose().popPose();
     }
 }
