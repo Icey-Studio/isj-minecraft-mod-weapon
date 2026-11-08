@@ -1,9 +1,12 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.tensura.TensuraEvents;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -23,6 +26,7 @@ import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
@@ -115,30 +119,38 @@ public class AlkaidAbility {
 
         ActiveAlkaid alkaid = new ActiveAlkaid(level, player);
 
-        // 3. Tạo Quả Cầu Tinh Tú 3D nhỏ xuất hiện cao trên trời (Ảnh 1: 0.5m)
         Vec3 spawnPos = player.position().add(0, 10.0D, 0);
-        Display.ItemDisplay sphere = EntityType.ITEM_DISPLAY.create(level);
-        if (sphere != null) {
-            sphere.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, 0.0F);
-            ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) sphere;
-            DisplayAccessor dispAcc = (DisplayAccessor) sphere;
-
-            itemAcc.weapons$setItemStack(new ItemStack(ModItems.ALKAID_SPHERE.get()));
-            itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
-            dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
-            sphere.setGlowingTag(true);
-            dispAcc.weapons$setGlowColorOverride(0xFFFFFF); // Trắng sáng chói lọi
-            dispAcc.weapons$setViewRange(6.0F);
-
-            dispAcc.weapons$setTransformation(new Transformation(
-                    new Vector3f(0.0F, 0.0F, 0.0F),
-                    new Quaternionf(),
-                    new Vector3f(0.8F, 0.8F, 0.8F),
-                    null
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_ALKAID);
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_ALKAID, player.getUUID(), spawnPos, player.getLookAngle(), 210, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
             ));
+            alkaid.sphereDisplay = null;
+        } else {
+            // 3. Tạo Quả Cầu Tinh Tú 3D nhỏ xuất hiện cao trên trời (Ảnh 1: 0.5m)
+            Display.ItemDisplay sphere = EntityType.ITEM_DISPLAY.create(level);
+            if (sphere != null) {
+                sphere.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, 0.0F);
+                ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) sphere;
+                DisplayAccessor dispAcc = (DisplayAccessor) sphere;
 
-            level.addFreshEntity(sphere);
-            alkaid.sphereDisplay = sphere;
+                itemAcc.weapons$setItemStack(new ItemStack(ModItems.ALKAID_SPHERE.get()));
+                itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+                dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
+                sphere.setGlowingTag(true);
+                dispAcc.weapons$setGlowColorOverride(0xFFFFFF); // Trắng sáng chói lọi
+                dispAcc.weapons$setViewRange(6.0F);
+
+                dispAcc.weapons$setTransformation(new Transformation(
+                        new Vector3f(0.0F, 0.0F, 0.0F),
+                        new Quaternionf(),
+                        new Vector3f(0.8F, 0.8F, 0.8F),
+                        null
+                ));
+
+                level.addFreshEntity(sphere);
+                alkaid.sphereDisplay = sphere;
+            }
         }
 
         ACTIVE_ALKAIDS.add(alkaid);
@@ -356,29 +368,32 @@ public class AlkaidAbility {
                 Vec3 up = right.cross(forward).normalize();
 
                 // Vẽ dải xoắn ốc đôi (Double Helix) bao quanh luồng bắn
-                for (double step = 0.0D; step <= speed; step += 0.6D) {
-                    Vec3 centerPt = prevPos.add(forward.scale(step));
-                    double angle1 = (alkaid.flightTicks * 0.8D) + (step * 0.7D);
-                    double angle2 = angle1 + Math.PI;
+                if (level.hasNearbyAlivePlayer(currentPos.x, currentPos.y, currentPos.z, 64.0D)) {
+                    for (double step = 0.0D; step <= speed; step += 0.6D) {
+                        Vec3 centerPt = prevPos.add(forward.scale(step));
+                        double angle1 = (alkaid.flightTicks * 0.8D) + (step * 0.7D);
+                        double angle2 = angle1 + Math.PI;
 
-                    double helixR = 5.5D;
-                    Vec3 h1 = centerPt.add(right.scale(Math.cos(angle1) * helixR)).add(up.scale(Math.sin(angle1) * helixR));
-                    Vec3 h2 = centerPt.add(right.scale(Math.cos(angle2) * helixR)).add(up.scale(Math.sin(angle2) * helixR));
+                        double helixR = 5.5D;
+                        Vec3 h1 = centerPt.add(right.scale(Math.cos(angle1) * helixR)).add(up.scale(Math.sin(angle1) * helixR));
+                        Vec3 h2 = centerPt.add(right.scale(Math.cos(angle2) * helixR)).add(up.scale(Math.sin(angle2) * helixR));
 
-                    level.sendParticles(STARLIGHT_WHITE_DUST, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0);
-                    level.sendParticles(ParticleTypes.END_ROD, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0.02D);
-                    level.sendParticles(VOID_PURPLE_DUST, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0);
-                    level.sendParticles(CYAN_COSMIC_DUST, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0);
+                        level.sendParticles(STARLIGHT_WHITE_DUST, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0);
+                        level.sendParticles(ParticleTypes.END_ROD, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0.02D);
+                        level.sendParticles(VOID_PURPLE_DUST, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0);
+                        level.sendParticles(CYAN_COSMIC_DUST, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0);
 
-                    // Sóng nén Sonic Boom dọc thân tia
-                    if (RANDOM.nextFloat() < 0.25F) {
-                        level.sendParticles(ParticleTypes.SONIC_BOOM, centerPt.x, centerPt.y, centerPt.z, 1, 0, 0, 0, 0);
+                        // Sóng nén Sonic Boom dọc thân tia
+                        if (RANDOM.nextFloat() < 0.25F) {
+                            level.sendParticles(ParticleTypes.SONIC_BOOM, centerPt.x, centerPt.y, centerPt.z, 1, 0, 0, 0, 0);
+                        }
                     }
                 }
 
                 // =====================================================================
                 // ĐÀO RÃNH ĐỊA HÌNH HÌNH TRỤ BÁN KÍNH 6 BLOCKS (ĐƯỜNG KÍNH 12 BLOCKS)
                 // Phỏng theo panel manga số 4: Khoan thủng núi đồi thành rãnh lòng máng
+                // Tối ưu Flag 50 (UPDATE_CLIENTS | SUPPRESS_DROPS | KNOWN_SHAPE): Tránh sập TPS do bão cập nhật vật lý láng giềng
                 // =====================================================================
                 double carveRadius = 5.8D;
                 double carveRadiusSq = carveRadius * carveRadius;
@@ -392,6 +407,7 @@ public class AlkaidAbility {
                 int maxZ = Mth.floor(currentPos.z + carveRadius);
 
                 BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
+                boolean hasNearbyPlayer = level.hasNearbyAlivePlayer(currentPos.x, currentPos.y, currentPos.z, 48.0D);
                 for (int bx = minX; bx <= maxX; bx++) {
                     for (int by = minY; by <= maxY; by++) {
                         for (int bz = minZ; bz <= maxZ; bz++) {
@@ -400,11 +416,11 @@ public class AlkaidAbility {
                                 mpos.set(bx, by, bz);
                                 BlockState bs = level.getBlockState(mpos);
                                 if (!bs.isAir() && bs.getDestroySpeed(level, mpos) >= 0.0F) {
-                                    level.destroyBlock(mpos, false); // Phá hủy sạch không vương drop
+                                    level.setBlock(mpos, Blocks.AIR.defaultBlockState(), 50); // Phá hủy sạch không vương drop, không kích hoạt chuỗi physics bão táp
                                 }
                             } else if (distSq <= perimeterRadiusSq) {
                                 // Vết xước vân xoáy trên thành hào
-                                if (RANDOM.nextFloat() < 0.08F) {
+                                if (hasNearbyPlayer && RANDOM.nextFloat() < 0.08F) {
                                     level.sendParticles(ParticleTypes.FLASH, bx + 0.5D, by + 0.5D, bz + 0.5D, 1, 0, 0, 0, 0);
                                 }
                             }

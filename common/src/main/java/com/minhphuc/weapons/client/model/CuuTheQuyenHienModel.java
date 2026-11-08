@@ -50,6 +50,14 @@ public class CuuTheQuyenHienModel<T extends LivingEntity> extends HumanoidModel<
         MeshDefinition meshdefinition = HumanoidModel.createMesh(new CubeDeformation(0.25F), 0.0F);
         PartDefinition partdefinition = meshdefinition.getRoot();
 
+        // 64x64 separate left arm & left leg mapping (Player standard)
+        partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create()
+                .texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.25F)),
+                PartPose.offset(5.0F, 2.0F, 0.0F));
+        partdefinition.addOrReplaceChild("left_leg", CubeListBuilder.create()
+                .texOffs(16, 48).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F, new CubeDeformation(0.25F)),
+                PartPose.offset(1.9F, 12.0F, 0.0F));
+
         PartDefinition head = partdefinition.getChild("head");
         PartDefinition body = partdefinition.getChild("body");
         PartDefinition leftArm = partdefinition.getChild("left_arm");
@@ -58,23 +66,23 @@ public class CuuTheQuyenHienModel<T extends LivingEntity> extends HumanoidModel<
         // 1. MŨ GIÁP KABUTO & BIỂU TƯỢNG TRĂNG LƯỠI LIỀM KHỔNG LỒ (CRESCENT MOON)
         // Vành mũ Kabuto và tai giáp Shikoro
         head.addOrReplaceChild("kabuto_brim", CubeListBuilder.create()
-                .texOffs(0, 32).addBox(-4.5F, -9.0F, -5.0F, 9.0F, 2.0F, 10.0F, new CubeDeformation(0.2F))
+                .texOffs(64, 64).addBox(-4.5F, -9.0F, -5.0F, 9.0F, 2.0F, 10.0F, new CubeDeformation(0.2F))
                 // Cánh tai giáp 2 bên mũ (Fukikaeshi)
-                .texOffs(28, 32).addBox(-6.0F, -8.0F, -4.0F, 1.5F, 4.0F, 6.0F)
-                .texOffs(28, 32).mirror().addBox(4.5F, -8.0F, -4.0F, 1.5F, 4.0F, 6.0F),
+                .texOffs(64, 76).addBox(-6.0F, -8.0F, -4.0F, 1.5F, 4.0F, 6.0F)
+                .texOffs(64, 76).mirror().addBox(4.5F, -8.0F, -4.0F, 1.5F, 4.0F, 6.0F),
                 PartPose.ZERO
         );
 
         // Biểu tượng Trăng Khuyết (Maedate Crescent Moon) lớn trên trán
         head.addOrReplaceChild("crescent_moon", CubeListBuilder.create()
                 // Trung tâm mặt trăng gắn vào trán
-                .texOffs(44, 32).addBox(-1.5F, -14.5F, -5.5F, 3.0F, 5.0F, 1.0F)
+                .texOffs(64, 48).addBox(-1.5F, -14.5F, -5.5F, 3.0F, 5.0F, 1.0F)
                 // Cánh sừng trăng bên trái uốn cong lên cao
-                .texOffs(52, 32).addBox(-4.5F, -17.0F, -5.5F, 3.0F, 5.0F, 1.0F)
-                .texOffs(56, 32).addBox(-7.0F, -20.0F, -5.5F, 2.5F, 5.0F, 1.0F)
+                .texOffs(72, 48).addBox(-4.5F, -17.0F, -5.5F, 3.0F, 5.0F, 1.0F)
+                .texOffs(80, 48).addBox(-7.0F, -20.0F, -5.5F, 2.5F, 5.0F, 1.0F)
                 // Cánh sừng trăng bên phải uốn cong lên cao
-                .texOffs(52, 32).mirror().addBox(1.5F, -17.0F, -5.5F, 3.0F, 5.0F, 1.0F)
-                .texOffs(56, 32).mirror().addBox(4.5F, -20.0F, -5.5F, 2.5F, 5.0F, 1.0F),
+                .texOffs(72, 48).mirror().addBox(1.5F, -17.0F, -5.5F, 3.0F, 5.0F, 1.0F)
+                .texOffs(80, 48).mirror().addBox(4.5F, -20.0F, -5.5F, 2.5F, 5.0F, 1.0F),
                 PartPose.ZERO
         );
 
@@ -82,13 +90,15 @@ public class CuuTheQuyenHienModel<T extends LivingEntity> extends HumanoidModel<
         // Bờm tóc dày đặc cuồn cuộn phủ kín lưng và tràn qua hai bên vai
         head.addOrReplaceChild("hair_mane", CubeListBuilder.create()
                 // Lớp tóc bờm trung tâm rủ dài sau đầu xuống lưng
-                .texOffs(0, 44).addBox(-5.5F, -9.0F, 4.2F, 11.0F, 16.0F, 4.0F, new CubeDeformation(0.3F))
-                // Lớp tóc bờm sau gáy tỏa rộng
-                .texOffs(30, 44).addBox(-7.0F, -7.0F, 3.5F, 14.0F, 18.0F, 2.5F, new CubeDeformation(0.2F))
+                .texOffs(64, 0).addBox(-5.5F, -9.0F, 4.2F, 11.0F, 16.0F, 4.0F, new CubeDeformation(0.3F))
+                // Lớp tóc bờm sau gáy tỏa rộng hình tam giác
+                .texOffs(64, 20).addBox(-7.0F, -7.0F, 3.5F, 14.0F, 18.0F, 2.5F, new CubeDeformation(0.2F))
+                // Đuôi bờm nhọn rủ tới hông
+                .texOffs(94, 0).addBox(-3.5F, 7.0F, 4.0F, 7.0F, 8.0F, 2.0F, new CubeDeformation(0.1F))
                 // Tóc bờm phủ mé bên trái
-                .texOffs(0, 64).addBox(-6.5F, -6.0F, -1.0F, 2.5F, 14.0F, 5.0F)
+                .texOffs(94, 10).addBox(-6.5F, -6.0F, -1.0F, 2.5F, 14.0F, 5.0F)
                 // Tóc bờm phủ mé bên phải
-                .texOffs(0, 64).mirror().addBox(4.0F, -6.0F, -1.0F, 2.5F, 14.0F, 5.0F),
+                .texOffs(94, 10).mirror().addBox(4.0F, -6.0F, -1.0F, 2.5F, 14.0F, 5.0F),
                 PartPose.ZERO
         );
 
@@ -112,20 +122,24 @@ public class CuuTheQuyenHienModel<T extends LivingEntity> extends HumanoidModel<
 
         // Giáp hông Kusazuri (Tấm giáp che đùi của Samurai)
         body.addOrReplaceChild("hip_armor", CubeListBuilder.create()
-                .texOffs(28, 64).addBox(-4.5F, 10.0F, -2.5F, 9.0F, 6.0F, 5.0F, new CubeDeformation(0.4F)),
+                .texOffs(32, 64).addBox(-4.5F, 10.0F, -2.5F, 9.0F, 6.0F, 5.0F, new CubeDeformation(0.4F)),
                 PartPose.ZERO
         );
 
         // 4. GIÁP VAI SAMURAI O-SODE (SHOULDER SHIELDS)
         // Giáp vai bên trái
         leftArm.addOrReplaceChild("left_sode", CubeListBuilder.create()
-                .texOffs(48, 64).addBox(-0.5F, -3.0F, -3.0F, 2.0F, 9.0F, 6.0F, new CubeDeformation(0.2F)),
+                .texOffs(64, 96).addBox(-0.5F, -3.0F, -3.0F, 2.0F, 9.0F, 6.0F, new CubeDeformation(0.2F))
+                // Bờm lông trắng trên đỉnh giáp vai
+                .texOffs(80, 96).addBox(-1.0F, -4.2F, -3.2F, 3.0F, 1.8F, 6.4F, new CubeDeformation(0.1F)),
                 PartPose.ZERO
         );
 
         // Giáp vai bên phải
         rightArm.addOrReplaceChild("right_sode", CubeListBuilder.create()
-                .texOffs(48, 64).mirror().addBox(-1.5F, -3.0F, -3.0F, 2.0F, 9.0F, 6.0F, new CubeDeformation(0.2F)),
+                .texOffs(64, 96).mirror().addBox(-1.5F, -3.0F, -3.0F, 2.0F, 9.0F, 6.0F, new CubeDeformation(0.2F))
+                // Bờm lông trắng trên đỉnh giáp vai
+                .texOffs(80, 96).mirror().addBox(-2.0F, -4.2F, -3.2F, 3.0F, 1.8F, 6.4F, new CubeDeformation(0.1F)),
                 PartPose.ZERO
         );
 

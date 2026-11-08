@@ -53,6 +53,24 @@ public class ModEntities {
                             .build("kubo")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity>> DEMON_LORD_KUBO =
+            ENTITY_TYPES.register("demon_lord_kubo", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity::new, MobCategory.MONSTER)
+                            .sized(2.8F, 3.2F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("demon_lord_kubo")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.VoNguyetMinhPhoiEntity>> VO_NGUYET_MINH_PHOI =
+            ENTITY_TYPES.register("vo_nguyet_minh_phoi", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.VoNguyetMinhPhoiEntity::new, MobCategory.MONSTER)
+                            .sized(2.4F, 2.4F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("vo_nguyet_minh_phoi")
+            );
+
     public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.MilimEntity>> MILIM =
             ENTITY_TYPES.register("milim", () ->
                     EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.MilimEntity::new, MobCategory.MONSTER)
@@ -125,6 +143,8 @@ public class ModEntities {
         EntityAttributeRegistry.register(PRIMORDIAL_DEMON, PrimordialDemonEntity::createAttributes);
         EntityAttributeRegistry.register(VELGRYND, com.minhphuc.weapons.entity.tensura.VelgryndEntity::createAttributes);
         EntityAttributeRegistry.register(KUBO, com.minhphuc.weapons.entity.darkgathering.KuboEntity::createAttributes);
+        EntityAttributeRegistry.register(DEMON_LORD_KUBO, com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity::createAttributes);
+        EntityAttributeRegistry.register(VO_NGUYET_MINH_PHOI, com.minhphuc.weapons.entity.darkgathering.VoNguyetMinhPhoiEntity::createAttributes);
         EntityAttributeRegistry.register(MILIM, com.minhphuc.weapons.entity.tensura.MilimEntity::createAttributes);
         EntityAttributeRegistry.register(VELZARD, com.minhphuc.weapons.entity.tensura.VelzardEntity::createAttributes);
         EntityAttributeRegistry.register(CUU_THE_QUYEN_HIEN, com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity::createAttributes);

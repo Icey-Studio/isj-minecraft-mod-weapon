@@ -169,6 +169,12 @@ public class ModItems {
     public static final RegistrySupplier<Item> KUBO_SPAWN_EGG = ITEMS.register("kubo_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.KUBO, 0x0A0512, 0x9333EA, new Item.Properties()));
 
+    public static final RegistrySupplier<Item> DEMON_LORD_KUBO_SPAWN_EGG = ITEMS.register("demon_lord_kubo_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.DEMON_LORD_KUBO, 0x0A0512, 0xF97316, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VO_NGUYET_MINH_PHOI_SPAWN_EGG = ITEMS.register("vo_nguyet_minh_phoi_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.VO_NGUYET_MINH_PHOI, 0x06020E, 0x8B5CF6, new Item.Properties()));
+
     public static final RegistrySupplier<Item> CUU_THE_QUYEN_HIEN_SPAWN_EGG = ITEMS.register("cuu_the_quyen_hien_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.CUU_THE_QUYEN_HIEN, 0x111318, 0xE5E7EB, new Item.Properties()));
 
@@ -530,6 +536,8 @@ public class ModItems {
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());
                         output.accept(VOID_CLAW_CALAMITY.get());
                         output.accept(KUBO_SPAWN_EGG.get());
+                        output.accept(DEMON_LORD_KUBO_SPAWN_EGG.get());
+                        output.accept(VO_NGUYET_MINH_PHOI_SPAWN_EGG.get());
                         output.accept(KUBO_SUMMON_CORE.get());
                         output.accept(CUU_THE_QUYEN_HIEN_SPAWN_EGG.get());
                         output.accept(SHIGARAKI_TANUKI_EMPTY.get());

@@ -36,37 +36,24 @@ public class TaKinhDaiTangModel extends HumanoidModel<TaKinhDaiTangEntity> {
     }
 
     public static LayerDefinition createBodyLayer() {
-        MeshDefinition meshdefinition = HumanoidModel.createMesh(new CubeDeformation(0.2F), 0.0F);
+        MeshDefinition meshdefinition = HumanoidModel.createMesh(CubeDeformation.NONE, 0.0F);
         PartDefinition partdefinition = meshdefinition.getRoot();
+
+        // 64x64 separate left arm & left leg mapping (Player standard)
+        partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create()
+                .texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 4.0F, 12.0F, 4.0F),
+                PartPose.offset(5.0F, 2.0F, 0.0F));
+        partdefinition.addOrReplaceChild("left_leg", CubeListBuilder.create()
+                .texOffs(16, 48).addBox(-2.0F, 0.0F, -2.0F, 4.0F, 12.0F, 4.0F),
+                PartPose.offset(1.9F, 12.0F, 0.0F));
 
         PartDefinition head = partdefinition.getChild("head");
         PartDefinition body = partdefinition.getChild("body");
 
-        // 1. DẢI KINH PHÙ PHẠN TỰ BAY LƠ LỬNG QUANH ĐẦU VÀ VAI
-        head.addOrReplaceChild("sutra_bands", CubeListBuilder.create()
-                // Dải bùa thả sau lưng
-                .texOffs(0, 32).addBox(-3.5F, -10.0F, 4.2F, 7.0F, 18.0F, 0.5F)
-                // Dải bùa rủ qua vai trái
-                .texOffs(16, 32).addBox(-6.0F, -8.0F, -3.5F, 1.0F, 16.0F, 4.0F)
-                // Dải bùa rủ qua vai phải
-                .texOffs(16, 32).mirror().addBox(5.0F, -8.0F, -3.5F, 1.0F, 16.0F, 4.0F),
-                PartPose.ZERO
-        );
-
-        // 2. VÒNG TRÀNG HẠT ĐẦU LÂU PHẬT MÔN
-        body.addOrReplaceChild("prayer_beads", CubeListBuilder.create()
-                // Hạt vắt trước ngực
-                .texOffs(28, 32).addBox(-4.0F, 0.0F, -3.0F, 8.0F, 9.0F, 1.0F, new CubeDeformation(0.2F))
-                // Hạt vắt sau lưng
-                .texOffs(28, 32).mirror().addBox(-4.0F, 0.0F, 2.2F, 8.0F, 9.0F, 1.0F, new CubeDeformation(0.2F)),
-                PartPose.ZERO
-        );
-
-        // 3. VẠT ÁO CÀ SA CỔ PHỦ TỚI GỐI (KASAYA ROBE)
-        body.addOrReplaceChild("kasaya_robe", CubeListBuilder.create()
-                .texOffs(0, 52).addBox(-4.5F, 9.0F, -2.5F, 9.0F, 8.0F, 5.0F, new CubeDeformation(0.35F)),
-                PartPose.ZERO
-        );
+        // Các bộ phận phụ giữ tương thích API mô hình
+        head.addOrReplaceChild("sutra_bands", CubeListBuilder.create(), PartPose.ZERO);
+        body.addOrReplaceChild("prayer_beads", CubeListBuilder.create(), PartPose.ZERO);
+        body.addOrReplaceChild("kasaya_robe", CubeListBuilder.create(), PartPose.ZERO);
 
         return LayerDefinition.create(meshdefinition, 64, 64);
     }

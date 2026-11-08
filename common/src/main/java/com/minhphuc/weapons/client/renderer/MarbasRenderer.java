@@ -16,6 +16,7 @@ public class MarbasRenderer extends MobRenderer<MarbasEntity, MarbasModel> {
     public MarbasRenderer(EntityRendererProvider.Context context) {
         super(context, new MarbasModel(context.bakeLayer(MarbasModel.LAYER_LOCATION)), 0.75F);
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new MarbasGlowLayer(this));
     }
 
     @Override

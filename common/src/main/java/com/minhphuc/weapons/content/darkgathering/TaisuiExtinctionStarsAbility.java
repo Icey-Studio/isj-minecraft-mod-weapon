@@ -1,11 +1,13 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.tensura.TensuraEvents;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
 import com.mojang.math.Transformation;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ClientboundSyncTaisuiPacket;
 import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
@@ -117,32 +119,40 @@ public class TaisuiExtinctionStarsAbility {
 
         ActiveTaisuiState state = new ActiveTaisuiState(level, player);
 
-        // 1. Tạo Quả Cầu Mắt 3D Khổng Lồ phía sau lưng người chơi
-        Vec3 look = player.getLookAngle();
-        Vec3 spawnPos = player.position().add(look.scale(-4.0D)).add(0, 3.2D, 0);
-
-        Display.ItemDisplay planet = EntityType.ITEM_DISPLAY.create(level);
-        if (planet != null) {
-            planet.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, 0.0F);
-            ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) planet;
-            DisplayAccessor dispAcc = (DisplayAccessor) planet;
-
-            itemAcc.weapons$setItemStack(new ItemStack(ModItems.TAISUI_EYE_PLANET.get()));
-            itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
-            dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
-            planet.setGlowingTag(true);
-            dispAcc.weapons$setGlowColorOverride(0xFF0055);
-            dispAcc.weapons$setViewRange(4.0F);
-
-            dispAcc.weapons$setTransformation(new Transformation(
-                    new Vector3f(0.0F, 0.0F, 0.0F),
-                    new Quaternionf(),
-                    new Vector3f(8.0F, 8.0F, 8.0F),
-                    null
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_EXTINCTION_STARS);
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_EXTINCTION_STARS, player.getUUID(), player.position(), player.getLookAngle(), 80, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
             ));
+            state.eyePlanetDisplay = null;
+        } else {
+            // 1. Tạo Quả Cầu Mắt 3D Khổng Lồ phía sau lưng người chơi
+            Vec3 look = player.getLookAngle();
+            Vec3 spawnPos = player.position().add(look.scale(-4.0D)).add(0, 3.2D, 0);
 
-            level.addFreshEntity(planet);
-            state.eyePlanetDisplay = planet;
+            Display.ItemDisplay planet = EntityType.ITEM_DISPLAY.create(level);
+            if (planet != null) {
+                planet.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, 0.0F);
+                ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) planet;
+                DisplayAccessor dispAcc = (DisplayAccessor) planet;
+
+                itemAcc.weapons$setItemStack(new ItemStack(ModItems.TAISUI_EYE_PLANET.get()));
+                itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+                dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
+                planet.setGlowingTag(true);
+                dispAcc.weapons$setGlowColorOverride(0xFF0055);
+                dispAcc.weapons$setViewRange(4.0F);
+
+                dispAcc.weapons$setTransformation(new Transformation(
+                        new Vector3f(0.0F, 0.0F, 0.0F),
+                        new Quaternionf(),
+                        new Vector3f(8.0F, 8.0F, 8.0F),
+                        null
+                ));
+
+                level.addFreshEntity(planet);
+                state.eyePlanetDisplay = planet;
+            }
         }
 
         ACTIVE_TAISUI.put(player.getUUID(), state);

@@ -1,8 +1,10 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.divine.MoonlightSwordItem;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ClientboundIaiStatePacket;
 import com.minhphuc.weapons.network.ModMessages;
 import dev.architectury.event.EventResult;
@@ -204,6 +206,12 @@ public class ReverseVelocityIaijutsuAbility {
                     true
             );
             return false;
+        }
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI, player.getUUID(), player.position(), player.getLookAngle(), 45, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
         }
 
         Vec3 bodyPos = player.position();

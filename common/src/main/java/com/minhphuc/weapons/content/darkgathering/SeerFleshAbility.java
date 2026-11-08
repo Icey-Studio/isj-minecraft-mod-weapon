@@ -1,9 +1,12 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.InteractionAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import dev.architectury.event.EventResult;
 import net.minecraft.core.BlockPos;
@@ -89,7 +92,7 @@ public class SeerFleshAbility {
         if (ACTIVE_FLESHES.isEmpty()) return null;
         double rSq = radius * radius;
         for (ActiveSeerFlesh flesh : ACTIVE_FLESHES.values()) {
-            if (flesh.level == level && flesh.display != null && flesh.display.isAlive()) {
+            if (flesh.level == level && (flesh.display != null && flesh.display.isAlive() || SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_SEER_FLESH))) {
                 if (flesh.spawnPos.distanceToSqr(pos) <= rSq) {
                     return flesh;
                 }
@@ -138,28 +141,35 @@ public class SeerFleshAbility {
         Vec3 targetPos = player.position().add(forwardHorizontal);
         Vec3 groundPos = findGroundBelow(level, targetPos);
 
-        // 1. Tạo Display Item hiển thị khối thịt 3D
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_SEER_FLESH);
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_SEER_FLESH, player.getUUID(), groundPos, player.getLookAngle(), 100, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        }
+
+        // 1. Tạo Display Item hiển thị khối thịt 3D nguyên bản (sinh vật nhầy nhụa squirming chuẩn Dark Gathering)
         Display.ItemDisplay display = EntityType.ITEM_DISPLAY.create(level);
-        if (display == null) return;
+        if (display != null) {
+            display.moveTo(groundPos.x, groundPos.y, groundPos.z, player.getYRot() + 180.0F, 0.0F);
+            ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) display;
+            DisplayAccessor dispAcc = (DisplayAccessor) display;
 
-        display.moveTo(groundPos.x, groundPos.y, groundPos.z, player.getYRot() + 180.0F, 0.0F);
-        ItemDisplayAccessor itemAcc = (ItemDisplayAccessor) display;
-        DisplayAccessor dispAcc = (DisplayAccessor) display;
+            itemAcc.weapons$setItemStack(new ItemStack(ModItems.TAISUI_SEER_FLESH.get()));
+            itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+            dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
+            display.setGlowingTag(true);
+            dispAcc.weapons$setGlowColorOverride(0xCC0022); // Đỏ thẫm thịt tươi
+            dispAcc.weapons$setViewRange(4.0F);
 
-        itemAcc.weapons$setItemStack(new ItemStack(ModItems.TAISUI_SEER_FLESH.get()));
-        itemAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
-        dispAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
-        display.setGlowingTag(true);
-        dispAcc.weapons$setGlowColorOverride(0xCC0022); // Đỏ thẫm thịt tươi
-        dispAcc.weapons$setViewRange(4.0F);
-
-        dispAcc.weapons$setTransformation(new Transformation(
-                new Vector3f(0.0F, 0.0F, 0.0F),
-                new Quaternionf(),
-                new Vector3f(2.2F, 2.2F, 2.2F),
-                null
-        ));
-        level.addFreshEntity(display);
+            dispAcc.weapons$setTransformation(new Transformation(
+                    new Vector3f(0.0F, 0.0F, 0.0F),
+                    new Quaternionf(),
+                    new Vector3f(2.2F, 2.2F, 2.2F),
+                    null
+            ));
+            level.addFreshEntity(display);
+        }
 
         // 2. Tạo Interaction Entity làm hitbox nhận diện click chuột phải và đánh chuột trái
         Interaction interaction = EntityType.INTERACTION.create(level);
