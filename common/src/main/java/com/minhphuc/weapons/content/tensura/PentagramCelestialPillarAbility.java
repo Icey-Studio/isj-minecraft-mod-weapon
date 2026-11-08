@@ -96,6 +96,13 @@ public class PentagramCelestialPillarAbility {
 
     private static final List<ActiveCelestialPillar> ACTIVE_PILLARS = new ArrayList<>();
 
+    public static void clearAllPillars() {
+        for (ActiveCelestialPillar p : ACTIVE_PILLARS) {
+            p.cleanup();
+        }
+        ACTIVE_PILLARS.clear();
+    }
+
     public static boolean destroyCircleIfMatches(Display.ItemDisplay display) {
         if (display == null) return false;
         for (Iterator<ActiveCelestialPillar> it = ACTIVE_PILLARS.iterator(); it.hasNext(); ) {

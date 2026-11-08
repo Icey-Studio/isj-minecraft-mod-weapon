@@ -95,18 +95,66 @@ public class TensuraSkillDispatcher {
         }
     }
 
+    /**
+     * LỌC KỸ NĂNG CÓ THỂ HOẠT ĐỘNG TRONG KHÁNG MA KẾT GIỚI:
+     * - Kháng Ma Kết Giới triệt tiêu nồng độ Ma Tố (Magicules) của ma vật và ác ma.
+     * - Các kỹ năng được phép sử dụng:
+     *   1. Phong Sát Kỹ Năng (Skill Nullification) - Phá vỡ và giải trừ kết giới từ bên trong!
+     *   2. Thánh Pháp Thuật Linh Tử (Disintegration, Jacob's Ladder, Miracle of the Gods, Faith & Grace) - Hạt Linh Tử nhỏ hơn ma tố, xuyên thủng kết giới theo chuẩn nguyên tác Tensura!
+     *   3. Kiếm Thuật Thuần Vật Lý (Nghịch Thời Nhất Trảm, Bạt Đao Thuật Vận Tốc Ngược) - Động năng và thể lực cơ bắp thuần túy.
+     *   4. Giác Quan & Tâm Trí (Tiên Tri Rykuzin Sinka, Cảm Nhận Vạn Năng) - Sóng não và nhận thức sinh học.
+     *   5. Dị Giới Thần Môn & Sáng Tạo Vật Chất - Cổng không gian thoát hiểm khẩn cấp và đúc vũ khí.
+     */
+    public static boolean isSkillAllowedInAntiMagicBarrier(int index, boolean hasCreation) {
+        // Nhóm 1: Thánh Thuật Linh Tử (Spiritrons)
+        if (index >= 0 && index <= 3) return true;
+
+        // Nhóm 2: Kiếm Thuật Vật Lý & Đao Pháp
+        if (index == 10 || index == 11) return true;
+
+        if (hasCreation) {
+            if (index == 12) return true; // Sáng Tạo Vật Chất
+            if (index == 16) return true; // Cảm Nhận Vạn Năng
+            if (index == 19) return true; // Tiên Tri: Rykuzin Sinka
+            if (index == 24) return true; // Phong Sát Kỹ Năng
+            if (index == 27) return true; // Dị Giới Thần Môn
+        } else {
+            if (index == 15) return true; // Cảm Nhận Vạn Năng
+            if (index == 18) return true; // Tiên Tri: Rykuzin Sinka
+            if (index == 23) return true; // Phong Sát Kỹ Năng
+            if (index == 26) return true; // Dị Giới Thần Môn
+        }
+        return false;
+    }
+
     public static void executeSkill(ServerLevel level, ServerPlayer player, int index, boolean hasCreation) {
-        // Kháng Ma Kết Giới (Anti-Magic Barrier) triệt tiêu toàn bộ ma pháp & kỹ năng
-        // Ác ma ở trong kết giới chỉ có thể cận chiến bằng tay không
+        // Kháng Ma Kết Giới (Anti-Magic Barrier) triệt tiêu ma pháp & ma tố:
+        // LỌC KỸ NĂNG: Chỉ cho phép các kỹ năng KHÔNG dùng ma tố hoạt động:
         if (AntiMagicBarrierManager.isInBarrier(level, player.position())) {
-            player.displayClientMessage(
-                    Component.literal("§c⚠️ Bạn đang nằm trong Kháng Ma Kết Giới! Nồng độ ma tử bằng 0, ác ma chỉ có thể đánh cận chiến bằng tay không, toàn bộ ma pháp bị phong ấn!"),
-                    true
-            );
-            level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                    net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
-            level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
-            return;
+            if (!isSkillAllowedInAntiMagicBarrier(index, hasCreation)) {
+                player.displayClientMessage(
+                        Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Kỹ năng này sử dụng Ma Tố nên bị phong ấn! Bạn chỉ có thể dùng: §ePhong Sát Kỹ Năng (phá kết giới), Thánh Thuật Linh Tử (Disintegration, Jacob), Kiếm Thuật Vật Lý (Bạt Đao, Nghịch Thời), Tiên Tri, hoặc Dị Giới Thần Môn!"),
+                        true
+                );
+                level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+                return;
+            }
+        }
+
+        // Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Skill Nullification Seal)
+        if (SkillNullificationAbility.isPlayerSealed(player)) {
+            // Khi bị Phong Sát, chỉ còn có thể dùng Kiếm Thuật Thuần Vật Lý
+            if (index != 10 && index != 11) {
+                player.displayClientMessage(
+                        Component.literal("§c⚠️ Bạn đang bị Phong Sát Kỹ Năng! Toàn bộ ma pháp bị phong ấn, chỉ có thể sử dụng Kiếm Thuật Vật Lý!"),
+                        true
+                );
+                level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
+                return;
+            }
         }
 
         int rykuzinIndex = hasCreation ? 19 : 18;

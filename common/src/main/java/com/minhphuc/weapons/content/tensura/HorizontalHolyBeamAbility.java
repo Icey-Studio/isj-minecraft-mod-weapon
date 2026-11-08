@@ -62,6 +62,13 @@ public class HorizontalHolyBeamAbility {
 
     private static final List<ActiveHorizontalBeam> ACTIVE_BEAMS = new ArrayList<>();
 
+    public static void clearAllBeams() {
+        for (ActiveHorizontalBeam b : ACTIVE_BEAMS) {
+            b.discard();
+        }
+        ACTIVE_BEAMS.clear();
+    }
+
     public static void tickBeams(ServerLevel level) {
         if (ACTIVE_BEAMS.isEmpty()) return;
         Iterator<ActiveHorizontalBeam> it = ACTIVE_BEAMS.iterator();

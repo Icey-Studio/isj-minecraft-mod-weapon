@@ -92,6 +92,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
     private final List<PrimordialSkillPool.SkillEntry> randomSkills = new ArrayList<>();
 
     private int skillCooldownTicks = 0;
+    private int sealedTicks = 0; // Thời gian bị Phong Sát Kỹ Năng (Skill Nullification Seal)
     public float wingFlapAngle = 0.0F;
     public float prevWingFlapAngle = 0.0F;
 
@@ -750,6 +751,15 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
         if (skillCooldownTicks > 0) {
             skillCooldownTicks--;
+        }
+
+        if (this.sealedTicks > 0) {
+            this.sealedTicks--;
+            if (this.level() instanceof ServerLevel sl && this.tickCount % 10 == 0) {
+                // Hiệu ứng hắc khói và bùa chú phong sát quấn quanh ác ma
+                sl.sendParticles(ParticleTypes.SMOKE, getX(), getY() + 1.0, getZ(), 6, 0.35, 0.5, 0.35, 0.02);
+                sl.sendParticles(ParticleTypes.ENCHANTED_HIT, getX(), getY() + 1.2, getZ(), 4, 0.25, 0.4, 0.25, 0.05);
+            }
         }
 
         // Cập nhật và xoay các vòng tròn ma thuật ItemDisplay
@@ -1506,7 +1516,31 @@ public class PrimordialDemonEntity extends TamableAnimal {
         return false;
     }
 
+    public boolean isSkillSealed() {
+        return this.sealedTicks > 0;
+    }
+
+    public void sealSkills(int durationTicks) {
+        this.sealedTicks = Math.max(this.sealedTicks, durationTicks);
+        this.skillCooldownTicks = Math.max(this.skillCooldownTicks, durationTicks);
+        this.cleanDomainBarriers();
+        this.activeDomainTicks = 0;
+        this.clearActiveCircles();
+    }
+
+    public void clearActiveCircles() {
+        for (ActiveDisplayCircle circle : this.activeCircles) {
+            if (circle.display != null && circle.display.isAlive()) {
+                circle.display.discard();
+            }
+        }
+        this.activeCircles.clear();
+    }
+
     public boolean canCastSkill() {
+        if (isSkillSealed()) {
+            return false;
+        }
         if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(this.level(), this.position())) {
             return false;
         }

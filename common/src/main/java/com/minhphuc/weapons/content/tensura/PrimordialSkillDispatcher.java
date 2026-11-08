@@ -36,6 +36,33 @@ public class PrimordialSkillDispatcher {
         DemonType type = PrimordialPlayerDataHelper.getPrimordialType(player);
         if (type == null) return;
 
+        // 1. Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Skill Nullification Seal)
+        if (SkillNullificationAbility.isPlayerSealed(player)) {
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ [PHONG SÁT KỸ NĂNG] Toàn bộ kỹ năng và sức mạnh Ác Ma của bạn đang bị phong ấn!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+            return;
+        }
+
+        // 2. Kiểm tra Kháng Ma Kết Giới (Anti-Magic Barrier)
+        // Ma Tố bị triệt tiêu hoàn toàn. Duy nhất kỹ năng Spiritrons (Skill 7: Linh Tử Bộc Phát) có thể xuyên thấu!
+        if (AntiMagicBarrierManager.isInBarrier(level, player.position())) {
+            if (skillIndex != 6) {
+                player.displayClientMessage(
+                        Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Ma Tố bị triệt tiêu! Kỹ năng Ác Ma bị phong ấn (Ngoại trừ: Linh Tử Bộc Phát)!"),
+                        true
+                );
+                level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+                level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+                return;
+            }
+        }
+
         if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PRIMORDIAL_DEMON)) {
             float demonCode = (float) (type.ordinal() * 10 + skillIndex);
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(

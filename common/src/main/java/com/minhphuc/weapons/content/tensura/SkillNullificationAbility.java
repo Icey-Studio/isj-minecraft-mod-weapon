@@ -28,6 +28,19 @@ import java.util.List;
  */
 public class SkillNullificationAbility {
 
+    private static final java.util.Map<java.util.UUID, Long> SEALED_PLAYERS = new java.util.concurrent.ConcurrentHashMap<>();
+
+    public static boolean isPlayerSealed(ServerPlayer player) {
+        if (player == null) return false;
+        Long until = SEALED_PLAYERS.get(player.getUUID());
+        return until != null && player.level().getGameTime() < until;
+    }
+
+    public static void sealPlayer(ServerPlayer player, int durationTicks) {
+        if (player == null) return;
+        SEALED_PLAYERS.put(player.getUUID(), player.level().getGameTime() + durationTicks);
+    }
+
     public static void cast(ServerLevel level, ServerPlayer caster) {
         if (level == null || caster == null) return;
 
@@ -53,6 +66,10 @@ public class SkillNullificationAbility {
         // 3. Xóa sổ toàn bộ ma pháp trận tàn dư và ma trận hạt nhân
         ResidualMagicCircleManager.clearAllResidualCircles(level);
         DeathStreakAbility.destroyAllCircles(level);
+        HorizontalHolyBeamAbility.clearAllBeams();
+        PentagramCelestialPillarAbility.clearAllPillars();
+        JaunePlayerSkillManager.ACTIVE_BARRAGES.clear();
+        JaunePlayerSkillManager.ACTIVE_GRAVITY_HOLES.clear();
 
         // 4. Hủy các cấm thuật diện rộng đang thi triển
         NihilityCollapseAbility.cancelAll(level);
@@ -91,13 +108,26 @@ public class SkillNullificationAbility {
             }
         }
 
-        // Ác ma Thủy Tổ: giải trừ Lãnh Địa & ngắt cấm thuật
+        // Ác ma Thủy Tổ: GIẢI TRỪ LÃNH ĐỊA & PHONG SÁT TOÀN BỘ KỸ NĂNG TRONG 30 GIÂY
         List<PrimordialDemonEntity> demons = level.getEntitiesOfClass(PrimordialDemonEntity.class, searchBox);
+        int sealedDemonsCount = 0;
         for (PrimordialDemonEntity d : demons) {
             if (d.isAlive()) {
-                d.cleanDomainBarriers();
-                d.activeDomainTicks = 0;
-                level.sendParticles(ParticleTypes.SMOKE, d.getX(), d.getY() + 1.0, d.getZ(), 20, 0.5, 0.8, 0.5, 0.05);
+                d.sealSkills(600); // 30s (600 ticks) hoàn toàn không thể dùng skill ma pháp, chỉ có thể cận chiến
+                sealedDemonsCount++;
+                level.sendParticles(ParticleTypes.SONIC_BOOM, d.getX(), d.getY() + 1.2, d.getZ(), 1, 0, 0, 0, 0);
+                level.sendParticles(ParticleTypes.LARGE_SMOKE, d.getX(), d.getY() + 1.0, d.getZ(), 25, 0.4, 0.7, 0.4, 0.05);
+            }
+        }
+
+        // Phong sát các người chơi đối địch mang sức mạnh ác ma trong bán kính 64m
+        for (ServerPlayer enemy : level.getEntitiesOfClass(ServerPlayer.class, caster.getBoundingBox().inflate(64.0D))) {
+            if (enemy != caster) {
+                sealPlayer(enemy, 600);
+                enemy.displayClientMessage(
+                        Component.literal("§c§l[PHONG SÁT KĨ NĂNG] §eToàn bộ kỹ năng & ma pháp của bạn đã bị phong ấn trong 30 giây!"),
+                        true
+                );
             }
         }
 
@@ -116,8 +146,14 @@ public class SkillNullificationAbility {
         }
 
         caster.displayClientMessage(
-                Component.literal("§c§l[PHONG SÁT KĨ NĂNG] §fĐã phong sát toàn bộ kết giới, cột sáng, ma pháp trận và trạng thái ngưng tụ của mọi sinh vật!"),
+                Component.literal("§c§l[PHONG SÁT KĨ NĂNG] §aĐã phá vỡ Kháng Ma Kết Giới, vô hiệu hóa mọi kết giới và phong ấn toàn bộ kỹ năng của Ác Ma trong 30 giây!"),
                 true
         );
+        for (ServerPlayer p : level.players()) {
+            p.displayClientMessage(
+                    Component.literal("§5§l[PHONG SÁT] §eToàn bộ kết giới đã bị phá vỡ! Kỹ năng của Ác Ma Thủy Tổ bị phong tỏa hoàn toàn (" + sealedDemonsCount + " ác ma bị khóa chiêu)!"),
+                    false
+            );
+        }
     }
 }
