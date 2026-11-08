@@ -53,6 +53,7 @@ public class NihilityCollapseAbility {
         public final ServerLevel level;
         public final ServerPlayer caster;
         public final Vec3 center;
+        public final double targetElevY;
         public int currentTick = 0;
         public final int maxTicks = 295; // ~14.75 giây (Kéo dài hồi 3 cho typography chuẩn điện ảnh)
 
@@ -63,6 +64,14 @@ public class NihilityCollapseAbility {
             this.level = level;
             this.caster = caster;
             this.center = center;
+
+            // Xuyên lên mặt đất nếu người chơi thi triển trong hang / không gian kín
+            int surfaceY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) center.x, (int) center.z);
+            if (surfaceY > center.y + 12) {
+                this.targetElevY = Math.max(center.y + 28.0D, surfaceY + 12.0D);
+            } else {
+                this.targetElevY = center.y + 28.0D;
+            }
         }
 
         public void cleanup() {
@@ -139,18 +148,19 @@ public class NihilityCollapseAbility {
 
                 c.currentTick++;
 
-                // 0. Cập nhật nâng người chơi bay lên cao (+28m) quan sát toàn cảnh ma pháp
-                double targetElevY = c.center.y + 28.0D;
+                // 0. Cập nhật nâng người chơi bay lên cao (xuyên lên trên mặt đất nếu trong hang) quan sát toàn cảnh ma pháp
+                double targetElevY = c.targetElevY;
                 if (c.currentTick <= 40) {
                     float elevProgress = c.currentTick / 40.0F;
                     float elevEase = elevProgress * elevProgress * (3.0F - 2.0F * elevProgress);
-                    double currentY = c.center.y + (28.0D * elevEase);
+                    double currentY = c.center.y + ((targetElevY - c.center.y) * elevEase);
                     c.caster.teleportTo(c.center.x, currentY, c.center.z);
                 } else {
                     c.caster.teleportTo(c.center.x, targetElevY, c.center.z);
                 }
                 c.caster.setDeltaMovement(0, 0, 0);
                 c.caster.resetFallDistance();
+                c.caster.setAirSupply(c.caster.getMaxAirSupply());
 
                 // 1. Cập nhật xoay & phóng đại Ma Pháp Trận 3D (Long Tinh Bộc Viêm Bá)
                 if (c.magicCircleDisplay != null && c.magicCircleDisplay.isAlive()) {
@@ -188,7 +198,7 @@ public class NihilityCollapseAbility {
                     }
 
                     // Hạt hư vô đen-tím viền ngoài kết giới
-                    if (c.currentTick % 4 == 0) {
+                    if (c.currentTick % 4 == 0 && c.level.hasNearbyAlivePlayer(c.center.x, c.center.y, c.center.z, 64.0)) {
                         for (int i = 0; i < 16; i++) {
                             double angle = Math.toRadians((i * 22.5) + (c.currentTick * 3.0));
                             double px = c.center.x + Math.cos(angle) * 35.0;
@@ -204,24 +214,26 @@ public class NihilityCollapseAbility {
                 else if (c.currentTick <= 110) {
                     Vec3 riftCenter = c.center.add(0, 35, 0);
 
-                    // Trọng lực nghịch đảo: Hút toàn bộ mob bay lơ lửng ngược lên bầu trời
-                    AABB vacuumZone = new AABB(c.center.x - 55, c.center.y - 10, c.center.z - 55,
-                            c.center.x + 55, c.center.y + 40, c.center.z + 55);
-                    List<LivingEntity> vacuumTargets = c.level.getEntitiesOfClass(LivingEntity.class, vacuumZone,
-                            e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
+                    // Trọng lực nghịch đảo: Hút toàn bộ mob bay lơ lửng ngược lên bầu trời (chạy mỗi 2 ticks để giảm tải CPU & packet)
+                    if (c.currentTick % 2 == 0) {
+                        AABB vacuumZone = new AABB(c.center.x - 55, c.center.y - 10, c.center.z - 55,
+                                c.center.x + 55, c.center.y + 40, c.center.z + 55);
+                        List<LivingEntity> vacuumTargets = c.level.getEntitiesOfClass(LivingEntity.class, vacuumZone,
+                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
 
-                    for (LivingEntity target : vacuumTargets) {
-                        Vec3 toRift = riftCenter.subtract(target.position());
-                        double dist = toRift.length();
-                        if (dist > 1.5) {
-                            Vec3 liftVelocity = toRift.normalize().scale(0.45).add(0, 0.28, 0);
-                            target.setDeltaMovement(liftVelocity);
-                            target.hurtMarked = true;
+                        for (LivingEntity target : vacuumTargets) {
+                            Vec3 toRift = riftCenter.subtract(target.position());
+                            double dist = toRift.length();
+                            if (dist > 1.5) {
+                                Vec3 liftVelocity = toRift.normalize().scale(0.50).add(0, 0.32, 0);
+                                target.setDeltaMovement(liftVelocity);
+                                target.hurtMarked = true;
+                            }
                         }
                     }
 
                     // Hạt tinh vân và plasma xoay tròn quanh tâm hội tụ
-                    if (c.currentTick % 3 == 0) {
+                    if (c.currentTick % 3 == 0 && c.level.hasNearbyAlivePlayer(riftCenter.x, riftCenter.y, riftCenter.z, 64.0)) {
                         for (int i = 0; i < 8; i++) {
                             double angle = Math.toRadians((i * 45.0) + (c.currentTick * 12.0));
                             double px = riftCenter.x + Math.cos(angle) * 8.0;
@@ -236,15 +248,17 @@ public class NihilityCollapseAbility {
                 // HỒI 3 (110 -> 224 ticks / ~5.75s): ĐIỂM TĨNH LẶNG TUYỆT ĐỐI ("LỜI CHÚC TỬ VONG")
                 // ==============================================================
                 else if (c.currentTick <= 224) {
-                    // Đóng băng toàn bộ mục tiêu đang lơ lửng trên không
-                    AABB freezeZone = new AABB(c.center.x - 60, c.center.y - 10, c.center.z - 60,
-                            c.center.x + 60, c.center.y + 50, c.center.z + 60);
-                    List<LivingEntity> frozenTargets = c.level.getEntitiesOfClass(LivingEntity.class, freezeZone,
-                            e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
+                    // Đóng băng toàn bộ mục tiêu đang lơ lửng trên không (chạy mỗi 3 ticks giảm 67% bão packet chuyển động)
+                    if (c.currentTick % 3 == 0) {
+                        AABB freezeZone = new AABB(c.center.x - 60, c.center.y - 10, c.center.z - 60,
+                                c.center.x + 60, c.center.y + 50, c.center.z + 60);
+                        List<LivingEntity> frozenTargets = c.level.getEntitiesOfClass(LivingEntity.class, freezeZone,
+                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
 
-                    for (LivingEntity target : frozenTargets) {
-                        target.setDeltaMovement(0, 0.02, 0);
-                        target.hurtMarked = true;
+                        for (LivingEntity target : frozenTargets) {
+                            target.setDeltaMovement(0, 0.02, 0);
+                            target.hurtMarked = true;
+                        }
                     }
                 }
 
@@ -380,6 +394,23 @@ public class NihilityCollapseAbility {
                 ActiveCollapse c = it.next();
                 if (c.level == level) {
                     c.cleanup();
+                    it.remove();
+                }
+            }
+        }
+    }
+
+    public static void cancelAll(ServerLevel level) {
+        synchronized (ACTIVE_COLLAPSES) {
+            Iterator<ActiveCollapse> it = ACTIVE_COLLAPSES.iterator();
+            while (it.hasNext()) {
+                ActiveCollapse c = it.next();
+                if (c.level == level) {
+                    c.cleanup();
+                    ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
+                            c.caster.getUUID(), c.center, 295, ClientboundNihilityCinematicPacket.PHASE_END
+                    );
+                    ModMessages.sendToPlayer(packet, c.caster);
                     it.remove();
                 }
             }

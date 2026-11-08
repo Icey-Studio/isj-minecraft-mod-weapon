@@ -1,10 +1,13 @@
 package com.minhphuc.weapons.content.evolution;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.darkgathering.KuboEntity;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModBlocks;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -87,37 +90,15 @@ public class InfiniteDragonPrisonAbility {
 
         Vec3 center = player.position().add(0, 1.0, 0);
 
-        // Cho phép người chơi tạo không giới hạn số lượng Long Giam Vô Hạn (kể cả chồng đè lên nhau)
-        ActivePrison prison = new ActivePrison(level, player, center, radius, tier);
-
-        // Tạo kết giới vật lý hình cầu bao bọc hoàn toàn cả mặt đất và bên dưới
-        BlockPos cPos = BlockPos.containing(center);
-        int rInt = (int) Math.ceil(radius);
-        BlockState barrierState = ModBlocks.DRAGON_PRISON_BARRIER.get().defaultBlockState();
-
-        for (int x = -rInt; x <= rInt; x++) {
-            for (int y = -rInt; y <= rInt; y++) {
-                for (int z = -rInt; z <= rInt; z++) {
-                    double distSq = x * x + y * y + z * z;
-                    if (distSq >= (radius - 0.9) * (radius - 0.9) && distSq <= (radius + 0.9) * (radius + 0.9)) {
-                        BlockPos bPos = cPos.offset(x, y, z);
-                        BlockState orig = level.getBlockState(bPos);
-                        // Không ghi đè Bedrock
-                        if (orig.getDestroySpeed(level, bPos) >= 0) {
-                            BlockState realOrig = orig;
-                            if (orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-                                realOrig = getOriginalBlockState(level, bPos);
-                            }
-                            prison.replacedBlocks.put(bPos, realOrig);
-                            if (!orig.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-                                level.setBlock(bPos, barrierState, 2);
-                            }
-                        }
-                    }
-                }
-            }
+        // Kích hoạt kết giới đa diện kim cương 3D thuần túy, hoàn toàn không đặt khối vuông vào thế giới
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, player.getUUID(), center, player.getLookAngle(), 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
         }
 
+        // Cho phép người chơi tạo không giới hạn số lượng Long Giam Vô Hạn (kể cả chồng đè lên nhau)
+        ActivePrison prison = new ActivePrison(level, player, center, radius, tier);
         ACTIVE_PRISONS.add(prison);
 
         level.playSound(null, center.x, center.y, center.z,
@@ -126,10 +107,10 @@ public class InfiniteDragonPrisonAbility {
                 SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.0F, 1.0F);
 
         player.displayClientMessage(
-                Component.literal("§6§l[LONG GIAM VÔ HẠN] §eĐã triển khai kết giới bao phủ (" + (int) radius + "m - Mức " + tier + ")!"),
+                Component.literal("§6§l[LONG GIAM VÔ HẠN] §eĐã triển khai lồng giam kim cương 3D (" + (int) radius + "m - Mức " + tier + ")!"),
                 true
         );
-        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Có thể tạo không giới hạn số lượng lồng giam. Tồn tại vĩnh viễn tới khi đấm tay không để hóa giải!"));
+        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Lồng giam 3D đa diện kim cương giam cầm vĩnh cửu. Đấm tay không để hóa giải!"));
     }
 
     /**
@@ -163,6 +144,11 @@ public class InfiniteDragonPrisonAbility {
         if (prison == null) return;
         ServerLevel level = prison.level;
 
+        // Tắt hiệu ứng 3D trên client
+        ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, prison.center, Vec3.ZERO, 0, ClientboundCinematicSkillPacket.ACTION_STOP, 0f
+        ));
+
         for (Map.Entry<BlockPos, BlockState> entry : prison.replacedBlocks.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState orig = entry.getValue();
@@ -181,7 +167,7 @@ public class InfiniteDragonPrisonAbility {
             // Chỉ hoàn nguyên về khối gốc nếu không còn lồng giam nào khác sử dụng khối này
             if (!stillUsed) {
                 if (level.getBlockState(pos).is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
-                    level.setBlock(pos, orig, 2);
+                    level.setBlock(pos, orig, 50);
                 }
             }
         }
@@ -194,6 +180,19 @@ public class InfiniteDragonPrisonAbility {
             while (it.hasNext()) {
                 ActivePrison p = it.next();
                 if (p.casterUuid.equals(playerUuid)) {
+                    it.remove();
+                    cleanPrison(p);
+                }
+            }
+        }
+    }
+
+    public static void cleanAllPrisons(net.minecraft.world.level.Level level) {
+        synchronized (ACTIVE_PRISONS) {
+            Iterator<ActivePrison> it = ACTIVE_PRISONS.iterator();
+            while (it.hasNext()) {
+                ActivePrison p = it.next();
+                if (p.level == level) {
                     it.remove();
                     cleanPrison(p);
                 }
@@ -214,8 +213,8 @@ public class InfiniteDragonPrisonAbility {
                 Vec3 center = prison.center;
                 double r = prison.radius;
 
-                // 1. Hiệu ứng hạt ánh sáng hoàng kim lấp lánh (mỗi 4 ticks)
-                if (prison.ticksAlive % 4 == 0) {
+                // 1. Hiệu ứng hạt ánh sáng hoàng kim lấp lánh (mỗi 4 ticks, chỉ gửi khi có người chơi gần)
+                if (prison.ticksAlive % 4 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, r + 24.0D)) {
                     for (int ang = 0; ang < 360; ang += 20) {
                         double rad = Math.toRadians(ang);
                         double x = center.x + Math.cos(rad) * r;
@@ -231,121 +230,128 @@ public class InfiniteDragonPrisonAbility {
                     }
                 }
 
-                // 2. Quét sinh vật trong vùng lồng giam
                 AABB prisonBox = new AABB(center.x - r - 2, center.y - r - 2, center.z - r - 2,
                         center.x + r + 2, center.y + r + 2, center.z + r + 2);
                 List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, prisonBox, e -> e.isAlive() && !(e instanceof Player));
 
-                boolean cageBroken = false;
-
+                // 2. Giam cầm trường lực kim cương 3D: Quái chỉ có thể vào từ bên ngoài, KHÔNG THỂ RA ngoài (Chạy liên tục mỗi tick)
                 for (LivingEntity e : entities) {
                     double dist = e.position().distanceTo(center);
-
-                    boolean isPrimordial = e instanceof PrimordialDemonEntity;
-                    boolean isMilim = e instanceof MilimEntity;
-                    boolean isKubo = e instanceof KuboEntity;
-                    boolean isVelgrynd = e instanceof VelgryndEntity;
-
-                    // Kiểm tra điều kiện phá lồng theo Mức (Tier)
-                    if (dist <= r) {
-                        // Cứu Thế Quyền Hiện: Khi bị giam sẽ lập tức chuyển sang dạng võ thần tay không và đấm vỡ lồng giam
-                        if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity ct) {
-                            ct.setBareHanded(true);
-                            cageBroken = true;
-                            level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                    SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 3.5F, 0.7F);
-                            level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                    SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 0.9F);
-                            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY() + 1.0D, e.getZ(), 2, 0, 0, 0, 0);
-                            ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
-                            if (caster != null) {
-                                caster.sendSystemMessage(Component.literal("§c§l[Báo cáo] §fCá thể Cứu Thế Quyền Hiện đã chuyển sang dạng tay không và phá vỡ Lồng Giam Vô Hạn!"));
-                            }
-                            break;
+                    if (dist <= r + 0.5 && dist > r - 1.2) {
+                        Vec3 toCenter = center.subtract(e.position()).normalize();
+                        e.setDeltaMovement(toCenter.scale(0.85));
+                        if (dist > r - 0.4) {
+                            e.setPos(center.x - toCenter.x * (r - 0.6), e.getY(), center.z - toCenter.z * (r - 0.6));
                         }
+                        e.hurtMarked = true;
+                        level.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX(), e.getY() + 1.0, e.getZ(), 4, 0.2, 0.2, 0.2, 0.1);
+                    }
 
-                        if (prison.tier == 1) {
-                            // Mức 1: Ác ma, Milim, Không Vong, Long Chủng phá được ngay
-                            if (isPrimordial || isMilim || isKubo || isVelgrynd) {
-                                cageBroken = true;
-                                level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                        SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.0F, 0.6F);
-                                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 1, 0, 0, 0, 0);
-                                ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
-                                if (caster != null) {
-                                    caster.sendSystemMessage(Component.literal("§c⚠️ " + e.getName().getString() + " đã phá vỡ Lồng Giam Vô Hạn (Mức 1)!"));
-                                }
+                    // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting mỗi 20 ticks)
+                    if (prison.ticksAlive % 20 == 0 && dist <= r && e instanceof Mob mob) {
+                        mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 60, 1));
+                        for (LivingEntity other : entities) {
+                            if (other != mob && other.isAlive()) {
+                                mob.setTarget(other);
                                 break;
-                            }
-                        } else if (prison.tier == 2) {
-                            // Mức 2: Milim, Không Vong, Long Chủng bị nhốt 30s (600 ticks) rồi mới phá lồng
-                            if ((isMilim || isKubo || isVelgrynd) && prison.ticksAlive >= 600) {
-                                cageBroken = true;
-                                level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                        SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 3.0F, 0.7F);
-                                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 1, 0, 0, 0, 0);
-                                ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
-                                if (caster != null) {
-                                    caster.sendSystemMessage(Component.literal("§c⚠️ Sau 30s bị giam cầm, " + e.getName().getString() + " đã phá nát Long Giam Vô Hạn (Mức 2)!"));
-                                }
-                                break;
-                            }
-                        } else {
-                            // Mức 3: Nhốt vĩnh viễn Boss, Ác Ma, Không Vong.
-                            // Riêng Milim và Chước Nhiệt Long (Velgrynd) chỉ nhốt được 3 phút (3600 ticks) rồi chúng sẽ phá lồng!
-                            if (isMilim || isVelgrynd) {
-                                // Cảnh báo khi còn 30 giây (tick 3000)
-                                if (prison.ticksAlive == 3000) {
-                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
-                                    if (caster != null) {
-                                        caster.sendSystemMessage(Component.literal("§e⚠️ Sức mạnh của " + e.getName().getString() + " đang cuộn trào dữ dội! Long Giam Vô Hạn (Mức 3) sắp bị phá vỡ sau 30 giây!"));
-                                    }
-                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                            SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.5F, 1.2F);
-                                }
-
-                                if (prison.ticksAlive >= 3600) {
-                                    cageBroken = true;
-                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                            SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.6F);
-                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
-                                            SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.5F, 0.5F);
-                                    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 2, 0, 0, 0, 0);
-                                    level.sendParticles(ParticleTypes.DRAGON_BREATH, e.getX(), e.getY() + 1.0, e.getZ(), 50, 1.2, 1.2, 1.2, 0.08);
-                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
-                                    if (caster != null) {
-                                        caster.sendSystemMessage(Component.literal("§c⚠️ Sau 3 phút bị giam cầm, " + e.getName().getString() + " đã bộc phát thần lực / long uy phá tan Long Giam Vô Hạn (Mức 3)!"));
-                                    }
-                                    break;
-                                }
-                            }
-                        }
-
-                        // Đẩy lùi mob bên trong khi cố trườn qua biên giới (Quái chỉ có thể vào, không thể ra)
-                        if (dist > r - 1.2) {
-                            Vec3 toCenter = center.subtract(e.position()).normalize();
-                            e.setDeltaMovement(toCenter.scale(0.8));
-                            e.hurtMarked = true;
-                            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX(), e.getY() + 1.0, e.getZ(), 10, 0.3, 0.3, 0.3, 0.1);
-                        }
-
-                        // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting)
-                        if (prison.ticksAlive % 20 == 0 && e instanceof Mob mob) {
-                            mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 60, 1));
-                            // Tìm mục tiêu khác trong lồng để cắn xé
-                            for (LivingEntity other : entities) {
-                                if (other != mob && other.isAlive()) {
-                                    mob.setTarget(other);
-                                    break;
-                                }
                             }
                         }
                     }
                 }
 
-                if (cageBroken) {
-                    it.remove();
-                    cleanPrison(prison);
+                // 3. Quét kiểm tra điều kiện phá vỡ lồng giam của Boss (Throttling mỗi 5 ticks)
+                if (prison.ticksAlive % 5 == 0) {
+                    boolean cageBroken = false;
+
+                    for (LivingEntity e : entities) {
+                        double dist = e.position().distanceTo(center);
+
+                        boolean isPrimordial = e instanceof PrimordialDemonEntity;
+                        boolean isMilim = e instanceof MilimEntity;
+                        boolean isKubo = e instanceof KuboEntity;
+                        boolean isVelgrynd = e instanceof VelgryndEntity;
+
+                        // Kiểm tra điều kiện phá lồng theo Mức (Tier)
+                        if (dist <= r) {
+                            // Cứu Thế Quyền Hiện: Khi bị giam sẽ lập tức chuyển sang dạng võ thần tay không và đấm vỡ lồng giam
+                            if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity ct) {
+                                ct.setBareHanded(true);
+                                cageBroken = true;
+                                level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                        SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 3.5F, 0.7F);
+                                level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                        SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 0.9F);
+                                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY() + 1.0D, e.getZ(), 2, 0, 0, 0, 0);
+                                ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                if (caster != null) {
+                                    caster.sendSystemMessage(Component.literal("§c§l[Báo cáo] §fCá thể Cứu Thế Quyền Hiện đã chuyển sang dạng tay không và phá vỡ Lồng Giam Vô Hạn!"));
+                                }
+                                break;
+                            }
+
+                            if (prison.tier == 1) {
+                                // Mức 1: Ác ma, Milim, Không Vong, Long Chủng phá được ngay
+                                if (isPrimordial || isMilim || isKubo || isVelgrynd) {
+                                    cageBroken = true;
+                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                        SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.0F, 0.6F);
+                                    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 1, 0, 0, 0, 0);
+                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                    if (caster != null) {
+                                        caster.sendSystemMessage(Component.literal("§c⚠️ " + e.getName().getString() + " đã phá vỡ Lồng Giam Vô Hạn (Mức 1)!"));
+                                    }
+                                    break;
+                                }
+                            } else if (prison.tier == 2) {
+                                // Mức 2: Milim, Không Vong, Long Chủng bị nhốt 30s (600 ticks) rồi mới phá lồng
+                                if ((isMilim || isKubo || isVelgrynd) && prison.ticksAlive >= 600) {
+                                    cageBroken = true;
+                                    level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                            SoundEvents.ANVIL_DESTROY, SoundSource.HOSTILE, 3.0F, 0.7F);
+                                    level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 1, 0, 0, 0, 0);
+                                    ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                    if (caster != null) {
+                                        caster.sendSystemMessage(Component.literal("§c⚠️ Sau 30s bị giam cầm, " + e.getName().getString() + " đã phá nát Long Giam Vô Hạn (Mức 2)!"));
+                                    }
+                                    break;
+                                }
+                            } else {
+                                // Mức 3: Nhốt vĩnh viễn Boss, Ác Ma, Không Vong.
+                                // Riêng Milim và Chước Nhiệt Long (Velgrynd) chỉ nhốt được 3 phút (3600 ticks) rồi chúng sẽ phá lồng!
+                                if (isMilim || isVelgrynd) {
+                                    // Cảnh báo khi còn 30 giây (tick 3000)
+                                    if (prison.ticksAlive == 3000) {
+                                        ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                        if (caster != null) {
+                                            caster.sendSystemMessage(Component.literal("§e⚠️ Sức mạnh của " + e.getName().getString() + " đang cuộn trào dữ dội! Long Giam Vô Hạn (Mức 3) sắp bị phá vỡ sau 30 giây!"));
+                                        }
+                                        level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.5F, 1.2F);
+                                    }
+
+                                    if (prison.ticksAlive >= 3600) {
+                                        cageBroken = true;
+                                        level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 4.0F, 0.6F);
+                                        level.playSound(null, e.getX(), e.getY(), e.getZ(),
+                                                SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 3.5F, 0.5F);
+                                        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, e.getX(), e.getY(), e.getZ(), 2, 0, 0, 0, 0);
+                                        level.sendParticles(ParticleTypes.DRAGON_BREATH, e.getX(), e.getY() + 1.0, e.getZ(), 50, 1.2, 1.2, 1.2, 0.08);
+                                        ServerPlayer caster = level.getServer().getPlayerList().getPlayer(prison.casterUuid);
+                                        if (caster != null) {
+                                            caster.sendSystemMessage(Component.literal("§c⚠️ Sau 3 phút bị giam cầm, " + e.getName().getString() + " đã bộc phát thần lực / long uy phá tan Long Giam Vô Hạn (Mức 3)!"));
+                                        }
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (cageBroken) {
+                        it.remove();
+                        cleanPrison(prison);
+                    }
                 }
             }
         }

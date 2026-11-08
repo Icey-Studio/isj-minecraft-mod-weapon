@@ -1,8 +1,11 @@
 package com.minhphuc.weapons.content.divine;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -255,25 +258,30 @@ public class SanctuaryDisintegrationAbility {
             }
         }
 
-        // 2. Khởi tạo 4 bộ ma pháp trận chuyên biệt với độ phân giải cao:
-        // Tầng 1: Địa Trận Thánh Vực (Y + 0.05m, Vàng Hoàng Kim 0xFFE066)
-        Display.ItemDisplay groundDisplay = createItemDisplayFlat(level, targetCenter, 0.05D, 0.01F,
-                ModItems.DISINTEGRATION_GROUND_ARRAY.get(), 0xFFE066);
-
-        // Tầng 2: Nhẫn Vương Miện Lồng Trong (Y + 3.80m, Hoàng Kim Rực Sáng 0xFFD700)
-        Display.ItemDisplay crownRingDisplay = createItemDisplayFlat(level, targetCenter, 3.80D, 0.01F,
-                ModItems.DISINTEGRATION_CROWN_RING.get(), 0xFFD700);
-
-        // Tầng 3: Nhẫn Cổ Ngữ Hồng Ngọc (Y + 4.20m, Hồng Ngọc / Ruby Hoàng Kim 0xFF3366)
-        Display.ItemDisplay runeRingDisplay = createItemDisplayFlat(level, targetCenter, 4.20D, 0.01F,
-                ModItems.DISINTEGRATION_RUNE_RING.get(), 0xFF3366);
-
-        // Đại Pháp Luân Thánh Tích Thẳng Đứng (Y + 7.50m, Bạch Kim Hoàng Kim 0xFFFFEE)
-        Display.ItemDisplay verticalCrestDisplay = createVerticalCrestDisplay(level, targetCenter, 7.50D, 0.01F, 0xFFFFEE);
-
         // Gieo xúc xắc xuất lực ngẫu nhiên
         SkillPowerRoll roll = SkillPowerRoll.roll();
         roll.announceAndPlayEffects(player, "Tam Trọng Thánh Giới - Linh Tử Băng Hoại");
+
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION);
+        Display.ItemDisplay groundDisplay = null;
+        Display.ItemDisplay crownRingDisplay = null;
+        Display.ItemDisplay runeRingDisplay = null;
+        Display.ItemDisplay verticalCrestDisplay = null;
+
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_DISINTEGRATION, player.getUUID(), targetCenter, player.getLookAngle(), 125, ClientboundCinematicSkillPacket.ACTION_START, roll.multiplier
+            ));
+        } else {
+            // Khởi tạo 4 bộ ma pháp trận chuyên biệt với độ phân giải cao:
+            groundDisplay = createItemDisplayFlat(level, targetCenter, 0.05D, 0.01F,
+                    ModItems.DISINTEGRATION_GROUND_ARRAY.get(), 0xFFE066);
+            crownRingDisplay = createItemDisplayFlat(level, targetCenter, 3.80D, 0.01F,
+                    ModItems.DISINTEGRATION_CROWN_RING.get(), 0xFFD700);
+            runeRingDisplay = createItemDisplayFlat(level, targetCenter, 4.20D, 0.01F,
+                    ModItems.DISINTEGRATION_RUNE_RING.get(), 0xFF3366);
+            verticalCrestDisplay = createVerticalCrestDisplay(level, targetCenter, 7.50D, 0.01F, 0xFFFFEE);
+        }
 
         // Tổng thời lượng: 125 ticks (~6.25 giây, chuẩn video Dulimo / Tensura)
         ActiveSanctuary sanctuary = new ActiveSanctuary(level, player, targetCenter,
@@ -375,12 +383,14 @@ public class SanctuaryDisintegrationAbility {
                 // 2. Lồng Giam 12 Trụ Thánh Quang (Tick 12..44): Nối từ Địa Trận lên Nhẫn Cổ Ngữ
                 if (!s.cageSpawned && elapsed >= 12) {
                     s.cageSpawned = true;
-                    double cageRadius = 4.2D;
-                    for (int i = 0; i < 12; i++) {
-                        double theta = i * (2.0 * Math.PI / 12.0);
-                        double px = s.center.x + Math.cos(theta) * cageRadius;
-                        double pz = s.center.z + Math.sin(theta) * cageRadius;
-                        s.cagePillars[i] = createCagePillarDisplay(s.level, px, groundY + 0.05D, pz, 0xFFEAA0);
+                    if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION)) {
+                        double cageRadius = 4.2D;
+                        for (int i = 0; i < 12; i++) {
+                            double theta = i * (2.0 * Math.PI / 12.0);
+                            double px = s.center.x + Math.cos(theta) * cageRadius;
+                            double pz = s.center.z + Math.sin(theta) * cageRadius;
+                            s.cagePillars[i] = createCagePillarDisplay(s.level, px, groundY + 0.05D, pz, 0xFFEAA0);
+                        }
                     }
                     s.level.playSound(null, s.center.x, groundY + 2.0D, s.center.z,
                             SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.0F, 1.6F);
@@ -455,18 +465,20 @@ public class SanctuaryDisintegrationAbility {
                 if (!s.beamSpawned) {
                     s.beamSpawned = true;
 
-                    // 1. Lớp Hào Quang Ngoài (Outer Aura): 11.5m x 70m x 11.5m, Vàng Kim Thánh Quang 0xFFE066
-                    s.megaBeamOuter = createMegaBeamDisplay(s.level, s.center, 11.5F, 70.0F, 11.5F, 0xFFE066);
+                    if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION)) {
+                        // 1. Lớp Hào Quang Ngoài (Outer Aura): 11.5m x 70m x 11.5m, Vàng Kim Thánh Quang 0xFFE066
+                        s.megaBeamOuter = createMegaBeamDisplay(s.level, s.center, 11.5F, 70.0F, 11.5F, 0xFFE066);
 
-                    // 2. Lớp Thân Cột Sáng (Beam Body): 8.0m x 70m x 8.0m, Vàng Trắng Bạch Kim 0xFFFFBB
-                    s.megaBeamBody = createMegaBeamDisplay(s.level, s.center, 8.0F, 70.0F, 8.0F, 0xFFFFBB);
+                        // 2. Lớp Thân Cột Sáng (Beam Body): 8.0m x 70m x 8.0m, Vàng Trắng Bạch Kim 0xFFFFBB
+                        s.megaBeamBody = createMegaBeamDisplay(s.level, s.center, 8.0F, 70.0F, 8.0F, 0xFFFFBB);
 
-                    // 3. Lớp Lõi Thánh Quang (Pure Core): 4.0m x 70m x 4.0m, Trắng Tinh Khiết Chói Lòa 0xFFFFFF
-                    s.megaBeamCore = createMegaBeamDisplay(s.level, s.center, 4.0F, 70.0F, 4.0F, 0xFFFFFF);
+                        // 3. Lớp Lõi Thánh Quang (Pure Core): 4.0m x 70m x 4.0m, Trắng Tinh Khiết Chói Lòa 0xFFFFFF
+                        s.megaBeamCore = createMegaBeamDisplay(s.level, s.center, 4.0F, 70.0F, 4.0F, 0xFFFFFF);
 
-                    // 4. Khởi tạo 2 vòng sóng xung kích linh tử (Shockwave Halos)
-                    s.shockwaveDisplay1 = createShockwaveDisplay(s.level, s.center, 0.4D, 6.0F, 0xFFFFEE);
-                    s.shockwaveDisplay2 = createShockwaveDisplay(s.level, s.center, 0.4D, 6.0F, 0xFFFFEE);
+                        // 4. Khởi tạo 2 vòng sóng xung kích linh tử (Shockwave Halos)
+                        s.shockwaveDisplay1 = createShockwaveDisplay(s.level, s.center, 0.4D, 6.0F, 0xFFFFEE);
+                        s.shockwaveDisplay2 = createShockwaveDisplay(s.level, s.center, 0.4D, 6.0F, 0xFFFFEE);
+                    }
 
                     // BÙNG NỔ ÂM THANH THIÊN PHẠT VANG DỘI KHÔNG GIAN
                     s.level.playSound(null, s.center.x, groundY, s.center.z,
@@ -514,9 +526,10 @@ public class SanctuaryDisintegrationAbility {
                 }
 
                 // Triệt tiêu mọi đạn đạo bay vào cột sáng (quét mỗi 3 ticks thay vì mỗi tick)
+                double beamRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION) ? 14.0D : 6.0D;
                 if (elapsed % 3 == 0) {
-                    AABB beamBox = new AABB(s.center.x - 6.0D, groundY - 1.0D, s.center.z - 6.0D,
-                            s.center.x + 6.0D, groundY + 70.0D, s.center.z + 6.0D);
+                    AABB beamBox = new AABB(s.center.x - beamRadius, groundY - 1.0D, s.center.z - beamRadius,
+                            s.center.x + beamRadius, groundY + 70.0D, s.center.z + beamRadius);
                     List<Projectile> projectiles = s.level.getEntitiesOfClass(Projectile.class, beamBox);
                     for (Projectile p : projectiles) {
                         s.level.sendParticles(ParticleTypes.FLASH, p.getX(), p.getY(), p.getZ(), 1, 0, 0, 0, 0);
@@ -527,7 +540,7 @@ public class SanctuaryDisintegrationAbility {
                 // Sát thương Linh Tử Băng Hoại (Thực hiện đúng 1 lần tại tick 45 khi cột giáng thế)
                 if (!s.damageDealt) {
                     s.damageDealt = true;
-                    executeDisintegrationStrike(s.level, s.center, 6.0D, s.caster, s.powerRoll);
+                    executeDisintegrationStrike(s.level, s.center, beamRadius, s.caster, s.powerRoll);
                 }
 
                 // Tiếng rền của thánh quang và sóng xung kích duy trì
@@ -911,7 +924,7 @@ public class SanctuaryDisintegrationAbility {
      * Khóa mục tiêu tuyệt đối mỗi tick - Triệt tiêu di chuyển, nhảy, đẩy lùi, lơ lửng và chặn dịch chuyển
      */
     private static void lockAndAnchorVictimsEveryTick(ActiveSanctuary s) {
-        double radius = 5.8D;
+        double radius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION) ? 14.0D : 5.8D;
         AABB box = new AABB(
                 s.center.x - radius, s.center.y - 2.0D, s.center.z - radius,
                 s.center.x + radius, s.center.y + 9.5D, s.center.z + radius

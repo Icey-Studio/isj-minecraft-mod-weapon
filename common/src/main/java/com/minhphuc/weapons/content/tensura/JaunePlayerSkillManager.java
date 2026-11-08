@@ -1,5 +1,9 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.entity.tensura.DemonType;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
@@ -350,7 +354,15 @@ public class JaunePlayerSkillManager {
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 2.5F, 1.6F);
 
         // 2. Chùm Đại Pháo 3D Beam vàng kim rực lửa 60 mét
-        HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, eyePos, look, maxDist, 3.5F, 0xFFFF00, 7.0F, 0xFF4500, 40);
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_SPIRITRON_OUTBURST)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_SPIRITRON_OUTBURST,
+                    player.getUUID(),
+                    eyePos, look, 40, ClientboundCinematicSkillPacket.ACTION_START, (float) DemonType.JAUNE.ordinal()
+            ));
+        } else {
+            HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, eyePos, look, maxDist, 3.5F, 0xFFFF00, 7.0F, 0xFF4500, 40);
+        }
 
         // 3. Quét sát thương dọc chùm pháo
         Vec3 cur = eyePos;

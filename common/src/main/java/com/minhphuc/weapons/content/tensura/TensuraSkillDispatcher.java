@@ -23,7 +23,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 24 : 23;
+        return hasCreation ? 28 : 27;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -55,6 +55,10 @@ public class TensuraSkillDispatcher {
                 case 21 -> "§c§l22. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
                 case 22 -> "§4§l23. Lời Chúc Tử Vong (Death Blessing)";
                 case 23 -> "§6§l24. Siêu Tân Tinh (Supernova)";
+                case 24 -> "§c§l25. Phong Sát Kĩ Năng (Skill Nullification)";
+                case 25 -> "§5§l26. Thần Hư Không Azathoth (Void God Azathoth)";
+                case 26 -> "§6§l27. Ban Danh Xưng (Naming Ability)";
+                case 27 -> "§b§l28. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -82,6 +86,10 @@ public class TensuraSkillDispatcher {
                 case 20 -> "§c§l21. Hắc Viêm Hỏa Cầu (Dark Flame Shot)";
                 case 21 -> "§4§l22. Lời Chúc Tử Vong (Death Blessing)";
                 case 22 -> "§6§l23. Siêu Tân Tinh (Supernova)";
+                case 23 -> "§c§l24. Phong Sát Kĩ Năng (Skill Nullification)";
+                case 24 -> "§5§l25. Thần Hư Không Azathoth (Void God Azathoth)";
+                case 25 -> "§6§l26. Ban Danh Xưng (Naming Ability)";
+                case 26 -> "§b§l27. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -147,6 +155,10 @@ public class TensuraSkillDispatcher {
                 case 21 -> DarkFlameShotAbility.cast(level, player);
                 case 22 -> NihilityCollapseAbility.cast(level, player);
                 case 23 -> SupernovaAbility.cast(level, player);
+                case 24 -> SkillNullificationAbility.cast(level, player);
+                case 25 -> AzathothAbility.cast(level, player);
+                case 26 -> TensuraNamingAbility.cast(level, player);
+                case 27 -> DimensionalSanctuaryAbility.cast(level, player);
             }
         } else {
             switch (index) {
@@ -173,6 +185,10 @@ public class TensuraSkillDispatcher {
                 case 20 -> DarkFlameShotAbility.cast(level, player);
                 case 21 -> NihilityCollapseAbility.cast(level, player);
                 case 22 -> SupernovaAbility.cast(level, player);
+                case 23 -> SkillNullificationAbility.cast(level, player);
+                case 24 -> AzathothAbility.cast(level, player);
+                case 25 -> TensuraNamingAbility.cast(level, player);
+                case 26 -> DimensionalSanctuaryAbility.cast(level, player);
             }
         }
     }

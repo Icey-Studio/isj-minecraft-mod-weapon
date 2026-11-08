@@ -1,8 +1,11 @@
 package com.minhphuc.weapons.content.divine;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -72,6 +75,8 @@ public class PurificationPillarAbility {
         public final BlockPos lightPos;
         public Display.ItemDisplay pillarDisplay;
         public int ticksAlive = 0;
+        public boolean villageRestored = false;
+        public int villageScanAttempts = 0;
 
         public ActivePurification(ServerLevel level, ServerPlayer caster, Vec3 center, BlockPos lightPos) {
             this.level = level;
@@ -153,9 +158,16 @@ public class PurificationPillarAbility {
             level.setBlock(lightPos, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15), 3);
         }
 
-        // Tạo cột sáng Phép Màu Của Thần Linh vĩnh viễn (cho phép người chơi tạo không giới hạn số lượng cột)
+        // Tạo cột sáng Phép Màu Của Thần Linh (cho phép người chơi tạo không giới hạn số lượng cột)
         ActivePurification ap = new ActivePurification(level, player, targetCenter, lightPos);
-        ap.pillarDisplay = createPillarDisplay(level, targetCenter, 5.0F, 50.0F, 5.0F, 0x55FFAA);
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PURIFICATION_PILLAR)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_PURIFICATION_PILLAR, player.getUUID(), targetCenter, player.getLookAngle(), 180, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+            ap.pillarDisplay = null;
+        } else {
+            ap.pillarDisplay = createPillarDisplay(level, targetCenter, 5.0F, 50.0F, 5.0F, 0x55FFAA);
+        }
 
         ACTIVE_PURIFICATIONS.add(ap);
 
@@ -225,8 +237,8 @@ public class PurificationPillarAbility {
             int elapsed = p.ticksAlive;
             double groundY = p.center.y;
 
-            // Hạt thánh quang ngọc bích rơi từ trời xuống đất
-            if (elapsed % 2 == 0) {
+            // Hạt thánh quang ngọc bích rơi từ trời xuống đất (chỉ gửi khi có người chơi gần và mỗi 4 ticks)
+            if (elapsed % 4 == 0 && p.level.hasNearbyAlivePlayer(p.center.x, p.center.y, p.center.z, 48.0D)) {
                 for (int y = 0; y < 8; y++) {
                     double py = groundY + (y * 4.0D);
                     p.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.center.x, py, p.center.z, 2, 1.2D, 0.3D, 1.2D, 0.02D);
@@ -250,13 +262,18 @@ public class PurificationPillarAbility {
                     DivineSalvationHelper.processSoulResurrection(p.level, p.center, 6.0D, p.caster);
                 }
 
-                // Phục hưng làng mạc bỏ hoang (mỗi 40 ticks)
-                if (elapsed % 40 == 0) {
+                // Phục hưng làng mạc bỏ hoang (tối đa 2 lần quét kiểm tra để tối ưu hiệu năng)
+                if (!p.villageRestored && elapsed % 40 == 0) {
+                    p.villageScanAttempts++;
                     DivineSalvationHelper.restoreAbandonedVillage(p.level, BlockPos.containing(p.center), 22, p.caster);
+                    if (p.villageScanAttempts >= 2) {
+                        p.villageRestored = true;
+                    }
                 }
 
-                AABB salvationBox = new AABB(p.center.x - 4.5D, groundY - 1.0D, p.center.z - 4.5D,
-                        p.center.x + 4.5D, groundY + 40.0D, p.center.z + 4.5D);
+                double salvRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PURIFICATION_PILLAR) ? 8.0D : 4.5D;
+                AABB salvationBox = new AABB(p.center.x - salvRadius, groundY - 1.0D, p.center.z - salvRadius,
+                        p.center.x + salvRadius, groundY + 40.0D, p.center.z + salvRadius);
 
                 List<LivingEntity> entities = p.level.getEntitiesOfClass(LivingEntity.class, salvationBox, Entity::isAlive);
 

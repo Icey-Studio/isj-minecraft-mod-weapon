@@ -42,6 +42,17 @@ public class ResidualMagicCircleManager {
         }
     }
 
+    public static void clearAllResidualCircles(net.minecraft.world.level.Level level) {
+        Iterator<Display.ItemDisplay> it = ACTIVE_CIRCLES.iterator();
+        while (it.hasNext()) {
+            Display.ItemDisplay circle = it.next();
+            if (circle != null && circle.isAlive() && circle.level() == level) {
+                circle.discard();
+                it.remove();
+            }
+        }
+    }
+
     /**
      * Thanh tẩy và xóa sạch toàn bộ các vòng tròn ma thuật tàn dư của mob trong vùng
      */

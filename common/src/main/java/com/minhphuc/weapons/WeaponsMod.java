@@ -26,6 +26,9 @@ public class WeaponsMod {
         TensuraEvents.register();
         com.minhphuc.weapons.content.divine.DivineWeaponEvents.register();
 
+        // Đăng ký lệnh quản trị và chuyển đổi kĩ xảo điện ảnh 3D / Bản cũ
+        com.minhphuc.weapons.command.SkillVisualCommand.register();
+
         LOGGER.info("Weapons Mod (Cross-Platform) initialized successfully!");
     }
 }

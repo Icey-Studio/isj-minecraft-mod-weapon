@@ -64,19 +64,29 @@ public class HellflareAbility {
     public static class ActiveHellflare {
         public final ServerLevel level;
         public final ServerPlayer caster;
+        public final Vec3 startPos;
         public final Vec3 center;
+        public final int flightDuration;
+        public Display.ItemDisplay projectileDisplay;
         public Display.ItemDisplay sphereDisplay;
         public Display.ItemDisplay fireDisplay;
         public int ticksAlive = 0;
-        public final int maxTicks = 80; // 4 giây
+        public final int maxTicks;
 
-        public ActiveHellflare(ServerLevel level, ServerPlayer caster, Vec3 center) {
+        public ActiveHellflare(ServerLevel level, ServerPlayer caster, Vec3 startPos, Vec3 center, int flightDuration) {
             this.level = level;
             this.caster = caster;
+            this.startPos = startPos;
             this.center = center;
+            this.flightDuration = Math.max(2, flightDuration);
+            this.maxTicks = this.flightDuration + 80;
         }
 
         public void cleanup() {
+            if (projectileDisplay != null && projectileDisplay.isAlive()) {
+                projectileDisplay.discard();
+                projectileDisplay = null;
+            }
             if (sphereDisplay != null && sphereDisplay.isAlive()) {
                 sphereDisplay.discard();
                 sphereDisplay = null;
@@ -111,44 +121,50 @@ public class HellflareAbility {
             targetPos = hit.getLocation();
         }
 
-        ActiveHellflare instance = new ActiveHellflare(level, player, targetPos);
+        double distance = eyePos.distanceTo(targetPos);
+        int flightTicks = Math.max(3, (int) (distance / 1.6D));
 
-        // GIAI ĐOẠN 1: Tạo khối lập phương không gian kính đen trong suốt (7x7x7) bao bọc giam giữ mob
-        // Ở giai đoạn này người bên ngoài nhìn vào THẤY RÕ mob bị nhốt hoàn toàn bên trong khối vuông!
-        Display.ItemDisplay display = EntityType.ITEM_DISPLAY.create(level);
-        if (display != null) {
-            display.moveTo(targetPos.x, targetPos.y, targetPos.z, 0.0F, 0.0F);
-            ItemDisplayAccessor iAcc = (ItemDisplayAccessor) display;
-            DisplayAccessor dAcc = (DisplayAccessor) display;
+        ActiveHellflare instance = new ActiveHellflare(level, player, eyePos, targetPos, flightTicks);
 
-            iAcc.weapons$setItemStack(new ItemStack(Blocks.BLACK_STAINED_GLASS));
-            iAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
-            dAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
-            dAcc.weapons$setViewRange(8.0F);
+        // GIAI ĐOẠN 0: BẮN RA CẦU LỬA ĐEN (PROJECTILE PHASE)
+        Display.ItemDisplay projDisplay = EntityType.ITEM_DISPLAY.create(level);
+        if (projDisplay != null) {
+            projDisplay.moveTo(eyePos.x, eyePos.y, eyePos.z, 0.0F, 0.0F);
+            ItemDisplayAccessor piAcc = (ItemDisplayAccessor) projDisplay;
+            DisplayAccessor pdAcc = (DisplayAccessor) projDisplay;
 
-            dAcc.weapons$setTransformation(new Transformation(
+            piAcc.weapons$setItemStack(new ItemStack(ModItems.BLACK_FIRE.get()));
+            piAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+            pdAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.CENTER);
+            pdAcc.weapons$setViewRange(8.0F);
+            pdAcc.weapons$setTransformation(new Transformation(
                     new Vector3f(0.0F, 0.0F, 0.0F),
                     new Quaternionf(),
-                    new Vector3f(7.0F, 7.0F, 7.0F),
+                    new Vector3f(1.4F, 1.4F, 1.4F),
                     null
             ));
-
-            level.addFreshEntity(display);
-            instance.sphereDisplay = display;
+            level.addFreshEntity(projDisplay);
+            instance.projectileDisplay = projDisplay;
         }
 
         ACTIVE_HELLFLARES.add(instance);
 
-        level.playSound(null, targetPos.x, targetPos.y, targetPos.z,
-                SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.5F, 0.8F);
-        level.playSound(null, targetPos.x, targetPos.y, targetPos.z,
-                SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.5F, 1.4F);
+        if (com.minhphuc.weapons.config.SkillVisualConfig.isCinematicEnabled(com.minhphuc.weapons.config.SkillVisualConfig.SKILL_HELLFLARE)) {
+            com.minhphuc.weapons.network.ModMessages.sendToPlayers(level.players(), new com.minhphuc.weapons.network.ClientboundCinematicSkillPacket(
+                    com.minhphuc.weapons.config.SkillVisualConfig.SKILL_HELLFLARE, player.getUUID(), targetPos, lookVec, instance.maxTicks, com.minhphuc.weapons.network.ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        }
+
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 3.0F, 0.7F);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.5F, 0.8F);
 
         player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§4§l【 HẮC VIÊM NGỤC: HELLFLARE 】")));
-        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c✦ Không Gian Giam Hãm ➔ Hắc Hỏa Bộc Phát ✦")));
+        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c✦ Phóng Cầu Hắc Hỏa ➔ Khóa Không Gian ✦")));
 
         player.displayClientMessage(
-                Component.literal("§4§l[BENIMARU - HELLFLARE] §cĐã phong tỏa mục tiêu vào khối không gian Hắc Viêm Ngục! 🔥⬛"),
+                Component.literal("§4§l[BENIMARU - HELLFLARE] §cĐã khai hỏa cầu Hắc Viêm! Bắn tới mục tiêu rồi phong tỏa thành khối không gian giam hãm! 🔥⬛"),
                 true
         );
     }
@@ -167,10 +183,85 @@ public class HellflareAbility {
                 double boxRadius = 3.5D;
 
                 // =====================================================================
-                // CHUYỂN GIAO GIAI ĐOẠN 2: TẠI TICK 26 (LỬA ĐEN THẬT BÙNG CHÁY BAO TRÙM)
+                // GIAI ĐOẠN 0: ĐẠN CẦU LỬA ĐEN BAY VỀ PHÍA MỤC TIÊU (PROJECTILE FLIGHT)
                 // =====================================================================
-                if (hf.ticksAlive == 26) {
-                    // 1. Chuyển khối kính sang bê tông đen tuyền che khuất 100% tầm nhìn bên trong
+                if (hf.ticksAlive < hf.flightDuration) {
+                    float fProg = (float) hf.ticksAlive / (float) hf.flightDuration;
+                    Vec3 curPos = hf.startPos.lerp(center, fProg);
+
+                    if (hf.projectileDisplay != null && hf.projectileDisplay.isAlive()) {
+                        hf.projectileDisplay.moveTo(curPos.x, curPos.y, curPos.z, 0.0F, 0.0F);
+                    }
+
+                    level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, curPos.x, curPos.y, curPos.z, 4, 0.1D, 0.1D, 0.1D, 0.02D);
+                    level.sendParticles(ParticleTypes.SQUID_INK, curPos.x, curPos.y, curPos.z, 3, 0.08D, 0.08D, 0.08D, 0.01D);
+                    level.sendParticles(ParticleTypes.SMOKE, curPos.x, curPos.y, curPos.z, 2, 0.05D, 0.05D, 0.05D, 0.01D);
+                    continue;
+                }
+
+                // =====================================================================
+                // ĐẠN CHẠM ĐÍCH: KÍCH HOẠT KHỐI GIAO HÃM NHỎ (SCALE 1.5)
+                // =====================================================================
+                if (hf.ticksAlive == hf.flightDuration) {
+                    if (hf.projectileDisplay != null && hf.projectileDisplay.isAlive()) {
+                        hf.projectileDisplay.discard();
+                        hf.projectileDisplay = null;
+                    }
+
+                    Display.ItemDisplay display = EntityType.ITEM_DISPLAY.create(level);
+                    if (display != null) {
+                        display.moveTo(center.x, center.y, center.z, 0.0F, 0.0F);
+                        ItemDisplayAccessor iAcc = (ItemDisplayAccessor) display;
+                        DisplayAccessor dAcc = (DisplayAccessor) display;
+
+                        iAcc.weapons$setItemStack(new ItemStack(Blocks.BLACK_STAINED_GLASS));
+                        iAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+                        dAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED);
+                        dAcc.weapons$setViewRange(8.0F);
+
+                        dAcc.weapons$setTransformation(new Transformation(
+                                new Vector3f(0.0F, 0.0F, 0.0F),
+                                new Quaternionf(),
+                                new Vector3f(1.5F, 1.5F, 1.5F),
+                                null
+                        ));
+
+                        level.addFreshEntity(display);
+                        hf.sphereDisplay = display;
+                    }
+
+                    level.playSound(null, center.x, center.y, center.z,
+                            SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.5F, 0.8F);
+                    level.playSound(null, center.x, center.y, center.z,
+                            SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.5F, 1.4F);
+                }
+
+                // =====================================================================
+                // GIAI ĐOẠN 1: KHỐI LẬP PHƯƠNG KHÔNG GIAN PHÓNG TO MƯỢT MÀ (SCALE 1.5 ➔ 7.0)
+                // =====================================================================
+                int expandTicks = 15;
+                int expandEndTick = hf.flightDuration + expandTicks;
+                if (hf.ticksAlive > hf.flightDuration && hf.ticksAlive <= expandEndTick) {
+                    float expandProg = (float) (hf.ticksAlive - hf.flightDuration) / (float) expandTicks;
+                    float curScale = 1.5F + 5.5F * expandProg;
+
+                    if (hf.sphereDisplay != null && hf.sphereDisplay.isAlive()) {
+                        DisplayAccessor dAcc = (DisplayAccessor) hf.sphereDisplay;
+                        dAcc.weapons$setTransformation(new Transformation(
+                                new Vector3f(0.0F, 0.0F, 0.0F),
+                                new Quaternionf(),
+                                new Vector3f(curScale, curScale, curScale),
+                                null
+                        ));
+                    }
+                }
+
+                // =====================================================================
+                // GIAI ĐOẠN 2: LỬA ĐEN THẬT BÙNG NỔ BAO TRÙM (KHÔNG THỂ NHÌN TỪ NGOÀI VÀO)
+                // =====================================================================
+                int fireSurgeTick = expandEndTick + 1;
+                if (hf.ticksAlive == fireSurgeTick) {
+                    // 1. Chuyển khối kính sang bê tông đen tuyền 100% che khuất tầm nhìn bên trong
                     if (hf.sphereDisplay != null && hf.sphereDisplay.isAlive()) {
                         ItemDisplayAccessor iAcc = (ItemDisplayAccessor) hf.sphereDisplay;
                         iAcc.weapons$setItemStack(new ItemStack(Blocks.BLACK_CONCRETE));
@@ -220,11 +311,11 @@ public class HellflareAbility {
 
                 // =====================================================================
                 // HIỆU ỨNG HẠT ĐỊNH KỲ:
-                // - Trước tick 26: Hạt không gian tím/đen viền khối vuông (Thấy mob bên trong)
-                // - Sau tick 26: Lửa đen bốc cháy ngùn ngụt che kín bên trong
+                // - Trước khi bùng lửa đen: Hạt không gian tím/đen viền khối vuông (Thấy mob bên trong)
+                // - Sau khi bùng lửa đen: Lửa đen bốc cháy ngùn ngụt che kín bên trong
                 // =====================================================================
                 if (hf.ticksAlive % 4 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, 48.0D)) {
-                    if (hf.ticksAlive < 26) {
+                    if (hf.ticksAlive < fireSurgeTick) {
                         // Hạt viền kết giới không gian
                         for (int a = 0; a < 360; a += 60) {
                             double rad = Math.toRadians(a);
@@ -249,7 +340,7 @@ public class HellflareAbility {
                 // =====================================================================
                 // GIAM HÃM VÀ THIÊU ĐỐT LIÊN TỤC MỤC TIÊU BÊN TRONG (MỖI 5 TICKS = 0.25S)
                 // =====================================================================
-                if (hf.ticksAlive % 5 == 0) {
+                if (hf.ticksAlive % 5 == 0 && hf.ticksAlive >= hf.flightDuration) {
                     AABB box = new AABB(center.x - boxRadius, center.y - boxRadius, center.z - boxRadius,
                                         center.x + boxRadius, center.y + boxRadius, center.z + boxRadius);
                     List<LivingEntity> trapped = level.getEntitiesOfClass(LivingEntity.class, box, LivingEntity::isAlive);
@@ -265,8 +356,8 @@ public class HellflareAbility {
                             e.hasImpulse = true;
                         }
 
-                        // Sau tick 26: Thiêu đốt liên tục bằng lửa đen thật (bỏ qua kháng lửa)
-                        if (hf.ticksAlive >= 26) {
+                        // Sau khi bùng lửa đen: Thiêu đốt liên tục bằng lửa đen thật (bỏ qua kháng lửa)
+                        if (hf.ticksAlive >= fireSurgeTick) {
                             e.hurt(level.damageSources().inFire(), 4.0F); // 16 damage/s
                             e.setRemainingFireTicks(100);
                         }
@@ -323,6 +414,19 @@ public class HellflareAbility {
                         victim.setRemainingFireTicks(160);
                     }
 
+                    hf.cleanup();
+                    it.remove();
+                }
+            }
+        }
+    }
+
+    public static void cancelAll(ServerLevel level) {
+        synchronized (ACTIVE_HELLFLARES) {
+            Iterator<ActiveHellflare> it = ACTIVE_HELLFLARES.iterator();
+            while (it.hasNext()) {
+                ActiveHellflare hf = it.next();
+                if (hf.level == level) {
                     hf.cleanup();
                     it.remove();
                 }

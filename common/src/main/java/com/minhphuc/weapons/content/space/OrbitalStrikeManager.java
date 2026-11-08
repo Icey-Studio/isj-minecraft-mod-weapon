@@ -40,10 +40,10 @@ public class OrbitalStrikeManager {
             this.targetPos = targetPos;
             this.mode = mode;
             this.maxTicks = switch (mode) {
-                case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 60;
-                case ClientOrbitalStrikeRenderer.MODE_GUNGNIR -> 70;
+                case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 75;
+                case ClientOrbitalStrikeRenderer.MODE_GUNGNIR -> 75;
                 case ClientOrbitalStrikeRenderer.MODE_SEVEN_STARS -> 100;
-                default -> 60;
+                default -> 75;
             };
         }
     }
@@ -96,95 +96,106 @@ public class OrbitalStrikeManager {
                 s.currentTick++;
 
                 // ==========================================================
-                // 1. SS-01 · RAILGUN
+                // 1. SS-01 · RAILGUN (CỘT PLASMA SIÊU TRỌNG TRƯỜNG QUỸ ĐẠO)
                 // ==========================================================
                 if (s.mode == ClientOrbitalStrikeRenderer.MODE_RAILGUN) {
-                    if (s.currentTick < 20) {
-                        // Tia ngắm sơ bộ
+                    if (s.currentTick < 24) {
+                        // Tia ngắm laser và định vị mục tiêu
                         s.level.sendParticles(ParticleTypes.ELECTRIC_SPARK,
                                 s.targetPos.x, s.targetPos.y + 0.5, s.targetPos.z,
                                 4, 0.2, 0.5, 0.2, 0.05);
                         s.level.sendParticles(ParticleTypes.END_ROD,
                                 s.targetPos.x, s.targetPos.y + 1.0, s.targetPos.z,
                                 2, 0.1, 1.0, 0.1, 0.02);
-                    } else if (s.currentTick == 20) {
-                        // BÙNG NỔ CỘT PLASMA RAILGUN
+                    } else if (s.currentTick == 24) {
+                        // Vệ tinh khai hỏa từ quỹ đạo vũ trụ
+                        s.level.playSound(null, s.targetPos.x, s.targetPos.y + 350.0, s.targetPos.z,
+                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 8.0F, 1.5F);
+                    } else if (s.currentTick == 45) {
+                        // BÙNG NỔ CỘT PLASMA RAILGUN VA CHẠM MẶT ĐẤT (Đồng bộ với Camera Hypersonic Dive)
                         s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
-                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 16.0F, 0.7F);
+                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 20.0F, 0.6F);
                         s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
-                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 12.0F, 0.5F);
+                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 18.0F, 0.5F);
+                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
+                                SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 14.0F, 0.6F);
 
-                        // Sát thương 2,500 ma pháp trong bán kính 22m (ZERO BLOCK DESTRUCTION)
-                        applyRadialDamage(s.level, s.caster, s.targetPos, 22.0, 2500.0F);
+                        // Sát thương 3,500 ma pháp trong bán kính 26m (ZERO BLOCK DESTRUCTION)
+                        applyRadialDamage(s.level, s.caster, s.targetPos, 26.0, 3500.0F);
 
                         // Hạt xung kích
-                        for (int i = 0; i < 16; i++) {
-                            double angle = Math.toRadians(i * 22.5);
-                            s.level.sendParticles(ParticleTypes.SONIC_BOOM,
-                                    s.targetPos.x + Math.cos(angle) * 8.0, s.targetPos.y + 1.0, s.targetPos.z + Math.sin(angle) * 8.0,
-                                    1, 0, 0, 0, 0);
-                        }
-                        s.level.sendParticles(ParticleTypes.FLASH, s.targetPos.x, s.targetPos.y + 2.0, s.targetPos.z, 2, 0, 0, 0, 0);
-                    }
-                }
-
-                // ==========================================================
-                // 2. SS-03 · GUNGNIR
-                // ==========================================================
-                else if (s.mode == ClientOrbitalStrikeRenderer.MODE_GUNGNIR) {
-                    if (s.currentTick < 25) {
-                        // Quỹ đạo thần thương lao xuống
-                        double t = s.currentTick / 25.0;
-                        double curX = s.targetPos.x - 35.0 * (1.0 - t);
-                        double curY = s.targetPos.y + 200.0 * (1.0 - t);
-                        double curZ = s.targetPos.z - 35.0 * (1.0 - t);
-
-                        s.level.sendParticles(ParticleTypes.FLAME, curX, curY, curZ, 8, 0.3, 0.3, 0.3, 0.05);
-                        s.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, curX, curY, curZ, 4, 0.2, 0.2, 0.2, 0.05);
-                    } else if (s.currentTick == 25) {
-                        // THẦN THƯƠNG CẮM XUỐNG ĐẤT
-                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
-                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 16.0F, 0.4F);
-                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
-                                SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 12.0F, 0.5F);
-
-                        // Sát thương 3,000 ma pháp trong bán kính 26m
-                        applyRadialDamage(s.level, s.caster, s.targetPos, 26.0, 3000.0F);
-
-                        // Sóng chấn động hạt
                         for (int i = 0; i < 24; i++) {
                             double angle = Math.toRadians(i * 15.0);
-                            s.level.sendParticles(ParticleTypes.LAVA,
-                                    s.targetPos.x + Math.cos(angle) * 12.0, s.targetPos.y + 0.5, s.targetPos.z + Math.sin(angle) * 12.0,
-                                    3, 0.2, 0.3, 0.2, 0.1);
+                            s.level.sendParticles(ParticleTypes.SONIC_BOOM,
+                                    s.targetPos.x + Math.cos(angle) * 10.0, s.targetPos.y + 1.0, s.targetPos.z + Math.sin(angle) * 10.0,
+                                    1, 0, 0, 0, 0);
                         }
-                        s.level.sendParticles(ParticleTypes.FLASH, s.targetPos.x, s.targetPos.y + 1.5, s.targetPos.z, 3, 0, 0, 0, 0);
+                        s.level.sendParticles(ParticleTypes.FLASH, s.targetPos.x, s.targetPos.y + 2.0, s.targetPos.z, 4, 0, 0, 0, 0);
                     }
                 }
 
                 // ==========================================================
-                // 3. SS-04 · THE SEVEN STARS (BẮC ĐẨU THẤT TINH)
+                // 2. SS-03 · GUNGNIR (THẦN THƯƠNG QUỸ ĐẠO SAO MỘC)
+                // ==========================================================
+                else if (s.mode == ClientOrbitalStrikeRenderer.MODE_GUNGNIR) {
+                    if (s.currentTick < 24) {
+                        // Khóa hồng ngoại
+                        s.level.sendParticles(ParticleTypes.FLAME, s.targetPos.x, s.targetPos.y + 0.5, s.targetPos.z, 2, 0.1, 0.5, 0.1, 0.02);
+                    } else if (s.currentTick >= 24 && s.currentTick < 45) {
+                        // Thần Thương lao dốc từ không gian
+                        double t = (s.currentTick - 24) / 21.0;
+                        double curX = s.targetPos.x - 45.0 * (1.0 - t);
+                        double curY = s.targetPos.y + 400.0 * (1.0 - t);
+                        double curZ = s.targetPos.z - 45.0 * (1.0 - t);
+
+                        s.level.sendParticles(ParticleTypes.FLAME, curX, curY, curZ, 8, 0.4, 0.4, 0.4, 0.08);
+                        s.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, curX, curY, curZ, 4, 0.2, 0.2, 0.2, 0.05);
+                    } else if (s.currentTick == 45) {
+                        // THẦN THƯƠNG CẮM XUỐNG ĐẤT BÙNG NỔ NHIỆT HẠCH
+                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
+                                SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 20.0F, 0.4F);
+                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
+                                SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 16.0F, 0.5F);
+                        s.level.playSound(null, s.targetPos.x, s.targetPos.y, s.targetPos.z,
+                                SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 18.0F, 0.7F);
+
+                        // Sát thương 4,000 ma pháp trong bán kính 30m
+                        applyRadialDamage(s.level, s.caster, s.targetPos, 30.0, 4000.0F);
+
+                        // Sóng chấn động hạt dung nham & chớp sáng
+                        for (int i = 0; i < 32; i++) {
+                            double angle = Math.toRadians(i * 11.25);
+                            s.level.sendParticles(ParticleTypes.LAVA,
+                                    s.targetPos.x + Math.cos(angle) * 14.0, s.targetPos.y + 0.5, s.targetPos.z + Math.sin(angle) * 14.0,
+                                    3, 0.2, 0.3, 0.2, 0.1);
+                        }
+                        s.level.sendParticles(ParticleTypes.FLASH, s.targetPos.x, s.targetPos.y + 1.5, s.targetPos.z, 5, 0, 0, 0, 0);
+                    }
+                }
+
+                // ==========================================================
+                // 3. SS-04 · THE SEVEN STARS (BẮC ĐẨU THẤT TINH LIÊN HOÀN)
                 // ==========================================================
                 else if (s.mode == ClientOrbitalStrikeRenderer.MODE_SEVEN_STARS) {
                     for (int i = 0; i < 7; i++) {
-                        int starTick = 10 + i * 8;
+                        int starTick = 38 + i * 6; // Oanh tạc liên hoàn từ tick 38 đến 74
                         if (s.currentTick == starTick) {
                             double sx = s.targetPos.x + ClientOrbitalStrikeRenderer.BIG_DIPPER_OFFSETS[i][0];
                             double sz = s.targetPos.z + ClientOrbitalStrikeRenderer.BIG_DIPPER_OFFSETS[i][1];
                             Vec3 starPos = new Vec3(sx, s.targetPos.y, sz);
 
                             s.level.playSound(null, sx, s.targetPos.y, sz,
-                                    SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 8.0F, 0.9F);
+                                    SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 10.0F, 0.9F);
                             s.level.playSound(null, sx, s.targetPos.y, sz,
-                                    SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 6.0F, 1.2F);
+                                    SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.PLAYERS, 8.0F, 1.2F);
 
-                            float damage = (i == 6) ? 2500.0F : 900.0F; // Ngôi sao thứ 7 (Alkaid) bạo kích cực đại
-                            double rad = (i == 6) ? 18.0 : 10.0;
+                            float damage = (i == 6) ? 3500.0F : 1200.0F; // Ngôi sao thứ 7 (Alkaid) bạo kích cực đại
+                            double rad = (i == 6) ? 22.0 : 12.0;
                             applyRadialDamage(s.level, s.caster, starPos, rad, damage);
 
                             s.level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, sx, s.targetPos.y + 0.5, sz, 1, 0, 0, 0, 0);
                             s.level.sendParticles(ParticleTypes.FLASH, sx, s.targetPos.y + 1.0, sz, 1, 0, 0, 0, 0);
-                            s.level.sendParticles(ParticleTypes.DRAGON_BREATH, sx, s.targetPos.y + 0.5, sz, 15, 1.0, 0.5, 1.0, 0.1);
+                            s.level.sendParticles(ParticleTypes.DRAGON_BREATH, sx, s.targetPos.y + 0.5, sz, 20, 1.0, 0.5, 1.0, 0.1);
                         }
                     }
                 }

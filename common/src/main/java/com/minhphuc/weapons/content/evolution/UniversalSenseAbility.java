@@ -1,7 +1,10 @@
 package com.minhphuc.weapons.content.evolution;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -26,9 +29,9 @@ public class UniversalSenseAbility {
 
     public static void cast(ServerLevel level, ServerPlayer player, int tier) {
         double radius = switch (tier) {
-            case 1 -> 10.0;
-            case 2 -> 20.0;
-            default -> 25.0;
+            case 1 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 16.0 : 10.0;
+            case 2 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 32.0 : 20.0;
+            default -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 48.0 : 25.0;
         };
 
         boolean canSeeThroughGround = tier >= 2;
@@ -68,6 +71,15 @@ public class UniversalSenseAbility {
             e.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0, false, false));
             level.sendParticles(ParticleTypes.END_ROD, e.getX(), e.getY() + e.getBbHeight() + 0.5, e.getZ(), 10, 0.2, 0.2, 0.2, 0.02);
             detectedCount++;
+        }
+
+        // Tự động phân bổ thời lượng camera tour điện ảnh theo số lượng mục tiêu phát hiện (để lia qua hết từng con)
+        int cutsceneTicks = (detectedCount == 0) ? 35 : ((detectedCount == 1) ? 45 : Math.min(120, 25 + detectedCount * 24));
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_UNIVERSAL_SENSE, player.getUUID(), player.position(), player.getLookAngle(), cutsceneTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
         }
 
         player.displayClientMessage(

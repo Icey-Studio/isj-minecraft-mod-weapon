@@ -1,9 +1,12 @@
 package com.minhphuc.weapons.content.evolution;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.darkgathering.KuboEntity;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -62,10 +65,16 @@ public class UrielCovenantAbility {
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 1.5F, 1.8F);
 
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_URIEL_DEFENSE)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_URIEL_DEFENSE, player.getUUID(), player.position(), look, 50, ClientboundCinematicSkillPacket.ACTION_START, (float) tier
+            ));
+        }
+
         Set<LivingEntity> hitEntities = new HashSet<>();
-        double maxDist = 30.0;
+        double maxDist = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_URIEL_DEFENSE) ? 45.0 : 30.0;
         double step = 0.8;
-        double armSpan = 2.4; // Độ rộng chữ X
+        double armSpan = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_URIEL_DEFENSE) ? 3.6 : 2.4; // Độ rộng chữ X
 
         for (double d = 1.0; d <= maxDist; d += step) {
             Vec3 center = eyePos.add(look.scale(d));

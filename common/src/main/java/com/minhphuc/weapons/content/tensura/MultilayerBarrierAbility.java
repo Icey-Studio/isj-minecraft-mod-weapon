@@ -1,6 +1,9 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModBlocks;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -45,16 +48,24 @@ public class MultilayerBarrierAbility {
         public final boolean isSphere; // true nếu là khối cầu bay, false nếu là tường
         public final Vec3 center;
         public final double radius;
+        public final Vec3 wallRight;
+        public final Vec3 wallNormal;
         public int ticksRemaining;
         public final Map<BlockPos, BlockState> replacedBlocks = new ConcurrentHashMap<>();
 
-        public ActiveMultilayer(ServerLevel level, ServerPlayer caster, boolean isSphere, Vec3 center, double radius, int durationTicks) {
+        public ActiveMultilayer(ServerLevel level, ServerPlayer caster, boolean isSphere, Vec3 center, double radius, int durationTicks, Vec3 wallRight, Vec3 wallNormal) {
             this.level = level;
             this.casterUuid = caster.getUUID();
             this.isSphere = isSphere;
             this.center = center;
             this.radius = radius;
             this.ticksRemaining = durationTicks;
+            this.wallRight = wallRight != null ? wallRight : new Vec3(1, 0, 0);
+            this.wallNormal = wallNormal != null ? wallNormal : new Vec3(0, 0, 1);
+        }
+
+        public ActiveMultilayer(ServerLevel level, ServerPlayer caster, boolean isSphere, Vec3 center, double radius, int durationTicks) {
+            this(level, caster, isSphere, center, radius, durationTicks, new Vec3(1, 0, 0), new Vec3(0, 0, 1));
         }
     }
 
@@ -177,11 +188,29 @@ public class MultilayerBarrierAbility {
                         }
                     }
                 } else {
-                    // Trường hợp tường chắn: kiểm tra tia tấn công có cắt trúng khối kết giới tường hay không
-                    ClipContext ctx = new ClipContext(sourcePos, victimPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, victim);
-                    BlockHitResult hit = level.clip(ctx);
-                    if (hit.getType() == HitResult.Type.BLOCK && level.getBlockState(hit.getBlockPos()).is(ModBlocks.MULTILAYER_BARRIER.get())) {
-                        hitPoint = hit.getLocation();
+                    // Trường hợp tường chắn không dùng block vuông: Kiểm tra giao điểm tia tấn công với mặt phẳng chữ nhật 3x4
+                    Vec3 wallCenter = b.center.add(0, 1.5, 0);
+                    Vec3 ray = victimPos.subtract(sourcePos);
+                    double denom = b.wallNormal.dot(ray);
+                    if (Math.abs(denom) > 1e-4) {
+                        double t = wallCenter.subtract(sourcePos).dot(b.wallNormal) / denom;
+                        if (t >= 0.0 && t <= 1.0) {
+                            Vec3 intersect = sourcePos.add(ray.scale(t));
+                            Vec3 offset = intersect.subtract(wallCenter);
+                            double hDist = Math.abs(offset.dot(b.wallRight));
+                            double vDist = Math.abs(offset.y);
+                            if (hDist <= 2.2 && vDist <= 2.5) {
+                                hitPoint = intersect;
+                            }
+                        }
+                    }
+                    if (hitPoint == null) {
+                        // Fallback kiểm tra khối cũ nếu còn sót lại
+                        ClipContext ctx = new ClipContext(sourcePos, victimPos, ClipContext.Block.COLLIDER, ClipContext.Fluid.NONE, victim);
+                        BlockHitResult hit = level.clip(ctx);
+                        if (hit.getType() == HitResult.Type.BLOCK && level.getBlockState(hit.getBlockPos()).is(ModBlocks.MULTILAYER_BARRIER.get())) {
+                            hitPoint = hit.getLocation();
+                        }
                     }
                 }
 
@@ -244,17 +273,21 @@ public class MultilayerBarrierAbility {
             return;
         }
 
-        // Cho phép triệu hồi bao nhiêu kết giới cũng được, không xóa kết giới cũ
-
         boolean isFlyingOrAir = player.isFallFlying() || player.getAbilities().flying || !player.onGround();
 
         if (isFlyingOrAir) {
             // TRẠNG THÁI 1: KHỐI CẦU ĐA TẦNG TRÊN KHÔNG / DƯỚI NƯỚC / DUNG NHAM (Bán kính 6 block)
             Vec3 center = player.position().add(0, 1.0, 0);
             double radius = 6.0;
-            ActiveMultilayer barrier = new ActiveMultilayer(level, player, true, center, radius, -1); // Vĩnh viễn tới khi đập tay giải trừ
-            buildSphere(barrier);
+            ActiveMultilayer barrier = new ActiveMultilayer(level, player, true, center, radius, -1, new Vec3(1, 0, 0), new Vec3(0, 0, 1)); // Vĩnh viễn tới khi đập tay giải trừ
             ACTIVE_BARRIERS.add(barrier);
+
+            // BẬT KỈ XẢO ĐIỆN ẢNH 3D: Dựng Geodesic Aegis Dome 3D hoàn toàn không dùng khối block vuông
+            if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_MULTILAYER_BARRIER)) {
+                ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                        SkillVisualConfig.SKILL_MULTILAYER_BARRIER, player.getUUID(), center, player.getLookAngle(), 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+                ));
+            }
 
             // Bảo hộ môi trường dung nham và dưới nước tạm thời
             player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 600, 0, false, false, true));
@@ -266,11 +299,11 @@ public class MultilayerBarrierAbility {
                     SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 2.0F, 1.0F);
 
             player.displayClientMessage(
-                    Component.literal("§b§l[ĐA TRÙNG KẾT GIỚI] §fĐã kích hoạt Khối Cầu Đa Tầng Bất Khả Xâm Phạm (6m)!"),
+                    Component.literal("§b§l[ĐA TRÙNG KẾT GIỚI] §fĐã kích hoạt Cầu Hộ Thân 3D Geodesic Aegis (6m)!"),
                     true
             );
             player.sendSystemMessage(
-                    Component.literal("§b✦ Khối Cầu Đa Tầng: Triệu hồi không giới hạn số lượng. Đấm tay không hoặc đánh vào để phá giải!")
+                    Component.literal("§b✦ Cầu Hộ Thân 3D: Trường lực lượng tử 3D không khối cản phá mọi đòn tấn công. Đấm tay không để phá giải!")
             );
         } else {
             // TRẠNG THÁI 2: BỨC TƯỜNG ĐA TRÙNG TRƯỚC MẶT (Ngang 3 block, Cao 4 block)
@@ -285,11 +318,16 @@ public class MultilayerBarrierAbility {
 
             // Đặt tường cách người chơi 2.5 block phía trước
             Vec3 wallBase = player.position().add(lookHoriz.scale(2.5));
-            BlockPos basePos = BlockPos.containing(wallBase);
 
-            ActiveMultilayer barrier = new ActiveMultilayer(level, player, false, wallBase, 3.0, -1); // Vĩnh viễn tới khi đập tay giải trừ
-            buildWall(barrier, basePos, right);
+            ActiveMultilayer barrier = new ActiveMultilayer(level, player, false, wallBase, 3.0, -1, right, lookHoriz); // Vĩnh viễn tới khi đập tay giải trừ
             ACTIVE_BARRIERS.add(barrier);
+
+            // BẬT KỈ XẢO ĐIỆN ẢNH 3D: Dựng khiên năng lượng 3D Runic Wall Aegis hoàn toàn không dùng khối block vuông
+            if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_MULTILAYER_BARRIER)) {
+                ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                        SkillVisualConfig.SKILL_MULTILAYER_BARRIER, player.getUUID(), wallBase, lookHoriz, 72000, ClientboundCinematicSkillPacket.ACTION_START, -3.0f
+                ));
+            }
 
             level.playSound(null, wallBase.x, wallBase.y, wallBase.z,
                     SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 2.5F, 0.8F);
@@ -297,11 +335,11 @@ public class MultilayerBarrierAbility {
                     SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 2.5F, 1.2F);
 
             player.displayClientMessage(
-                    Component.literal("§b§l[ĐA TRÙNG KẾT GIỚI] §fĐã dựng Tường Chắn Đa Tầng (3x4) cản phá mọi đòn tấn công!"),
+                    Component.literal("§b§l[ĐA TRÙNG KẾT GIỚI] §fĐã dựng Tường Khiên 3D Runic Aegis cản phá mọi đòn tấn công!"),
                     true
             );
             player.sendSystemMessage(
-                    Component.literal("§b✦ Bức Tường Đa Trùng: Triệu hồi không giới hạn số lượng. Đấm tay không hoặc đánh vào để phá giải!")
+                    Component.literal("§b✦ Tường Khiên 3D: Trường lực lượng tử 3D không khối cản phá mọi đòn tấn công. Đấm tay không để phá giải!")
             );
         }
     }
@@ -342,7 +380,7 @@ public class MultilayerBarrierAbility {
                             }
                             barrier.replacedBlocks.put(pos, realOrig);
                             if (!orig.is(ModBlocks.MULTILAYER_BARRIER.get())) {
-                                level.setBlock(pos, barrierState, 2);
+                                level.setBlock(pos, barrierState, 50);
                             }
                         }
                     }
@@ -371,7 +409,7 @@ public class MultilayerBarrierAbility {
                     }
                     barrier.replacedBlocks.put(pos, realOrig);
                     if (!orig.is(ModBlocks.MULTILAYER_BARRIER.get())) {
-                        level.setBlock(pos, barrierState, 2);
+                        level.setBlock(pos, barrierState, 50);
                     }
                 }
             }
@@ -381,25 +419,28 @@ public class MultilayerBarrierAbility {
     public static void cleanBarrier(ActiveMultilayer barrier) {
         if (barrier == null) return;
         ServerLevel level = barrier.level;
+
+        // Tắt hiệu ứng 3D trên client
+        ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_MULTILAYER_BARRIER, barrier.casterUuid, barrier.center, Vec3.ZERO, 0, ClientboundCinematicSkillPacket.ACTION_STOP, 0f
+        ));
+
+        Set<BlockPos> otherUsedPositions = new HashSet<>();
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveMultilayer other : ACTIVE_BARRIERS) {
+                if (other != barrier && other.level == level) {
+                    otherUsedPositions.addAll(other.replacedBlocks.keySet());
+                }
+            }
+        }
+
         for (Map.Entry<BlockPos, BlockState> entry : barrier.replacedBlocks.entrySet()) {
             BlockPos pos = entry.getKey();
             BlockState orig = entry.getValue();
 
-            // Kiểm tra xem vị trí này có còn nằm trong bất kỳ kết giới nào KHÁC đang hoạt động không
-            boolean stillUsed = false;
-            synchronized (ACTIVE_BARRIERS) {
-                for (ActiveMultilayer other : ACTIVE_BARRIERS) {
-                    if (other != barrier && other.level == level && other.replacedBlocks.containsKey(pos)) {
-                        stillUsed = true;
-                        break;
-                    }
-                }
-            }
-
-            // Chỉ hoàn nguyên về khối gốc nếu không còn kết giới nào khác sử dụng khối này
-            if (!stillUsed) {
+            if (!otherUsedPositions.contains(pos)) {
                 if (level.getBlockState(pos).is(ModBlocks.MULTILAYER_BARRIER.get())) {
-                    level.setBlock(pos, orig, 2);
+                    level.setBlock(pos, orig, 50);
                 }
             }
         }
@@ -412,6 +453,19 @@ public class MultilayerBarrierAbility {
             while (it.hasNext()) {
                 ActiveMultilayer b = it.next();
                 if (b.casterUuid.equals(playerUuid)) {
+                    cleanBarrier(b);
+                    it.remove();
+                }
+            }
+        }
+    }
+
+    public static void cleanAllBarriers(Level level) {
+        synchronized (ACTIVE_BARRIERS) {
+            Iterator<ActiveMultilayer> it = ACTIVE_BARRIERS.iterator();
+            while (it.hasNext()) {
+                ActiveMultilayer b = it.next();
+                if (b.level == level) {
                     cleanBarrier(b);
                     it.remove();
                 }
@@ -628,22 +682,51 @@ public class MultilayerBarrierAbility {
                     }
                 }
 
-                // 2. Triệt tiêu & phản hồi đạn bay trúng kết giới
+                // 2. Chắn và đẩy lùi quái vật cố gắng vượt qua trường lực kết giới (Không cần khối block vuông)
                 double scanR = b.isSphere ? b.radius + 2.5 : 4.0;
                 AABB scanBox = new AABB(b.center.x - scanR, b.center.y - scanR, b.center.z - scanR,
                         b.center.x + scanR, b.center.y + scanR, b.center.z + scanR);
+                List<LivingEntity> nearbyEntities = level.getEntitiesOfClass(LivingEntity.class, scanBox,
+                        e -> e.isAlive() && !(e instanceof Player) && (e instanceof Monster || e instanceof Enemy));
+                for (LivingEntity m : nearbyEntities) {
+                    if (b.isSphere) {
+                        double dist = m.position().distanceTo(b.center);
+                        if (dist >= b.radius - 0.8 && dist <= b.radius + 0.8) {
+                            Vec3 pushOut = m.position().subtract(b.center).normalize().scale(0.65);
+                            m.setDeltaMovement(pushOut);
+                            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, m.getX(), m.getY() + 1.0, m.getZ(), 4, 0.2, 0.2, 0.2, 0.05);
+                        }
+                    } else {
+                        Vec3 wallCenter = b.center.add(0, 1.5, 0);
+                        Vec3 toMob = m.position().subtract(wallCenter);
+                        double perpDist = Math.abs(toMob.dot(b.wallNormal));
+                        double hDist = Math.abs(toMob.dot(b.wallRight));
+                        double vDist = Math.abs(toMob.y);
+                        if (perpDist <= 1.2 && hDist <= 2.2 && vDist <= 2.5) {
+                            Vec3 pushOut = b.wallNormal.scale(toMob.dot(b.wallNormal) >= 0 ? 0.65 : -0.65);
+                            m.setDeltaMovement(pushOut);
+                            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, m.getX(), m.getY() + 1.0, m.getZ(), 4, 0.2, 0.2, 0.2, 0.05);
+                        }
+                    }
+                }
+
+                // 3. Triệt tiêu & phản hồi đạn bay trúng kết giới
                 List<Projectile> projectiles = level.getEntitiesOfClass(Projectile.class, scanBox);
                 for (Projectile p : projectiles) {
                     if (p.getOwner() == null || !p.getOwner().getUUID().equals(b.casterUuid)) {
                         boolean hitBarrier = false;
                         if (b.isSphere) {
                             double dist = p.position().distanceTo(b.center);
-                            if (Math.abs(dist - b.radius) <= 1.2 || dist < b.radius) {
+                            if (Math.abs(dist - b.radius) <= 1.4 || dist < b.radius) {
                                 hitBarrier = true;
                             }
                         } else {
-                            BlockPos pPos = BlockPos.containing(p.position());
-                            if (b.replacedBlocks.containsKey(pPos) || p.position().distanceTo(b.center) <= 2.2) {
+                            Vec3 wallCenter = b.center.add(0, 1.5, 0);
+                            Vec3 toP = p.position().subtract(wallCenter);
+                            double perpDist = Math.abs(toP.dot(b.wallNormal));
+                            double hDist = Math.abs(toP.dot(b.wallRight));
+                            double vDist = Math.abs(toP.y);
+                            if (perpDist <= 1.4 && hDist <= 2.4 && vDist <= 2.8) {
                                 hitBarrier = true;
                             }
                         }

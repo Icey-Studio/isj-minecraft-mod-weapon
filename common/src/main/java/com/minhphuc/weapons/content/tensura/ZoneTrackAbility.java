@@ -1,6 +1,9 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModBlocks;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.BlockParticleOption;
 import net.minecraft.core.particles.ParticleTypes;
@@ -46,15 +49,21 @@ public class ZoneTrackAbility {
 
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 dir = player.getLookAngle().normalize();
-        double maxRange = 26.0D;
+        double maxRange = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_ZONE_TRACK) ? 50.0D : 26.0D;
 
-        // 1. Khởi tạo chùm sáng 3D đa tầng màu trắng tuyết bạch kim cực kỳ tráng lệ
-        HorizontalHolyBeamAbility.spawn3DBeamDisplay(
-                level, eyePos, dir, maxRange,
-                2.0F, 0xFFFFFF,
-                3.4F, 0xF0F8FF,
-                12
-        );
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_ZONE_TRACK)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_ZONE_TRACK, player.getUUID(), eyePos, dir, 20, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        } else {
+            // 1. Khởi tạo chùm sáng 3D đa tầng màu trắng tuyết bạch kim cực kỳ tráng lệ
+            HorizontalHolyBeamAbility.spawn3DBeamDisplay(
+                    level, eyePos, dir, maxRange,
+                    2.0F, 0xFFFFFF,
+                    3.4F, 0xF0F8FF,
+                    12
+            );
+        }
 
         // Âm thanh uy lực đại pháo nổ rung trời
         level.playSound(null, eyePos.x, eyePos.y, eyePos.z,

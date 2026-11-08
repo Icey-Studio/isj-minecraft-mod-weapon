@@ -428,23 +428,28 @@ public class IncubationCapsuleManager {
                 double cx = c.pos.getX() + 0.5D;
                 double cy = c.pos.getY() + 1.2D;
                 double cz = c.pos.getZ() + 0.5D;
+                boolean playerNear = level.hasNearbyAlivePlayer(cx, cy, cz, 32.0D);
 
-                // Hào quang chói lòa 4 giây (80 tick) che khuất hoàn toàn bên trong
-                level.sendParticles(ParticleTypes.FLASH, cx, cy, cz, 4, 0.2, 0.5, 0.2, 0);
-                level.sendParticles(ParticleTypes.END_ROD, cx, cy, cz, 25, 0.35, 0.8, 0.35, 0.08);
-                level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy, cz, 20, 0.4, 0.8, 0.4, 0.15);
-                level.sendParticles(ParticleTypes.PORTAL, cx, cy, cz, 15, 0.3, 0.5, 0.3, 0.1);
+                // Hào quang chói lòa 4 giây (80 tick) che khuất hoàn toàn bên trong (chạy mỗi 2 ticks khi có người chơi)
+                if (playerNear && c.animTicks % 2 == 0) {
+                    level.sendParticles(ParticleTypes.FLASH, cx, cy, cz, 2, 0.2, 0.5, 0.2, 0);
+                    level.sendParticles(ParticleTypes.END_ROD, cx, cy, cz, 12, 0.35, 0.8, 0.35, 0.08);
+                    level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy, cz, 10, 0.4, 0.8, 0.4, 0.15);
+                    level.sendParticles(ParticleTypes.PORTAL, cx, cy, cz, 8, 0.3, 0.5, 0.3, 0.1);
+                }
 
                 if (c.animTicks % 15 == 0) {
                     level.playSound(null, cx, cy, cz, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 2.0F, 1.2F);
                     level.playSound(null, cx, cy, cz, SoundEvents.CONDUIT_ATTACK_TARGET, SoundSource.BLOCKS, 2.0F, 1.4F);
                 }
 
-                updateText(c,
-                        "§6§l✦ ĐANG DUNG HỢP NHỤC THỂ & TÁI CẤU TRÚC MA THẦN ✦\n" +
-                        "§eTiến độ: §f" + (c.animTicks * 100 / 80) + "% §7(Còn " + String.format("%.1f", (80 - c.animTicks) / 20.0F) + "s)\n" +
-                        "§dÁnh sáng ma pháp đang chói lòa!"
-                );
+                if (c.animTicks % 4 == 0 || c.animTicks >= 80) {
+                    updateText(c,
+                            "§6§l✦ ĐANG DUNG HỢP NHỤC THỂ & TÁI CẤU TRÚC MA THẦN ✦\n" +
+                            "§eTiến độ: §f" + (c.animTicks * 100 / 80) + "% §7(Còn " + String.format("%.1f", (80 - c.animTicks) / 20.0F) + "s)\n" +
+                            "§dÁnh sáng ma pháp đang chói lòa!"
+                    );
+                }
 
                 if (c.animTicks >= 80) {
                     level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, cx, cy, cz, 3, 0.2, 0.4, 0.2, 0);
