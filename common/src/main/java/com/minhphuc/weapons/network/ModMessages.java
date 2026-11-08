@@ -108,6 +108,21 @@ public class ModMessages {
                 ClientboundOrbitalStrikePacket::encode,
                 ClientboundOrbitalStrikePacket::new,
                 ClientboundOrbitalStrikePacket::handle);
+
+        CHANNEL.register(ClientboundAzathothPacket.class,
+                ClientboundAzathothPacket::encode,
+                ClientboundAzathothPacket::new,
+                ClientboundAzathothPacket::handle);
+
+        CHANNEL.register(ClientboundHellflarePacket.class,
+                ClientboundHellflarePacket::encode,
+                ClientboundHellflarePacket::new,
+                ClientboundHellflarePacket::handle);
+
+        CHANNEL.register(ClientboundCinematicSkillPacket.class,
+                ClientboundCinematicSkillPacket::encode,
+                ClientboundCinematicSkillPacket::new,
+                ClientboundCinematicSkillPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

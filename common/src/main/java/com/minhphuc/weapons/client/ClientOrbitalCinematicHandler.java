@@ -27,9 +27,25 @@ public class ClientOrbitalCinematicHandler {
     private static int totalDurationTicks = 70;
     private static long startWorldTick = 0;
     private static boolean skipped = false;
+    private static boolean impactTriggered = false;
 
     public static boolean isActive() {
         return active && !skipped;
+    }
+
+    public static Vec3 getTargetPos() {
+        return targetPos;
+    }
+
+    public static int getStrikeMode() {
+        return strikeMode;
+    }
+
+    public static float getAge(float partialTicks) {
+        if (!isActive()) return -1;
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.level == null) return -1;
+        return (float) (mc.level.getGameTime() - startWorldTick) + partialTicks;
     }
 
     public static void init() {
@@ -63,6 +79,7 @@ public class ClientOrbitalCinematicHandler {
         strikeMode = mode;
         totalDurationTicks = Math.max(65, durationTicks);
         skipped = false;
+        impactTriggered = false;
         active = true;
 
         Minecraft mc = Minecraft.getInstance();
@@ -98,20 +115,21 @@ public class ClientOrbitalCinematicHandler {
         // === HỒI 1 & 2: NGOÀI KHÔNG GIAN QUỸ ĐẠO (0 -> 28 ticks) ===
         if (age < 28.0f) {
             float progress = age / 28.0f;
-            // Camera ở độ cao +420m trên tầng bình lưu, xoay nhẹ quanh trục quỹ đạo
-            double orbitAngle = Math.toRadians(45.0 + progress * 8.0);
-            double dist = 110.0;
-            double offsetX = Math.cos(orbitAngle) * dist;
-            double offsetZ = Math.sin(orbitAngle) * dist;
+            // Camera ở quỹ đạo nhìn chếch ngang đường chân trời Trái Đất (ISS Horizon View)
+            double orbitAngle = Math.toRadians(35.0 + progress * 10.0);
+            double dist = 44.0;
+            double offsetX = Math.cos(orbitAngle) * dist - 8.0;
+            double offsetZ = Math.sin(orbitAngle) * dist - 14.0;
 
-            // Rung chấn khi vũ khí khai hỏa (ticks 20 -> 25)
+            // Rung chấn khi vũ khí khai hỏa (ticks 23 -> 27.5)
             double recoilShake = 0.0;
-            if (age >= 20.0f && age <= 26.0f) {
-                recoilShake = Math.sin((age - 20.0f) * 4.0) * 1.5;
+            if (age >= 23.0f && age <= 27.5f) {
+                recoilShake = Math.sin((age - 23.0f) * 4.5) * 1.8;
             }
 
-            camPos = new Vec3(targetPos.x + offsetX, targetPos.y + 420.0 + recoilShake, targetPos.z + offsetZ);
-            lookTarget = targetPos.add(0, 0, 0); // Nhìn thẳng xuống mục tiêu mặt đất
+            camPos = new Vec3(targetPos.x + 18.0 + offsetX, targetPos.y + 446.0 + recoilShake, targetPos.z + 26.0 + offsetZ);
+            // Hướng nhìn chếch về phía vệ tinh và đường chân trời cong vút phát quang của Trái Đất
+            lookTarget = new Vec3(targetPos.x + 18.0 + Math.cos(orbitAngle + 0.4) * 85.0, targetPos.y + 360.0, targetPos.z + 26.0 + Math.sin(orbitAngle + 0.4) * 85.0);
         }
         // === HỒI 3: LAO DỐC SIÊU THANH XUYÊN TẦNG MÂY (28 -> 45 ticks) ===
         else if (age < 45.0f) {
@@ -132,6 +150,10 @@ public class ClientOrbitalCinematicHandler {
         }
         // === HỒI 4: BAO QUÁT VỤ NỔ MẶT ĐẤT & RUNG CHẤN (45 -> 58 ticks) ===
         else if (age < 58.0f) {
+            if (!impactTriggered) {
+                impactTriggered = true;
+                CustomImpactFrameOverlay.trigger();
+            }
             float blastAge = age - 45.0f;
             float shakeStrength = (float) Math.max(0.0, 1.0 - blastAge / 13.0);
             double shakeX = Math.sin(blastAge * 4.2) * 0.8 * shakeStrength;
@@ -141,9 +163,9 @@ public class ClientOrbitalCinematicHandler {
             camPos = new Vec3(targetPos.x + 22.0 + shakeX, targetPos.y + 16.0 + shakeY, targetPos.z - 26.0);
             lookTarget = targetPos.add(0, 1.5, 0);
         }
-        // === HỒI 5: TRẢ GÓC NHÌN MƯỢT MÀ VỀ NGƯỜI CHƠI (58 -> 70 ticks) ===
+        // === HỒI 5: TRẢ GÓC NHÌN MƯỢT MÀ VỀ NGƯỜI CHƠI (58 -> 75 ticks) ===
         else {
-            float blend = (age - 58.0f) / 12.0f;
+            float blend = Math.clamp((age - 58.0f) / 17.0f, 0.0f, 1.0f);
             float ease = blend * blend * (3.0f - 2.0f * blend); // Smoothstep
 
             Vec3 shot4Pos = new Vec3(targetPos.x + 22.0, targetPos.y + 16.0, targetPos.z - 26.0);
@@ -158,7 +180,7 @@ public class ClientOrbitalCinematicHandler {
 
         // Giai đoạn trả góc nhìn: Lerp cả Yaw và Pitch về mắt người chơi
         if (age >= 58.0f) {
-            float blend = (age - 58.0f) / 12.0f;
+            float blend = Math.clamp((age - 58.0f) / 17.0f, 0.0f, 1.0f);
             float ease = blend * blend * (3.0f - 2.0f * blend);
             float finalYaw = net.minecraft.util.Mth.rotLerp(ease, targetYaw, vanillaYaw);
             float finalPitch = net.minecraft.util.Mth.lerp(ease, targetPitch, vanillaPitch);

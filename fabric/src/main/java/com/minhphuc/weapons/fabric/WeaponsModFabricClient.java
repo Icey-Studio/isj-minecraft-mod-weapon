@@ -1,12 +1,20 @@
 package com.minhphuc.weapons.fabric;
 
 import com.minhphuc.weapons.WeaponsMod;
+import com.minhphuc.weapons.client.ClientAzathothCinematicHandler;
+import com.minhphuc.weapons.client.ClientCinematicSkillHandler;
+import com.minhphuc.weapons.client.ClientHellflareCinematicHandler;
+import com.minhphuc.weapons.client.renderer.ClientCinematicSkillRenderer;
+import com.minhphuc.weapons.client.renderer.ClientHellflareRenderer;
 import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
 import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
 import com.minhphuc.weapons.client.CustomImpactFrameOverlay;
 import com.minhphuc.weapons.client.renderer.AtomicPostFx;
 import com.minhphuc.weapons.client.renderer.AtomicRenderer;
+import com.minhphuc.weapons.client.renderer.ClientAzathothDragonRenderer;
+import com.minhphuc.weapons.client.renderer.ClientOrbitalSpaceRenderer;
 import com.minhphuc.weapons.client.renderer.ClientOrbitalStrikeRenderer;
+import com.minhphuc.weapons.client.renderer.ClientSupernovaPlasmaRenderer;
 import com.minhphuc.weapons.client.renderer.SupernovaAccretionRenderer;
 import com.minhphuc.weapons.init.ModBlocks;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -29,6 +37,8 @@ public class WeaponsModFabricClient implements ClientModInitializer {
     public void onInitializeClient() {
         com.minhphuc.weapons.client.WeaponsModClient.initClient();
         ClientOrbitalCinematicHandler.init();
+        ClientHellflareCinematicHandler.init();
+        ClientCinematicSkillHandler.init();
 
         // 1. Khai báo RenderType bán trong suốt cho các khối kết giới
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.INCUBATION_CAPSULE.get(), RenderType.translucent());
@@ -64,6 +74,21 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             AtomicRenderer.render(matrices, camera, tickDelta);
             SupernovaAccretionRenderer.render(matrices, camera, tickDelta);
             ClientOrbitalStrikeRenderer.render(matrices, camera, tickDelta);
+            ClientAzathothDragonRenderer.render(matrices, camera, tickDelta);
+            ClientSupernovaPlasmaRenderer.render(matrices, camera, tickDelta);
+            ClientHellflareRenderer.render(matrices, camera, tickDelta);
+            ClientCinematicSkillRenderer.render(matrices, camera, tickDelta);
+
+            // Render Không gian vũ trụ, Địa Cầu uốn cong & Vệ tinh cho Tuyệt Kỹ Stellar Remote
+            if (ClientOrbitalCinematicHandler.isActive()) {
+                float spaceAge = ClientOrbitalCinematicHandler.getAge(tickDelta);
+                if (spaceAge >= 0 && spaceAge < 46.0f) {
+                    ClientOrbitalSpaceRenderer.render(matrices, camera, tickDelta,
+                            ClientOrbitalCinematicHandler.getTargetPos(),
+                            ClientOrbitalCinematicHandler.getStrikeMode(),
+                            spaceAge);
+                }
+            }
         });
 
         // 4. Bắt ma trận và xử lý Shaders GLSL Post-Processing (Bloom, Aberration, Volumetric Beam)
@@ -80,6 +105,8 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             ClientNihilityCinematicHandler.renderCinematicOverlay(graphics, partialTick);
             ClientOrbitalStrikeRenderer.renderHudOverlay(graphics, partialTick);
             ClientOrbitalCinematicHandler.renderOverlay(graphics, partialTick);
+            ClientHellflareCinematicHandler.renderCinematicOverlay(graphics, partialTick);
+            ClientCinematicSkillHandler.renderCinematicOverlay(graphics, partialTick);
         });
 
         // 6. Tự động dọn dẹp bộ nhớ đồ họa và trạng thái khi thoát thế giới hoặc tắt game
@@ -91,6 +118,13 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             SupernovaAccretionRenderer.reset();
             ClientOrbitalStrikeRenderer.reset();
             ClientOrbitalCinematicHandler.stopCinematic();
+            ClientAzathothDragonRenderer.reset();
+            ClientAzathothCinematicHandler.stopCinematic();
+            ClientSupernovaPlasmaRenderer.reset();
+            ClientHellflareRenderer.reset();
+            ClientHellflareCinematicHandler.stopCinematic();
+            ClientCinematicSkillRenderer.reset();
+            ClientCinematicSkillHandler.stopCinematic();
         });
 
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
@@ -101,6 +135,20 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             SupernovaAccretionRenderer.reset();
             ClientOrbitalStrikeRenderer.reset();
             ClientOrbitalCinematicHandler.stopCinematic();
+            ClientAzathothDragonRenderer.reset();
+            ClientAzathothCinematicHandler.stopCinematic();
+            ClientSupernovaPlasmaRenderer.reset();
+            ClientHellflareRenderer.reset();
+            ClientHellflareCinematicHandler.stopCinematic();
+            ClientCinematicSkillRenderer.reset();
+            ClientCinematicSkillHandler.stopCinematic();
+            ClientAzathothDragonRenderer.reset();
+            ClientAzathothCinematicHandler.stopCinematic();
+            ClientSupernovaPlasmaRenderer.reset();
+            ClientHellflareRenderer.reset();
+            ClientHellflareCinematicHandler.stopCinematic();
+            ClientHellflareRenderer.reset();
+            ClientHellflareCinematicHandler.stopCinematic();
         });
     }
 }

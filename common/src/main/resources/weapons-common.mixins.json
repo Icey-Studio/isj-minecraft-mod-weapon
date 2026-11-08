@@ -10,7 +10,8 @@
     "DisplayAccessor",
     "ItemDisplayAccessor",
     "TextDisplayAccessor",
-    "InteractionAccessor"
+    "InteractionAccessor",
+    "MobAccessor"
   ],
   "client": [
     "ItemPropertiesAccessor",
@@ -18,7 +19,9 @@
     "MixinLivingEntityRenderer",
     "CameraMixin",
     "PostChainAccessor",
-    "DeathBlessingPoseMixin"
+    "DeathBlessingPoseMixin",
+    "FogRendererMixin",
+    "LevelRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

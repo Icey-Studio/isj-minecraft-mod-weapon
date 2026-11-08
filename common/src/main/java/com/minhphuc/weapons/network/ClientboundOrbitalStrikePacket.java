@@ -49,10 +49,10 @@ public class ClientboundOrbitalStrikePacket {
                 Vec3 target = new Vec3(this.x, this.y, this.z);
                 ClientOrbitalStrikeRenderer.receive(target, this.mode);
                 int duration = switch (this.mode) {
-                    case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 65;
+                    case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 75;
                     case ClientOrbitalStrikeRenderer.MODE_GUNGNIR -> 75;
                     case ClientOrbitalStrikeRenderer.MODE_SEVEN_STARS -> 100;
-                    default -> 70;
+                    default -> 75;
                 };
                 ClientOrbitalCinematicHandler.startCinematic(target, this.mode, duration);
             } else {

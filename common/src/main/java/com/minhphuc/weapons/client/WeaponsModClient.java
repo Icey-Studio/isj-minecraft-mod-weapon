@@ -12,6 +12,7 @@ public class WeaponsModClient {
         com.minhphuc.weapons.client.ClientTengaiMangaHandler.init();
         com.minhphuc.weapons.client.ClientIaiHandler.init();
         com.minhphuc.weapons.client.ClientNihilityCinematicHandler.init();
+        com.minhphuc.weapons.client.ClientAzathothCinematicHandler.init();
         com.minhphuc.weapons.client.ClientModelProperties.register();
 
         // Đăng ký Model Layers và Entity Renderers cho Ác Ma Thủy Tổ & Chước Nhiệt Long Velgrynd
@@ -40,6 +41,24 @@ public class WeaponsModClient {
         dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
                 com.minhphuc.weapons.entity.ModEntities.KUBO,
                 com.minhphuc.weapons.client.renderer.KuboRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.DemonLordKuboModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.DemonLordKuboModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.DEMON_LORD_KUBO,
+                com.minhphuc.weapons.client.renderer.DemonLordKuboRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.VoNguyetMinhPhoiModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.VoNguyetMinhPhoiModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.VO_NGUYET_MINH_PHOI,
+                com.minhphuc.weapons.client.renderer.VoNguyetMinhPhoiRenderer::new
         );
 
         dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
@@ -89,6 +108,16 @@ public class WeaponsModClient {
         dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
                 com.minhphuc.weapons.entity.ModEntities.MARBAS,
                 com.minhphuc.weapons.client.renderer.MarbasRenderer::new
+        );
+
+        // Vệ Tinh Quỹ Đạo & Đầu Đạn Tấn Công 3D Models
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.OrbitalDefenseSatelliteModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.OrbitalDefenseSatelliteModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.OrbitalKineticProjectileModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.OrbitalKineticProjectileModel::createBodyLayer
         );
 
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");

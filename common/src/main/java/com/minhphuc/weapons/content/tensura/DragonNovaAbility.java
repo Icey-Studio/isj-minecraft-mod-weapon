@@ -1,9 +1,12 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -16,6 +19,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
@@ -125,11 +129,22 @@ public class DragonNovaAbility {
 
         ActiveDragonNova nova = new ActiveDragonNova(level, player);
 
-        // 1. Tạo Ma Pháp Trận Tím Thẫm dưới chân
-        Vec3 groundPos = player.position().add(0, 0.05D, 0);
-        nova.groundCircle = createMagicCircleDisplay(level, groundPos, ModItems.BEELZEBUTH_MAGIC_CIRCLE.get(), 3.0F, 0x9400D3);
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DRAGON_NOVA);
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_DRAGON_NOVA, player.getUUID(), player.position(), player.getLookAngle(), 75, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+            nova.groundCircle = null;
+        } else {
+            // 1. Tạo Ma Pháp Trận Tím Thẫm dưới chân
+            Vec3 groundPos = player.position().add(0, 0.05D, 0);
+            nova.groundCircle = createMagicCircleDisplay(level, groundPos, ModItems.BEELZEBUTH_MAGIC_CIRCLE.get(), 3.0F, 0x9400D3);
+        }
 
         ACTIVE_NOVAS.add(nova);
+
+        // Vươn cánh tay hướng ra trước khai mở tuyệt kỹ
+        player.swing(InteractionHand.MAIN_HAND, true);
 
         // 2. Gửi Title chuẩn Kanji & Latin
         if (player.connection != null) {
@@ -201,21 +216,25 @@ public class DragonNovaAbility {
                 }
 
                 // 2. HIỆU ỨNG TẬP HỢP CÁC LINH TỬ (SPIRITRONS GATHERING):
-                // Hàng vạn đốm sáng linh tử tinh khiết từ quả cầu 7.5m không gian bay vút vào ngực người chơi
+                // Hàng vạn đốm sáng linh tử tím & hồng neon từ không gian bay vút hội tụ thẳng vào lòng bàn tay người chơi
+                Vec3 look = caster.getLookAngle();
+                Vec3 rightVec = new Vec3(-look.z, 0, look.x).normalize();
                 Vec3 casterChest = caster.position().add(0, 1.2D, 0);
+                Vec3 handPos = casterChest.add(look.scale(0.85D)).add(rightVec.scale(0.35D));
+
                 for (int i = 0; i < 45; i++) {
                     double u = RANDOM.nextDouble();
                     double v = RANDOM.nextDouble();
                     double theta = u * 2.0D * Math.PI;
                     double phi = Math.acos(2.0D * v - 1.0D);
-                    double r = 4.0D + RANDOM.nextDouble() * 3.5D;
+                    double r = 3.0D + RANDOM.nextDouble() * 3.5D;
 
-                    double sx = casterChest.x + r * Math.sin(phi) * Math.cos(theta);
-                    double sy = casterChest.y + r * Math.sin(phi) * Math.sin(theta);
-                    double sz = casterChest.z + r * Math.cos(phi);
+                    double sx = handPos.x + r * Math.sin(phi) * Math.cos(theta);
+                    double sy = handPos.y + r * Math.sin(phi) * Math.sin(theta);
+                    double sz = handPos.z + r * Math.cos(phi);
 
                     Vec3 spawnPos = new Vec3(sx, sy, sz);
-                    Vec3 inwardVelocity = casterChest.subtract(spawnPos).normalize().scale(0.85D);
+                    Vec3 inwardVelocity = handPos.subtract(spawnPos).normalize().scale(0.85D);
 
                     if (i % 3 == 0) {
                         level.sendParticles(SPIRITRON_PINK, spawnPos.x, spawnPos.y, spawnPos.z, 0,
@@ -227,6 +246,15 @@ public class DragonNovaAbility {
                         level.sendParticles(ELECTRIC_CYAN_DUST, spawnPos.x, spawnPos.y, spawnPos.z, 0,
                                 inwardVelocity.x, inwardVelocity.y, inwardVelocity.z, 0.85D);
                     }
+                }
+
+                // Điểm tụ sáng rực rỡ ở lòng bàn tay giơ ra (ngưng tụ năng lượng siêu việt)
+                level.sendParticles(SPIRITRON_PURPLE, handPos.x, handPos.y, handPos.z, 4, 0.08D, 0.08D, 0.08D, 0.02D);
+                level.sendParticles(SPIRITRON_PINK, handPos.x, handPos.y, handPos.z, 3, 0.06D, 0.06D, 0.06D, 0.02D);
+                level.sendParticles(ParticleTypes.END_ROD, handPos.x, handPos.y, handPos.z, 2, 0.04D, 0.04D, 0.04D, 0.01D);
+                if (tick >= 14) {
+                    level.sendParticles(ELECTRIC_CYAN_DUST, handPos.x, handPos.y, handPos.z, 3, 0.06D, 0.06D, 0.06D, 0.01D);
+                    level.sendParticles(ParticleTypes.FLASH, handPos.x, handPos.y, handPos.z, 1, 0, 0, 0, 0);
                 }
 
                 // 3. Hạt tụ lực xoay quanh người chơi cuốn xoáy dữ dội (chuẩn Milim)
@@ -266,7 +294,6 @@ public class DragonNovaAbility {
 
                 // 4. Thập Tự Quang Mang (Cross Star Flare) rực sáng cực độ trước khi khai hỏa
                 if (tick >= 24) {
-                    Vec3 look = caster.getLookAngle();
                     Vec3 focusPos = caster.getEyePosition().add(look.scale(1.8D));
                     Vec3 right = new Vec3(-look.z, 0, look.x).normalize();
                     Vec3 up = look.cross(right).normalize();
@@ -301,9 +328,14 @@ public class DragonNovaAbility {
                 if (tick == 30) {
                     nova.cleanupDisplays();
 
+                    // Vung tay khai hỏa luồng pháo cực đại
+                    caster.swing(InteractionHand.MAIN_HAND, true);
+
                     // CỘT SÁNG 3D ĐA TẦNG CỰC ĐẠI CHUẨN MILIM NAVA
-                    // Lõi trong 4.5F (0xFF55DD - Tinh Tố Hồng), Vỏ bọc ngoài 8.0F (0xFF0044 - Long Hỏa Đỏ Tía)
-                    HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, origin, look, maxRange, 4.5F, 0xFF55DD, 8.0F, 0xFF0044, 40);
+                    // Khi bật chế độ Điện Ảnh 3D: Triệt tiêu 100% cột vuông ItemDisplay lỗi thời, chuyển sang Client OpenGL CGL 32-sided Smooth Cylinder
+                    if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DRAGON_NOVA)) {
+                        HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, origin, look, maxRange, 4.5F, 0xFF55DD, 8.0F, 0xFF0044, 40);
+                    }
 
                     // THOẠI KINH ĐIỂN CỦA MILIM KHI KHAI HỎA
                     for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, caster.getBoundingBox().inflate(64.0D))) {

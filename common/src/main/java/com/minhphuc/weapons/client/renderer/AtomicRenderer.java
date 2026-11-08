@@ -677,7 +677,7 @@ public final class AtomicRenderer {
         energyVertex(v, m, d, 0xA550FF, opacity, .513671875f, .01953125f);
     }
 
-    private static void ensureEnergyTexture() {
+    public static void ensureEnergyTexture() {
         if (textureReady) return;
         var pixels = new com.mojang.blaze3d.platform.NativeImage(256, 128, false);
         for (int y = 0; y < 128; y++) for (int x = 0; x < 256; x++)

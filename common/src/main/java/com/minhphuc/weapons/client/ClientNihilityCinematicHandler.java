@@ -189,7 +189,10 @@ public class ClientNihilityCinematicHandler {
             double dist = 45.0;
             double offsetX = -Math.sin(slowOrbit) * dist;
             double offsetZ = Math.cos(slowOrbit) * dist;
-            double height = centerPos.y + 48.0 + progress * 8.0;
+
+            int surfaceY = mc.level != null ? mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) centerPos.x, (int) centerPos.z) : (int) centerPos.y;
+            double baseHeight = surfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 48.0, surfaceY + 16.0) : (centerPos.y + 48.0);
+            double height = baseHeight + progress * 8.0;
 
             camPos = new Vec3(centerPos.x + offsetX, height, centerPos.z + offsetZ);
             lookTarget = centerPos.add(0, 15.0, 0);
@@ -215,7 +218,10 @@ public class ClientNihilityCinematicHandler {
             double shakeX = Math.sin(blastAge * 2.7) * 0.5 * shakeStrength;
             double shakeY = Math.cos(blastAge * 3.3) * 0.5 * shakeStrength;
 
-            camPos = new Vec3(centerPos.x + offsetX + shakeX, centerPos.y + 24.0 + shakeY, centerPos.z + offsetZ);
+            int surfaceY = mc.level != null ? mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) centerPos.x, (int) centerPos.z) : (int) centerPos.y;
+            double baseBlastY = surfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 24.0, surfaceY + 10.0) : (centerPos.y + 24.0);
+
+            camPos = new Vec3(centerPos.x + offsetX + shakeX, baseBlastY + shakeY, centerPos.z + offsetZ);
             lookTarget = centerPos.add(0, 4.0, 0);
         } else {
             // === GIỮ GÓC NHÌN TRÊN CAO & CHUYỂN TIẾP VỀ NGƯỜI CHƠI TRÊN KHÔNG (270 -> 295) ===
