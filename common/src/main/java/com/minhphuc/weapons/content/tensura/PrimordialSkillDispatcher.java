@@ -1,10 +1,13 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -32,6 +35,13 @@ public class PrimordialSkillDispatcher {
     public static void castSkill(ServerLevel level, ServerPlayer player, int skillIndex) {
         DemonType type = PrimordialPlayerDataHelper.getPrimordialType(player);
         if (type == null) return;
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PRIMORDIAL_DEMON)) {
+            float demonCode = (float) (type.ordinal() * 10 + skillIndex);
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_PRIMORDIAL_DEMON, player.getUUID(), player.position(), player.getLookAngle(), 60, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+            ));
+        }
 
         // Skill 0 (Skill 1): Tà Khứ Vũ Thê Tử (Chung cho 7 Ác Ma)
         if (skillIndex == 0) {

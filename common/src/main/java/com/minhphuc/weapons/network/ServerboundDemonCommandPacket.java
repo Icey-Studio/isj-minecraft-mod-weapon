@@ -49,7 +49,7 @@ public class ServerboundDemonCommandPacket {
             if (player == null) return;
             ServerLevel level = player.serverLevel();
 
-            // Tìm ác ma thuộc quyền sở hữu của người chơi
+            // Tìm ác ma thuộc quyền sở hữu của người chơi trong phạm vi lân cận
             List<PrimordialDemonEntity> demons = level.getEntitiesOfClass(
                     PrimordialDemonEntity.class,
                     new AABB(player.getX() - 128, player.getY() - 64, player.getZ() - 128, player.getX() + 128, player.getY() + 64, player.getZ() + 128),
@@ -57,7 +57,25 @@ public class ServerboundDemonCommandPacket {
             );
 
             if (demons.isEmpty()) {
-                player.displayClientMessage(Component.literal("§c[Khế Ước] Không tìm thấy Ác Ma Thủy Tổ nào đang hiện diện gần đây!"), true);
+                // Hỗ trợ Thu Hồi Từ Xa (Remote Dismiss) khi Ác ma ở chunk xa đã bị unload
+                if (actionType == ACTION_DISMISS) {
+                    boolean found = false;
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack st = player.getInventory().getItem(i);
+                        if (st.getItem() instanceof PrimordialPactItem && ItemStackDataHelper.getBoolean(st, "IsSummoned")) {
+                            ItemStackDataHelper.putBoolean(st, "IsSummoned", false);
+                            ItemStackDataHelper.putString(st, "DemonUUID", "");
+                            found = true;
+                        }
+                    }
+                    if (found) {
+                        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 0.8F);
+                        player.displayClientMessage(Component.literal("§a✔ Đã triệu hồi Ác Ma từ phương xa trở về nghỉ ngơi trong Ấn Chú!"), true);
+                        return;
+                    }
+                }
+
+                player.displayClientMessage(Component.literal("§e[Khế Ước] Ác Ma đang ở xa (khu vực chưa nạp). Hãy bấm §6Shift + Chuột Phải §evào Khế Ước để Hiệu Triệu Ác Ma tới ngay cạnh bạn!"), true);
                 return;
             }
 
@@ -82,16 +100,37 @@ public class ServerboundDemonCommandPacket {
                     level.sendParticles(ParticleTypes.DRAGON_BREATH, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 40, 0.5D, 0.8D, 0.5D, 0.1D);
                     level.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 0.8F);
                     player.displayClientMessage(Component.literal("§a✔ Đã cho §e" + demon.getDemonType().getColorName() + " §alui về nghỉ ngơi trong Ấn Chú!"), true);
-                    demon.discard();
 
-                    // Cập nhật pact item trong túi đồ
+                    // Cập nhật và lưu toàn bộ trạng thái tiến hóa, Ma Vương, máu, tên vào pact item trong túi đồ
                     for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
                         ItemStack st = player.getInventory().getItem(i);
                         if (st.getItem() instanceof PrimordialPactItem) {
-                            ItemStackDataHelper.putBoolean(st, "IsSummoned", false);
-                            ItemStackDataHelper.putString(st, "DemonUUID", "");
+                            if (PrimordialPactItem.getDemonType(st) == demon.getDemonType() || demon.getStringUUID().equals(ItemStackDataHelper.getString(st, "DemonUUID"))) {
+                                ItemStackDataHelper.putBoolean(st, "IsSummoned", false);
+                                ItemStackDataHelper.putString(st, "DemonUUID", "");
+                                ItemStackDataHelper.putFloat(st, "CurrentHp", demon.getHealth());
+                                ItemStackDataHelper.putFloat(st, "MaxHp", demon.getMaxHealth());
+                                ItemStackDataHelper.putInt(st, "EvolutionTier", demon.getEvolutionTier());
+                                ItemStackDataHelper.putBoolean(st, "HasPhysicalBody", demon.hasPhysicalBody());
+                                ItemStackDataHelper.putBoolean(st, "IsNamed", demon.isNamed());
+                                ItemStackDataHelper.putString(st, "CustomDemonName", demon.getCustomDemonName());
+
+                                boolean isDemonLord = demon.getTags().contains("TensuraDemonLordMob") || demon.getEvolutionTier() >= 2;
+                                ItemStackDataHelper.putBoolean(st, "IsDemonLord", isDemonLord);
+                                ItemStackDataHelper.putBoolean(st, "IsAwakenedDemonLord", isDemonLord);
+
+                                StringBuilder sb = new StringBuilder();
+                                for (com.minhphuc.weapons.content.tensura.PrimordialSkillPool.SkillEntry sk : demon.getRandomSkills()) {
+                                    if (sb.length() > 0) sb.append(",");
+                                    sb.append(sk.id());
+                                }
+                                ItemStackDataHelper.putString(st, "PrimordialSkills", sb.toString());
+                                break;
+                            }
                         }
                     }
+
+                    demon.discard();
                 }
             }
         });

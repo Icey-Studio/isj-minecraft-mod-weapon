@@ -1,5 +1,8 @@
 package com.minhphuc.weapons.entity.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.VoiceOfTheWorld;
 import com.minhphuc.weapons.content.tensura.PrimordialPactItem;
@@ -136,12 +139,52 @@ public class PrimordialDemonEntity extends TamableAnimal {
     public PrimordialDemonEntity(EntityType<? extends TamableAnimal> entityType, Level level) {
         super(entityType, level);
         this.setTame(false, false);
+        this.moveControl = new net.minecraft.world.entity.ai.control.FlyingMoveControl(this, 18, true);
+    }
+
+    @Override
+    protected net.minecraft.world.entity.ai.navigation.PathNavigation createNavigation(Level level) {
+        net.minecraft.world.entity.ai.navigation.FlyingPathNavigation nav = new net.minecraft.world.entity.ai.navigation.FlyingPathNavigation(this, level);
+        nav.setCanOpenDoors(false);
+        nav.setCanFloat(true);
+        nav.setCanPassDoors(true);
+        return nav;
+    }
+
+    @Override
+    public void travel(net.minecraft.world.phys.Vec3 travelVector) {
+        if (this.isEffectiveAi() || this.isControlledByLocalInstance()) {
+            if (this.isInWater()) {
+                this.moveRelative(0.02F, travelVector);
+                this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+                this.setDeltaMovement(this.getDeltaMovement().scale(0.8D));
+            } else if (this.isInLava()) {
+                this.moveRelative(0.02F, travelVector);
+                this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+                this.setDeltaMovement(this.getDeltaMovement().scale(0.5D));
+            } else {
+                this.moveRelative(this.getSpeed(), travelVector);
+                this.move(net.minecraft.world.entity.MoverType.SELF, this.getDeltaMovement());
+                this.setDeltaMovement(this.getDeltaMovement().scale(0.91D));
+            }
+        }
+        this.calculateEntityAnimation(false);
+    }
+
+    @Override
+    public boolean causeFallDamage(float fallDistance, float multiplier, net.minecraft.world.damagesource.DamageSource source) {
+        return false;
+    }
+
+    @Override
+    protected void checkFallDamage(double y, boolean onGround, net.minecraft.world.level.block.state.BlockState state, BlockPos pos) {
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
                 .add(Attributes.MAX_HEALTH, 3600.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.38D)
+                .add(Attributes.FLYING_SPEED, 0.55D)
                 .add(Attributes.ATTACK_DAMAGE, 160.0D)
                 .add(Attributes.ARMOR, 24.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 16.0D)
@@ -217,7 +260,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 chosen = DemonType.VERT;        // 75-99: 25%
             }
             this.setDemonType(chosen);
-            this.setWinged(chosen == DemonType.NOIR && this.random.nextFloat() < 0.5F);
+            this.setWinged(true); // Toàn bộ Thủy Tổ Ác Ma đều sở hữu cánh và khả năng bay
         }
 
         return spawnData;
@@ -230,7 +273,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
         this.goalSelector.addGoal(3, new PrimordialSkillGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.4D, true));
         this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.25D, 7.0F, 2.5F));
-        this.goalSelector.addGoal(6, new WaterAvoidingRandomStrollGoal(this, 0.8D));
+        this.goalSelector.addGoal(6, new net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal(this, 1.0D));
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
@@ -591,13 +634,32 @@ public class PrimordialDemonEntity extends TamableAnimal {
             updateAttributesForType(getDemonType());
         }
 
-        // Animation vỗ cánh
+        // Animation vỗ cánh & Kiểm soát bay lượn trên không
         this.prevWingFlapAngle = this.wingFlapAngle;
         if (isWinged()) {
             this.wingFlapAngle += 0.15F;
             if (!this.onGround() && this.getDeltaMovement().y < 0.0D) {
                 this.setDeltaMovement(this.getDeltaMovement().multiply(1.0D, 0.6D, 1.0D));
                 this.fallDistance = 0.0F;
+            }
+        }
+
+        // Kiểm soát bay lượn tự do & không trọng lực khi chiến đấu hoặc đi theo chủ nhân
+        if (!this.level().isClientSide()) {
+            LivingEntity target = this.getTarget();
+            if (target != null && target.isAlive()) {
+                this.setNoGravity(true);
+                this.fallDistance = 0.0F;
+                double desiredY = target.getY() + 2.5D;
+                if (this.getY() < desiredY) {
+                    this.setDeltaMovement(this.getDeltaMovement().add(0, 0.04D, 0));
+                }
+            } else if (this.getOwner() != null && this.getOwner().getY() > this.getY() + 2.0D) {
+                this.setNoGravity(true);
+                this.fallDistance = 0.0F;
+                this.setDeltaMovement(this.getDeltaMovement().add(0, 0.04D, 0));
+            } else if (this.onGround()) {
+                this.setNoGravity(false);
             }
         }
 
@@ -759,7 +821,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (this.level() instanceof ServerLevel sl) {
             for (BlockPos p : domainBarrierBlocks) {
                 if (isDomainBarrierBlock(sl.getBlockState(p).getBlock())) {
-                    sl.setBlock(p, Blocks.AIR.defaultBlockState(), 3);
+                    sl.setBlock(p, Blocks.AIR.defaultBlockState(), 50);
                 }
             }
             if (domainCenter != null) {
@@ -871,7 +933,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
                     if (dist >= radius - 0.9 && dist <= radius + 0.9) {
                         BlockPos bPos = cPos.offset(x, y, z);
                         if (level.getBlockState(bPos).isAir() || level.getBlockState(bPos).liquid()) {
-                            level.setBlock(bPos, barrierBlock.defaultBlockState(), 3);
+                            level.setBlock(bPos, barrierBlock.defaultBlockState(), 50);
                             domainBarrierBlocks.add(bPos);
                         }
                     }
@@ -1721,8 +1783,17 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
         announceSkill(type.getColorName() + ": Thất Sắc Thần Trụ • Cột Sáng Cực Đại");
 
-        // 1. Tạo Cột Sáng Thần Khí vươn cao chọc trời 60m
-        createPillarDisplay(level, tPos, 6.5F, 60.0F, 6.5F, type.getGlowColor(), 80);
+        // 1. Tạo Cột Sáng Thần Khí vươn cao chọc trời 60m (3D Cinematic hoặc Cũ)
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_CHROMATIC_PILLAR)) {
+            float demonCode = (float) type.ordinal();
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_CHROMATIC_PILLAR,
+                    this.getUUID(),
+                    tPos, new Vec3(0, 1, 0), 80, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+            ));
+        } else {
+            createPillarDisplay(level, tPos, 6.5F, 60.0F, 6.5F, type.getGlowColor(), 80);
+        }
 
         // 2. Pháp trận xoay dưới đất và trên đỉnh cột sáng
         spawnRotatingCircle(level, tPos.add(0, 0.05D, 0), 8.0F, 6.0F, 80, true, type.getGlowColor());
@@ -1772,6 +1843,14 @@ public class PrimordialDemonEntity extends TamableAnimal {
         Vec3 tPos = target.position();
 
         announceSkill(type.getColorName() + ": Linh Tử Băng Hoại (Disintegration)");
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DISINTEGRATION)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_DISINTEGRATION,
+                    this.getUUID(),
+                    tPos, new Vec3(0, 1, 0), 100, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        }
 
         // 1. Pháp trận đồng tâm đa tầng
         spawnRotatingCircle(level, tPos.add(0, 0.05D, 0), 8.5F, 6.0F, 70, true, 0xFFFFFF);
