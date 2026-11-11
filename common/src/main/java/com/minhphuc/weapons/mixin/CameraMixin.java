@@ -72,7 +72,9 @@ public abstract class CameraMixin {
                 this.getXRot()
         );
         if (pose != null) {
-            this.detached = true;
+            if (ClientNihilityCinematicHandler.isSelfCaster()) {
+                this.detached = true;
+            }
             this.setRotation(pose.yaw(), pose.pitch());
             this.setPosition(pose.position().x, pose.position().y, pose.position().z);
             return;

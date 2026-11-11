@@ -77,9 +77,9 @@ void main() {
         vec2 gasHit=cylinderHit(origin-shift,direction,36.0*spread,54.0*spread);
         gasHit.y=min(gasHit.y,sceneDistance);
         if(gasHit.y>gasHit.x) {
-            float stepSize=(gasHit.y-gasHit.x)/20.0, transmit=1.0;
+            float stepSize=(gasHit.y-gasHit.x)/12.0, transmit=1.0;
             float jitter=hash(vec3(gl_FragCoord.xy,0));
-            for(int i=0;i<20;i++) {
+            for(int i=0;i<12;i++) {
                 vec3 p=origin+direction*(gasHit.x+(float(i)+jitter)*stepSize);
                 vec3 local=(p-shift)/spread;
                 float r=length(local.xz), angle=atan(local.z,local.x);
@@ -119,10 +119,10 @@ void main() {
         vec2 hit=cylinderHit(origin+vec3(0,BeamDepth,0),direction,beamRadius+8.0,BeamHeight+BeamDepth);
         hit.y=min(hit.y,sceneDistance);
         if(hit.y>hit.x&&(beamRadius>.001)) {
-            float stepSize=(hit.y-hit.x)/32.0;
+            float stepSize=(hit.y-hit.x)/16.0;
             float transmittance=1.0;
             float jitter=hash(vec3(gl_FragCoord.xy,0));
-            for(int i=0;i<32;i++) {
+            for(int i=0;i<16;i++) {
                 vec3 p=origin+direction*(hit.x+(float(i)+jitter)*stepSize);
                 float radial=length(p.xz), interior=1.0-smoothstep(beamRadius*.6,beamRadius,radial);
                 float corona=exp(-abs(radial-beamRadius)*.35);
@@ -157,10 +157,10 @@ void main() {
         auraHit.y=min(auraHit.y,sceneDistance);
         vec2 solidColumn=cylinderHit(origin+vec3(0,BeamDepth,0),direction,beamRadius,BeamHeight+BeamDepth);
         if(solidColumn.y>solidColumn.x) auraHit.y=min(auraHit.y,solidColumn.x);
-        if(auraLife>0.0&&auraHit.y>auraHit.x) {
-            float stepSize=(auraHit.y-auraHit.x)/24.0, transmit=1.0;
+        if(EmissionOnly<.5&&auraLife>0.0&&auraHit.y>auraHit.x) {
+            float stepSize=(auraHit.y-auraHit.x)/12.0, transmit=1.0;
             vec3 auraColor=vec3(0);
-            for(int i=0;i<24;i++) {
+            for(int i=0;i<12;i++) {
                 vec3 p=origin+direction*(auraHit.x+(float(i)+.5)*stepSize);
                 float r=length(p.xz), a=atan(p.z,p.x);
                 float travel=r-beamRadius-t*6.0;

@@ -7,10 +7,10 @@ import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.MobRenderer;
 import net.minecraft.resources.ResourceLocation;
 
-public class PrimordialDemonRenderer extends MobRenderer<PrimordialDemonEntity, PrimordialDemonModel> {
+public class PrimordialDemonRenderer extends MobRenderer<PrimordialDemonEntity, PrimordialDemonModel<PrimordialDemonEntity>> {
 
     public PrimordialDemonRenderer(EntityRendererProvider.Context context) {
-        super(context, new PrimordialDemonModel(context.bakeLayer(PrimordialDemonModel.LAYER_LOCATION)), 0.5F);
+        super(context, new PrimordialDemonModel<>(context.bakeLayer(PrimordialDemonModel.LAYER_LOCATION)), 0.5F);
         this.addLayer(new DemonEyesLayer(this));
     }
 

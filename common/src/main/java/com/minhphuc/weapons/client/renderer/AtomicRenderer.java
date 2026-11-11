@@ -34,7 +34,15 @@ public final class AtomicRenderer {
 
     private static final Map<Integer, State> ACTIVE = new LinkedHashMap<>();
     private static final List<State> AUDIO_TAILS = new ArrayList<>();
-    private record Scar(Vec3 center, long started) {}
+    public record LineSegment(Vec3 from, Vec3 to) {}
+    private static final class Scar {
+        final Vec3 center;
+        final long started;
+        final List<LineSegment> segments;
+        Scar(Vec3 center, long started, List<LineSegment> segments) {
+            this.center = center; this.started = started; this.segments = segments;
+        }
+    }
     private static final Map<Integer, Scar> SCARS = new LinkedHashMap<>();
     private static final ResourceLocation ENERGY_TEXTURE = ResourceLocation.fromNamespaceAndPath("weapons", "atomic_energy");
     private static boolean textureReady;
@@ -93,7 +101,7 @@ public final class AtomicRenderer {
         if ((payload.phase() == PHASE_RELEASE || newBurst) && state.blast == null)
             state.blast = sound("atomic_blast", payload, 1.0f);
         if (newBurst) {
-            SCARS.put(payload.casterId(), new Scar(new Vec3(payload.x(), payload.y(), payload.z()), payload.releasedAt() - AtomicSequence.WAIT_TICK));
+            SCARS.put(payload.casterId(), createScar(new Vec3(payload.x(), payload.y(), payload.z()), payload.releasedAt() - AtomicSequence.WAIT_TICK));
             if (SCARS.size() > 64) SCARS.remove(SCARS.keySet().iterator().next());
             CustomImpactFrameOverlay.trigger();
         }
@@ -223,16 +231,25 @@ public final class AtomicRenderer {
                     if (built != null) BufferUploader.drawWithShader(built);
                 } finally { matrices.popPose(); }
             }
-            var visible = SCARS.values().stream().filter(s -> s.center.distanceToSqr(camera.getPosition()) < 256 * 256)
-                    .sorted(Comparator.comparingDouble(s -> s.center.distanceToSqr(camera.getPosition()))).limit(8).toList();
-            for (var scar : visible) {
-                matrices.pushPose();
-                matrices.translate(scar.center.x - camera.getPosition().x, scar.center.y - camera.getPosition().y, scar.center.z - camera.getPosition().z);
-                try {
-                    var mesh = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
-                    scars(mesh, matrices.last().pose(), scar);
-                    var built = mesh.build(); if (built != null) BufferUploader.drawWithShader(built);
-                } finally { matrices.popPose(); }
+            if (!SCARS.isEmpty()) {
+                Vec3 camPos = camera.getPosition();
+                double maxDistSq = 256.0 * 256.0;
+                int count = 0;
+                for (var scar : SCARS.values()) {
+                    if (scar.center.distanceToSqr(camPos) < maxDistSq) {
+                        matrices.pushPose();
+                        matrices.translate(scar.center.x - camPos.x, scar.center.y - camPos.y, scar.center.z - camPos.z);
+                        try {
+                            var mesh = Tesselator.getInstance().begin(VertexFormat.Mode.QUADS, DefaultVertexFormat.POSITION_TEX_COLOR);
+                            scars(mesh, matrices.last().pose(), scar);
+                            var built = mesh.build();
+                            if (built != null) BufferUploader.drawWithShader(built);
+                        } finally {
+                            matrices.popPose();
+                        }
+                        if (++count >= 8) break;
+                    }
+                }
             }
         } finally {
             RenderSystem.depthMask(true);
@@ -341,8 +358,8 @@ public final class AtomicRenderer {
     private static void motes(VertexConsumer v, Matrix4f m, double age, Vec3 eye) {
         float q = AtomicSequence.charge(age), alpha = chargeAlpha(age), spread = 1;
         double moteAge = AtomicSequence.moteClock(age);
-        for (int i = 0; i < 1536; i++) {
-            double seed = fract(i * .61803398875), birth = 20 + i * .06;
+        for (int i = 0; i < 384; i++) {
+            double seed = fract(i * .61803398875), birth = 20 + i * .24;
             if (age < birth) continue;
             double life = (moteAge - birth) / (90 + seed * 70), rise = fract(life), emitter = seed + Math.floor(life) * .754877666;
             float reveal = AtomicSequence.phase(age, birth, birth + 12);
@@ -350,15 +367,15 @@ public final class AtomicRenderer {
             Vec3 tip = AtomicSequence.releaseMote(AtomicSequence.risingMote(rise, emitter), age);
             float size = (.03f + .028f * (float) seed) * (1 + .2f * q) * spread;
             mote(v, m, tip, eye, size, glow * alpha * 2f);
-            if (i % 12 == 0 && rise >= .05)
+            if (i % 6 == 0 && rise >= .05)
                 stroke(v, m, AtomicSequence.releaseMote(AtomicSequence.risingMote(rise - .05, emitter), age - 1.2), tip, .01f * spread, glow * alpha * .45f);
-            if (i % 48 == 0 && rise < .12) {
+            if (i % 24 == 0 && rise < .12) {
                 Vec3 sourcePoint = AtomicSequence.risingMote(0, emitter);
                 Matrix4f local = new Matrix4f(m).translate((float) sourcePoint.x, 0, (float) sourcePoint.z);
                 ring(v, local, .075f, (float)(.15 + rise * 7) * spread, .022f, alpha * reveal * (float)(1 - rise / .12) * .55f);
             }
         }
-        for (int i = 0; i < 96; i++) {
+        for (int i = 0; i < 64; i++) {
             double seed = fract(i * .61803398875), life = moteAge * (.005 + seed * .005) + seed, rise = fract(life);
             float sparkLight = (float)(Math.sin(rise * Math.PI) * alpha * AtomicSequence.phase(age, 32, 100) * .6);
             Vec3 tip = AtomicSequence.releaseMote(AtomicSequence.risingMote(rise, seed + Math.floor(life) * .754877666 + 17), age);
@@ -527,8 +544,8 @@ public final class AtomicRenderer {
         if (age < AtomicSequence.DETONATION || age >= 734) return;
         fade *= 1 - AtomicSequence.phase(age, 574, 734);
         double elapsed = age - AtomicSequence.DETONATION;
-        for (int plume = 0; plume < 192; plume++) {
-            double clock = elapsed - plume * (36.0 / 192);
+        for (int plume = 0; plume < 64; plume++) {
+            double clock = elapsed - plume * (36.0 / 64);
             if (clock <= 0) continue;
             double cycle = Math.floor(clock / 36), life = clock - cycle * 36;
             double seed = fract(plume * .61803398875 + cycle * .173), angle = plume * 2.39996;
@@ -552,35 +569,36 @@ public final class AtomicRenderer {
         }
     }
 
-    static int scarHeight(int x, int z) {
-        long tick = world.getGameTime();
-        if (tick != scarHeightTick) { SCAR_HEIGHTS.clear(); scarHeightTick = tick; }
-        long key = net.minecraft.world.level.ChunkPos.asLong(x, z);
-        Integer height = SCAR_HEIGHTS.get(key);
-        if (height == null) {
-            height = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z);
-            SCAR_HEIGHTS.put(key, height);
+    private static Scar createScar(Vec3 center, long started) {
+        List<LineSegment> segments = new ArrayList<>();
+        if (world != null) {
+            for (int ray = 0; ray < 26; ray++) {
+                Vec3 previous = null;
+                int steps = ray < 24 ? 28 : 128;
+                for (int step = 0; step <= steps; step++) {
+                    double r = ray < 24 ? 3 + step * (AtomicSequence.MAX_RADIUS - 3) / steps : ray == 24 ? AtomicSequence.MAX_RADIUS * .76 : AtomicSequence.MAX_RADIUS;
+                    double angle = ray < 24 ? ray * Math.PI / 12 : step * Math.PI * 2 / steps;
+                    if (r > AtomicSequence.MAX_RADIUS || (ray >= 24 && Math.sin(angle * 8) <= .1)) { previous = null; continue; }
+                    Vec3 p = polar(r, 0, angle);
+                    int x = (int) Math.floor(center.x + p.x), z = (int) Math.floor(center.z + p.z);
+                    if (!world.getChunkSource().hasChunk(x >> 4, z >> 4)) { previous = null; continue; }
+                    double y = world.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, x, z) + .06 - center.y;
+                    Vec3 next = new Vec3(p.x, y, p.z);
+                    if (previous != null && Math.abs(next.y - previous.y) < 4) {
+                        segments.add(new LineSegment(previous, next));
+                    }
+                    previous = next;
+                }
+            }
         }
-        return height;
+        return new Scar(center, started, segments);
     }
 
     private static void scars(VertexConsumer v, Matrix4f m, Scar scar) {
         float alpha = AtomicSequence.scarOpacity(world.getGameTime() - scar.started);
-        for (int ray = 0; ray < 26; ray++) {
-            Vec3 previous = null;
-            int steps = ray < 24 ? 28 : 128;
-            for (int step = 0; step <= steps; step++) {
-                double r = ray < 24 ? 3 + step * (AtomicSequence.MAX_RADIUS - 3) / steps : ray == 24 ? AtomicSequence.MAX_RADIUS * .76 : AtomicSequence.MAX_RADIUS;
-                double angle = ray < 24 ? ray * Math.PI / 12 : step * Math.PI * 2 / steps;
-                if (r > AtomicSequence.MAX_RADIUS || (ray >= 24 && Math.sin(angle * 8) <= .1)) { previous = null; continue; }
-                Vec3 p = polar(r, 0, angle);
-                int x = (int) Math.floor(scar.center.x + p.x), z = (int) Math.floor(scar.center.z + p.z);
-                if (!world.getChunkSource().hasChunk(x >> 4, z >> 4)) { previous = null; continue; }
-                double y = scarHeight(x, z) + .06 - scar.center.y;
-                Vec3 next = new Vec3(p.x, y, p.z);
-                if (previous != null && Math.abs(next.y - previous.y) < 4) stroke(v, m, previous, next, .055f, alpha);
-                previous = next;
-            }
+        if (alpha <= 0 || scar.segments.isEmpty()) return;
+        for (LineSegment seg : scar.segments) {
+            stroke(v, m, seg.from(), seg.to(), .055f, alpha);
         }
     }
 

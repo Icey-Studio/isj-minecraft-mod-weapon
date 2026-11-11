@@ -10,7 +10,7 @@ import net.minecraft.client.model.geom.builders.*;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
-public class PrimordialDemonModel extends HumanoidModel<PrimordialDemonEntity> {
+public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEntity> extends HumanoidModel<T> {
 
     public static final ModelLayerLocation LAYER_LOCATION =
             new ModelLayerLocation(ResourceLocation.fromNamespaceAndPath("weapons", "primordial_demon"), "main");
@@ -222,9 +222,22 @@ public class PrimordialDemonModel extends HumanoidModel<PrimordialDemonEntity> {
                 .texOffs(40, 32).addBox(-3.2F, -2.2F, -2.2F, 4.4F, 3.0F, 4.4F, new CubeDeformation(0.15F)),
                 PartPose.ZERO);
 
-        // Left hand remains refined butler hand with white shirt cuff; dummy part kept for compatibility
+        // Left hand demon claw gauntlet (mirrored for dual-claw Noir possession & first-person left hand)
         PartDefinition leftArm = partdefinition.getChild("left_arm");
-        leftArm.addOrReplaceChild("noir_claws_left", CubeListBuilder.create(), PartPose.ZERO);
+        leftArm.addOrReplaceChild("noir_claws_left", CubeListBuilder.create()
+                .texOffs(56, 16).mirror().addBox(-1.3F, 7.5F, -2.3F, 4.6F, 2.8F, 4.6F, new CubeDeformation(0.15F))
+                .texOffs(56, 24).mirror().addBox(-1.1F, 9.8F, -2.1F, 4.2F, 1.5F, 4.2F)
+                .texOffs(56, 26).mirror().addBox(-1.1F, 9.5F, -1.0F, 0.7F, 4.5F, 0.7F)
+                .texOffs(56, 29).mirror().addBox(-0.9F, 13.8F, -1.8F, 0.5F, 3.5F, 0.5F)
+                .texOffs(56, 26).mirror().addBox(-0.3F, 10.0F, -1.2F, 0.7F, 5.5F, 0.7F)
+                .texOffs(56, 29).mirror().addBox(-0.1F, 15.2F, -2.2F, 0.5F, 4.5F, 0.5F)
+                .texOffs(56, 26).mirror().addBox(0.6F, 10.0F, -1.2F, 0.7F, 6.5F, 0.7F)
+                .texOffs(56, 29).mirror().addBox(0.8F, 16.2F, -2.4F, 0.5F, 5.0F, 0.5F)
+                .texOffs(56, 26).mirror().addBox(1.4F, 10.0F, -1.0F, 0.7F, 5.5F, 0.7F)
+                .texOffs(56, 29).mirror().addBox(1.6F, 15.2F, -2.0F, 0.5F, 4.5F, 0.5F)
+                .texOffs(56, 26).mirror().addBox(2.2F, 9.5F, -0.8F, 0.6F, 4.5F, 0.6F)
+                .texOffs(56, 29).mirror().addBox(2.3F, 13.8F, -1.6F, 0.5F, 3.5F, 0.5F),
+                PartPose.offsetAndRotation(0.0F, 0.0F, 0.0F, 0.12F, 0.0F, 0.0F));
 
         // Blanc Puffy Shoulder Sleeve Left (Ball gown puff sleeves)
         leftArm.addOrReplaceChild("blanc_puff_left", CubeListBuilder.create()
@@ -354,10 +367,10 @@ public class PrimordialDemonModel extends HumanoidModel<PrimordialDemonEntity> {
     }
 
     @Override
-    public void setupAnim(PrimordialDemonEntity entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+    public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
         super.setupAnim(entity, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
 
-        DemonType type = entity.getDemonType();
+        DemonType type = (entity instanceof PrimordialDemonEntity pde) ? pde.getDemonType() : DemonType.NOIR;
         if (type == null) type = DemonType.NOIR;
 
         boolean isNoir = (type == DemonType.NOIR);
@@ -468,12 +481,117 @@ public class PrimordialDemonModel extends HumanoidModel<PrimordialDemonEntity> {
         }
 
         // Ritual rising pose
-        if (entity.isRising()) {
+        if (entity instanceof PrimordialDemonEntity pde && pde.isRising()) {
             this.head.xRot = -0.2F;
             this.leftArm.xRot = 0.1F;
             this.rightArm.xRot = 0.1F;
             this.leftLeg.xRot = 0.0F;
             this.rightLeg.xRot = 0.0F;
+        }
+    }
+
+    public void setupAnimForPossessed(DemonType type, boolean hasBody, boolean isWinged, T player, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        // Chạy đầy đủ hoạt ảnh HumanoidModel gốc (bước đi, vung tay đánh, cúi người) VÀ kích hoạt DeathBlessingPoseMixin cho các chiêu dài!
+        super.setupAnim(player, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+
+        if (type == null) type = DemonType.NOIR;
+
+        boolean isNoir = (type == DemonType.NOIR);
+        boolean isRouge = (type == DemonType.ROUGE);
+        boolean isBlanc = (type == DemonType.BLANC);
+        boolean isJaune = (type == DemonType.JAUNE);
+        boolean isViolet = (type == DemonType.VIOLET);
+        boolean isBleu = (type == DemonType.BLEU);
+        boolean isVert = (type == DemonType.VERT);
+
+        // Female silhouette active only for the 5 female demons
+        this.femaleBust.visible = type.isFemale();
+
+        // Noir
+        this.noirBangs.visible = isNoir;
+        this.noirTails.visible = isNoir;
+        this.noirSashKnot.visible = isNoir;
+        this.wings.visible = isWinged || isNoir;
+        this.noirClawsRight.visible = isNoir;
+        this.noirClawsLeft.visible = isNoir;
+
+        // Rouge
+        this.rougeHorns.visible = isRouge;
+        this.rougeMane.visible = isRouge;
+        this.rougeCollar.visible = isRouge;
+        this.rougeCloak.visible = isRouge;
+
+        // Blanc
+        this.blancLongHair.visible = isBlanc;
+        this.blancRibbon.visible = isBlanc;
+        this.blancCoat.visible = isBlanc;
+        this.blancPuffRight.visible = isBlanc;
+        this.blancPuffLeft.visible = isBlanc;
+
+        // Jaune
+        this.jauneBangs.visible = isJaune;
+        this.jauneTwintailLeft.visible = isJaune;
+        this.jauneTwintailRight.visible = isJaune;
+        this.jauneEpaulets.visible = isJaune;
+        this.jauneSkirt.visible = isJaune;
+
+        // Violet
+        this.violetBuns.visible = isViolet;
+        this.violetSkirt.visible = isViolet;
+        this.violetSleeveRight.visible = isViolet;
+        this.violetSleeveLeft.visible = isViolet;
+
+        // Bleu
+        this.bleuMaidBand.visible = isBleu;
+        this.bleuSkirt.visible = isBleu;
+        this.bleuFrillRight.visible = isBleu;
+        this.bleuFrillLeft.visible = isBleu;
+
+        // Vert
+        this.vertHair.visible = isVert;
+        this.vertMaidBand.visible = isVert;
+        this.vertSkirt.visible = isVert;
+
+        // --- ANIMATIONS ---
+        if (this.wings.visible) {
+            boolean isMovingInAir = player.isFallFlying() || !player.onGround();
+            float speed = isMovingInAir ? 0.30F : 0.16F;
+            float flap = Mth.sin(ageInTicks * speed) * (isMovingInAir ? 0.32F : 0.18F);
+            float flapZ = Mth.cos(ageInTicks * speed) * (isMovingInAir ? 0.18F : 0.08F);
+            this.leftWing.yRot = 0.32F + flap;
+            this.leftWing.zRot = 0.08F + flapZ;
+            this.rightWing.yRot = -0.32F - flap;
+            this.rightWing.zRot = -0.08F - flapZ;
+        }
+
+        if (isJaune) {
+            float sway = Mth.sin(limbSwing * 0.6662F) * 0.06F * limbSwingAmount;
+            this.jauneTwintailLeft.zRot = -0.04F - sway;
+            this.jauneTwintailRight.zRot = 0.04F + sway;
+            this.jauneSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+        if (isBlanc) {
+            this.blancLongHair.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+        if (isVert) {
+            this.vertHair.xRot = 0.06F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        }
+        if (isViolet) {
+            this.violetBuns.zRot = 0.05F + Mth.sin(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+        if (isNoir) {
+            this.noirTails.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.2F * limbSwingAmount;
+        } else if (isRouge) {
+            this.rougeCloak.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.2F * limbSwingAmount;
+            this.rougeMane.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        } else if (isBlanc) {
+            this.blancCoat.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        } else if (isBleu) {
+            this.bleuSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        } else if (isVert) {
+            this.vertSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        } else if (isViolet) {
+            this.violetSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
         }
     }
 }

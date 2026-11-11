@@ -2,6 +2,7 @@ package com.minhphuc.weapons.client.renderer;
 
 import com.minhphuc.weapons.client.ClientCinematicSkillHandler;
 import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility;
 import com.mojang.blaze3d.systems.RenderSystem;
 import com.mojang.blaze3d.vertex.BufferUploader;
 import com.mojang.blaze3d.vertex.DefaultVertexFormat;
@@ -114,6 +115,34 @@ public final class ClientCinematicSkillRenderer {
         activeSkills.clear();
     }
 
+    public static boolean isLookingAtDimensionalGate(net.minecraft.world.entity.player.Player player) {
+        if (player == null || activeSkills.isEmpty()) return false;
+        Vec3 eye = player.getEyePosition();
+        Vec3 look = player.getLookAngle().normalize();
+
+        for (ActiveSkillInstance instance : activeSkills.values()) {
+            if (instance.skillId() != SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY) continue;
+            if (instance.isExpired(0f)) continue;
+
+            Vec3 gateCenter = instance.center().add(0, 2.35, 0);
+            double dist = eye.distanceTo(gateCenter);
+            if (dist > 9.0) continue;
+            if (dist < 1.8) return true;
+
+            Vec3 toGate = gateCenter.subtract(eye);
+            double proj = toGate.dot(look);
+            if (proj < 0) continue;
+
+            Vec3 closest = eye.add(look.scale(proj));
+            double horizErr = Math.hypot(closest.x - gateCenter.x, closest.z - gateCenter.z);
+            double vertErr = Math.abs(closest.y - gateCenter.y);
+            if (horizErr <= 2.3 && vertErr <= 2.9) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static void render(PoseStack matrices, Camera camera, float tickDelta) {
         if (activeSkills.isEmpty()) return;
 
@@ -126,9 +155,30 @@ public final class ClientCinematicSkillRenderer {
         // Dọn dẹp các instance đã hết hạn
         activeSkills.entrySet().removeIf(entry -> entry.getValue().isExpired(tickDelta));
 
+        Vec3 camLook = mc.player != null ? mc.player.getViewVector(tickDelta) : null;
+
         for (ActiveSkillInstance instance : activeSkills.values()) {
             float age = instance.getAge(tickDelta);
             if (age < 0 || age >= instance.totalTicks()) continue;
+
+            double dx = instance.center().x - camPos.x;
+            double dy = instance.center().y - camPos.y;
+            double dz = instance.center().z - camPos.z;
+            double distSq = dx * dx + dy * dy + dz * dz;
+
+            // 1. Distance Culling: Bỏ qua nếu cách xa hơn 320m
+            if (distSq > 320.0 * 320.0) continue;
+
+            // 2. Camera Backface / Frustum Culling:
+            // Nếu người chơi nhìn hướng ngược lại hoàn toàn với chiêu thức
+            // và khoảng cách đủ xa (> 20m) để không rơi vào rìa màn hình
+            if (camLook != null && distSq > 400.0) {
+                double invDist = 1.0 / Math.sqrt(distSq);
+                double dot = (dx * camLook.x + dy * camLook.y + dz * camLook.z) * invDist;
+                if (dot < -0.38) {
+                    continue; // Culled! Bỏ qua lệnh vẽ, tiết kiệm GPU cực lớn!
+                }
+            }
 
             renderSingleSkill(matrices, camPos, instance, age);
         }
@@ -490,7 +540,7 @@ public final class ClientCinematicSkillRenderer {
 
 
     // =========================================================================
-    // 6. LONG TINH BỘC VIÊM BÁ (DRAGON NOVA - 32-SIDED GPU STARLIGHT DRAGON CANNON)
+    // 6. LONG TINH BỘC VIÊM BÁ (DRAGON NOVA - CHÙM PLASMA ĐỎ 3D CHUẨN LỜI CHÚC TỬ VONG)
     // =========================================================================
     private static void renderDragonNova(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
         float maxRange = 75.0f * skill.powerMultiplier();
@@ -498,89 +548,90 @@ public final class ClientCinematicSkillRenderer {
         if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
         Vec3 d = dir.normalize();
 
-        // GIAI ĐOẠN 1: TỤ NĂNG LƯỢNG LONG TINH (Ticks 0 -> 30)
+        // GIAI ĐOẠN 1: TỤ NĂNG LƯỢNG LONG TINH (Ticks 0 -> 30) - Tụ linh tử & khối cầu nén
         if (age < 30.0f) {
             float progress = age / 30.0f;
-            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-            Vec3 right = d.cross(up).normalize();
-            Vec3 upVec = d.cross(right).normalize();
-            Vec3 handPos = new Vec3(0, 1.2, 0).add(d.scale(0.85)).add(right.scale(0.35));
+            float coreR = 3.5f + (1.0f - progress) * 8.0f;
+            Vec3 chestPos = new Vec3(0, 1.2, 0).add(d.scale(1.5));
 
-            // Quả cầu ngưng tụ năng lượng Starlight trong lòng bàn tay vươn ra
-            float pulse = (float) Math.sin(age * 0.8f) * 0.05f;
-            float coreR = 0.35f + progress * 0.55f + pulse;
+            // Quả cầu ngưng tụ năng lượng Starlight rực lửa
+            billboardDisc(v, m, chestPos, coreR, 0xFF1744, 0.95f);
+            billboardDisc(v, m, chestPos, coreR * 0.65f, 0xFF3D00, 0.98f);
+            billboardDisc(v, m, chestPos, coreR * 0.35f, 0xFFFFFF, 1.0f);
 
-            // Các lớp cầu phát sáng linh tử tím & hồng neon
-            billboardDisc(v, m, handPos, coreR * 2.2f, 0x9400D3, progress * 0.70f); // Tím huyền ảo
-            billboardDisc(v, m, handPos, coreR * 1.5f, 0xFF0044, 0.85f);            // Đỏ tía Starlight
-            billboardDisc(v, m, handPos, coreR, 0xFF1493, 0.95f);                   // Hồng neon
-            billboardDisc(v, m, handPos, coreR * 0.45f, 0xFFFFFF, 1.0f);            // Lõi siêu nhiệt trắng
-
-            // Ma pháp trận lục lăng xoay quanh cổ tay / bàn tay nén năng lượng
-            renderHexagonRing(v, m, 1.2f, coreR * 1.6f, 0.22f, 0xFF1493, progress * 0.85f, age * 0.12f);
-            renderHexagonRing(v, m, 1.2f, coreR * 2.2f, 0.18f, 0x9400D3, progress * 0.75f, -age * 0.09f);
-
-            // Các vệt tia chớp linh tử mini hội tụ vào bàn tay
-            for (int s = 0; s < 4; s++) {
-                double a = s * Math.PI / 2.0 + age * 0.2;
-                double sparkDist = (1.0 - (age * 0.06) % 1.0) * 1.6;
-                Vec3 sparkPos = handPos.add(right.scale(Math.cos(a) * sparkDist)).add(upVec.scale(Math.sin(a) * sparkDist));
-                stroke(v, m, sparkPos, handPos, 0.12f, 0.9f, 0xE1BEE7);
-            }
-
-            // Thập tự quang mang rực sáng trước khi khai hỏa (ticks 24 -> 30)
-            if (age >= 24.0f) {
-                double flareLen = 1.2 + (age - 24.0) * 0.4;
-                stroke(v, m, handPos.add(right.scale(-flareLen)), handPos.add(right.scale(flareLen)), 0.15f, 0.98f, 0xFFFFFF);
-                stroke(v, m, handPos.add(upVec.scale(-flareLen)), handPos.add(upVec.scale(flareLen)), 0.15f, 0.98f, 0xFFFFFF);
-                stroke(v, m, handPos.add(right.scale(-flareLen * 0.7)), handPos.add(right.scale(flareLen * 0.7)), 0.25f, 0.85f, 0xFF1493);
-                stroke(v, m, handPos.add(upVec.scale(-flareLen * 0.7)), handPos.add(upVec.scale(flareLen * 0.7)), 0.25f, 0.85f, 0x9400D3);
-            }
+            // 3 Vành ma pháp trận xoay đa trục nén năng lượng
+            renderHexagonRing(v, m, 1.2f, coreR * 1.4f, 0.35f, 0xFF1744, progress * 0.85f, age * 0.08f);
+            renderHexagonRing(v, m, 1.2f, coreR * 1.8f, 0.25f, 0xFF3D00, progress * 0.75f, -age * 0.06f);
         }
-        // GIAI ĐOẠN 2: KHAI HỎA ĐẠI PHÁO LONG TINH 3D 75M (Ticks 30 -> 55) - LOẠI BỎ 100% CỘT VUÔNG
+        // GIAI ĐOẠN 2: KHAI HỎA CHÙM PLASMA ĐỎ 3D 75M CHUẨN LỜI CHÚC TỬ VONG (Ticks 30 -> 55)
         else if (age < 55.0f) {
             float beamAge = age - 30.0f;
             float beamFade = (beamAge < 20.0f) ? 1.0f : (float) Math.max(0.0, 1.0 - (beamAge - 20.0f) / 5.0f);
+            Vec3 origin = new Vec3(0, 1.2, 0);
+
             Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-            Vec3 right = d.cross(up).normalize();
-            Vec3 upVec = d.cross(right).normalize();
-            Vec3 origin = new Vec3(0, 1.2, 0).add(d.scale(0.85)).add(right.scale(0.35));
+            Vec3 u = d.cross(up).normalize();
+            Vec3 w = d.cross(u).normalize();
 
-            // 1. CỘT NĂNG LƯỢNG 32-SIDED SMOOTH GPU CYLINDER ĐA TẦNG DÀI 75M
-            // Lớp ngoài: Long Hỏa Đỏ Tía (Crimson Dragon Flame Aura - 6.5m)
-            beamCylinder(v, m, origin, d, maxRange, 6.5f, 0xFF0044, beamFade * 0.45f, age);
-            // Lớp giữa: Tinh Tố Hồng Neon (Neon Starlight Magenta Tube - 3.8m)
-            beamCylinder(v, m, origin, d, maxRange, 3.8f, 0xFF1493, beamFade * 0.75f, age + 2);
-            // Lớp lõi: Siêu Quang Tử Trắng Tinh Khiết (White Hot Laser Core - 1.5m)
-            beamCylinder(v, m, origin, d, maxRange, 1.5f, 0xFFFFFF, beamFade * 0.98f, age + 4);
+            // 1. CỘT PLASMA ĐỎ 3D ĐA TẦNG VOLUMETRIC CYLINDERS CHUẨN LỜI CHÚC TỬ VONG (48 radial slices x 12 segments)
+            // Lớp 1: Lõi Plasma Trắng Tinh Khiết Cực Sáng (White Hot Singularity Core - 1.4m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 1.4f, 0xFFFFFF, beamFade * 0.98f, age, 0.0f);
+            // Lớp 2: Thân Chùm Plasma Huyết Sắc Rực Cháy (Crimson Red Plasma - 3.2m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 3.2f, 0xFF1744, beamFade * 0.85f, age, 2.0f);
+            // Lớp 3: Lớp Plasma Nhiệt Hạch Long Hỏa (Solar Flame Shroud - 5.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 5.6f, 0xFF3D00, beamFade * 0.60f, age, 4.0f);
+            // Lớp 4: Quầng Năng Lượng Đỏ Thẫm Vực Thẳm (Deep Crimson Corona Aura - 8.5m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 8.5f, 0xB71C1C, beamFade * 0.35f, age, 6.0f);
+            // Lớp 5: Trường Lực Dragon Nova Khổng Lồ (Giant Outer Dragon Flare - 11.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 11.0f, 0x880015, beamFade * 0.18f, age, 8.0f);
 
-            // 2. XOẮN KÉP LINH TỬ DNA (TWIN STARLIGHT DNA HELIX) CHẠY DỌC THÂN PHÁO
-            int helixNodes = 36;
-            for (int h = 0; h < helixNodes - 1; h++) {
-                double dist1 = h * (maxRange / helixNodes);
-                double dist2 = (h + 1) * (maxRange / helixNodes);
-                double rot1 = dist1 * 0.35 + age * 0.25;
-                double rot2 = dist2 * 0.35 + age * 0.25;
-                float helixR = 4.8f;
-
-                // Dây xoắn 1
-                Vec3 p1A = origin.add(d.scale(dist1)).add(right.scale(Math.cos(rot1) * helixR)).add(upVec.scale(Math.sin(rot1) * helixR));
-                Vec3 p2A = origin.add(d.scale(dist2)).add(right.scale(Math.cos(rot2) * helixR)).add(upVec.scale(Math.sin(rot2) * helixR));
-                stroke(v, m, p1A, p2A, 0.32f, beamFade * 0.90f, 0xFFFFFF);
-
-                // Dây xoắn 2 (đối xứng 180 độ)
-                Vec3 p1B = origin.add(d.scale(dist1)).add(right.scale(-Math.cos(rot1) * helixR)).add(upVec.scale(-Math.sin(rot1) * helixR));
-                Vec3 p2B = origin.add(d.scale(dist2)).add(right.scale(-Math.cos(rot2) * helixR)).add(upVec.scale(-Math.sin(rot2) * helixR));
-                stroke(v, m, p1B, p2B, 0.32f, beamFade * 0.90f, 0xFF55DD);
+            // 2. 36 NHÁNH LÔI ĐIỆN XOẮN ỐC 3D XÉ RÁCH KHÔNG GIAN (SPIRALING FRACTAL LIGHTNING TENDRILS)
+            int numTendrils = 36;
+            int tendrilNodes = 14;
+            for (int i = 0; i < numTendrils; i++) {
+                double baseAngle = i * (Math.PI * 2.0 / numTendrils) + age * 0.08;
+                Vec3 last = null;
+                for (int j = 0; j <= tendrilNodes; j++) {
+                    double dist = j * (maxRange / (double) tendrilNodes);
+                    double angle = baseAngle + (j * 0.55);
+                    double jitter = Math.sin(i * 18.23 + j * 8.3 + age * 0.28) * 0.55;
+                    double r = 4.2 + (j % 3) * 1.5 + jitter;
+                    Vec3 curr = origin.add(d.scale(dist))
+                            .add(u.scale(Math.cos(angle) * r))
+                            .add(w.scale(Math.sin(angle) * r));
+                    if (last != null) {
+                        int tendrilCol = (i % 3 == 0) ? 0xFFFFFF : ((i % 3 == 1) ? 0xFFD600 : 0xFF1744);
+                        float strokeW = (i % 3 == 0) ? 0.22f : 0.16f;
+                        stroke(v, m, last, curr, strokeW, beamFade * (i % 2 == 0 ? 0.95f : 0.70f), tendrilCol);
+                    }
+                    last = curr;
+                }
             }
 
-            // 3. CÁC VÒNG SÓNG NỔ MACH RINGS PHÓNG DỌC ĐƯỜNG ĐẠN
-            for (int k = 1; k <= 5; k++) {
-                double machDist = ((beamAge * 4.0 + k * 14.0) % maxRange);
+            // 3. 8 VÒNG SÓNG NỔ MACH RINGS PHÓNG DỌC THÂN PHÁO
+            for (int k = 1; k <= 8; k++) {
+                double machDist = ((beamAge * 6.0 + k * 9.5) % maxRange);
                 Vec3 ringCenter = origin.add(d.scale(machDist));
-                billboardDisc(v, m, ringCenter, 7.5f, 0xFF0044, beamFade * 0.65f);
-                billboardDisc(v, m, ringCenter, 4.5f, 0xFFFFFF, beamFade * 0.85f);
+                float ringR = 5.2f + (float) (Math.sin(machDist * 0.25 + age * 0.2) * 1.8f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR, 0.40f, 0xFF1744, beamFade * 0.85f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR * 0.65f, 0.25f, 0xFFFFFF, beamFade * 0.95f);
             }
+
+            // 4. HỌNG PHÁO ĐẦU NÒNG KHAI HỎA (MUZZLE BLAST & RUNIC RINGS)
+            Vec3 muzzle1 = origin.add(d.scale(1.0));
+            Vec3 muzzle2 = origin.add(d.scale(2.2));
+            renderDirectionalRing(v, m, muzzle1, u, w, 8.5f, 0.55f, 0xFF1744, beamFade * 0.95f);
+            renderDirectionalRing(v, m, muzzle1, u, w, 5.5f, 0.38f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, muzzle2, u, w, 6.8f, 0.45f, 0xFF3D00, beamFade * 0.88f);
+            billboardDisc(v, m, muzzle1, 6.5f, 0xFF1744, beamFade * 0.90f);
+            billboardDisc(v, m, muzzle1, 3.5f, 0xFFFFFF, beamFade * 0.98f);
+
+            // 5. ĐIỂM VA CHẠM BÙNG NỔ TRỰC DIỆN (IMPACT CRATER BLAST)
+            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            billboardDisc(v, m, impactCenter, 14.0f, 0xFF1744, beamFade * 0.92f);
+            billboardDisc(v, m, impactCenter, 8.0f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 15.0f, 0.9f, 0xFF1744, beamFade * 0.85f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 10.0f, 0.6f, 0xFF3D00, beamFade * 0.90f);
         }
         // GIAI ĐOẠN 3: ĐẠI VỤ NỔ SIÊU TÂN TINH (Ticks 55 -> 75: CRATER SUPERNOVA EXPLOSION)
         else {
@@ -588,15 +639,31 @@ public final class ClientCinematicSkillRenderer {
             float progress = Math.min(1.0f, blastAge / 20.0f);
             float curR = 72.0f * progress;
             float fade = (float) Math.max(0.0, 1.0 - progress);
-            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-            Vec3 right = d.cross(up).normalize();
-            Vec3 origin = new Vec3(0, 1.2, 0).add(d.scale(0.85)).add(right.scale(0.35));
-            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            Vec3 impactCenter = new Vec3(0, 1.2, 0).add(d.scale(maxRange));
 
-            // Sóng nổ hình cầu đa tầng
-            ring(v, m, 1.5f, curR, 0.65f, 0xFF0044, fade * 0.95f);
-            ring(v, m, 2.5f, curR * 0.85f, 0.45f, 0xFF1493, fade * 0.85f);
-            ring(v, m, 3.5f, curR * 0.65f, 0.35f, 0xFFFFFF, fade * 0.95f);
+            // Sóng nổ hình cầu đa tầng bộc phát
+            ring(v, m, 1.5f, curR, 0.85f, 0xFF1744, fade * 0.95f);
+            ring(v, m, 1.5f, curR * 0.72f, 0.65f, 0xFF3D00, fade * 0.90f);
+            ring(v, m, 1.5f, curR * 0.45f, 0.45f, 0xFFFFFF, fade * 0.98f);
+
+            // Trụ plasma đỏ phụt ngược lên trời tại tâm vụ nổ
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 9.0f * (1.0f - progress * 0.5f), 120.0f, fade * 0.90f, 0xFF1744);
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 4.5f * (1.0f - progress * 0.5f), 140.0f, fade * 0.98f, 0xFFFFFF);
+
+            // 24 Nhánh sét nổ tung tại tâm vụ nổ
+            for (int l = 0; l < 24; l++) {
+                double baseA = l * Math.PI / 12.0 + age * 0.05;
+                Vec3 p0 = impactCenter.add(0, 1.5, 0);
+                for (int seg = 1; seg <= 5; seg++) {
+                    double dist = seg * (curR / 5.0);
+                    double jX = Math.sin(age * 0.9 + l * 4.0 + seg * 2.0) * 2.0;
+                    double jY = Math.abs(Math.cos(age * 0.7 + l * 3.0 + seg * 1.7) * 2.0);
+                    double jZ = Math.cos(age * 0.8 + l * 2.5 + seg * 2.2) * 2.0;
+                    Vec3 pNext = impactCenter.add(Math.cos(baseA) * dist + jX, 1.5 + jY, Math.sin(baseA) * dist + jZ);
+                    stroke(v, m, p0, pNext, 0.35f, fade * 0.92f, (l % 2 == 0 ? 0xFFFFFF : 0xFF1744));
+                    p0 = pNext;
+                }
+            }
         }
     }
 
@@ -1095,7 +1162,7 @@ public final class ClientCinematicSkillRenderer {
     }
 
     // =========================================================================
-    // 22. DỊ GIỚI THẦN MÔN (DIMENSIONAL SANCTUARY GATEWAY - 3D RUNIC CELESTIAL PORTAL)
+    // 22. DỊ GIỚI THẦN MÔN 2.0 (CHROMATIC NUMBERED STAR-GATE & HOWL'S COMPASS DIAL)
     // =========================================================================
     private static void renderDimensionalGate(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
         float fade = (age < skill.totalTicks() - 10) ? 1.0f : (float) Math.max(0.0, (skill.totalTicks() - age) / 10.0f);
@@ -1105,10 +1172,19 @@ public final class ClientCinematicSkillRenderer {
         Vec3 right = new Vec3(-forward.z, 0, forward.x).normalize();
         Vec3 up = new Vec3(0, 1, 0);
 
-        // Hiệu ứng mở cổng 1 lần trong 15 ticks đầu (Rift expanding)
-        float openProgress = Math.min(1.0f, age / 15.0f);
-        float gateW = 1.7f * openProgress; // Bán kính ngang 1.7m (Rộng 3.4m)
-        float gateH = 4.8f * openProgress; // Chiều cao 4.8m
+        // Giải mã Kênh La Bàn (0 -> 9) và trạng thái Xoay Kênh (isSwitchOnly = power >= 99.5)
+        int encoded = Math.round(skill.powerMultiplier());
+        boolean isSwitchOnly = skill.powerMultiplier() >= 99.5f;
+        int channel = Math.clamp(encoded % 100, 0, 9);
+
+        int primaryColor = DimensionalSanctuaryAbility.getChannelPrimaryColor(channel);
+        int secondaryColor = DimensionalSanctuaryAbility.getChannelSecondaryColor(channel);
+        int nebulaColor = DimensionalSanctuaryAbility.getChannelNebulaColor(channel);
+
+        // Hiệu ứng mở cổng 1 lần trong 15 ticks đầu (khi xoay kênh giữ nguyên kích thước 100%)
+        float openProgress = isSwitchOnly ? 1.0f : Math.min(1.0f, age / 15.0f);
+        float gateW = 1.7f * openProgress; // Rộng 3.4m
+        float gateH = 4.6f * openProgress; // Cao 4.6m
 
         Vec3 botCenter = new Vec3(0, 0.05, 0);
         Vec3 topCenter = botCenter.add(up.scale(gateH));
@@ -1118,37 +1194,188 @@ public final class ClientCinematicSkillRenderer {
         Vec3 topLeft = topCenter.add(right.scale(-gateW));
         Vec3 topRight = topCenter.add(right.scale(gateW));
 
-        // 1. Khung cổng cổ ngữ hoàng kim & lam ngọc (Gold & Cyan Portal Archway)
-        stroke(v, m, botLeft, topLeft, 0.18f, fade * 0.95f, 0xFFD700);
-        stroke(v, m, botRight, topRight, 0.18f, fade * 0.95f, 0xFFD700);
-        stroke(v, m, topLeft, topRight, 0.22f, fade * 0.95f, 0xFFD700);
-        stroke(v, m, botLeft, botRight, 0.14f, fade * 0.80f, 0x00E5FF);
+        // 1. Khung cổng ma thuật đổi màu theo Kênh La Bàn (0 -> 9)
+        portalStroke(v, m, botLeft, topLeft, forward, 0.16f, fade * 0.95f, secondaryColor);
+        portalStroke(v, m, botRight, topRight, forward, 0.16f, fade * 0.95f, secondaryColor);
+        portalStroke(v, m, botLeft, topLeft, forward, 0.07f, fade * 0.98f, 0xFFFFFF);
+        portalStroke(v, m, botRight, topRight, forward, 0.07f, fade * 0.98f, 0xFFFFFF);
 
-        // Đỉnh vòm cổng có hoa văn cổ ngữ Tensura
-        Vec3 apex = topCenter.add(up.scale(0.8 * openProgress));
-        stroke(v, m, topLeft, apex, 0.16f, fade * 0.90f, 0xFFEA00);
-        stroke(v, m, topRight, apex, 0.16f, fade * 0.90f, 0xFFEA00);
+        portalStroke(v, m, topLeft, topRight, forward, 0.18f, fade * 0.95f, secondaryColor);
+        portalStroke(v, m, botLeft, botRight, forward, 0.14f, fade * 0.85f, primaryColor);
 
-        // 2. Màng không gian dị giới phát quang huyền bí bên trong khung (Translucent Nebula Horizon)
-        int portalOpacity = Math.clamp(Math.round(fade * 170.0f * openProgress), 0, 255);
-        quad(v, m, botLeft, botRight, topRight, topLeft, 0x1A0033, portalOpacity); // Tím thẳm ngân hà
-        quad(v, m, topLeft, topRight, botRight, botLeft, 0x00E5FF, (int) (portalOpacity * 0.45f)); // Ánh xanh dị giới
+        // Vòm nhọn Gothic / Torii hội tụ lên La Bàn Đỉnh Cổng
+        Vec3 apex = topCenter.add(up.scale(0.85 * openProgress));
+        portalStroke(v, m, topLeft, apex, forward, 0.14f, fade * 0.92f, primaryColor);
+        portalStroke(v, m, topRight, apex, forward, 0.14f, fade * 0.92f, primaryColor);
 
-        // 3. Tinh tú lơ lửng trong lòng cổng (Constellation Stars)
+        // 2. Màng tinh vân không gian đa sắc bên trong lòng cổng (êm dịu, không nhấp nháy rối mắt)
+        int portalOpacity = Math.clamp(Math.round(fade * 175.0f * openProgress), 0, 255);
+        quad(v, m, botLeft, botRight, topRight, topLeft, nebulaColor, portalOpacity);
+        quad(v, m, topLeft, topRight, botRight, botLeft, primaryColor, (int) (portalOpacity * 0.42f));
+
+        // Viền nội khung mảnh tinh tế
+        float inW = gateW * 0.86f;
+        float inH = gateH * 0.92f;
+        Vec3 iBL = botCenter.add(up.scale(0.18 * openProgress)).add(right.scale(-inW));
+        Vec3 iBR = botCenter.add(up.scale(0.18 * openProgress)).add(right.scale(inW));
+        Vec3 iTL = botCenter.add(up.scale(inH)).add(right.scale(-inW));
+        Vec3 iTR = botCenter.add(up.scale(inH)).add(right.scale(inW));
+        portalStroke(v, m, iBL, iTL, forward, 0.045f, fade * 0.65f, primaryColor);
+        portalStroke(v, m, iBR, iTR, forward, 0.045f, fade * 0.65f, primaryColor);
+        portalStroke(v, m, iTL, iTR, forward, 0.045f, fade * 0.65f, primaryColor);
+
+        // 3. Tinh tú lơ lửng nhẹ nhàng trong lòng cổng
         for (int star = 0; star < 6; star++) {
-            float sx = (float) Math.sin(star * 1.7 + age * 0.03f) * (gateW * 0.75f);
-            float sy = 0.8f + (float) ((star * 0.7 + age * 0.04f) % (gateH * 0.85f));
+            float sx = (float) Math.sin(star * 1.7 + age * 0.025f) * (gateW * 0.72f);
+            float sy = 0.7f + (float) ((star * 0.72 + age * 0.03f) % Math.max(0.2f, gateH * 0.82f));
             Vec3 starPos = botCenter.add(right.scale(sx)).add(up.scale(sy));
-            billboardDisc(v, m, starPos, 0.28f, 0xFFFFFF, fade * 0.85f);
-            billboardDisc(v, m, starPos, 0.50f, 0x80D8FF, fade * 0.50f);
+            billboardDisc(v, m, starPos, 0.24f, 0xFFFFFF, fade * 0.85f);
+            billboardDisc(v, m, starPos, 0.46f, primaryColor, fade * 0.48f);
         }
 
-        // Làn sóng mở cổng bung 1 lần duy nhất lúc xuất hiện (age < 15)
-        if (age < 15.0f) {
-            float burstAlpha = (1.0f - age / 15.0f) * fade * 0.9f;
-            stroke(v, m, botLeft.add(forward.scale(0.1)), botRight.add(forward.scale(0.1)), 0.35f, burstAlpha, 0xFFFFFF);
-            stroke(v, m, topLeft.add(forward.scale(0.1)), topRight.add(forward.scale(0.1)), 0.35f, burstAlpha, 0xFFFFFF);
+        // 4. HUY HIỆU LA BÀN XOAY & CHỮ SỐ 3D PHÁT SÁNG (0 -> 9) TRÊN ĐỈNH VÒM CỔNG
+        if (openProgress > 0.35f) {
+            Vec3 medallionCenter = topCenter.add(up.scale(0.95 * openProgress));
+            float dialScale = openProgress;
+
+            // Vòng bát giác La Bàn xoay chậm quanh số hiệu cổng
+            float dialSpeed = (age < 15.0f) ? age * 0.28f : age * 0.025f;
+            renderPortalPolygonRing(v, m, medallionCenter, right, up, forward, 0.78f * dialScale, 8, dialSpeed, 0.065f, fade * 0.90f, secondaryColor);
+            renderPortalPolygonRing(v, m, medallionCenter, right, up, forward, 0.60f * dialScale, 4, -dialSpeed * 1.4f, 0.045f, fade * 0.75f, primaryColor);
+
+            // Tự động căn chiều trái-phải theo góc nhìn camera để chữ số 0..9 không bao giờ bị ngược dù đứng trước hay sau cổng!
+            Vec3 camPos = Minecraft.getInstance().gameRenderer.getMainCamera().getPosition();
+            Vec3 camToGate = skill.center().subtract(camPos);
+            Vec3 screenRight = camToGate.cross(up);
+            Vec3 digitRight = (right.dot(screenRight) >= 0) ? right : right.scale(-1.0);
+
+            renderPortalDigit3D(v, m, medallionCenter, digitRight, up, forward,
+                    channel, 0.28f * dialScale, 0.42f * dialScale, fade, primaryColor);
         }
+
+        // 5. Hiệu ứng Kim La Bàn xoay bung sóng 1 lần duy nhất (15 ticks) khi vừa mở cổng hoặc vừa đổi số!
+        if (age < 15.0f) {
+            float p = age / 15.0f;
+            float burstAlpha = (1.0f - p) * fade * 0.92f;
+            Vec3 portalMid = botCenter.add(up.scale(gateH * 0.5f));
+            renderPortalPolygonRing(v, m, portalMid, right, up, forward, 0.5f + p * 2.2f, 12, p * 1.8f, 0.11f, burstAlpha, primaryColor);
+            portalStroke(v, m, botLeft.add(forward.scale(0.08)), botRight.add(forward.scale(0.08)), forward, 0.25f, burstAlpha, 0xFFFFFF);
+        }
+    }
+
+    private static void portalStroke(VertexConsumer v, Matrix4f m, Vec3 a, Vec3 b, Vec3 faceNormal, float halfWidth, float alpha, int color) {
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        Vec3 dir = b.subtract(a);
+        if (dir.lengthSqr() < 1e-6) return;
+        Vec3 perp = dir.cross(faceNormal);
+        if (perp.lengthSqr() < 1e-6) {
+            perp = new Vec3(1, 0, 0);
+        } else {
+            perp = perp.normalize();
+        }
+        Vec3 offset = perp.scale(halfWidth);
+
+        energyVertex(v, m, a.subtract(offset), color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, a.add(offset), color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, b.add(offset), color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, b.subtract(offset), color, opacity, 0.875f, 0.5f);
+    }
+
+    private static void renderPortalPolygonRing(VertexConsumer v, Matrix4f m, Vec3 center, Vec3 right, Vec3 up, Vec3 normal,
+                                                float radius, int sides, float rot, float thickness, float alpha, int color) {
+        for (int i = 0; i < sides; i++) {
+            double a1 = i * Math.PI * 2.0 / sides + rot;
+            double a2 = (i + 1) * Math.PI * 2.0 / sides + rot;
+            Vec3 p1 = center.add(right.scale(Math.cos(a1) * radius)).add(up.scale(Math.sin(a1) * radius));
+            Vec3 p2 = center.add(right.scale(Math.cos(a2) * radius)).add(up.scale(Math.sin(a2) * radius));
+            portalStroke(v, m, p1, p2, normal, thickness, alpha, color);
+        }
+    }
+
+    private static void renderPortalDigit3D(VertexConsumer v, Matrix4f m, Vec3 center, Vec3 dRight, Vec3 dUp, Vec3 normal,
+                                            int digit, float halfW, float halfH, float fade, int glowColor) {
+        Vec3 tl = center.add(dRight.scale(-halfW)).add(dUp.scale(halfH));
+        Vec3 tr = center.add(dRight.scale(halfW)).add(dUp.scale(halfH));
+        Vec3 ml = center.add(dRight.scale(-halfW));
+        Vec3 mr = center.add(dRight.scale(halfW));
+        Vec3 bl = center.add(dRight.scale(-halfW)).add(dUp.scale(-halfH));
+        Vec3 br = center.add(dRight.scale(halfW)).add(dUp.scale(-halfH));
+
+        switch (Math.clamp(digit, 0, 9)) {
+            case 0 -> {
+                digitSeg(v, m, tl, tr, normal, fade, glowColor);
+                digitSeg(v, m, tr, br, normal, fade, glowColor);
+                digitSeg(v, m, br, bl, normal, fade, glowColor);
+                digitSeg(v, m, bl, tl, normal, fade, glowColor);
+            }
+            case 1 -> {
+                Vec3 tc = center.add(dUp.scale(halfH));
+                Vec3 bc = center.add(dUp.scale(-halfH));
+                Vec3 flag = center.add(dRight.scale(-halfW * 0.55)).add(dUp.scale(halfH * 0.55));
+                Vec3 baseL = center.add(dRight.scale(-halfW * 0.65)).add(dUp.scale(-halfH));
+                Vec3 baseR = center.add(dRight.scale(halfW * 0.65)).add(dUp.scale(-halfH));
+                digitSeg(v, m, flag, tc, normal, fade, glowColor);
+                digitSeg(v, m, tc, bc, normal, fade, glowColor);
+                digitSeg(v, m, baseL, baseR, normal, fade, glowColor);
+            }
+            case 2 -> {
+                digitSeg(v, m, tl, tr, normal, fade, glowColor);
+                digitSeg(v, m, tr, mr, normal, fade, glowColor);
+                digitSeg(v, m, mr, ml, normal, fade, glowColor);
+                digitSeg(v, m, ml, bl, normal, fade, glowColor);
+                digitSeg(v, m, bl, br, normal, fade, glowColor);
+            }
+            case 3 -> {
+                digitSeg(v, m, tl, tr, normal, fade, glowColor);
+                digitSeg(v, m, tr, mr, normal, fade, glowColor);
+                digitSeg(v, m, ml, mr, normal, fade, glowColor);
+                digitSeg(v, m, mr, br, normal, fade, glowColor);
+                digitSeg(v, m, bl, br, normal, fade, glowColor);
+            }
+            case 4 -> {
+                digitSeg(v, m, tl, ml, normal, fade, glowColor);
+                digitSeg(v, m, ml, mr, normal, fade, glowColor);
+                digitSeg(v, m, tr, br, normal, fade, glowColor);
+            }
+            case 5 -> {
+                digitSeg(v, m, tr, tl, normal, fade, glowColor);
+                digitSeg(v, m, tl, ml, normal, fade, glowColor);
+                digitSeg(v, m, ml, mr, normal, fade, glowColor);
+                digitSeg(v, m, mr, br, normal, fade, glowColor);
+                digitSeg(v, m, br, bl, normal, fade, glowColor);
+            }
+            case 6 -> {
+                digitSeg(v, m, tr, tl, normal, fade, glowColor);
+                digitSeg(v, m, tl, bl, normal, fade, glowColor);
+                digitSeg(v, m, bl, br, normal, fade, glowColor);
+                digitSeg(v, m, br, mr, normal, fade, glowColor);
+                digitSeg(v, m, mr, ml, normal, fade, glowColor);
+            }
+            case 7 -> {
+                Vec3 foot = center.add(dRight.scale(-halfW * 0.25)).add(dUp.scale(-halfH));
+                digitSeg(v, m, tl, tr, normal, fade, glowColor);
+                digitSeg(v, m, tr, foot, normal, fade, glowColor);
+            }
+            case 8 -> {
+                digitSeg(v, m, tl, tr, normal, fade, glowColor);
+                digitSeg(v, m, bl, br, normal, fade, glowColor);
+                digitSeg(v, m, ml, mr, normal, fade, glowColor);
+                digitSeg(v, m, tl, bl, normal, fade, glowColor);
+                digitSeg(v, m, tr, br, normal, fade, glowColor);
+            }
+            case 9 -> {
+                digitSeg(v, m, bl, br, normal, fade, glowColor);
+                digitSeg(v, m, br, tr, normal, fade, glowColor);
+                digitSeg(v, m, tr, tl, normal, fade, glowColor);
+                digitSeg(v, m, tl, ml, normal, fade, glowColor);
+                digitSeg(v, m, ml, mr, normal, fade, glowColor);
+            }
+        }
+    }
+
+    private static void digitSeg(VertexConsumer v, Matrix4f m, Vec3 a, Vec3 b, Vec3 normal, float fade, int glowColor) {
+        portalStroke(v, m, a, b, normal, 0.095f, fade * 0.85f, glowColor);
+        portalStroke(v, m, a, b, normal, 0.042f, fade * 0.98f, 0xFFFFFF);
     }
 
     // =========================================================================
@@ -1335,6 +1562,102 @@ public final class ClientCinematicSkillRenderer {
     // TIỆN ÍCH HÌNH HỌC GPU (GPU GEOMETRY PRIMITIVES)
     // =========================================================================
 
+    private static void renderDirectionalRing(VertexConsumer v, Matrix4f m, Vec3 center, Vec3 u, Vec3 w, float radius, float width, int color, float alpha) {
+        if (radius <= 0 || alpha <= 0.001f) return;
+        int segs = 32;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+
+        double cx = center.x, cy = center.y, cz = center.z;
+        double ux = u.x, uy = u.y, uz = u.z;
+        double wx = w.x, wy = w.y, wz = w.z;
+
+        float rInner = radius - width;
+        float rOuter = radius + width;
+
+        for (int i = 0; i < segs; i++) {
+            double a1 = i * Math.PI * 2.0 / segs;
+            double a2 = (i + 1) * Math.PI * 2.0 / segs;
+
+            double cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+            double cos2 = Math.cos(a2), sin2 = Math.sin(a2);
+
+            float x1 = (float) (cx + ux * (cos1 * rInner) + wx * (sin1 * rInner));
+            float y1 = (float) (cy + uy * (cos1 * rInner) + wy * (sin1 * rInner));
+            float z1 = (float) (cz + uz * (cos1 * rInner) + wz * (sin1 * rInner));
+
+            float x2 = (float) (cx + ux * (cos1 * rOuter) + wx * (sin1 * rOuter));
+            float y2 = (float) (cy + uy * (cos1 * rOuter) + wy * (sin1 * rOuter));
+            float z2 = (float) (cz + uz * (cos1 * rOuter) + wz * (sin1 * rOuter));
+
+            float x3 = (float) (cx + ux * (cos2 * rOuter) + wx * (sin2 * rOuter));
+            float y3 = (float) (cy + uy * (cos2 * rOuter) + wy * (sin2 * rOuter));
+            float z3 = (float) (cz + uz * (cos2 * rOuter) + wz * (sin2 * rOuter));
+
+            float x4 = (float) (cx + ux * (cos2 * rInner) + wx * (sin2 * rInner));
+            float y4 = (float) (cy + uy * (cos2 * rInner) + wy * (sin2 * rInner));
+            float z4 = (float) (cz + uz * (cos2 * rInner) + wz * (sin2 * rInner));
+
+            quad(v, m, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, color, opacity);
+        }
+    }
+
+    private static void renderDirectionalPlasmaCylinder(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 dir,
+                                                        float length, float radius, int color, float alpha,
+                                                        float age, float seed) {
+        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        Vec3 d = dir.normalize();
+        Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+        Vec3 u = d.cross(up).normalize();
+        Vec3 w = d.cross(u).normalize();
+
+        int slices = 32;
+        int segments = 8;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+
+        double sx = start.x, sy = start.y, sz = start.z;
+        double dx = d.x, dy = d.y, dz = d.z;
+        double ux = u.x, uy = u.y, uz = u.z;
+        double wx = w.x, wy = w.y, wz = w.z;
+
+        for (int j = 0; j < segments; j++) {
+            double dist1 = j * (length / (double) segments);
+            double dist2 = (j + 1) * (length / (double) segments);
+            double c1x = sx + dx * dist1, c1y = sy + dy * dist1, c1z = sz + dz * dist1;
+            double c2x = sx + dx * dist2, c2y = sy + dy * dist2, c2z = sz + dz * dist2;
+
+            for (int i = 0; i < slices; i++) {
+                double a1 = i * Math.PI * 2.0 / slices;
+                double a2 = (i + 1) * Math.PI * 2.0 / slices;
+
+                double pulse1 = radius * (0.94 + 0.06 * Math.sin(i * 2.7 + j * 1.8 + age * 0.25 + seed));
+                double pulse2 = radius * (0.94 + 0.06 * Math.sin((i + 1) * 2.7 + j * 1.8 + age * 0.25 + seed));
+                double pulse3 = radius * (0.94 + 0.06 * Math.sin((i + 1) * 2.7 + (j + 1) * 1.8 + age * 0.25 + seed));
+                double pulse4 = radius * (0.94 + 0.06 * Math.sin(i * 2.7 + (j + 1) * 1.8 + age * 0.25 + seed));
+
+                double cos1 = Math.cos(a1), sin1 = Math.sin(a1);
+                double cos2 = Math.cos(a2), sin2 = Math.sin(a2);
+
+                float x1 = (float) (c1x + ux * (cos1 * pulse1) + wx * (sin1 * pulse1));
+                float y1 = (float) (c1y + uy * (cos1 * pulse1) + wy * (sin1 * pulse1));
+                float z1 = (float) (c1z + uz * (cos1 * pulse1) + wz * (sin1 * pulse1));
+
+                float x2 = (float) (c1x + ux * (cos2 * pulse2) + wx * (sin2 * pulse2));
+                float y2 = (float) (c1y + uy * (cos2 * pulse2) + wy * (sin2 * pulse2));
+                float z2 = (float) (c1z + uz * (cos2 * pulse2) + wz * (sin2 * pulse2));
+
+                float x3 = (float) (c2x + ux * (cos2 * pulse3) + wx * (sin2 * pulse3));
+                float y3 = (float) (c2y + uy * (cos2 * pulse3) + wy * (sin2 * pulse3));
+                float z3 = (float) (c2z + uz * (cos2 * pulse3) + wz * (sin2 * pulse3));
+
+                float x4 = (float) (c2x + ux * (cos1 * pulse4) + wx * (sin1 * pulse4));
+                float y4 = (float) (c2y + uy * (cos1 * pulse4) + wy * (sin1 * pulse4));
+                float z4 = (float) (c2z + uz * (cos1 * pulse4) + wz * (sin1 * pulse4));
+
+                quad(v, m, x1, y1, z1, x2, y2, z2, x3, y3, z3, x4, y4, z4, color, opacity);
+            }
+        }
+    }
+
     private static void beamCylinder(VertexConsumer v, Matrix4f m, Vec3 start, Vec3 dir, float length, float radius, int color, float alpha, float uvOffset) {
         if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
         Vec3 d = dir.normalize();
@@ -1344,60 +1667,64 @@ public final class ClientCinematicSkillRenderer {
 
         int segs = 32;
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
-        Vec3 end = start.add(d.scale(length));
+
+        double sx = start.x, sy = start.y, sz = start.z;
+        double ex = sx + d.x * length, ey = sy + d.y * length, ez = sz + d.z * length;
+        double ux = u.x, uy = u.y, uz = u.z;
+        double wx = w.x, wy = w.y, wz = w.z;
 
         for (int i = 0; i < segs; i++) {
             double a1 = i * Math.PI * 2.0 / segs;
             double a2 = (i + 1) * Math.PI * 2.0 / segs;
 
-            Vec3 r1 = u.scale(Math.cos(a1) * radius).add(w.scale(Math.sin(a1) * radius));
-            Vec3 r2 = u.scale(Math.cos(a2) * radius).add(w.scale(Math.sin(a2) * radius));
+            double cos1 = Math.cos(a1) * radius, sin1 = Math.sin(a1) * radius;
+            double cos2 = Math.cos(a2) * radius, sin2 = Math.sin(a2) * radius;
 
-            Vec3 p1 = start.add(r1);
-            Vec3 p2 = start.add(r2);
-            Vec3 p3 = end.add(r2);
-            Vec3 p4 = end.add(r1);
+            float r1x = (float) (ux * cos1 + wx * sin1);
+            float r1y = (float) (uy * cos1 + wy * sin1);
+            float r1z = (float) (uz * cos1 + wz * sin1);
 
-            energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+            float r2x = (float) (ux * cos2 + wx * sin2);
+            float r2y = (float) (uy * cos2 + wy * sin2);
+            float r2z = (float) (uz * cos2 + wz * sin2);
+
+            energyVertex(v, m, (float) sx + r1x, (float) sy + r1y, (float) sz + r1z, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, (float) sx + r2x, (float) sy + r2y, (float) sz + r2z, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, (float) ex + r2x, (float) ey + r2y, (float) ez + r2z, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, (float) ex + r1x, (float) ey + r1y, (float) ez + r1z, color, opacity, 0.875f, 0.5f);
         }
     }
 
     private static void renderCubeMesh(VertexConsumer v, Matrix4f m, Vec3 center, float halfSize, int color, float alpha) {
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
         float s = halfSize;
-        Vec3 c = center;
+        float cx = (float) center.x, cy = (float) center.y, cz = (float) center.z;
 
-        Vec3 p000 = c.add(-s, -s, -s);
-        Vec3 p100 = c.add( s, -s, -s);
-        Vec3 p110 = c.add( s,  s, -s);
-        Vec3 p010 = c.add(-s,  s, -s);
-        Vec3 p001 = c.add(-s, -s,  s);
-        Vec3 p101 = c.add( s, -s,  s);
-        Vec3 p111 = c.add( s,  s,  s);
-        Vec3 p011 = c.add(-s,  s,  s);
+        float x0 = cx - s, x1 = cx + s;
+        float y0 = cy - s, y1 = cy + s;
+        float z0 = cz - s, z1 = cz + s;
 
-        quad(v, m, p000, p100, p110, p010, color, opacity);
-        quad(v, m, p101, p001, p011, p111, color, opacity);
-        quad(v, m, p001, p000, p010, p011, color, opacity);
-        quad(v, m, p100, p101, p111, p110, color, opacity);
-        quad(v, m, p010, p110, p111, p011, color, opacity);
-        quad(v, m, p000, p001, p101, p100, color, opacity);
+        quad(v, m, x0, y0, z0, x1, y0, z0, x1, y1, z0, x0, y1, z0, color, opacity);
+        quad(v, m, x1, y0, z1, x0, y0, z1, x0, y1, z1, x1, y1, z1, color, opacity);
+        quad(v, m, x0, y0, z1, x0, y0, z0, x0, y1, z0, x0, y1, z1, color, opacity);
+        quad(v, m, x1, y0, z0, x1, y0, z1, x1, y1, z1, x1, y1, z0, color, opacity);
+        quad(v, m, x0, y1, z0, x1, y1, z0, x1, y1, z1, x0, y1, z1, color, opacity);
+        quad(v, m, x0, y0, z0, x0, y0, z1, x1, y0, z1, x1, y0, z0, color, opacity);
     }
 
     private static void renderGeodesicDome(VertexConsumer v, Matrix4f m, Vec3 center, float radius, int color, float alpha, float rot) {
         int rings = 6;
         int sectors = 12;
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        int quadOpacity = (int) (opacity * 0.45f);
+        float cx = (float) center.x, cy = (float) center.y, cz = (float) center.z;
 
         for (int r = 0; r < rings; r++) {
             double phi1 = (r * Math.PI * 0.5) / rings;
             double phi2 = ((r + 1) * Math.PI * 0.5) / rings;
 
-            float y1 = (float) (Math.sin(phi1) * radius);
-            float y2 = (float) (Math.sin(phi2) * radius);
+            float y1 = cy + (float) (Math.sin(phi1) * radius);
+            float y2 = cy + (float) (Math.sin(phi2) * radius);
             float rad1 = (float) (Math.cos(phi1) * radius);
             float rad2 = (float) (Math.cos(phi2) * radius);
 
@@ -1405,45 +1732,64 @@ public final class ClientCinematicSkillRenderer {
                 double theta1 = s * Math.PI * 2.0 / sectors + rot;
                 double theta2 = (s + 1) * Math.PI * 2.0 / sectors + rot;
 
-                Vec3 p1 = center.add(Math.cos(theta1) * rad1, y1, Math.sin(theta1) * rad1);
-                Vec3 p2 = center.add(Math.cos(theta2) * rad1, y1, Math.sin(theta2) * rad1);
-                Vec3 p3 = center.add(Math.cos(theta2) * rad2, y2, Math.sin(theta2) * rad2);
-                Vec3 p4 = center.add(Math.cos(theta1) * rad2, y2, Math.sin(theta1) * rad2);
+                float x1 = cx + (float) (Math.cos(theta1) * rad1);
+                float z1 = cz + (float) (Math.sin(theta1) * rad1);
 
-                quad(v, m, p1, p2, p3, p4, color, (int) (opacity * 0.45f));
-                stroke(v, m, p1, p2, 0.12f, alpha * 0.95f, color);
-                stroke(v, m, p2, p3, 0.12f, alpha * 0.95f, color);
-                stroke(v, m, p3, p4, 0.12f, alpha * 0.95f, color);
-                stroke(v, m, p4, p1, 0.12f, alpha * 0.95f, color);
+                float x2 = cx + (float) (Math.cos(theta2) * rad1);
+                float z2 = cz + (float) (Math.sin(theta2) * rad1);
+
+                float x3 = cx + (float) (Math.cos(theta2) * rad2);
+                float z3 = cz + (float) (Math.sin(theta2) * rad2);
+
+                float x4 = cx + (float) (Math.cos(theta1) * rad2);
+                float z4 = cz + (float) (Math.sin(theta1) * rad2);
+
+                quad(v, m, x1, y1, z1, x2, y1, z2, x3, y2, z3, x4, y2, z4, color, quadOpacity);
+                stroke(v, m, x1, y1, z1, x2, y1, z2, 0.12f, alpha * 0.95f, color);
+                stroke(v, m, x2, y1, z2, x3, y2, z3, 0.12f, alpha * 0.95f, color);
+                stroke(v, m, x3, y2, z3, x4, y2, z4, 0.12f, alpha * 0.95f, color);
+                stroke(v, m, x4, y2, z4, x1, y1, z1, 0.12f, alpha * 0.95f, color);
             }
         }
     }
 
-
+    private static void quad(VertexConsumer v, Matrix4f m, float x1, float y1, float z1,
+                             float x2, float y2, float z2,
+                             float x3, float y3, float z3,
+                             float x4, float y4, float z4,
+                             int color, int opacity) {
+        energyVertex(v, m, x1, y1, z1, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, x2, y2, z2, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, x3, y3, z3, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, x4, y4, z4, color, opacity, 0.875f, 0.5f);
+    }
 
     private static void quad(VertexConsumer v, Matrix4f m, Vec3 p1, Vec3 p2, Vec3 p3, Vec3 p4, int color, int opacity) {
-        energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, (float) p1.x, (float) p1.y, (float) p1.z, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, (float) p2.x, (float) p2.y, (float) p2.z, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, (float) p3.x, (float) p3.y, (float) p3.z, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, (float) p4.x, (float) p4.y, (float) p4.z, color, opacity, 0.875f, 0.5f);
     }
 
     private static void cylinder(VertexConsumer v, Matrix4f m, float r, float h, float alpha, int color, float age) {
-        int segs = 32;
+        cylinder(v, m, r, h, alpha, color, age, 32);
+    }
+
+    private static void cylinder(VertexConsumer v, Matrix4f m, float r, float h, float alpha, int color, float age, int segs) {
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
         for (int i = 0; i < segs; i++) {
             double a1 = i * Math.PI * 2.0 / segs;
             double a2 = (i + 1) * Math.PI * 2.0 / segs;
 
-            Vec3 p1 = new Vec3(Math.cos(a1) * r, 0, Math.sin(a1) * r);
-            Vec3 p2 = new Vec3(Math.cos(a2) * r, 0, Math.sin(a2) * r);
-            Vec3 p3 = new Vec3(Math.cos(a2) * r, h, Math.sin(a2) * r);
-            Vec3 p4 = new Vec3(Math.cos(a1) * r, h, Math.sin(a1) * r);
+            float x1 = (float) (Math.cos(a1) * r);
+            float z1 = (float) (Math.sin(a1) * r);
+            float x2 = (float) (Math.cos(a2) * r);
+            float z2 = (float) (Math.sin(a2) * r);
 
-            energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x1, 0, z1, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x2, 0, z2, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x2, h, z2, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x1, h, z1, color, opacity, 0.875f, 0.5f);
         }
     }
 
@@ -1454,84 +1800,108 @@ public final class ClientCinematicSkillRenderer {
             double a1 = i * Math.PI * 2.0 / segs;
             double a2 = (i + 1) * Math.PI * 2.0 / segs;
 
-            Vec3 p1 = new Vec3(ox + Math.cos(a1) * r, 0, oz + Math.sin(a1) * r);
-            Vec3 p2 = new Vec3(ox + Math.cos(a2) * r, 0, oz + Math.sin(a2) * r);
-            Vec3 p3 = new Vec3(ox + Math.cos(a2) * r, h, oz + Math.sin(a2) * r);
-            Vec3 p4 = new Vec3(ox + Math.cos(a1) * r, h, oz + Math.sin(a1) * r);
+            float x1 = (float) (ox + Math.cos(a1) * r);
+            float z1 = (float) (oz + Math.sin(a1) * r);
+            float x2 = (float) (ox + Math.cos(a2) * r);
+            float z2 = (float) (oz + Math.sin(a2) * r);
 
-            energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x1, 0, z1, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x2, 0, z2, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x2, h, z2, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, x1, h, z1, color, opacity, 0.875f, 0.5f);
         }
     }
 
     private static void renderHexagonRing(VertexConsumer v, Matrix4f m, float y, float radius, float width, int color, float alpha, float rot) {
         int sides = 6;
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float rInner = radius - width;
+        float rOuter = radius + width;
         for (int i = 0; i < sides; i++) {
             double a1 = i * Math.PI * 2.0 / sides + rot;
             double a2 = (i + 1) * Math.PI * 2.0 / sides + rot;
 
-            Vec3 p1 = new Vec3(Math.cos(a1) * (radius - width), y, Math.sin(a1) * (radius - width));
-            Vec3 p2 = new Vec3(Math.cos(a1) * (radius + width), y, Math.sin(a1) * (radius + width));
-            Vec3 p3 = new Vec3(Math.cos(a2) * (radius + width), y, Math.sin(a2) * (radius + width));
-            Vec3 p4 = new Vec3(Math.cos(a2) * (radius - width), y, Math.sin(a2) * (radius - width));
+            float cos1 = (float) Math.cos(a1);
+            float sin1 = (float) Math.sin(a1);
+            float cos2 = (float) Math.cos(a2);
+            float sin2 = (float) Math.sin(a2);
 
-            energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos1 * rInner, y, sin1 * rInner, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos1 * rOuter, y, sin1 * rOuter, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos2 * rOuter, y, sin2 * rOuter, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos2 * rInner, y, sin2 * rInner, color, opacity, 0.875f, 0.5f);
         }
     }
 
     private static void ring(VertexConsumer v, Matrix4f m, float y, float radius, float width, int color, float alpha) {
         int segs = 36;
         int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float rInner = radius - width;
+        float rOuter = radius + width;
         for (int i = 0; i < segs; i++) {
             double a1 = i * Math.PI * 2.0 / segs;
             double a2 = (i + 1) * Math.PI * 2.0 / segs;
 
-            Vec3 p1 = new Vec3(Math.cos(a1) * (radius - width), y, Math.sin(a1) * (radius - width));
-            Vec3 p2 = new Vec3(Math.cos(a1) * (radius + width), y, Math.sin(a1) * (radius + width));
-            Vec3 p3 = new Vec3(Math.cos(a2) * (radius + width), y, Math.sin(a2) * (radius + width));
-            Vec3 p4 = new Vec3(Math.cos(a2) * (radius - width), y, Math.sin(a2) * (radius - width));
+            float cos1 = (float) Math.cos(a1);
+            float sin1 = (float) Math.sin(a1);
+            float cos2 = (float) Math.cos(a2);
+            float sin2 = (float) Math.sin(a2);
 
-            energyVertex(v, m, p1, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p2, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p3, color, opacity, 0.875f, 0.5f);
-            energyVertex(v, m, p4, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos1 * rInner, y, sin1 * rInner, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos1 * rOuter, y, sin1 * rOuter, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos2 * rOuter, y, sin2 * rOuter, color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, cos2 * rInner, y, sin2 * rInner, color, opacity, 0.875f, 0.5f);
         }
     }
 
     private static void stroke(VertexConsumer v, Matrix4f m, Vec3 a, Vec3 b, float width, float alpha, int color) {
-        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
-        Vec3 dir = b.subtract(a).normalize();
-        Vec3 right = dir.cross(new Vec3(0, 1, 0)).normalize().scale(width);
-        if (right.lengthSqr() < 0.001) right = new Vec3(width, 0, 0);
+        stroke(v, m, (float) a.x, (float) a.y, (float) a.z, (float) b.x, (float) b.y, (float) b.z, width, alpha, color);
+    }
 
-        energyVertex(v, m, a.subtract(right), color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, a.add(right), color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, b.add(right), color, opacity, 0.875f, 0.5f);
-        energyVertex(v, m, b.subtract(right), color, opacity, 0.875f, 0.5f);
+    private static void stroke(VertexConsumer v, Matrix4f m, float ax, float ay, float az,
+                               float bx, float by, float bz, float width, float alpha, int color) {
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float dx = bx - ax, dy = by - ay, dz = bz - az;
+        float lenSq = dx * dx + dy * dy + dz * dz;
+        if (lenSq < 1e-6f) return;
+        float invLen = (float) (1.0 / Math.sqrt(lenSq));
+        float ndx = dx * invLen, ndy = dy * invLen, ndz = dz * invLen;
+
+        float rx = -ndz, ry = 0, rz = ndx;
+        float rLenSq = rx * rx + rz * rz;
+        if (rLenSq < 1e-6f) {
+            rx = width; ry = 0; rz = 0;
+        } else {
+            float invRLen = (float) (width / Math.sqrt(rLenSq));
+            rx *= invRLen;
+            rz *= invRLen;
+        }
+
+        energyVertex(v, m, ax - rx, ay, az - rz, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, ax + rx, ay, az + rz, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, bx + rx, by, bz + rz, color, opacity, 0.875f, 0.5f);
+        energyVertex(v, m, bx - rx, by, bz - rz, color, opacity, 0.875f, 0.5f);
     }
 
     private static void billboardDisc(VertexConsumer v, Matrix4f m, Vec3 center, float size, int color, float alpha) {
-        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
-        Vec3 a = center.add(-size, -size, 0);
-        Vec3 b = center.add(size, -size, 0);
-        Vec3 c = center.add(size, size, 0);
-        Vec3 d = center.add(-size, size, 0);
+        billboardDisc(v, m, (float) center.x, (float) center.y, (float) center.z, size, color, alpha);
+    }
 
-        energyVertex(v, m, a, color, opacity, 0.0078125f, 0.984375f);
-        energyVertex(v, m, b, color, opacity, 0.4921875f, 0.984375f);
-        energyVertex(v, m, c, color, opacity, 0.4921875f, 0.015625f);
-        energyVertex(v, m, d, color, opacity, 0.0078125f, 0.015625f);
+    private static void billboardDisc(VertexConsumer v, Matrix4f m, float cx, float cy, float cz, float size, int color, float alpha) {
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        energyVertex(v, m, cx - size, cy - size, cz, color, opacity, 0.0078125f, 0.984375f);
+        energyVertex(v, m, cx + size, cy - size, cz, color, opacity, 0.4921875f, 0.984375f);
+        energyVertex(v, m, cx + size, cy + size, cz, color, opacity, 0.4921875f, 0.015625f);
+        energyVertex(v, m, cx - size, cy + size, cz, color, opacity, 0.0078125f, 0.015625f);
+    }
+
+    private static void energyVertex(VertexConsumer v, Matrix4f m, float x, float y, float z, int color, int opacity, float u, float texV) {
+        v.addVertex(m, x, y, z)
+                .setColor((color >> 16) & 255, (color >> 8) & 255, color & 255, opacity)
+                .setUv(u, texV);
     }
 
     private static void energyVertex(VertexConsumer v, Matrix4f m, Vec3 p, int color, int opacity, float u, float texV) {
-        v.addVertex(m, (float) p.x, (float) p.y, (float) p.z)
-                .setColor((color >> 16) & 255, (color >> 8) & 255, color & 255, opacity)
-                .setUv(u, texV);
+        energyVertex(v, m, (float) p.x, (float) p.y, (float) p.z, color, opacity, u, texV);
     }
 }

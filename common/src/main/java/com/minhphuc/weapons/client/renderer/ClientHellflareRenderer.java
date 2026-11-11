@@ -143,7 +143,18 @@ public final class ClientHellflareRenderer {
                     }
                 }
 
-                if (camPos.distanceToSqr(inst.targetPos) > 320 * 320) continue;
+                double distSq = camPos.distanceToSqr(inst.targetPos);
+                if (distSq > 320 * 320) continue;
+
+                // Backface / Frustum culling nếu quay lưng lại hoàn toàn
+                if (mc.player != null && distSq > 400.0) {
+                    Vec3 camLook = mc.player.getViewVector(delta);
+                    double dx = inst.targetPos.x - camPos.x;
+                    double dy = inst.targetPos.y - camPos.y;
+                    double dz = inst.targetPos.z - camPos.z;
+                    double dot = (dx * camLook.x + dy * camLook.y + dz * camLook.z) / Math.sqrt(distSq);
+                    if (dot < -0.38) continue;
+                }
 
                 renderDarkFlameInstance(matrices, camPos, inst, age, delta, gameTime);
             }

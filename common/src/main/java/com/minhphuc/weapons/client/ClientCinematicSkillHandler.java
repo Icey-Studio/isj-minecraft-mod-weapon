@@ -305,92 +305,84 @@ public final class ClientCinematicSkillHandler {
     }
 
     // =========================================================================
-    // 6. LONG TINH BỘC VIÊM BÁ (DRAGON NOVA - DYNAMIC CLOSE-UP & OVER-THE-SHOULDER)
+    // 6. LONG TINH BỘC VIÊM BÁ (DRAGON NOVA - CLOSE-UP HERO CHARGE TO HIGH-ALTITUDE PANORAMA)
     // =========================================================================
     private static Pose getDragonNovaPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
+        Minecraft mc = Minecraft.getInstance();
+        net.minecraft.world.entity.Entity caster = (mc.level != null && casterUuid != null) ? mc.level.getPlayerByUUID(casterUuid) : null;
+        Vec3 basePos = (caster != null) ? caster.position() : centerPos;
+
+        Vec3 forward = (aimDir.lengthSqr() > 1e-4) ? aimDir.normalize() : new Vec3(0, 0, 1);
+        Vec3 up = new Vec3(0, 1, 0);
+        Vec3 right = forward.cross(up);
+        if (right.lengthSqr() < 1e-4) {
+            right = new Vec3(1, 0, 0);
+        } else {
+            right = right.normalize();
+        }
+
         Vec3 camPos;
         Vec3 lookTarget;
 
-        Vec3 forward = (aimDir != null && aimDir.lengthSqr() > 0.001) ? aimDir.normalize() : new Vec3(0, 0, 1);
-        Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
-        if (right.lengthSqr() < 0.001) {
-            right = new Vec3(1, 0, 0);
+        // HỒI 1: GIAI ĐOẠN TỤ LINH TỬ & QUẢ CẦU STARLIGHT (Ticks 0 -> 30)
+        // Góc quay Hero Trung Cận Cảnh (Front-Quarter Low-Angle Hero Shot) để thấy rõ người chơi giơ tay ngưng tụ ma tố
+        if (age < 30.0f) {
+            float t = age / 30.0f;
+            float ease = t * t * (3.0f - 2.0f * t);
+
+            // Camera trôi nhẹ từ 5.2m về 4.4m ở phía trước chếch bên phải người chơi, hơi hất nhẹ lên
+            double camDistForward = 5.2 - ease * 0.8;
+            double camDistRight = 3.4 - ease * 0.6;
+            double camHeight = 1.30 + ease * 0.15;
+
+            camPos = basePos.add(forward.scale(camDistForward))
+                    .add(right.scale(camDistRight))
+                    .add(0, camHeight, 0);
+
+            // Nhìn tập trung vào ngực người chơi - nơi quả cầu Starlight ngưng tụ
+            lookTarget = basePos.add(0, 1.25, 0);
         }
-        Vec3 playerChest = vanillaPos.add(0, -0.35, 0);
-
-        // Hồi 1 (0 -> 28 ticks): Dynamic Hero Front 3/4 Close-Up (Góc 3/4 cận cảnh phía trước người chơi)
-        // Zoom gần thấy rõ người chơi giơ tay ra phía trước, các hạt linh tử tím hội tụ sáng rực vào lòng bàn tay
-        if (age < 28.0f) {
-            float progress = age / 28.0f;
-            float smooth = progress * progress * (3.0f - 2.0f * progress);
-
-            // Camera tiến nhẹ từ 2.40m vào 1.95m, góc ngửa nhẹ tôn vinh tư thế kiêu hãnh của người chơi
-            double camDistFront = 2.40 - smooth * 0.45;
-            double camDistRight = 1.35 - smooth * 0.20;
-            double camHeight = 0.15 + smooth * 0.10;
-
-            // Rung chấn áp lực tinh tử nén dần khi sắp nổ
-            double chargeTremor = (smooth > 0.6f) ? Math.sin(age * 1.6) * 0.02 * smooth : 0.0;
-
-            camPos = playerChest.add(forward.scale(camDistFront))
-                                .add(right.scale(camDistRight))
-                                .add(0, camHeight + chargeTremor, 0);
-
-            // Điểm nhìn tập trung vào cánh tay duỗi ra và quả cầu linh tử đang ngưng tụ
-            lookTarget = playerChest.add(forward.scale(0.40))
-                                    .add(right.scale(0.18))
-                                    .add(0, 0.10, 0);
-        }
-        // Hồi chuyển tiếp (28 -> 33 ticks): Dynamic Whip-Pan qua sau vai khi khai hỏa cực hạn
-        else if (age < 33.0f) {
-            float t = (age - 28.0f) / 5.0f;
-            float whipEase = t * t * (3.0f - 2.0f * t);
-
-            // Vị trí cuối của Hồi 1
-            Vec3 posChargeEnd = playerChest.add(forward.scale(1.95))
-                                           .add(right.scale(1.15))
-                                           .add(0, 0.25, 0);
-            Vec3 lookChargeEnd = playerChest.add(forward.scale(0.40))
-                                            .add(right.scale(0.18))
-                                            .add(0, 0.10, 0);
-
-            // Vị trí bắt đầu của Hồi 2 (Over-the-shoulder sau vai phải)
-            Vec3 posOTS = playerChest.add(right.scale(1.25))
-                                     .add(forward.scale(-2.30))
-                                     .add(0, 0.45, 0);
-            Vec3 lookOTS = playerChest.add(forward.scale(55.0)).add(0, 0.20, 0);
-
-            camPos = posChargeEnd.lerp(posOTS, whipEase);
-            lookTarget = lookChargeEnd.lerp(lookOTS, whipEase);
-        }
-        // Hồi 2 (33 -> 55 ticks): Over-The-Shoulder Action Cam (Góc sau vai ngắm dọc theo luồng pháo 75m)
-        // Người chơi giơ thẳng cánh tay phía trước, luồng pháo 3D khổng lồ xé toạc chân trời kèm độ giật hoành tráng
+        // HỒI 2: GIAI ĐOẠN KHAI HỎA CHÙM PLASMA ĐỎ 3D 75M (Ticks 30 -> 55)
+        // Góc quay Siêu Toàn Cảnh Trên Cao (High-Altitude Majestic Flycam) nhìn bao quát toàn bộ 75m chùm tia và vụ nổ
         else if (age < 55.0f) {
-            float blastProgress = (age - 33.0f) / 22.0f;
-            double recoilDecay = Math.max(0.0, 1.0 - blastProgress);
-            double recoilShake = Math.sin((age - 33.0) * 2.4) * 0.055 * recoilDecay;
+            float beamProg = (age - 30.0f) / 25.0f;
+            float ease = beamProg * beamProg * (3.0f - 2.0f * beamProg);
 
-            camPos = playerChest.add(right.scale(1.25))
-                                .add(forward.scale(-2.30 - recoilDecay * 0.25))
-                                .add(recoilShake, 0.45 + recoilShake * 0.4, recoilShake);
+            // Nâng camera lên cao 19m -> 26m, lùi phía sau lưng người chơi 12m và chếch ngang 18m -> 22m
+            double camDistBack = 12.0 - ease * 2.0;
+            double camDistSide = 18.0 + ease * 4.0;
+            double camHeight = 19.0 + ease * 7.0;
 
-            lookTarget = playerChest.add(forward.scale(65.0)).add(0, 0.20, 0);
+            camPos = basePos.subtract(forward.scale(camDistBack))
+                    .add(right.scale(camDistSide))
+                    .add(0, camHeight, 0);
+
+            // Rung chấn Camera giật nổ uy lực lúc xuất lực cực hạn (Recoil & Thunder Shake Ticks 30..38)
+            if (age < 38.0f) {
+                float shakeDecay = 1.0f - (age - 30.0f) / 8.0f;
+                double shakeX = Math.sin(age * 3.8) * 0.35 * shakeDecay;
+                double shakeY = Math.cos(age * 4.2) * 0.25 * shakeDecay;
+                camPos = camPos.add(right.scale(shakeX)).add(0, shakeY, 0);
+            }
+
+            // Điểm ngắm bao quát thân chùm plasma (35m -> 50m về phía trước)
+            lookTarget = basePos.add(forward.scale(35.0 + ease * 15.0)).add(0, 3.0, 0);
         }
-        // Hồi 3 (55 -> 75 ticks): Đại Vụ Nổ Siêu Tân Tinh & Trả Góc Nhìn Mượt Mà Về First/Third Person
+        // HỒI 3: ĐẠI VỤ NỔ SIÊU TÂN TINH & HOÀN GÓC QUAY MƯỢT MÀ (Ticks 55 -> 75)
         else {
             float blend = Math.clamp((age - 55.0f) / 20.0f, 0.0f, 1.0f);
             float ease = blend * blend * (3.0f - 2.0f * blend);
 
-            Vec3 posOTS = playerChest.add(right.scale(1.25))
-                                     .add(forward.scale(-2.30))
-                                     .add(0, 0.45, 0);
-            Vec3 lookOTS = playerChest.add(forward.scale(65.0)).add(0, 0.20, 0);
+            Vec3 highCamPos = basePos.subtract(forward.scale(10.0))
+                    .add(right.scale(22.0))
+                    .add(0, 26.0, 0);
 
-            camPos = posOTS.lerp(vanillaPos, ease);
-            lookTarget = lookOTS.lerp(vanillaPos.add(forward.scale(10.0)), ease);
+            camPos = highCamPos.lerp(vanillaPos, ease);
+            lookTarget = basePos.add(forward.scale(50.0)).add(0, 3.0, 0)
+                    .lerp(vanillaPos.add(aimDir.scale(10.0)), ease);
         }
 
-        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 55.0f, 75.0f);
+        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 58.0f, 75.0f);
     }
 
     // =========================================================================
@@ -564,13 +556,16 @@ public final class ClientCinematicSkillHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return null;
 
-        double scanR = powerMultiplier > 0 ? powerMultiplier : 48.0;
+        double scanR = powerMultiplier > 0 ? powerMultiplier : 384.0;
         double scanRSq = scanR * scanR;
 
-        // 1. Thu thập TẤT CẢ các sinh vật sống được phát hiện trong phạm vi (không bao gồm người chơi)
+        // 1. Thu thập TẤT CẢ các sinh vật sống được phát hiện trong phạm vi (bỏ qua đồng minh khế ước)
         List<net.minecraft.world.entity.LivingEntity> detectedEntities = new ArrayList<>();
         for (net.minecraft.world.entity.Entity ent : mc.level.entitiesForRendering()) {
             if (ent instanceof net.minecraft.world.entity.LivingEntity le && ent != mc.player && le.isAlive()) {
+                if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(mc.player.getUUID(), le)) {
+                    continue;
+                }
                 double dSq = mc.player.distanceToSqr(ent);
                 if (dSq <= scanRSq && dSq >= 2.5) {
                     detectedEntities.add(le);
@@ -578,8 +573,15 @@ public final class ClientCinematicSkillHandler {
             }
         }
 
-        // Sắp xếp thứ tự ưu tiên: theo khoảng cách gần nhất
-        detectedEntities.sort(Comparator.comparingDouble(e -> mc.player.distanceToSqr(e)));
+        // Sắp xếp thứ tự ưu tiên: ƯU TIÊN SỐ 1 các sinh vật thù địch có thể tấn công người chơi trước, sau đó theo khoảng cách gần nhất
+        detectedEntities.sort((a, b) -> {
+            boolean aHostile = com.minhphuc.weapons.content.evolution.UniversalSenseAbility.isHostileThreat(a, mc.player);
+            boolean bHostile = com.minhphuc.weapons.content.evolution.UniversalSenseAbility.isHostileThreat(b, mc.player);
+            if (aHostile != bHostile) {
+                return aHostile ? -1 : 1;
+            }
+            return Double.compare(mc.player.distanceToSqr(a), mc.player.distanceToSqr(b));
+        });
 
         // Giới hạn tối đa 6 mục tiêu để phân bổ góc lia camera chuẩn điện ảnh
         if (detectedEntities.size() > 6) {

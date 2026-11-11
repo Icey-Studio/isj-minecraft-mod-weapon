@@ -123,6 +123,31 @@ public class ModMessages {
                 ClientboundCinematicSkillPacket::encode,
                 ClientboundCinematicSkillPacket::new,
                 ClientboundCinematicSkillPacket::handle);
+
+        CHANNEL.register(ClientboundOpenGateDialPacket.class,
+                ClientboundOpenGateDialPacket::encode,
+                ClientboundOpenGateDialPacket::new,
+                ClientboundOpenGateDialPacket::handle);
+
+        CHANNEL.register(ServerboundGateDialActionPacket.class,
+                ServerboundGateDialActionPacket::encode,
+                ServerboundGateDialActionPacket::new,
+                ServerboundGateDialActionPacket::handle);
+
+        CHANNEL.register(ServerboundInteractGatePacket.class,
+                ServerboundInteractGatePacket::encode,
+                ServerboundInteractGatePacket::new,
+                ServerboundInteractGatePacket::handle);
+
+        CHANNEL.register(ServerboundAbyssalActionPacket.class,
+                ServerboundAbyssalActionPacket::encode,
+                ServerboundAbyssalActionPacket::new,
+                ServerboundAbyssalActionPacket::handle);
+
+        CHANNEL.register(ClientboundSyncPossessionPacket.class,
+                ClientboundSyncPossessionPacket::encode,
+                ClientboundSyncPossessionPacket::new,
+                ClientboundSyncPossessionPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

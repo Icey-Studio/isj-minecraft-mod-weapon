@@ -25,6 +25,8 @@ public class ClientNihilityCinematicHandler {
     private static UUID casterUuid = null;
     private static int casterEntityId = 0;
     private static Vec3 centerPos = Vec3.ZERO;
+    private static double targetElevY = 0;
+    private static double cachedSurfaceY = 0;
     private static int totalDurationTicks = 295;
     private static long startWorldTick = 0;
     private static boolean skipped = false;
@@ -33,23 +35,40 @@ public class ClientNihilityCinematicHandler {
         return isActive() && casterUuid != null && casterUuid.equals(uuid);
     }
 
+    public static boolean isSelfCaster() {
+        Minecraft mc = Minecraft.getInstance();
+        return mc.player != null && casterUuid != null && casterUuid.equals(mc.player.getUUID());
+    }
+
     public static float getAge() {
+        return getAge(0.0f);
+    }
+
+    public static float getAge(float partialTicks) {
         if (!isActive()) return -1;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return -1;
-        return (float) (mc.level.getGameTime() - startWorldTick);
+        return (float) (mc.level.getGameTime() - startWorldTick) + partialTicks;
     }
 
-    public static void handleCinematicPacket(UUID caster, Vec3 center, int durationTicks, int phase) {
+    public static void handleCinematicPacket(UUID caster, Vec3 center, double elevY, int durationTicks, int phase) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         Entity entity = mc.level.getPlayerByUUID(caster);
+        if (entity == null) {
+            for (Entity e : mc.level.entitiesForRendering()) {
+                if (e != null && caster.equals(e.getUUID())) {
+                    entity = e;
+                    break;
+                }
+            }
+        }
         int entId = entity != null ? entity.getId() : (mc.player != null ? mc.player.getId() : 0);
 
         if (phase == 0) { // PHASE_START
             casterEntityId = entId;
-            startCinematic(caster, center, durationTicks);
+            startCinematic(caster, center, elevY, durationTicks);
             AtomicRenderer.receive(new AtomicRenderer.FxData(
                     entId,
                     mc.level.getGameTime(),
@@ -73,9 +92,14 @@ public class ClientNihilityCinematicHandler {
         }
     }
 
-    public static void startCinematic(UUID caster, Vec3 center, int durationTicks) {
+    public static void handleCinematicPacket(UUID caster, Vec3 center, int durationTicks, int phase) {
+        handleCinematicPacket(caster, center, center.y + 28.0D, durationTicks, phase);
+    }
+
+    public static void startCinematic(UUID caster, Vec3 center, double elevY, int durationTicks) {
         casterUuid = caster;
         centerPos = center;
+        targetElevY = elevY;
         totalDurationTicks = durationTicks;
         skipped = false;
         active = true;
@@ -83,7 +107,15 @@ public class ClientNihilityCinematicHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null) {
             startWorldTick = mc.level.getGameTime();
+            int surfaceY = mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) center.x, (int) center.z);
+            cachedSurfaceY = (double) surfaceY;
+        } else {
+            cachedSurfaceY = center.y;
         }
+    }
+
+    public static void startCinematic(UUID caster, Vec3 center, int durationTicks) {
+        startCinematic(caster, center, center.y + 28.0D, durationTicks);
     }
 
     public static void stopCinematic() {
@@ -137,75 +169,119 @@ public class ClientNihilityCinematicHandler {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null || mc.player == null) return null;
 
-        long currentTick = mc.level.getGameTime();
-        float age = (float) (currentTick - startWorldTick) + partialTicks;
+        boolean isSelf = casterUuid != null && casterUuid.equals(mc.player.getUUID());
 
+        float age = getAge(partialTicks);
         if (age < 0 || age >= totalDurationTicks) {
             return null;
         }
 
-        Entity caster = null;
-        if (casterUuid != null) {
-            caster = mc.level.getPlayerByUUID(casterUuid);
-        }
-        if (caster == null) {
-            caster = mc.player;
+        double elevY = targetElevY > centerPos.y ? targetElevY : (centerPos.y + 28.0);
+        double currentCasterY;
+        if (age <= 40.0f) {
+            float elevProgress = age / 40.0f;
+            float elevEase = elevProgress * elevProgress * (3.0f - 2.0f * elevProgress);
+            currentCasterY = centerPos.y + ((elevY - centerPos.y) * elevEase);
+        } else {
+            currentCasterY = elevY;
         }
 
-        Vec3 casterEye = caster.getEyePosition(partialTicks);
-        Vec3 casterCenter = caster.getPosition(partialTicks).add(0, caster.getBbHeight() * 0.5, 0);
+        // KHI ÁC MA KHẾ ƯỚC DÙNG LỜI CHÚC TỬ VONG:
+        // Người chơi đứng dưới đất tại chỗ của mình và ngước nhìn Ác Ma bay lên thi triển kỹ năng!
+        if (!isSelf) {
+            Vec3 demonTargetPos = new Vec3(centerPos.x, currentCasterY + 1.0, centerPos.z);
+            Entity demonEnt = mc.level.getEntity(casterEntityId);
+            if (demonEnt != null && demonEnt.isAlive()) {
+                demonTargetPos = demonEnt.getPosition(partialTicks).add(0, demonEnt.getBbHeight() * 0.65, 0);
+            }
+
+            Vec3 camPos = vanillaPos;
+            // Thêm rung chấn nhẹ khi Ác Ma kích nổ Lời Chúc Tử Vong
+            if (age >= 35.0f && age < 80.0f) {
+                float blastAge = age - 35.0f;
+                float shakeStrength = (float) (Math.max(0.0, 1.0 - blastAge / 45.0) * 0.65);
+                double shakeX = Math.sin(blastAge * 2.7) * 0.25 * shakeStrength;
+                double shakeY = Math.sin(blastAge * 3.3) * 0.20 * shakeStrength;
+                camPos = vanillaPos.add(shakeX, shakeY, 0);
+            }
+
+            Vec3 dirToDemon = demonTargetPos.subtract(camPos);
+            double distH = Math.hypot(dirToDemon.x, dirToDemon.z);
+            float lookYaw = (float) Math.toDegrees(Math.atan2(-dirToDemon.x, dirToDemon.z));
+            float lookPitch = (float) -Math.toDegrees(Math.atan2(dirToDemon.y, distH));
+
+            if (age >= totalDurationTicks - 20.0f) {
+                float blend = (age - (totalDurationTicks - 20.0f)) / 20.0f;
+                float ease = blend * blend * (3.0f - 2.0f * blend);
+                lookYaw = Mth.rotLerp(ease, lookYaw, vanillaYaw);
+                lookPitch = Mth.rotLerp(ease, lookPitch, vanillaPitch);
+            }
+
+            return new Pose(camPos, lookYaw, lookPitch);
+        }
+
+        Entity caster = mc.player;
         float casterYaw = caster.getViewYRot(partialTicks);
+
+        Vec3 smoothCasterPos = new Vec3(centerPos.x, currentCasterY, centerPos.z);
+        Vec3 smoothCasterEye = smoothCasterPos.add(0, caster.getEyeHeight(), 0);
+        Vec3 smoothCasterCenter = smoothCasterPos.add(0, caster.getBbHeight() * 0.5, 0);
 
         Vec3 camPos;
         Vec3 lookTarget;
 
         if (age < 25.0f) {
-            // === SHOT 1 (0 -> 25): Cận cảnh xoay quanh (Orbit) ===
+            // === SHOT 1 (0 -> 25): Cận cảnh xoay quanh từ trước ra sau (Orbit 225° mượt mà nối tiếp Hồi 2) ===
             float progress = age / 25.0f;
-            float orbitAngle = (float) Math.toRadians(casterYaw + age * 10.0f);
-            double dist = 4.2;
+            float ease = progress * progress * (3.0f - 2.0f * progress);
+            float orbitAngle = (float) Math.toRadians(casterYaw - 45.0f + (ease * 225.0f));
+            double dist = 4.5 - (ease * 0.3); // 4.5m -> 4.2m
             double offsetX = -Math.sin(orbitAngle) * dist;
             double offsetZ = Math.cos(orbitAngle) * dist;
-            double offsetY = 0.5 + progress * 1.2;
+            double offsetY = 0.4 + (ease * 1.3);
 
-            camPos = casterCenter.add(offsetX, offsetY, offsetZ);
-            lookTarget = casterEye;
+            camPos = smoothCasterCenter.add(offsetX, offsetY, offsetZ);
+            lookTarget = smoothCasterEye.subtract(0, 0.15, 0);
         } else if (age < 50.0f) {
-            // === SHOT 2 (25 -> 50): Cinematic Dolly-Out lùi xa bay lên cao bao quát ma pháp trận ===
+            // === SHOT 2 (25 -> 50): Cinematic Dolly-Out lùi xa bay lên cao bao quát ma pháp trận (Tiếp nối liền mạch góc 180°) ===
             float progress = (age - 25.0f) / 25.0f;
             float ease = progress * progress * (3.0f - 2.0f * progress);
-            float backAngle = (float) Math.toRadians(casterYaw + 180.0f + ease * 30.0f);
-            double dist = 5.0 + ease * 16.0; // Lùi từ 5m ra 21m
+            float backAngle = (float) Math.toRadians(casterYaw + 180.0f + ease * 25.0f);
+            double dist = 4.2 + (ease * 17.8); // Lùi êm từ 4.2m ra 22m
             double offsetX = -Math.sin(backAngle) * dist;
             double offsetZ = Math.cos(backAngle) * dist;
-            double height = 2.0 + ease * 12.0; // Nâng từ 2m lên 14m
+            double height = 1.7 + (ease * 13.3); // Nâng từ 1.7m lên 15m
 
-            camPos = caster.getPosition(partialTicks).add(offsetX, height, offsetZ);
-            lookTarget = casterCenter.add(0, -1.0 * ease, 0); // Nhìn chúc xuống bao quát người chơi và ma pháp trận
+            camPos = smoothCasterPos.add(offsetX, height, offsetZ);
+            lookTarget = smoothCasterCenter.add(0, -1.2 * ease, 0); // Nhìn chúc xuống bao quát người chơi và ma pháp trận
         } else if (age < 110.0f) {
             // === SHOT 3 (50 -> 110): Đại Cảnh Vũ Trụ từ Tầng Mây (Bird's Eye / Cosmic View) ===
             float progress = (age - 50.0f) / 60.0f;
-            float slowOrbit = (float) Math.toRadians(casterYaw + progress * 35.0f);
-            double dist = 45.0;
+            float slowOrbit = (float) Math.toRadians(casterYaw + 205.0f + progress * 35.0f);
+            double dist = 22.0 + (progress * 23.0); // Chuyển từ 22m ra 45m liền mạch
             double offsetX = -Math.sin(slowOrbit) * dist;
             double offsetZ = Math.cos(slowOrbit) * dist;
 
-            int surfaceY = mc.level != null ? mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) centerPos.x, (int) centerPos.z) : (int) centerPos.y;
-            double baseHeight = surfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 48.0, surfaceY + 16.0) : (centerPos.y + 48.0);
-            double height = baseHeight + progress * 8.0;
+            double baseHeight = cachedSurfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 48.0, cachedSurfaceY + 16.0) : (centerPos.y + 48.0);
+            double height = (centerPos.y + 15.0) + (progress * (baseHeight + 8.0 - (centerPos.y + 15.0)));
 
             camPos = new Vec3(centerPos.x + offsetX, height, centerPos.z + offsetZ);
-            lookTarget = centerPos.add(0, 15.0, 0);
+            lookTarget = centerPos.add(0, 12.0 + progress * 3.0, 0);
         } else if (age < 225.0f) {
             // === SHOT 4 (110 -> 225): Cận Cảnh Kịch Tính Nửa Khuôn Mặt ("LỜI CHÚC TỬ VONG" - 5.75 giây) ===
             float progress = (age - 110.0f) / 115.0f;
-            Vec3 forward = caster.getLookAngle();
-            Vec3 right = forward.cross(new Vec3(0, 1, 0)).normalize();
+            float yawRad = (float) Math.toRadians(casterYaw);
+            // Hướng nhìn ngang chuẩn xác, triệt tiêu lỗi NaN khi người chơi nhìn xuống đất
+            Vec3 forward = new Vec3(-Math.sin(yawRad), 0, Math.cos(yawRad));
+            Vec3 right = new Vec3(Math.cos(yawRad), 0, Math.sin(yawRad));
 
-            // Zoom chậm dần từ 1.25m lại gần 0.78m
-            double dist = 1.25 - (0.47 * progress);
-            camPos = casterEye.add(forward.scale(dist)).add(right.scale(0.25 * (1.0 - progress * 0.3))).add(0, 0.05, 0);
-            lookTarget = casterEye;
+            // Zoom cận cảnh điện ảnh an toàn từ 1.60m lại gần 1.18m (đảm bảo không bị đâm xuyên đầu/nón)
+            double dist = 1.60 - (0.42 * progress);
+            camPos = smoothCasterEye
+                    .add(forward.scale(dist))
+                    .add(right.scale(0.38 * (1.0 - progress * 0.25)))
+                    .add(0, 0.08, 0);
+            lookTarget = smoothCasterEye.subtract(0, 0.04, 0);
         } else if (age < 270.0f) {
             // === SHOT 5 (225 -> 270): Đại Xung Kích Từ Xa & Camera Shake Cực Đại ===
             float blastAge = age - 225.0f;
@@ -214,12 +290,12 @@ public class ClientNihilityCinematicHandler {
             double offsetX = -Math.sin(backAngle) * dist;
             double offsetZ = Math.cos(backAngle) * dist;
 
-            float shakeStrength = (float) (Math.max(0.0, 1.0 - blastAge / 45.0) * 1.8);
-            double shakeX = Math.sin(blastAge * 2.7) * 0.5 * shakeStrength;
-            double shakeY = Math.cos(blastAge * 3.3) * 0.5 * shakeStrength;
+            float shakeStrength = (float) (Math.max(0.0, 1.0 - blastAge / 45.0) * 1.4);
+            // Damped harmonic shake (bắt đầu từ 0 để không bị nhảy khung hình)
+            double shakeX = Math.sin(blastAge * 2.7) * 0.45 * shakeStrength;
+            double shakeY = Math.sin(blastAge * 3.3) * 0.35 * shakeStrength;
 
-            int surfaceY = mc.level != null ? mc.level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) centerPos.x, (int) centerPos.z) : (int) centerPos.y;
-            double baseBlastY = surfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 24.0, surfaceY + 10.0) : (centerPos.y + 24.0);
+            double baseBlastY = cachedSurfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 24.0, cachedSurfaceY + 10.0) : (centerPos.y + 24.0);
 
             camPos = new Vec3(centerPos.x + offsetX + shakeX, baseBlastY + shakeY, centerPos.z + offsetZ);
             lookTarget = centerPos.add(0, 4.0, 0);
@@ -230,24 +306,25 @@ public class ClientNihilityCinematicHandler {
             float backAngle = (float) Math.toRadians(casterYaw + 135.0f);
             double offsetX = -Math.sin(backAngle) * 65.0;
             double offsetZ = Math.cos(backAngle) * 65.0;
-            Vec3 shot5Pos = new Vec3(centerPos.x + offsetX, centerPos.y + 24.0, centerPos.z + offsetZ);
+            double baseBlastY = cachedSurfaceY > centerPos.y + 12 ? Math.max(centerPos.y + 24.0, cachedSurfaceY + 10.0) : (centerPos.y + 24.0);
+            Vec3 shot5Pos = new Vec3(centerPos.x + offsetX, baseBlastY, centerPos.z + offsetZ);
 
-            // Chuyển tiếp mượt mà từ góc nhìn từ xa về vị trí người chơi đang lơ lửng trên không
+            // Chuyển tiếp mượt mà từ góc nhìn từ xa về góc nhìn người chơi trên không
             camPos = shot5Pos.lerp(vanillaPos, ease);
-            lookTarget = centerPos.add(0, 1.0, 0); // Nhìn xuống tâm chiến trường
+            lookTarget = centerPos.add(0, 2.0, 0).lerp(vanillaPos.add(caster.getViewVector(partialTicks).scale(10.0)), ease);
         }
 
         Vec3 dir = lookTarget.subtract(camPos);
+        double distHoriz = Math.hypot(dir.x, dir.z);
         float targetYaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
-        float targetPitch = (float) -Math.toDegrees(Math.atan2(dir.y, Math.hypot(dir.x, dir.z)));
+        float targetPitch = (float) -Math.toDegrees(Math.atan2(dir.y, distHoriz));
 
         if (age >= 270.0f) {
             float blend = (age - 270.0f) / 25.0f;
             float ease = blend * blend * (3.0f - 2.0f * blend);
             targetYaw = Mth.rotLerp(ease, targetYaw, vanillaYaw);
-            // Giữ góc nhìn chúc nhẹ xuống mặt đất (28° - 35°) để ngắm toàn cảnh khu vực bị phá hủy
-            float aerialPitch = Math.max(vanillaPitch, 28.0f);
-            targetPitch = Mth.lerp(ease, targetPitch, aerialPitch);
+            // Chuyển tiếp 100% êm ái về vanillaPitch, triệt tiêu hoàn toàn cú giật góc quay 28° khi kết thúc
+            targetPitch = Mth.rotLerp(ease, targetPitch, vanillaPitch);
         }
 
         return new Pose(camPos, targetYaw, targetPitch);
