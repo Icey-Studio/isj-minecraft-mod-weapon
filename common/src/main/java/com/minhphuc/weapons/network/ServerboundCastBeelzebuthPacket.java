@@ -29,6 +29,11 @@ public class ServerboundCastBeelzebuthPacket {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
 
+            if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(player)) {
+                com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.castSkill(player);
+                return;
+            }
+
             boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
             boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
             boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(player);

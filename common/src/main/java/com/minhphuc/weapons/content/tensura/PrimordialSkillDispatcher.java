@@ -33,7 +33,9 @@ import java.util.List;
 public class PrimordialSkillDispatcher {
 
     public static void castSkill(ServerLevel level, ServerPlayer player, int skillIndex) {
-        DemonType type = PrimordialPlayerDataHelper.getPrimordialType(player);
+        DemonType type = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.getPossessedType(player)
+                : PrimordialPlayerDataHelper.getPrimordialType(player);
         if (type == null) return;
 
         // 1. Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Skill Nullification Seal)
@@ -76,8 +78,12 @@ public class PrimordialSkillDispatcher {
             return;
         }
 
-        boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
-        boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
+        boolean hasBody = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.hasPhysicalBody(player)
+                : PrimordialPlayerDataHelper.hasPhysicalBody(player);
+        boolean isDemonLord = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.isDemonLord(player)
+                : PrimordialPlayerDataHelper.isDemonLord(player);
 
         // Skill 5 (Skill 6): Ngũ Trọng Ma Trận Cột Sáng Thiên Khấu (Chung cho các Ác Ma khác, riêng Jaune là Cấm Thuật Hạt Nhân Supernova)
         if (skillIndex == 5) {
@@ -137,6 +143,7 @@ public class PrimordialSkillDispatcher {
 
     private static void dealDamage(ServerPlayer player, LivingEntity victim, float baseDmg, boolean hasBody, boolean isDemonLord) {
         if (victim == null || !victim.isAlive() || victim == player) return;
+        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), victim)) return;
         boolean isBoss = (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss)
                 || (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)
                 || (victim instanceof net.minecraft.world.entity.monster.warden.Warden)

@@ -11,17 +11,21 @@
     "ItemDisplayAccessor",
     "TextDisplayAccessor",
     "InteractionAccessor",
-    "MobAccessor"
+    "MobAccessor",
+    "ServerPlayerMixin"
   ],
   "client": [
     "ItemPropertiesAccessor",
     "GameRendererAccessor",
     "MixinLivingEntityRenderer",
+    "PlayerRendererMixin",
     "CameraMixin",
     "PostChainAccessor",
     "DeathBlessingPoseMixin",
     "FogRendererMixin",
-    "LevelRendererMixin"
+    "LevelRendererMixin",
+    "ItemInHandRendererMixin",
+    "GuiMixin"
   ],
   "injectors": {
     "defaultRequire": 1

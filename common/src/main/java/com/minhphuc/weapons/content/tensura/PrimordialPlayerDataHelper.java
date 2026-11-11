@@ -14,6 +14,9 @@ public class PrimordialPlayerDataHelper {
 
     public static DemonType getPrimordialType(Player player) {
         if (player == null) return null;
+        if (PrimordialPossessionManager.isPossessing(player)) {
+            return PrimordialPossessionManager.getPossessedType(player);
+        }
         CompoundTag tag = EntityDataHelper.getCustomData(player);
         if (!tag.contains(NBT_PRIMORDIAL_TYPE)) return null;
         String typeName = tag.getString(NBT_PRIMORDIAL_TYPE);
@@ -44,6 +47,9 @@ public class PrimordialPlayerDataHelper {
 
     public static boolean hasPhysicalBody(Player player) {
         if (player == null) return false;
+        if (PrimordialPossessionManager.isPossessing(player)) {
+            return PrimordialPossessionManager.hasPhysicalBody(player);
+        }
         CompoundTag tag = EntityDataHelper.getCustomData(player);
         // Có thể xác nếu NBT đánh dấu true hoặc tổng số linh hồn đạt 40 trở lên
         if (tag.getBoolean(NBT_PHYSICAL_BODY)) return true;
@@ -62,6 +68,9 @@ public class PrimordialPlayerDataHelper {
 
     public static boolean isDemonLord(Player player) {
         if (player == null) return false;
+        if (PrimordialPossessionManager.isPossessing(player)) {
+            return PrimordialPossessionManager.isDemonLord(player);
+        }
         CompoundTag tag = EntityDataHelper.getCustomData(player);
         return tag.getBoolean("TensuraTrueDemonLord");
     }
