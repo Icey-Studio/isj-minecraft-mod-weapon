@@ -1,6 +1,8 @@
 package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineSalvationHelper;
+import com.minhphuc.weapons.data.ItemStackDataHelper;
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -14,6 +16,7 @@ import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 
@@ -79,7 +82,7 @@ public class TensuraNamingAbility {
         }
 
         // 1. Kiểm tra nếu sinh vật đã từng được ban tên
-        if (target.getTags().contains("TensuraNamedMob")) {
+        if (target.getTags().contains("TensuraNamedMob") || (target instanceof PrimordialDemonEntity pde && pde.isNamed())) {
             player.displayClientMessage(
                     Component.literal("§c[BAN DANH XƯNG] Sinh vật này đã được ban danh xưng từ trước, không thể ban tên lần thứ hai!"),
                     true
@@ -151,22 +154,37 @@ public class TensuraNamingAbility {
 
         // 3. Ban Danh Xưng Ngẫu Nhiên
         String chosenName = FANTASY_NAMES[RANDOM.nextInt(FANTASY_NAMES.length)];
-        String oldName = target.getName().getString();
+        String oldName = (target instanceof PrimordialDemonEntity pde && pde.getDemonType() != null)
+                ? pde.getDemonType().getColorName()
+                : target.getName().getString();
 
         target.addTag("TensuraNamedMob");
-        target.setCustomName(Component.literal("§6§l✦ " + chosenName + " ✦ §e[" + oldName + "]"));
-        target.setCustomNameVisible(true);
 
-        // 4. Sức mạnh tăng vọt 30 LẦN CẢ MÁU VÀ SỨC TẤN CÔNG
-        var hpAttr = target.getAttribute(Attributes.MAX_HEALTH);
-        if (hpAttr != null) {
-            hpAttr.setBaseValue(hpAttr.getBaseValue() * 30.0D);
-            target.setHealth((float) hpAttr.getValue());
-        }
+        if (target instanceof PrimordialDemonEntity demon) {
+            demon.setNamed(true);
+            demon.setCustomDemonName(chosenName);
+            if (demon.getEvolutionTier() < 2) {
+                demon.setEvolutionTier(demon.hasPhysicalBody() ? 3 : 2);
+            }
+            demon.updateAttributesForType(demon.getDemonType());
+            demon.setHealth(demon.getMaxHealth());
+            demon.updateDemonNametag();
+            demon.syncToPactInOwnerInventory();
+        } else {
+            target.setCustomName(Component.literal("§6§l✦ " + chosenName + " ✦ §e[" + oldName + "]"));
+            target.setCustomNameVisible(true);
 
-        var atkAttr = target.getAttribute(Attributes.ATTACK_DAMAGE);
-        if (atkAttr != null) {
-            atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 4.0D) * 30.0D);
+            // 4. Sức mạnh tăng vọt 30 LẦN CẢ MÁU VÀ SỨC TẤN CÔNG (cho mob thường)
+            var hpAttr = target.getAttribute(Attributes.MAX_HEALTH);
+            if (hpAttr != null) {
+                hpAttr.setBaseValue(hpAttr.getBaseValue() * 30.0D);
+                target.setHealth((float) hpAttr.getValue());
+            }
+
+            var atkAttr = target.getAttribute(Attributes.ATTACK_DAMAGE);
+            if (atkAttr != null) {
+                atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 4.0D) * 30.0D);
+            }
         }
 
         // 5. Hiệu ứng bùng nổ Ma Tố & Thánh Quang

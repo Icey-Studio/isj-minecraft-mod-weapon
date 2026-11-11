@@ -4,12 +4,23 @@ import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
+import com.minhphuc.weapons.content.divine.PurificationPillarAbility;
+import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
+import com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager;
+import com.minhphuc.weapons.content.tensura.DarkFlameShotAbility;
+import com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility;
+import com.minhphuc.weapons.content.tensura.DragonNovaAbility;
+import com.minhphuc.weapons.content.tensura.HellflareAbility;
+import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
+import com.minhphuc.weapons.content.tensura.NihilityCollapseAbility;
+import com.minhphuc.weapons.content.tensura.SupernovaAbility;
 import com.minhphuc.weapons.content.tensura.VoiceOfTheWorld;
 import com.minhphuc.weapons.content.tensura.PrimordialPactItem;
 import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility;
 import com.minhphuc.weapons.init.ModBlocks;
 import com.minhphuc.weapons.init.ModItems;
+import com.minhphuc.weapons.init.ModSoundEvents;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
 import com.mojang.math.Transformation;
@@ -88,8 +99,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
             SynchedEntityData.defineId(PrimordialDemonEntity.class, EntityDataSerializers.INT);
     private static final EntityDataAccessor<String> DATA_CUSTOM_NAME =
             SynchedEntityData.defineId(PrimordialDemonEntity.class, EntityDataSerializers.STRING);
+    private static final EntityDataAccessor<Boolean> DATA_MASSACRE_MODE =
+            SynchedEntityData.defineId(PrimordialDemonEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final List<PrimordialSkillPool.SkillEntry> randomSkills = new ArrayList<>();
+    private BlockPos guardCenterPos = null;
 
     private int skillCooldownTicks = 0;
     private int sealedTicks = 0; // Thời gian bị Phong Sát Kỹ Năng (Skill Nullification Seal)
@@ -225,6 +239,42 @@ public class PrimordialDemonEntity extends TamableAnimal {
         builder.define(DATA_IS_NAMED, false);
         builder.define(DATA_EVOLUTION_TIER, 0);
         builder.define(DATA_CUSTOM_NAME, "");
+        builder.define(DATA_MASSACRE_MODE, false);
+    }
+
+    public boolean isMassacreMode() {
+        return this.entityData.get(DATA_MASSACRE_MODE);
+    }
+
+    public void setMassacreMode(boolean active) {
+        this.entityData.set(DATA_MASSACRE_MODE, active);
+        if (active) {
+            this.setOrderedToSit(false);
+            this.guardCenterPos = null;
+        } else if (this.getTarget() != null && isFriendlyCreature(this.getTarget())) {
+            this.setTarget(null);
+        }
+    }
+
+    public BlockPos getGuardCenterPos() {
+        return this.guardCenterPos;
+    }
+
+    public void setGuardMode(boolean guarding, @org.jetbrains.annotations.Nullable BlockPos center) {
+        this.setOrderedToSit(guarding);
+        this.guardCenterPos = guarding ? (center != null ? center : this.blockPosition()) : null;
+        if (guarding) {
+            this.setMassacreMode(false);
+            this.setPersistenceRequired();
+        }
+    }
+
+    @Override
+    public boolean removeWhenFarAway(double distanceToClosestPlayer) {
+        if (this.isTame() || this.isOrderedToSit() || this.guardCenterPos != null || this.isPersistenceRequired()) {
+            return false;
+        }
+        return super.removeWhenFarAway(distanceToClosestPlayer);
     }
 
     @Override
@@ -262,6 +312,26 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
             this.setDemonType(chosen);
             this.setWinged(true); // Toàn bộ Thủy Tổ Ác Ma đều sở hữu cánh và khả năng bay
+
+            // 25% cơ hội Thủy Tổ tự nhiên giáng thế đã có Thể Xác Vật Lý (nhưng chưa tiến hóa Ma Vương)
+            if (this.random.nextFloat() < 0.25F) {
+                this.setPhysicalBody(true);
+                this.setEvolutionTier(1);
+                this.updateAttributesForType(chosen);
+                this.setHealth(this.getMaxHealth());
+                this.updateDemonNametag();
+                if (chosen == DemonType.JAUNE) {
+                    this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(ModItems.GOLDEN_GUN.get()));
+                }
+                ServerLevel sl = level.getLevel();
+                if (sl != null) {
+                    BlockPos p = this.blockPosition();
+                    String vMsg = "Cảnh báo. Phát hiện Thủy Tổ Ác Ma " + chosen.getColorName() + " (" + chosen.getTitleVi() + ") đã hiện thân cùng Thể Xác Vật Lý tại tọa độ [" + p.getX() + ", " + p.getY() + ", " + p.getZ() + "]!";
+                    for (ServerPlayer sp : sl.players()) {
+                        VoiceOfTheWorld.announce(sp, vMsg);
+                    }
+                }
+            }
         }
 
         return spawnData;
@@ -269,25 +339,52 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
     @Override
     protected void registerGoals() {
-        this.goalSelector.addGoal(1, new FloatGoal(this));
-        this.goalSelector.addGoal(2, new SitWhenOrderedToGoal(this));
+        this.goalSelector.addGoal(0, new FloatGoal(this));
+        this.goalSelector.addGoal(1, new PrimordialBreakSpawnerGoal(this));
+        this.goalSelector.addGoal(2, new BlancMassacreVillageGoal(this));
         this.goalSelector.addGoal(3, new PrimordialSkillGoal(this));
         this.goalSelector.addGoal(4, new MeleeAttackGoal(this, 1.4D, true));
-        this.goalSelector.addGoal(5, new FollowOwnerGoal(this, 1.25D, 7.0F, 2.5F));
-        this.goalSelector.addGoal(6, new net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal(this, 1.0D));
-        this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 10.0F));
-        this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(5, new PrimordialPatrolGuardGoal(this));
+        this.goalSelector.addGoal(6, new FollowOwnerGoal(this, 1.25D, 7.0F, 2.5F) {
+            @Override
+            public boolean canUse() {
+                if (PrimordialDemonEntity.this.isOrderedToSit()
+                        || PrimordialDemonEntity.this.guardCenterPos != null
+                        || PrimordialDemonEntity.this.isMassacreMode()) {
+                    return false;
+                }
+                return super.canUse();
+            }
+
+            @Override
+            public boolean canContinueToUse() {
+                if (PrimordialDemonEntity.this.isOrderedToSit()
+                        || PrimordialDemonEntity.this.guardCenterPos != null
+                        || PrimordialDemonEntity.this.isMassacreMode()) {
+                    return false;
+                }
+                return super.canContinueToUse();
+            }
+        });
+        this.goalSelector.addGoal(7, new PrimordialVillageServiceGoal(this));
+        this.goalSelector.addGoal(8, new net.minecraft.world.entity.ai.goal.WaterAvoidingRandomFlyingGoal(this, 1.0D));
+        this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 10.0F));
+        this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
         // THỦY TỔ CHƯA THU PHỤC: ƯU TIÊN SỐ 1 TẤN CÔNG ÁC MA ĐÃ KÝ KHẾ ƯỚC CỦA NGƯỜI CHƠI TRƯỚC!
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, PrimordialDemonEntity.class, 10, true, false,
                 e -> !this.isTame() && e instanceof PrimordialDemonEntity pde && pde.isTame() && pde.isAlive()));
 
-        this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
-        this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
-        this.targetSelector.addGoal(3, new HurtByTargetGoal(this));
+        // Ác ma ĐÃ KHẾ ƯỚC: Tự động khóa và bảo vệ chủ nhân trước các Ác Ma hoang dã
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, PrimordialDemonEntity.class, 10, true, false,
+                e -> this.isTame() && e instanceof PrimordialDemonEntity pde && !pde.isTame() && pde.isAlive()));
+
+        this.targetSelector.addGoal(2, new OwnerHurtByTargetGoal(this));
+        this.targetSelector.addGoal(3, new OwnerHurtTargetGoal(this));
+        this.targetSelector.addGoal(4, new HurtByTargetGoal(this));
         // Khi CHƯA THU PHỤC: Thử thách người chơi
-        this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, e -> !this.isTame()));
-        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false, e -> e instanceof Enemy));
+        this.targetSelector.addGoal(5, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, e -> !this.isTame()));
+        this.targetSelector.addGoal(6, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false, e -> e instanceof Enemy));
     }
 
     public DemonType getDemonType() {
@@ -303,12 +400,32 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
     public void updateAttributesForType(DemonType type) {
         if (type == null) return;
-        double multiplier = hasPhysicalBody() ? 5.0D : 1.0D;
+        // 1. Thể xác vật lý: Sức mạnh tăng 30 lần, Máu tăng 4 lần
+        double hpMul = hasPhysicalBody() ? 4.0D : 1.0D;
+        double dmgMul = hasPhysicalBody() ? 30.0D : 1.0D;
+
+        // 2. Ban Danh Xưng (Tensura Naming): Máu x30, Sức mạnh x30
+        if (isNamed() || this.getTags().contains("TensuraNamedMob")) {
+            hpMul *= 30.0D;
+            dmgMul *= 30.0D;
+        }
+
+        // 3. Tiến hóa Ma Vương (Awakened Demon Lord): Máu x20, Sức mạnh x20
+        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
+        if (isDemonLord) {
+            hpMul *= 20.0D;
+            dmgMul *= 20.0D;
+        }
+
+        // Cánh Hắc Sắc Noir thưởng thêm
+        if (isWinged() && type == DemonType.NOIR) {
+            hpMul *= 1.2D;
+            dmgMul *= 1.25D;
+        }
 
         var maxHpAttr = this.getAttribute(Attributes.MAX_HEALTH);
         if (maxHpAttr != null) {
-            double hp = type.getMaxHealth() * multiplier;
-            if (isWinged() && type == DemonType.NOIR) hp *= 1.2D;
+            double hp = type.getMaxHealth() * hpMul;
             maxHpAttr.setBaseValue(hp);
             if (this.getHealth() > (float) hp) {
                 this.setHealth((float) hp);
@@ -316,19 +433,68 @@ public class PrimordialDemonEntity extends TamableAnimal {
         }
         var dmgAttr = this.getAttribute(Attributes.ATTACK_DAMAGE);
         if (dmgAttr != null) {
-            double dmg = type.getAttackDamage() * multiplier;
-            if (isWinged() && type == DemonType.NOIR) dmg *= 1.25D;
+            double dmg = type.getAttackDamage() * dmgMul;
             dmgAttr.setBaseValue(dmg);
         }
+    }
+
+    public long getCalculatedEP() {
+        DemonType type = getDemonType();
+        long baseEp = switch (type) {
+            case ROUGE -> 2800000L;
+            case NOIR -> 2500000L;
+            case BLANC, JAUNE, VIOLET -> 2000000L;
+            case BLEU, VERT -> 1500000L;
+            default -> 1500000L;
+        };
+
+        // Khi có thể xác vật lý: EP gấp 3 lần!
+        double epMul = hasPhysicalBody() ? 3.0D : 1.0D;
+
+        // Nếu có ban tên: EP nhân 2.5 lần
+        if (isNamed() || this.getTags().contains("TensuraNamedMob")) {
+            epMul *= 2.5D;
+        }
+
+        // Nếu tiến hóa Ma Vương: EP nhân 6.0 lần (hoặc đạt ngưỡng Chân Ma Vương tối thiểu 40,000,000 EP)
+        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
+        if (isDemonLord) {
+            epMul *= 6.0D;
+        }
+
+        long finalEp = (long) (baseEp * epMul);
+        if (isDemonLord && finalEp < 40000000L) {
+            finalEp = 40000000L + (hasPhysicalBody() ? 20000000L : 0L);
+        }
+        return finalEp;
+    }
+
+    public String getDemonRankTitle() {
+        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
+        if (isDemonLord) {
+            return "✦ Chân Ma Vương Thức Tỉnh";
+        }
+        return "★ Ma Tướng Thượng Cấp";
     }
 
     public void updateDemonNametag() {
         DemonType type = getDemonType();
         String colorPrefix = type != null ? type.getColorName() : "Thủy Tổ";
-        if (hasPhysicalBody()) {
-            this.setCustomName(Component.literal("§c§l★ THỂ XÁC: §f§l" + colorPrefix.toUpperCase() + " §c§l★"));
+        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
+        String effectiveName = (getCustomDemonName() != null && !getCustomDemonName().isEmpty()) ? getCustomDemonName() : colorPrefix;
+
+        if (isDemonLord) {
+            this.setCustomName(Component.literal("§4§l✦ CHÂN MA VƯƠNG: §c§l" + effectiveName + " §4§l✦"));
+        } else if (isNamed() || (getCustomDemonName() != null && !getCustomDemonName().isEmpty())) {
+            if (hasPhysicalBody()) {
+                this.setCustomName(Component.literal("§5§l✦ MA THẦN: §6§l" + effectiveName + " §5§l✦"));
+            } else {
+                this.setCustomName(Component.literal("§6§l✦ MA TƯỚNG: §e§l" + effectiveName + " §6§l✦"));
+            }
+        } else if (hasPhysicalBody()) {
+            this.setCustomName(Component.literal("§c§l★ MA TƯỚNG [THỂ XÁC]: §f§l" + colorPrefix.toUpperCase() + " §c§l★"));
         } else {
-            this.setCustomName(Component.literal("§7★ THỦY TỔ: §f" + colorPrefix + " §7★"));
+            this.setCustomName(Component.literal("§7★ MA TƯỚNG THƯỢNG CẤP: §f" + colorPrefix + " §7★"));
         }
         this.setCustomNameVisible(true);
     }
@@ -346,14 +512,6 @@ public class PrimordialDemonEntity extends TamableAnimal {
             return Component.literal(getCustomDemonName());
         }
         return super.getName();
-    }
-
-    @Override
-    public Component getDisplayName() {
-        if (isNamed() && getCustomDemonName() != null && !getCustomDemonName().isEmpty()) {
-            return Component.literal(getCustomDemonName());
-        }
-        return super.getDisplayName();
     }
 
     public boolean hasPhysicalBody() {
@@ -392,6 +550,9 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
     public void setCustomDemonName(String name) {
         this.entityData.set(DATA_CUSTOM_NAME, name != null ? name : "");
+        if (name != null && !name.isEmpty()) {
+            this.entityData.set(DATA_IS_NAMED, true);
+        }
         updateDemonNametag();
     }
 
@@ -486,9 +647,32 @@ public class PrimordialDemonEntity extends TamableAnimal {
     }
 
     // =========================================================================
-    // MIỄN NHIỄM TUYỆT ĐỐI CHO NGƯỜI CHƠI CẦM GĂNG TAY VÔ CỰC HOẶC MẶC GIÁP THẦN THOẠI
+    // MIỄN NHIỄM TUYỆT ĐỐI CHO SINH VẬT HIỀN LÀNH (DÂN LÀNG, PET, IRON GOLEM) & NGƯỜI CHƠI BẢO HỘ
     // =========================================================================
+    public static boolean isFriendlyCreature(LivingEntity target) {
+        if (target == null) return false;
+        if (target instanceof net.minecraft.world.entity.npc.Villager ||
+            target instanceof net.minecraft.world.entity.npc.WanderingTrader ||
+            target instanceof net.minecraft.world.entity.npc.Npc) {
+            return true;
+        }
+        if (target instanceof net.minecraft.world.entity.animal.IronGolem) {
+            return true;
+        }
+        if (target instanceof TamableAnimal tame && tame.isTame()) {
+            return true;
+        }
+        if (target instanceof net.minecraft.world.entity.animal.horse.AbstractHorse horse && horse.isTamed()) {
+            return true;
+        }
+        return false;
+    }
+
     public static boolean isTargetImmune(LivingEntity target) {
+        if (target == null) return false;
+        if (isFriendlyCreature(target)) {
+            return true; // Tuyệt đối không gây tử vong hoặc tổn hại cho dân làng & sinh vật hiền lành
+        }
         if (target instanceof Player player) {
             ItemStack main = player.getMainHandItem();
             ItemStack off = player.getOffhandItem();
@@ -502,6 +686,99 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
         }
         return false;
+    }
+
+    public static boolean isContractedAllyOfPlayer(java.util.UUID playerUuid, net.minecraft.world.entity.Entity target) {
+        if (target == null || playerUuid == null) return false;
+        if (target.getUUID().equals(playerUuid)) return true;
+        if (target instanceof PrimordialDemonEntity demon && demon.isTame()) {
+            return playerUuid.equals(demon.getOwnerUUID());
+        }
+        if (target instanceof TamableAnimal tame && tame.isTame() && playerUuid.equals(tame.getOwnerUUID())) {
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isAlliedTo(net.minecraft.world.entity.Entity other) {
+        if (other == null) return false;
+        if (other == this) return true;
+        if (this.isTame()) {
+            if (this.getOwnerUUID() != null && this.getOwnerUUID().equals(other.getUUID())) {
+                return true;
+            }
+            if (other instanceof PrimordialDemonEntity otherDemon && otherDemon.isTame()) {
+                return true; // Các Ác Ma đã ký khế ước không bao giờ gây sát thương cho nhau
+            }
+            if (other instanceof TamableAnimal tame && tame.isTame() && this.getOwnerUUID() != null && this.getOwnerUUID().equals(tame.getOwnerUUID())) {
+                return true;
+            }
+        }
+        return super.isAlliedTo(other);
+    }
+
+    @Override
+    public void setTarget(@org.jetbrains.annotations.Nullable LivingEntity target) {
+        if (target != null && this.isTame() && this.isAlliedTo(target)) {
+            super.setTarget(null);
+            return;
+        }
+        super.setTarget(target);
+    }
+
+    public boolean isImmuneOrFriendly(LivingEntity target) {
+        if (target == null) return true;
+        if (target == this) return true;
+        if (this.isTame() && this.isAlliedTo(target)) return true;
+        if (this.isMassacreMode() && (target instanceof net.minecraft.world.entity.npc.AbstractVillager || target instanceof net.minecraft.world.entity.animal.IronGolem || target instanceof net.minecraft.world.entity.animal.SnowGolem)) {
+            return false; // Trong chế độ Tàn Sát, Dân Làng và Iron Golem KHÔNG được miễn nhiễm!
+        }
+        if (isTargetImmune(target)) return true;
+        if (this.getOwner() != null && target == this.getOwner()) return true;
+        return false;
+    }
+
+    /**
+     * PHÁ KHỐI ZERO-LAG DÀNH RIÊNG CHO HOÀNG SẮC THỦY TỔ (CARRERA - JAUNE):
+     * Mọi ma pháp của Carrera đều có thể bộc phá khối, giới hạn bán kính an toàn và không rớt item để đảm bảo 20 TPS.
+     */
+    public void applyCarreraBlockDestruction(Vec3 center, float radius) {
+        if (!(this.level() instanceof ServerLevel sl) || center == null) return;
+        int r = Math.min(3, Math.round(radius));
+        BlockPos cPos = BlockPos.containing(center);
+        int destroyed = 0;
+        int maxLimit = 36;
+        for (int dx = -r; dx <= r && destroyed < maxLimit; dx++) {
+            for (int dy = -r; dy <= r && destroyed < maxLimit; dy++) {
+                for (int dz = -r; dz <= r && destroyed < maxLimit; dz++) {
+                    if (dx * dx + dy * dy + dz * dz > r * r) continue;
+                    BlockPos p = cPos.offset(dx, dy, dz);
+                    net.minecraft.world.level.block.state.BlockState state = sl.getBlockState(p);
+                    if (state.isAir()) continue;
+                    if (state.is(net.minecraft.world.level.block.Blocks.BEDROCK) || state.is(net.minecraft.world.level.block.Blocks.BARRIER)) continue;
+                    if (state.getDestroySpeed(sl, p) < 0) continue;
+                    sl.destroyBlock(p, false); // false = không rớt item để triệt tiêu 100% lag
+                    destroyed++;
+                }
+            }
+        }
+        if (destroyed > 0) {
+            sl.sendParticles(ParticleTypes.EXPLOSION, center.x, center.y, center.z, 2, 0.5, 0.5, 0.5, 0);
+            sl.playSound(null, center.x, center.y, center.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 1.8F, 1.2F);
+        }
+    }
+
+    /**
+     * PHÁ HỦY MA PHÁP & VÒNG TRÒN PHÁP TRẬN ĐỐI NGHỊCH:
+     * Kỹ năng của các ác ma khi có khế ước hay chưa đều phá tan vòng tròn ma pháp trận hoặc kết giới của nhau.
+     */
+    public void dispelOpposingMagic(Vec3 center, double radius) {
+        if (!(this.level() instanceof ServerLevel sl) || center == null) return;
+        com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager.purgeCirclesInArea(sl, center, radius, radius * 2);
+        com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.removeBarriersInArea(sl, center, radius, this.getOwner());
+        com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.removeBarriersInArea(sl, center, radius, this.getOwner());
+        com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removePrisonsInArea(sl, center, radius);
     }
 
     public static boolean isBossTarget(LivingEntity target) {
@@ -559,11 +836,28 @@ public class PrimordialDemonEntity extends TamableAnimal {
         super.awardKillScore(victim, score, damageSource);
         if (victim instanceof LivingEntity living) {
             triggerKillDialogue(living);
+            onMassacreKill(living);
+        }
+    }
+
+    private void onMassacreKill(LivingEntity victim) {
+        if (!this.isTame() || !this.isMassacreMode() || !(this.getOwner() instanceof ServerPlayer owner)) return;
+        if (victim.getTags().contains("BlancMassacreCounted")) return;
+        victim.addTag("BlancMassacreCounted");
+
+        if (victim instanceof net.minecraft.world.entity.npc.AbstractVillager) {
+            CompoundTag data = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(owner);
+            int sacrificed = data.getInt("TensuraVillagersSacrificed") + 1;
+            data.putInt("TensuraVillagersSacrificed", sacrificed);
+            ItemStack dmSoul = new ItemStack(ModItems.DEMON_LORD_SOUL.get());
+            if (!owner.getInventory().add(dmSoul)) {
+                owner.drop(dmSoul, false);
+            }
         }
     }
 
     public void dealDemonicDamage(LivingEntity target, float amount) {
-        if (isTargetImmune(target)) {
+        if (isImmuneOrFriendly(target)) {
             // Không hiển thị tin nhắn găng tay/áo giáp theo yêu cầu người chơi
             if (this.level() instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.FLASH, target.getX(), target.getY() + 1.0D, target.getZ(), 1, 0, 0, 0, 0);
@@ -604,18 +898,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
         target.hurt(this.level().damageSources().mobAttack(this), amount);
         if (target.isDeadOrDying() || target.getHealth() <= 0) {
             triggerKillDialogue(target);
+            onMassacreKill(target);
         }
     }
 
     public void applyDemonicEffect(LivingEntity target, MobEffectInstance effect) {
-        if (isTargetImmune(target)) return;
+        if (isImmuneOrFriendly(target)) return;
         target.addEffect(effect);
     }
 
     @Override
     public boolean doHurtTarget(Entity target) {
         if (target instanceof LivingEntity living) {
-            if (isTargetImmune(living)) {
+            if (isImmuneOrFriendly(living)) {
                 // Không hiển thị tin nhắn găng tay/áo giáp theo yêu cầu người chơi
                 if (this.level() instanceof ServerLevel sl) {
                     sl.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -623,7 +918,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 return false;
             }
         }
-        return super.doHurtTarget(target);
+        boolean res = super.doHurtTarget(target);
+        if (res && target instanceof LivingEntity living && (living.isDeadOrDying() || living.getHealth() <= 0)) {
+            onMassacreKill(living);
+        }
+        return res;
     }
 
     @Override
@@ -894,7 +1193,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
             for (LivingEntity e : entities) {
                 if (e == this || e == this.getOwner()) continue;
-                if (isTargetImmune(e)) continue;
+                if (isImmuneOrFriendly(e)) continue;
 
                 double dist = e.distanceToSqr(domainCenter);
 
@@ -1021,15 +1320,18 @@ public class PrimordialDemonEntity extends TamableAnimal {
                     player.displayClientMessage(Component.literal("§c§l✦ " + getEffectiveDemonName() + " §cđã có thể xác vật lý rồi!"), true);
                     return InteractionResult.FAIL;
                 }
-                // Grant physical body
+                // Ban thể xác vật lý (Sức mạnh x30, Máu x4, EP x3)
                 this.setPhysicalBody(true);
-                this.setEvolutionTier(1);
-                this.setWinged(getDemonType() == DemonType.NOIR);
+                int newTier = Math.max(this.getEvolutionTier(), 1);
+                if (isNamed()) newTier = Math.max(newTier, 3);
+                this.setEvolutionTier(newTier);
+                boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
+                this.setWinged(getDemonType() == DemonType.NOIR || isDemonLord);
                 if (getDemonType() == DemonType.JAUNE) {
                     this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(ModItems.GOLDEN_GUN.get()));
                 }
                 if (!player.isCreative()) heldItem.shrink(1);
-                performEvolution(player, "NHẬN THỂ XÁC VẬT LÝ", false);
+                performEvolution(player, "BAN CƠ THỂ VẬT LÝ", false);
                 return InteractionResult.SUCCESS;
             }
 
@@ -1063,19 +1365,27 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 }
             } else {
                 // ==========================================
-                // CLICK THƯỜNG: TOGGLE SIT/FOLLOW
+                // CLICK THƯỜNG: TOGGLE CANH GIỮ / ĐI THEO
                 // ==========================================
                 boolean newSitting = !this.isOrderedToSit();
-                this.setOrderedToSit(newSitting);
+                this.setGuardMode(newSitting, this.blockPosition());
                 this.jumping = false;
                 this.navigation.stop();
 
                 if (newSitting) {
-                    player.displayClientMessage(Component.literal("§e§l[" + this.getDemonType().getColorName() + "] §7đang §cĐỨNG CHỜ LỆNH§7 của chủ nhân."), true);
+                    player.displayClientMessage(Component.literal("§e§l[" + this.getDemonType().getColorName() + "] §7đang §eTUẦN TRA CANH GIỮ KHU VỰC§7 này!"), true);
                 } else {
                     player.displayClientMessage(Component.literal("§e§l[" + this.getDemonType().getColorName() + "] §aĐI THEO BẢO VỆ§7 chủ nhân!"), true);
                 }
                 return InteractionResult.SUCCESS;
+            }
+        } else {
+            ItemStack heldItem = player.getItemInHand(hand);
+            if (heldItem.is(ModItems.ARTIFICIAL_SKELETON.get())) {
+                if (!this.level().isClientSide()) {
+                    player.displayClientMessage(Component.literal("§c§l✦ Ác ma này chưa lập khế ước với bạn! Chỉ có chủ nhân đã ký khế ước mới có thể ban thể xác vật lý!"), true);
+                }
+                return InteractionResult.sidedSuccess(this.level().isClientSide());
             }
         }
         return super.mobInteract(player, hand);
@@ -1204,11 +1514,17 @@ public class PrimordialDemonEntity extends TamableAnimal {
                         }
 
                         // Cập nhật trạng thái tiến hóa lên khế ước mới
+                        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
                         ItemStackDataHelper.putString(newStack, "DemonType", type.name());
                         ItemStackDataHelper.putBoolean(newStack, "HasPhysicalBody", hasPhysicalBody());
                         ItemStackDataHelper.putBoolean(newStack, "IsNamed", isNamed());
                         ItemStackDataHelper.putString(newStack, "CustomDemonName", getCustomDemonName());
                         ItemStackDataHelper.putInt(newStack, "EvolutionTier", currentTier);
+                        ItemStackDataHelper.putBoolean(newStack, "IsDemonLord", isDemonLord);
+                        ItemStackDataHelper.putBoolean(newStack, "IsAwakenedDemonLord", isDemonLord);
+                        ItemStackDataHelper.putString(newStack, "DemonRank", getDemonRankTitle());
+                        ItemStackDataHelper.putLong(newStack, "CalculatedEP", getCalculatedEP());
+                        ItemStackDataHelper.putFloat(newStack, "AttackDamage", (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
                         ItemStackDataHelper.putFloat(newStack, "CurrentHp", this.getHealth());
                         ItemStackDataHelper.putFloat(newStack, "MaxHp", this.getMaxHealth());
                         ItemStackDataHelper.putBoolean(newStack, "IsSummoned", ItemStackDataHelper.getBoolean(stack, "IsSummoned"));
@@ -1228,10 +1544,16 @@ public class PrimordialDemonEntity extends TamableAnimal {
                         owner.getInventory().setItem(i, newStack);
                     } else {
                         // Item đã đúng variant, chỉ cập nhật NBT data
+                        boolean isDemonLord = this.getTags().contains("TensuraDemonLordMob");
                         ItemStackDataHelper.putBoolean(stack, "HasPhysicalBody", hasPhysicalBody());
                         ItemStackDataHelper.putBoolean(stack, "IsNamed", isNamed());
                         ItemStackDataHelper.putString(stack, "CustomDemonName", getCustomDemonName());
                         ItemStackDataHelper.putInt(stack, "EvolutionTier", currentTier);
+                        ItemStackDataHelper.putBoolean(stack, "IsDemonLord", isDemonLord);
+                        ItemStackDataHelper.putBoolean(stack, "IsAwakenedDemonLord", isDemonLord);
+                        ItemStackDataHelper.putString(stack, "DemonRank", getDemonRankTitle());
+                        ItemStackDataHelper.putLong(stack, "CalculatedEP", getCalculatedEP());
+                        ItemStackDataHelper.putFloat(stack, "AttackDamage", (float) this.getAttributeValue(Attributes.ATTACK_DAMAGE));
                         ItemStackDataHelper.putFloat(stack, "CurrentHp", this.getHealth());
                         ItemStackDataHelper.putFloat(stack, "MaxHp", this.getMaxHealth());
 
@@ -1254,6 +1576,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (isRising()) return false;
         if (source.is(net.minecraft.tags.DamageTypeTags.IS_FIRE) || source.is(net.minecraft.tags.DamageTypeTags.IS_FALL)) {
             return false;
+        }
+
+        // ÁC MA ĐÃ KÝ KHẾ ƯỚC: Miễn nhiễm hoàn toàn sát thương từ Chủ Nhân và từ các Ác Ma đã ký khế ước khác
+        if (this.isTame()) {
+            if (source.getEntity() != null && this.isAlliedTo(source.getEntity())) {
+                return false;
+            }
+            if (source.getDirectEntity() != null && this.isAlliedTo(source.getDirectEntity())) {
+                return false;
+            }
+            if (source.getEntity() instanceof Player p && (this.getOwnerUUID() != null && this.getOwnerUUID().equals(p.getUUID()))) {
+                return false;
+            }
         }
 
         // TÍNH TOÁN RỦI RO CHIẾN ĐẤU VỚI BOSS
@@ -1417,9 +1752,16 @@ public class PrimordialDemonEntity extends TamableAnimal {
         tag.putBoolean("HasPhysicalBody", hasPhysicalBody());
         tag.putBoolean("IsNamed", isNamed());
         tag.putInt("EvolutionTier", getEvolutionTier());
+        tag.putBoolean("IsDemonLord", this.getTags().contains("TensuraDemonLordMob"));
         tag.putString("CustomDemonName", getCustomDemonName());
         tag.putBoolean("IsSupportMinion", this.isSupportMinion);
         tag.putBoolean("HasSummonedMinions", this.hasSummonedMinions);
+        tag.putBoolean("MassacreMode", isMassacreMode());
+        if (this.guardCenterPos != null) {
+            tag.putInt("GuardCenterX", this.guardCenterPos.getX());
+            tag.putInt("GuardCenterY", this.guardCenterPos.getY());
+            tag.putInt("GuardCenterZ", this.guardCenterPos.getZ());
+        }
 
         net.minecraft.nbt.ListTag skillsList = new net.minecraft.nbt.ListTag();
         for (PrimordialSkillPool.SkillEntry entry : randomSkills) {
@@ -1447,13 +1789,30 @@ public class PrimordialDemonEntity extends TamableAnimal {
             setEvolutionTier(tag.getInt("EvolutionTier"));
         }
         if (tag.contains("CustomDemonName")) {
-            setCustomDemonName(tag.getString("CustomDemonName"));
+            String cName = tag.getString("CustomDemonName");
+            setCustomDemonName(cName);
+            if (!cName.isEmpty()) {
+                setNamed(true);
+            }
+        }
+        if (isNamed()) {
+            this.addTag("TensuraNamedMob");
+        }
+        if (tag.getBoolean("IsDemonLord")) {
+            this.addTag("TensuraDemonLordMob");
+            this.addTag("TensuraDemonLordCalm");
         }
         if (tag.contains("IsSupportMinion")) {
             this.isSupportMinion = tag.getBoolean("IsSupportMinion");
         }
         if (tag.contains("HasSummonedMinions")) {
             this.hasSummonedMinions = tag.getBoolean("HasSummonedMinions");
+        }
+        if (tag.contains("MassacreMode")) {
+            this.setMassacreMode(tag.getBoolean("MassacreMode"));
+        }
+        if (tag.contains("GuardCenterX")) {
+            this.guardCenterPos = new BlockPos(tag.getInt("GuardCenterX"), tag.getInt("GuardCenterY"), tag.getInt("GuardCenterZ"));
         }
         if (tag.contains("PrimordialSkills", 9)) {
             net.minecraft.nbt.ListTag list = tag.getList("PrimordialSkills", 8);
@@ -1678,6 +2037,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
         float damage = (float) (type.getAttackDamage() * 1.5D);
         dealDemonicDamage(target, damage);
+        dispelOpposingMagic(tPos, 14.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(tPos, 2.6F);
+        }
     }
 
     public void executeSkillTwo(LivingEntity target, DemonType type) {
@@ -1746,6 +2109,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 owner.heal(25.0F);
             }
         }
+        dispelOpposingMagic(tPos, 14.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(tPos, 2.8F);
+        }
     }
 
     public void executeSkillThree(LivingEntity target, DemonType type) {
@@ -1805,6 +2172,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
         }
         for (LivingEntity e : targets) {
             dealDemonicDamage(e, damage);
+        }
+        dispelOpposingMagic(tPos, 16.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(tPos, 3.2F);
         }
     }
 
@@ -1867,6 +2238,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
             e.setDeltaMovement(0, 0.6D, 0);
             e.hasImpulse = true;
         }
+        dispelOpposingMagic(tPos, 20.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(tPos, 3.5F);
+        }
     }
 
     // =========================================================================
@@ -1920,6 +2295,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
             applyDemonicEffect(e, new MobEffectInstance(MobEffects.WEAKNESS, 160, 3));
             applyDemonicEffect(e, new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 3));
         }
+        dispelOpposingMagic(tPos, 20.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(tPos, 3.5F);
+        }
     }
 
     // =========================================================================
@@ -1951,6 +2330,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
         // 3. Khai hỏa chùm pháo Granit / Linh Tử Bộc Phát theo màu sắc
         float dmg = hasPhysicalBody() ? 560.0F : 400.0F;
         HorizontalHolyBeamAbility.fireSpiritronOutburst(level, this, eyePos, dir, type, 56.0D, dmg);
+        Vec3 impact = eyePos.add(dir.scale(28.0D));
+        dispelOpposingMagic(impact, 18.0D);
+        if (type == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(impact, 3.2F);
+        }
     }
 
     // =========================================================================
@@ -2258,35 +2642,97 @@ public class PrimordialDemonEntity extends TamableAnimal {
     // LỆNH THI TRIỂN KỸ NĂNG TỪ XA (COMMAND EXECUTION TỪ CUỘN KHẾ ƯỚC)
     // =========================================================================
     public void executeCommandedSkill(int skillIndex, LivingEntity target) {
-        if (target == null || !target.isAlive()) {
+        if (target == null || !target.isAlive() || isImmuneOrFriendly(target)) {
             target = this.getTarget();
-        }
-        if (target == null) {
-            List<LivingEntity> nearby = this.level().getEntitiesOfClass(
-                    LivingEntity.class,
-                    this.getBoundingBox().inflate(24.0D),
-                    e -> e != this && e != this.getOwner() && e instanceof Enemy && e.isAlive()
-            );
-            if (!nearby.isEmpty()) {
-                target = nearby.get(0);
+            if (target != null && (!target.isAlive() || isImmuneOrFriendly(target))) {
+                target = null;
             }
         }
-        if (target == null) return;
+        if (target == null) {
+            List<LivingEntity> nearbyHostiles = this.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    this.getBoundingBox().inflate(48.0D),
+                    e -> e != this && !isImmuneOrFriendly(e) && e.isAlive() && (e instanceof Enemy || (isMassacreMode() && (e instanceof net.minecraft.world.entity.npc.AbstractVillager || e instanceof net.minecraft.world.entity.animal.IronGolem)))
+            );
+            if (!nearbyHostiles.isEmpty()) {
+                nearbyHostiles.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
+                target = nearbyHostiles.get(0);
+            } else {
+                List<LivingEntity> anyValid = this.level().getEntitiesOfClass(
+                        LivingEntity.class,
+                        this.getBoundingBox().inflate(48.0D),
+                        e -> e != this && !isImmuneOrFriendly(e) && e.isAlive()
+                );
+                if (!anyValid.isEmpty()) {
+                    anyValid.sort(java.util.Comparator.comparingDouble(this::distanceToSqr));
+                    target = anyValid.get(0);
+                }
+            }
+        }
 
-        this.setTarget(target);
-        this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        if (target != null) {
+            this.setTarget(target);
+            this.getLookControl().setLookAt(target, 30.0F, 30.0F);
+        }
 
-        if (skillIndex >= 10) {
-            int randomSkillIdx = skillIndex - 10;
+        // Toàn bộ kỹ năng Khế Ước (100 -> 112) được mở khóa hoàn toàn, không cần ràng buộc Tên hay Thể Xác!
+        if (skillIndex >= 100) {
+            switch (skillIndex) {
+                case 100 -> executeContractAntiMagicBarrier(target);
+                case 101 -> executeContractGraniteBlast(target);
+                case 102 -> executeContractZoneTrack(target);
+                case 103 -> executeContractSeerFlesh(target);
+                case 104 -> executeContractMiracleOfGods(target);
+                case 105 -> executeContractMultilayerBarrier(target);
+                case 106 -> executeContractInfiniteDragonPrison(target);
+                case 107 -> executeContractHellflare(target);
+                case 108 -> executeContractDarkFlameShot(target);
+                case 109 -> executeContractDeathBlessing(target);
+                case 110 -> executeContractSupernova(target);
+                case 111 -> executeContractDimensionalSanctuary(target);
+                case 112 -> executeContractDragonNova(target);
+            }
+            this.triggerSkillCooldown(30);
+            return;
+        }
+
+        DemonType type = getDemonType();
+        if (skillIndex == 10) {
+            executeSkillFourDomain(target, type);
+            this.triggerSkillCooldown(40);
+            return;
+        }
+
+        if (skillIndex >= 20) {
+            int randomSkillIdx = skillIndex - 20;
             List<PrimordialSkillPool.SkillEntry> rSkills = getRandomSkills();
             if (randomSkillIdx >= 0 && randomSkillIdx < rSkills.size()) {
-                PrimordialSkillPool.executeSkill(this, target, rSkills.get(randomSkillIdx));
-                this.triggerSkillCooldown(40);
+                if (target != null) {
+                    PrimordialSkillPool.executeSkill(this, target, rSkills.get(randomSkillIdx));
+                    this.triggerSkillCooldown(30);
+                } else if (this.getOwner() instanceof ServerPlayer sp) {
+                    sp.displayClientMessage(Component.literal("§e[" + getEffectiveDemonName() + "] §7Chưa có mục tiêu thù địch trong bán kính 48m để thi triển chiêu này!"), true);
+                }
                 return;
             }
         }
 
-        DemonType type = getDemonType();
+        if (target == null) {
+            if (skillIndex == 6 && this.level() instanceof ServerLevel sl) {
+                Vec3 eyePos = this.getEyePosition(1.0F);
+                Vec3 dir = this.getLookAngle();
+                announceSkill(type.getColorName() + ": Linh Tử Bộc Phát (Spiritron Outburst)");
+                float dmg = hasPhysicalBody() ? 560.0F : 400.0F;
+                HorizontalHolyBeamAbility.fireSpiritronOutburst(sl, this, eyePos, dir, type, 56.0D, dmg);
+                this.triggerSkillCooldown(30);
+                return;
+            }
+            if (this.getOwner() instanceof ServerPlayer sp) {
+                sp.displayClientMessage(Component.literal("§e[" + getEffectiveDemonName() + "] §7Chưa có mục tiêu thù địch trong bán kính 48m!"), true);
+            }
+            return;
+        }
+
         switch (skillIndex) {
             case 0 -> executeNormalAttack(target, type);
             case 1 -> executeSkillOne(target, type);
@@ -2301,7 +2747,168 @@ public class PrimordialDemonEntity extends TamableAnimal {
             case 10 -> executeSkillFourDomain(target, type);
             default -> executeSpiritronOutburst(target, type);
         }
-        this.triggerSkillCooldown(40);
+        this.triggerSkillCooldown(30);
+    }
+
+    // =========================================================================
+    // CÁC KỸ NĂNG NGƯỜI CHƠI TRAO QUYỀN CHO ÁC MA KHẾ ƯỚC (INDEX 100 -> 112)
+    // =========================================================================
+    public void executeContractAntiMagicBarrier(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 pos = this.position();
+        announceSkill("Kháng Ma Kết Giới (Anti-Magic Barrier)");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        AntiMagicBarrierManager.spawnDemonBarrier(sl, owner, pos, 60.0, 40.0);
+        broadcastNearbyDialogue("Kháng Ma Kết Giới đã được dựng lên! Mọi ma pháp thù địch sẽ bị phong ấn triệt để!", 32.0D);
+    }
+
+    public void executeContractGraniteBlast(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 eyePos = this.getEyePosition(1.0F);
+        Vec3 dir = target != null ? target.getEyePosition(1.0F).subtract(eyePos).normalize() : this.getLookAngle();
+        announceSkill("Cú Bắn Granit (Granite Blast)");
+        HorizontalHolyBeamAbility.fireGraniteBlast(sl, this, eyePos, dir, 56.0D, 1200.0F);
+        Vec3 impact = eyePos.add(dir.scale(28.0D));
+        dispelOpposingMagic(impact, 16.0D);
+        if (this.getDemonType() == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(impact, 3.0F);
+        }
+    }
+
+    public void executeContractZoneTrack(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 eyePos = this.getEyePosition(1.0F);
+        Vec3 dir = target != null ? target.getEyePosition(1.0F).subtract(eyePos).normalize() : this.getLookAngle();
+        announceSkill("Zone Track: Đại Pháo Bạch Kim");
+
+        ModMessages.sendToPlayers(sl.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_ZONE_TRACK, this.getUUID(), eyePos, dir, 20, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+        ));
+        sl.playSound(null, eyePos.x, eyePos.y, eyePos.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 3.5F, 1.7F);
+
+        double maxDist = 48.0D;
+        for (double d = 1.0; d <= maxDist; d += 1.5) {
+            Vec3 cur = eyePos.add(dir.scale(d));
+            AABB box = new AABB(cur, cur).inflate(2.5D);
+            List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && !isImmuneOrFriendly(e));
+            for (LivingEntity v : victims) {
+                dealDemonicDamage(v, 360.0F);
+                v.setDeltaMovement(dir.scale(1.8D).add(0, 0.4D, 0));
+                v.hurtMarked = true;
+            }
+        }
+        Vec3 finalHit = eyePos.add(dir.scale(Math.min(30.0, maxDist)));
+        dispelOpposingMagic(finalHit, 14.0D);
+        if (this.getDemonType() == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(finalHit, 3.0F);
+        }
+    }
+
+    public void executeContractSeerFlesh(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 pos = this.position();
+        announceSkill("Thị Thực: Thị Nhục Mạch Động");
+
+        this.heal(this.getMaxHealth() * 0.5F);
+        sl.playSound(null, pos.x, pos.y, pos.z, SoundEvents.WARDEN_HEARTBEAT, SoundSource.HOSTILE, 4.0F, 0.8F);
+        sl.playSound(null, pos.x, pos.y, pos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.HOSTILE, 2.5F, 0.6F);
+        sl.sendParticles(ParticleTypes.SONIC_BOOM, pos.x, pos.y + 1.0, pos.z, 2, 0, 0, 0, 0);
+
+        AABB box = new AABB(pos, pos).inflate(18.0D);
+        List<LivingEntity> enemies = sl.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && !isImmuneOrFriendly(e));
+        for (LivingEntity e : enemies) {
+            dealDemonicDamage(e, 260.0F);
+            Vec3 knock = e.position().subtract(pos).normalize().scale(2.0D).add(0, 0.5D, 0);
+            e.setDeltaMovement(knock);
+            e.hurtMarked = true;
+        }
+        dispelOpposingMagic(pos, 16.0D);
+    }
+
+    public void executeContractMiracleOfGods(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 targetPos = target != null ? target.position() : this.position();
+        Vec3 groundVec = PurificationPillarAbility.findGroundBelow(sl, targetPos);
+        announceSkill("Phép Màu Của Thần Linh: Đại Thánh Tẩy");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        PurificationPillarAbility.spawnTemporaryPurification(sl, groundVec, 240, owner);
+        dispelOpposingMagic(groundVec, 20.0D);
+    }
+
+    public void executeContractMultilayerBarrier(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 pos = this.position().add(0, 1.0D, 0);
+        announceSkill("Đa Trùng Kết Giới (Multilayer Barrier)");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        MultilayerBarrierAbility.spawnDemonBarrier(sl, owner, this.getUUID(), pos, 6.0, 600);
+    }
+
+    public void executeContractInfiniteDragonPrison(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 targetPos = target != null ? target.position().add(0, 1.0, 0) : this.position().add(this.getLookAngle().scale(8.0)).add(0, 1.0, 0);
+        announceSkill("Lồng Giam Vô Hạn (Infinite Dragon Prison)");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        InfiniteDragonPrisonAbility.spawnDemonPrison(sl, owner, this.getUUID(), targetPos, 8.0, 600);
+    }
+
+    public void executeContractHellflare(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 eyePos = this.getEyePosition(1.0F);
+        Vec3 targetPos = target != null ? target.position().add(0, target.getBbHeight() * 0.5D, 0) : eyePos.add(this.getLookAngle().scale(16.0D));
+        announceSkill("Hắc Viêm Ngục (Hellflare)");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        HellflareAbility.castFromDemon(sl, this, eyePos, targetPos, owner);
+        dispelOpposingMagic(targetPos, 16.0D);
+        if (this.getDemonType() == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(targetPos, 3.2F);
+        }
+    }
+
+    public void executeContractDarkFlameShot(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 eyePos = this.getEyePosition(1.0F);
+        Vec3 targetPos = target != null ? target.position().add(0, target.getBbHeight() * 0.5D, 0) : eyePos.add(this.getLookAngle().scale(24.0D));
+        announceSkill("Hắc Viêm Hỏa Cầu (Dark Flame Shot)");
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        DarkFlameShotAbility.castFromDemon(sl, this, eyePos, targetPos, owner);
+        dispelOpposingMagic(targetPos, 16.0D);
+        if (this.getDemonType() == DemonType.JAUNE) {
+            applyCarreraBlockDestruction(targetPos, 3.2F);
+        }
+    }
+
+    public void executeContractDeathBlessing(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        NihilityCollapseAbility.castFromDemon(sl, this, owner);
+    }
+
+    public void executeContractSupernova(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        Vec3 forward = this.getLookAngle();
+        Vec3 corePos = this.position().add(forward.scale(16.0)).add(0, 15.0, 0);
+        announceSkill("Siêu Tân Tinh (Supernova)");
+        broadcastNearbyDialogue("Hãy chiêm ngưỡng ánh sáng của sự hủy diệt nguyên sơ!", 48.0D);
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+
+        SupernovaAbility.spawnTemporarySupernova(sl, corePos, 240, owner, this);
+        dispelOpposingMagic(corePos, 32.0D);
+    }
+
+    public void executeContractDimensionalSanctuary(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        if (owner == null) return;
+        announceSkill("Dị Giới Thần Môn: Cánh Cửa Về Căn Cứ");
+        DimensionalSanctuaryAbility.spawnOuterGate(sl, owner, 0);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 3.0F, 1.0F);
+        broadcastNearbyDialogue("Ta đã mở Dị Giới Thần Môn kết nối thẳng về nhà! Hãy bước qua cánh cửa!", 32.0D);
+    }
+
+    public void executeContractDragonNova(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        DragonNovaAbility.castFromDemon(sl, this, owner);
     }
 
     // =========================================================================
@@ -2434,7 +3041,8 @@ public class PrimordialDemonEntity extends TamableAnimal {
         @Override
         public boolean canUse() {
             LivingEntity target = this.demon.getTarget();
-            return target != null && target.isAlive() && demon.canCastSkill() && demon.distanceToSqr(target) <= 36.0D * 36.0D;
+            if (target == null || !target.isAlive() || this.demon.isImmuneOrFriendly(target)) return false;
+            return demon.canCastSkill() && demon.distanceToSqr(target) <= 48.0D * 48.0D;
         }
 
         @Override
@@ -2445,7 +3053,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
         @Override
         public void tick() {
             LivingEntity target = this.demon.getTarget();
-            if (target == null || !target.isAlive() || !this.demon.canCastSkill()) return;
+            if (target == null || !target.isAlive() || !this.demon.canCastSkill() || this.demon.isImmuneOrFriendly(target)) return;
 
             this.demon.getLookControl().setLookAt(target, 40.0F, 40.0F);
             this.warmUpTicks--;
@@ -2467,6 +3075,32 @@ public class PrimordialDemonEntity extends TamableAnimal {
             // Khi chưa bật lãnh địa và gặp Boss, hoặc gặp kẻ địch nguy hiểm, hoặc 15% ngẫu nhiên
             if (this.demon.activeDomainTicks <= 0 && (isBoss || (dist <= 16.0D && random.nextFloat() < 0.15F))) {
                 demon.executeSkillFourDomain(target, type);
+                return;
+            }
+
+            // 1.5. ÁC MA ĐÃ KÝ KHẾ ƯỚC: Toàn quyền tự động dùng các Đại Ma Pháp Khế Ước khi chiến đấu
+            // (NGOẠI TRỪ Lời Chúc Tử Vong [109] bắt buộc phải do người chơi ra lệnh qua Khế Ước!)
+            if (this.demon.isTame() && random.nextFloat() < 0.35F) {
+                if (this.demon.getHealth() < this.demon.getMaxHealth() * 0.6F && random.nextFloat() < 0.5F) {
+                    demon.executeContractSeerFlesh(target);
+                    return;
+                }
+                int[] autonomousContractSkills = isBoss
+                        ? new int[]{101, 102, 104, 106, 107, 108, 110, 112}
+                        : new int[]{101, 102, 103, 104, 105, 106, 107, 108, 110, 112};
+                int chosenContract = autonomousContractSkills[random.nextInt(autonomousContractSkills.length)];
+                switch (chosenContract) {
+                    case 101 -> demon.executeContractGraniteBlast(target);
+                    case 102 -> demon.executeContractZoneTrack(target);
+                    case 103 -> demon.executeContractSeerFlesh(target);
+                    case 104 -> demon.executeContractMiracleOfGods(target);
+                    case 105 -> demon.executeContractMultilayerBarrier(target);
+                    case 106 -> demon.executeContractInfiniteDragonPrison(target);
+                    case 107 -> demon.executeContractHellflare(target);
+                    case 108 -> demon.executeContractDarkFlameShot(target);
+                    case 110 -> demon.executeContractSupernova(target);
+                    case 112 -> demon.executeContractDragonNova(target);
+                }
                 return;
             }
 
@@ -2556,6 +3190,488 @@ public class PrimordialDemonEntity extends TamableAnimal {
                     default -> demon.executeNormalAttack(target, type);
                 }
             }
+        }
+    }
+
+    // =========================================================================
+    // AI ƯU TIÊN PHÁ HỦY LỒNG TRIỆU HỒI (SPAWNER) CHO ÁC MA ĐÃ KÝ KHẾ ƯỚC
+    // =========================================================================
+    static class PrimordialBreakSpawnerGoal extends Goal {
+        private final PrimordialDemonEntity demon;
+        private BlockPos targetSpawner = null;
+        private int scanCooldown = 0;
+        private int approachTicks = 0;
+
+        public PrimordialBreakSpawnerGoal(PrimordialDemonEntity demon) {
+            this.demon = demon;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.demon.isTame() || this.demon.isRising()) return false;
+            if (this.targetSpawner != null && this.demon.level().getBlockState(this.targetSpawner).is(Blocks.SPAWNER)) {
+                return true;
+            }
+            if (this.scanCooldown > 0) {
+                this.scanCooldown--;
+                return false;
+            }
+            this.scanCooldown = 15;
+            this.targetSpawner = findNearestSpawner(32, 12);
+            return this.targetSpawner != null;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return this.demon.isTame()
+                    && this.targetSpawner != null
+                    && this.demon.level().getBlockState(this.targetSpawner).is(Blocks.SPAWNER)
+                    && this.demon.blockPosition().distSqr(this.targetSpawner) <= 40.0D * 40.0D;
+        }
+
+        @Override
+        public void start() {
+            this.approachTicks = 0;
+            if (this.targetSpawner != null) {
+                this.demon.getNavigation().moveTo(this.targetSpawner.getX() + 0.5D, this.targetSpawner.getY() + 0.5D, this.targetSpawner.getZ() + 0.5D, 1.5D);
+            }
+        }
+
+        @Override
+        public void stop() {
+            this.targetSpawner = null;
+            this.approachTicks = 0;
+        }
+
+        @Override
+        public void tick() {
+            if (this.targetSpawner == null || !(this.demon.level() instanceof ServerLevel sl)) return;
+            if (!sl.getBlockState(this.targetSpawner).is(Blocks.SPAWNER)) {
+                this.targetSpawner = null;
+                return;
+            }
+
+            Vec3 center = Vec3.atCenterOf(this.targetSpawner);
+            this.demon.getLookControl().setLookAt(center.x, center.y, center.z, 35.0F, 35.0F);
+            this.approachTicks++;
+
+            double distSqr = this.demon.distanceToSqr(center);
+            if (distSqr > 5.0D * 5.0D) {
+                if (this.approachTicks >= 25) {
+                    // Tốc biến áp sát thẳng tới lồng spawn nếu bị vướng địa hình
+                    this.demon.teleportTo(center.x, center.y + 1.0D, center.z);
+                    sl.sendParticles(ParticleTypes.PORTAL, center.x, center.y + 1.0D, center.z, 20, 0.4, 0.5, 0.4, 0.05);
+                    sl.playSound(null, center.x, center.y, center.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.5F, 1.2F);
+                } else if (this.approachTicks % 10 == 1) {
+                    this.demon.getNavigation().moveTo(center.x, center.y, center.z, 1.5D);
+                }
+            }
+
+            if (this.demon.distanceToSqr(center) <= 6.0D * 6.0D || this.approachTicks >= 30) {
+                this.demon.swing(InteractionHand.MAIN_HAND);
+                sl.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y, center.z, 1, 0, 0, 0, 0);
+                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, center.x, center.y, center.z, 25, 0.5, 0.5, 0.5, 0.08);
+                sl.playSound(null, center.x, center.y, center.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.0F, 1.1F);
+                sl.destroyBlock(this.targetSpawner, true, this.demon);
+
+                if (this.demon.getOwner() instanceof ServerPlayer owner) {
+                    owner.displayClientMessage(Component.literal("§d§l[" + this.demon.getEffectiveDemonName() + "] §a✔ Đã ưu tiên phá hủy Lồng Triệu Hồi (Spawner) tại [" + this.targetSpawner.toShortString() + "]!"), true);
+                }
+                // Tìm ngay lồng spawn kế tiếp nếu còn xung quanh
+                this.targetSpawner = findNearestSpawner(32, 12);
+                this.approachTicks = 0;
+            }
+        }
+
+        private BlockPos findNearestSpawner(int radiusXZ, int radiusY) {
+            BlockPos origin = this.demon.blockPosition();
+            Level level = this.demon.level();
+            BlockPos best = null;
+            double bestDist = Double.MAX_VALUE;
+
+            for (BlockPos p : BlockPos.betweenClosed(
+                    origin.offset(-radiusXZ, -radiusY, -radiusXZ),
+                    origin.offset(radiusXZ, radiusY, radiusXZ))) {
+                if (level.getBlockState(p).is(Blocks.SPAWNER)) {
+                    double d = origin.distSqr(p);
+                    if (d < bestDist) {
+                        bestDist = d;
+                        best = p.immutable();
+                    }
+                }
+            }
+            return best;
+        }
+    }
+
+    // =========================================================================
+    // AI TÀN SÁT THÔN LÀNG DÀNH CHO BẠCH SẮC BLANC (TESTAROSSA)
+    // =========================================================================
+    static class BlancMassacreVillageGoal extends Goal {
+        private final PrimordialDemonEntity demon;
+        private LivingEntity currentVictim = null;
+        private int emptyTicks = 0;
+
+        public BlancMassacreVillageGoal(PrimordialDemonEntity demon) {
+            this.demon = demon;
+            this.setFlags(EnumSet.of(Flag.MOVE, Flag.LOOK));
+        }
+
+        @Override
+        public boolean canUse() {
+            return this.demon.isTame() && this.demon.isMassacreMode() && !this.demon.isRising();
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return this.demon.isTame() && this.demon.isMassacreMode() && !this.demon.isRising();
+        }
+
+        @Override
+        public void start() {
+            this.emptyTicks = 0;
+            this.currentVictim = findNextVictim();
+            if (this.currentVictim != null) {
+                this.demon.setTarget(this.currentVictim);
+            }
+        }
+
+        @Override
+        public void tick() {
+            if (!(this.demon.level() instanceof ServerLevel sl)) return;
+
+            // Hút toàn bộ vật phẩm & linh hồn rơi ra xung quanh về túi đồ chủ nhân
+            if (this.demon.tickCount % 10 == 0 && this.demon.getOwner() instanceof ServerPlayer owner) {
+                List<ItemEntity> drops = sl.getEntitiesOfClass(ItemEntity.class, this.demon.getBoundingBox().inflate(24.0D), Entity::isAlive);
+                for (ItemEntity itemEntity : drops) {
+                    ItemStack st = itemEntity.getItem().copy();
+                    if (owner.getInventory().add(st)) {
+                        itemEntity.discard();
+                    }
+                }
+            }
+
+            if (this.currentVictim == null || !this.currentVictim.isAlive()) {
+                this.currentVictim = findNextVictim();
+                if (this.currentVictim != null) {
+                    this.emptyTicks = 0;
+                    this.demon.setTarget(this.currentVictim);
+                } else {
+                    this.emptyTicks++;
+                    if (this.emptyTicks >= 60) {
+                        this.demon.setMassacreMode(false);
+                        this.demon.setTarget(null);
+                        if (this.demon.getOwner() instanceof ServerPlayer owner) {
+                            owner.sendSystemMessage(Component.literal("§f§l[BLANC - TESTAROSSA] §c\"Ara ara~ Toàn bộ sinh mạng trong ngôi làng này đã bị xóa sổ sạch sẽ theo ý chủ nhân.\""));
+                            owner.displayClientMessage(Component.literal("§4§l[TÀN SÁT HOÀN TẤT] §fBlanc đã tiêu diệt toàn bộ Dân Làng & Iron Golem trong phạm vi 100m!"), true);
+                        }
+                    }
+                    return;
+                }
+            }
+
+            this.demon.setTarget(this.currentVictim);
+            this.demon.getLookControl().setLookAt(this.currentVictim, 40.0F, 40.0F);
+            double dist = this.demon.distanceTo(this.currentVictim);
+
+            if (dist > 18.0D || (dist > 5.0D && this.demon.tickCount % 25 == 0)) {
+                Vec3 vPos = this.currentVictim.position();
+                this.demon.teleportTo(vPos.x + (this.demon.getRandom().nextDouble() - 0.5D) * 2.5D, vPos.y + 0.5D, vPos.z + (this.demon.getRandom().nextDouble() - 0.5D) * 2.5D);
+                sl.sendParticles(ParticleTypes.END_ROD, this.demon.getX(), this.demon.getY() + 1.0D, this.demon.getZ(), 15, 0.3D, 0.5D, 0.3D, 0.05D);
+                sl.playSound(null, this.demon.getX(), this.demon.getY(), this.demon.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.5F, 1.4F);
+            } else {
+                this.demon.getNavigation().moveTo(this.currentVictim, 1.6D);
+            }
+
+            if (dist <= 4.5D && this.demon.tickCount % 10 == 0) {
+                this.demon.executeNormalAttack(this.currentVictim, this.demon.getDemonType());
+            } else if (this.demon.canCastSkill()) {
+                int roll = this.demon.getRandom().nextInt(5);
+                switch (roll) {
+                    case 0 -> this.demon.executeSkillOne(this.currentVictim, this.demon.getDemonType());
+                    case 1 -> this.demon.executeSignatureSkillOne(this.currentVictim, this.demon.getDemonType());
+                    case 2 -> this.demon.executeSignatureSkillTwo(this.currentVictim, this.demon.getDemonType());
+                    case 3 -> this.demon.executeDisintegration(this.currentVictim, this.demon.getDemonType());
+                    default -> this.demon.executeSpiritronOutburst(this.currentVictim, this.demon.getDemonType());
+                }
+                this.demon.triggerSkillCooldown(18);
+            }
+        }
+
+        private LivingEntity findNextVictim() {
+            List<LivingEntity> victims = this.demon.level().getEntitiesOfClass(
+                    LivingEntity.class,
+                    this.demon.getBoundingBox().inflate(100.0D, 40.0D, 100.0D),
+                    e -> e.isAlive() && (e instanceof net.minecraft.world.entity.npc.AbstractVillager
+                            || e instanceof net.minecraft.world.entity.animal.IronGolem
+                            || e instanceof net.minecraft.world.entity.animal.SnowGolem)
+            );
+            if (victims.isEmpty()) return null;
+            // Ưu tiên giết Iron Golem bảo vệ làng trước hoặc mục tiêu gần nhất
+            victims.sort((a, b) -> {
+                boolean aGolem = a instanceof net.minecraft.world.entity.animal.IronGolem;
+                boolean bGolem = b instanceof net.minecraft.world.entity.animal.IronGolem;
+                if (aGolem != bGolem) return aGolem ? -1 : 1;
+                return Double.compare(this.demon.distanceToSqr(a), this.demon.distanceToSqr(b));
+            });
+            return victims.get(0);
+        }
+    }
+
+    // =========================================================================
+    // AI TUẦN TRA CANH GIỮ VÙNG RỘNG (64-120M) KHÔNG ĐỨNG IM MỘT CHỖ
+    // =========================================================================
+    static class PrimordialPatrolGuardGoal extends Goal {
+        private final PrimordialDemonEntity demon;
+        private int patrolCooldown = 0;
+        private Vec3 currentWaypoint = null;
+
+        public PrimordialPatrolGuardGoal(PrimordialDemonEntity demon) {
+            this.demon = demon;
+            this.setFlags(EnumSet.of(Flag.MOVE));
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.demon.isTame() || !this.demon.isOrderedToSit() || this.demon.isMassacreMode()) {
+                return false;
+            }
+            if (this.demon.guardCenterPos == null) {
+                this.demon.guardCenterPos = this.demon.blockPosition();
+                this.demon.setPersistenceRequired();
+            }
+            // Nếu đang giao chiến với mục tiêu trong bán kính 120m quanh tâm canh giữ, nhường quyền di chuyển cho AI chiến đấu
+            LivingEntity target = this.demon.getTarget();
+            if (target != null && target.isAlive()) {
+                double distFromGuard = target.distanceToSqr(Vec3.atCenterOf(this.demon.guardCenterPos));
+                if (distFromGuard <= 120.0D * 120.0D) {
+                    return false;
+                } else {
+                    this.demon.setTarget(null);
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean canContinueToUse() {
+            return canUse();
+        }
+
+        @Override
+        public void start() {
+            this.patrolCooldown = 10;
+        }
+
+        @Override
+        public void tick() {
+            if (this.demon.guardCenterPos == null || !(this.demon.level() instanceof ServerLevel sl)) return;
+            Vec3 center = Vec3.atCenterOf(this.demon.guardCenterPos);
+
+            // 1. Quét tìm quái vật xâm nhập trong phạm vi 96m quanh tâm canh giữ
+            if (this.demon.tickCount % 20 == 0) {
+                List<LivingEntity> intruders = sl.getEntitiesOfClass(
+                        LivingEntity.class,
+                        new AABB(center, center).inflate(96.0D, 36.0D, 96.0D),
+                        e -> e != this.demon && e.isAlive() && e instanceof Enemy && !this.demon.isImmuneOrFriendly(e)
+                );
+                if (!intruders.isEmpty()) {
+                    intruders.sort(java.util.Comparator.comparingDouble(this.demon::distanceToSqr));
+                    this.demon.setTarget(intruders.get(0));
+                    return;
+                }
+            }
+
+            // 2. Nếu đi quá xa tâm canh giữ (> 110m), quay về tâm
+            double distFromCenterSqr = this.demon.distanceToSqr(center);
+            if (distFromCenterSqr > 130.0D * 130.0D) {
+                this.demon.teleportTo(center.x, center.y + 1.0D, center.z);
+                return;
+            } else if (distFromCenterSqr > 96.0D * 96.0D) {
+                this.demon.getNavigation().moveTo(center.x, center.y, center.z, 1.35D);
+                return;
+            }
+
+            // 3. Đi tuần tra tự nhiên quanh khu vực canh giữ (bán kính rộng tới 72m)
+            if (this.patrolCooldown > 0) {
+                this.patrolCooldown--;
+            }
+            if (this.patrolCooldown <= 0 || (this.currentWaypoint != null && this.demon.distanceToSqr(this.currentWaypoint) <= 6.0D)) {
+                double angle = this.demon.getRandom().nextDouble() * Math.PI * 2.0D;
+                double radius = 12.0D + this.demon.getRandom().nextDouble() * 60.0D; // Tuần tra rộng 12m - 72m
+                int wx = this.demon.guardCenterPos.getX() + (int) (Math.cos(angle) * radius);
+                int wz = this.demon.guardCenterPos.getZ() + (int) (Math.sin(angle) * radius);
+                int wy = sl.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, wx, wz);
+                if (wy < sl.getMinBuildHeight() + 5) {
+                    wy = this.demon.guardCenterPos.getY();
+                }
+                this.currentWaypoint = new Vec3(wx + 0.5D, wy + 0.5D, wz + 0.5D);
+                this.demon.getNavigation().moveTo(this.currentWaypoint.x, this.currentWaypoint.y, this.currentWaypoint.z, 1.1D);
+                this.patrolCooldown = 50 + this.demon.getRandom().nextInt(60);
+            }
+        }
+    }
+
+    // =========================================================================
+    // AI ĐỜI SỐNG THÔN LÀNG & DỊCH VỤ THU PHÍ CỦA ÁC MA ĐÃ KÝ KHẾ ƯỚC
+    // (Trò chuyện với dân làng, hồi máu Iron Golem, làm ruộng, lấp đất sửa đường -> Dân làng trả phí)
+    // =========================================================================
+    static class PrimordialVillageServiceGoal extends Goal {
+        private final PrimordialDemonEntity demon;
+        private int serviceCooldown = 80;
+
+        public PrimordialVillageServiceGoal(PrimordialDemonEntity demon) {
+            this.demon = demon;
+        }
+
+        @Override
+        public boolean canUse() {
+            if (!this.demon.isTame() || this.demon.isMassacreMode() || this.demon.isRising()) return false;
+            if (this.demon.getTarget() != null && this.demon.getTarget().isAlive()) return false;
+            if (this.serviceCooldown > 0) {
+                this.serviceCooldown--;
+                return false;
+            }
+            List<net.minecraft.world.entity.npc.Villager> villagers = this.demon.level().getEntitiesOfClass(
+                    net.minecraft.world.entity.npc.Villager.class,
+                    this.demon.getBoundingBox().inflate(48.0D, 20.0D, 48.0D),
+                    Entity::isAlive
+            );
+            if (villagers.isEmpty()) {
+                this.serviceCooldown = 100;
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public void start() {
+            this.serviceCooldown = 120 + this.demon.getRandom().nextInt(80); // Mỗi 6-10 giây thực hiện 1 dịch vụ
+            if (!(this.demon.level() instanceof ServerLevel sl)) return;
+
+            List<net.minecraft.world.entity.npc.Villager> villagers = sl.getEntitiesOfClass(
+                    net.minecraft.world.entity.npc.Villager.class,
+                    this.demon.getBoundingBox().inflate(48.0D, 20.0D, 48.0D),
+                    Entity::isAlive
+            );
+            if (villagers.isEmpty()) return;
+
+            // 1. Ưu tiên Hồi máu & Cường hóa cho Người Sắt (Iron Golem) bị thương
+            List<net.minecraft.world.entity.animal.IronGolem> golems = sl.getEntitiesOfClass(
+                    net.minecraft.world.entity.animal.IronGolem.class,
+                    this.demon.getBoundingBox().inflate(40.0D, 16.0D, 40.0D),
+                    g -> g.isAlive() && g.getHealth() < g.getMaxHealth()
+            );
+            if (!golems.isEmpty()) {
+                net.minecraft.world.entity.animal.IronGolem golem = golems.get(0);
+                this.demon.getNavigation().moveTo(golem, 1.25D);
+                this.demon.getLookControl().setLookAt(golem, 30.0F, 30.0F);
+                golem.heal(golem.getMaxHealth());
+                golem.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 600, 1));
+                golem.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, golem.getX(), golem.getY() + 1.4D, golem.getZ(), 20, 0.4D, 0.6D, 0.4D, 0.05D);
+                sl.playSound(null, golem.getX(), golem.getY(), golem.getZ(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.NEUTRAL, 2.0F, 1.1F);
+                payVillageFee(sl, villagers.get(0), "đã chữa trị & cường hóa Người Sắt bảo vệ làng", 3);
+                return;
+            }
+
+            // 2. Làm ruộng: Thu hoạch lúa/hoa màu chín và gieo hạt trồng lại
+            BlockPos cropFound = null;
+            int harvestedCount = 0;
+            BlockPos origin = this.demon.blockPosition();
+            for (BlockPos p : BlockPos.betweenClosed(origin.offset(-20, -4, -20), origin.offset(20, 4, 20))) {
+                net.minecraft.world.level.block.state.BlockState state = sl.getBlockState(p);
+                if (state.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop && crop.isMaxAge(state)) {
+                    if (cropFound == null) cropFound = p.immutable();
+                    List<ItemStack> drops = Block.getDrops(state, sl, p, null, this.demon, ItemStack.EMPTY);
+                    sl.setBlock(p, crop.getStateForAge(0), 3);
+                    sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, 5, 0.2D, 0.2D, 0.2D, 0.02D);
+                    if (this.demon.getOwner() instanceof ServerPlayer owner) {
+                        for (ItemStack drop : drops) {
+                            if (!owner.getInventory().add(drop.copy())) {
+                                owner.drop(drop.copy(), false);
+                            }
+                        }
+                    }
+                    harvestedCount++;
+                    if (harvestedCount >= 6) break;
+                }
+            }
+            if (harvestedCount > 0 && cropFound != null) {
+                this.demon.getNavigation().moveTo(cropFound.getX() + 0.5D, cropFound.getY(), cropFound.getZ() + 0.5D, 1.2D);
+                sl.playSound(null, cropFound.getX(), cropFound.getY(), cropFound.getZ(), SoundEvents.CROP_BREAK, SoundSource.BLOCKS, 1.5F, 1.1F);
+                payVillageFee(sl, villagers.get(0), "đã thu hoạch & gieo trồng lại " + harvestedCount + " ô ruộng", 2);
+                return;
+            }
+
+            // 3. Lấp đất & Sửa chữa hố sâu / địa hình hư hại quanh làng
+            int filledCount = 0;
+            BlockPos fillTarget = null;
+            for (BlockPos p : BlockPos.betweenClosed(origin.offset(-18, -4, -18), origin.offset(18, 2, 18))) {
+                net.minecraft.world.level.block.state.BlockState st = sl.getBlockState(p);
+                if (st.isAir() && sl.getBlockState(p.below()).isSolidRender(sl, p.below())) {
+                    int solidNeighbors = 0;
+                    boolean hasGrassOrDirt = false;
+                    for (net.minecraft.core.Direction dir : net.minecraft.core.Direction.Plane.HORIZONTAL) {
+                        net.minecraft.world.level.block.state.BlockState nb = sl.getBlockState(p.relative(dir));
+                        if (nb.isSolidRender(sl, p.relative(dir))) {
+                            solidNeighbors++;
+                            if (nb.is(Blocks.GRASS_BLOCK) || nb.is(Blocks.DIRT) || nb.is(Blocks.DIRT_PATH)) {
+                                hasGrassOrDirt = true;
+                            }
+                        }
+                    }
+                    if (solidNeighbors >= 3 && hasGrassOrDirt && sl.getBlockState(p.above()).isAir()) {
+                        Block fillBlock = sl.getBlockState(p.above()).isAir() ? Blocks.GRASS_BLOCK : Blocks.DIRT;
+                        sl.setBlock(p, fillBlock.defaultBlockState(), 3);
+                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, p.getX() + 0.5D, p.getY() + 1.0D, p.getZ() + 0.5D, 4, 0.2D, 0.2D, 0.2D, 0.02D);
+                        if (fillTarget == null) fillTarget = p.immutable();
+                        filledCount++;
+                        if (filledCount >= 5) break;
+                    }
+                }
+            }
+            if (filledCount > 0 && fillTarget != null) {
+                this.demon.getNavigation().moveTo(fillTarget.getX() + 0.5D, fillTarget.getY() + 1.0D, fillTarget.getZ() + 0.5D, 1.2D);
+                sl.playSound(null, fillTarget.getX(), fillTarget.getY(), fillTarget.getZ(), SoundEvents.GRASS_PLACE, SoundSource.BLOCKS, 1.5F, 1.0F);
+                payVillageFee(sl, villagers.get(0), "đã lấp đất & tu sửa địa hình thôn làng (" + filledCount + " khối)", 2);
+                return;
+            }
+
+            // 4. Đứng xuống nói chuyện, ban phước lành & bảo vệ Dân Làng
+            net.minecraft.world.entity.npc.Villager chosenVillager = villagers.get(this.demon.getRandom().nextInt(villagers.size()));
+            this.demon.getNavigation().moveTo(chosenVillager, 1.15D);
+            this.demon.getLookControl().setLookAt(chosenVillager, 30.0F, 30.0F);
+            chosenVillager.getLookControl().setLookAt(this.demon, 30.0F, 30.0F);
+            chosenVillager.heal(chosenVillager.getMaxHealth());
+            chosenVillager.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 400, 1));
+            chosenVillager.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 400, 1));
+
+            sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, chosenVillager.getX(), chosenVillager.getY() + 1.5D, chosenVillager.getZ(), 8, 0.3D, 0.4D, 0.3D, 0.02D);
+            sl.playSound(null, chosenVillager.getX(), chosenVillager.getY(), chosenVillager.getZ(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.5F, 1.0F);
+            payVillageFee(sl, chosenVillager, "đã trò chuyện, bảo vệ & ban phước cho Dân Làng", 1 + this.demon.getRandom().nextInt(2));
+        }
+
+        private void payVillageFee(ServerLevel sl, net.minecraft.world.entity.npc.Villager villager, String serviceDesc, int emeraldCount) {
+            if (!(this.demon.getOwner() instanceof ServerPlayer owner)) return;
+            ItemStack emeraldFee = new ItemStack(Items.EMERALD, emeraldCount);
+            boolean added = owner.getInventory().add(emeraldFee);
+            if (!added) {
+                owner.drop(emeraldFee, false);
+            }
+            if (this.demon.getRandom().nextFloat() < 0.35F) {
+                ItemStack bonus = switch (this.demon.getRandom().nextInt(3)) {
+                    case 0 -> new ItemStack(Items.GOLD_INGOT, 1 + this.demon.getRandom().nextInt(2));
+                    case 1 -> new ItemStack(Items.GOLDEN_CARROT, 2);
+                    default -> new ItemStack(Items.BREAD, 3);
+                };
+                if (!owner.getInventory().add(bonus)) {
+                    owner.drop(bonus, false);
+                }
+            }
+            sl.playSound(null, owner.getX(), owner.getY(), owner.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 0.7F, 1.3F);
+            owner.displayClientMessage(Component.literal("§6§l[Dịch Vụ Thôn Làng] §e" + this.demon.getEffectiveDemonName() + " §f" + serviceDesc + " §7→ Dân làng trả phí: §a+" + emeraldCount + " Emerald!"), true);
         }
     }
 }

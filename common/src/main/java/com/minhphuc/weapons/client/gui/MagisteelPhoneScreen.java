@@ -211,7 +211,17 @@ public class MagisteelPhoneScreen extends Screen {
             }
         }
         guiGraphics.drawString(font, "§a💚 Tốc Độ Hồi Phục: " + regenInfo, x, y, 0xFFFFFFFF, false);
-        y += 14;
+        y += 12;
+
+        if (target instanceof PrimordialDemonEntity demon) {
+            guiGraphics.drawString(font, "§4✦ Cấp Bậc: §c" + demon.getDemonRankTitle(), x, y, 0xFFFFFFFF, false);
+            y += 12;
+            String bodyInfo = demon.hasPhysicalBody() ? "§a✔ Đã Có Thể Xác (DMG x30, HP x4, EP x3)" : "§7✖ Chưa Có (Linh Thể)";
+            guiGraphics.drawString(font, "§b✦ Thể Xác: " + bodyInfo, x, y, 0xFFFFFFFF, false);
+            y += 14;
+        } else {
+            y += 2;
+        }
 
         // Phán định quan hệ
         String relation = "§cThù Địch (Hostile)";
@@ -265,11 +275,19 @@ public class MagisteelPhoneScreen extends Screen {
             y += 12;
             guiGraphics.drawString(font, "§4☠ Điểm Yếu: §eBị Diệt Ngay Bởi Long Tinh Bộc Viêm Bá", x, y, 0xFFFFAA00, false);
             y += 12;
-        } else if (target instanceof PrimordialDemonEntity) {
-            guiGraphics.drawString(font, "§5🌀 Linh Tử Kháng Tính: §fMiễn nhiễm Nguyền Rủa & Độc", x, y, 0xFFFFFFFF, false);
+        } else if (target instanceof PrimordialDemonEntity demon) {
+            guiGraphics.drawString(font, "§5🌀 Linh Tử Kháng Tính: §fMiễn nhiễm Nguyền Rủa & Độc Tố", x, y, 0xFFFFFFFF, false);
             y += 12;
             guiGraphics.drawString(font, "§e👁 Ma Lực Cảm Tri: §aPhát hiện mọi kẻ tàng hình 360°", x, y, 0xFFFFFFFF, false);
             y += 12;
+            guiGraphics.drawString(font, "§6🔥 Hỏa Diễm Miễn Dịch: §aKháng 100% Lửa Thường & Tro Bụi", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            guiGraphics.drawString(font, "§b❄ Băng Hoại Phòng Ngự: §aKháng Đóng Băng & Chịu Rơi Tự Do", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            if (demon.hasPhysicalBody()) {
+                guiGraphics.drawString(font, "§a🛡 Thể Xác Ma Thiết: §fTăng cường giáp & kháng đẩy lùi 95%", x, y, 0xFFFFFFFF, false);
+                y += 12;
+            }
         } else {
             guiGraphics.drawString(font, "§7⚡ Kháng Ma Pháp: §fCơ bản theo giáp thủ", x, y, 0xFFFFFFFF, false);
             y += 12;
@@ -296,11 +314,10 @@ public class MagisteelPhoneScreen extends Screen {
             return "§eLong Chủng Tối Thượng (True Dragon - Đệ Tam Long)";
         }
         if (entity instanceof PrimordialDemonEntity demon) {
-            String form = "Thể Linh Hồn";
-            if (demon.hasPhysicalBody() && demon.isNamed()) form = "Ma Thần Tối Thượng [Thức Tỉnh]";
-            else if (demon.hasPhysicalBody()) form = "Hóa Thân Thể Xác";
-            else if (demon.isNamed()) form = "Danh Xưng Ban Tặng";
-            return "§5Ác Ma Thủy Tổ §7- " + demon.getDemonType().getColorName() + " (" + form + ")";
+            String rank = demon.getDemonRankTitle();
+            String bodyStr = demon.hasPhysicalBody() ? "Đã Có Thể Xác" : "Linh Thể";
+            String nameStr = demon.isNamed() ? "Đã Ban Tên" : "Thủy Tổ";
+            return "§5" + rank + " §7- " + demon.getDemonType().getColorName() + " (" + bodyStr + " | " + nameStr + ")";
         }
         if (entity instanceof Player) {
             return "§3Sinh Mệnh Thứ Nguyên / Người Kế Thừa Thần Khí";
@@ -316,19 +333,7 @@ public class MagisteelPhoneScreen extends Screen {
             return 74350000L;
         }
         if (entity instanceof PrimordialDemonEntity demon) {
-            DemonType type = demon.getDemonType();
-            boolean body = demon.hasPhysicalBody();
-            boolean named = demon.isNamed();
-
-            if (type == DemonType.ROUGE) {
-                return (body && named) ? 40000000L : 2800000L;
-            } else if (type == DemonType.NOIR) {
-                return (body && named) ? 6666666L : 2500000L;
-            } else if (type == DemonType.BLANC || type == DemonType.JAUNE || type == DemonType.VIOLET) {
-                return (body && named) ? 10500000L : 2000000L;
-            } else {
-                return (body && named) ? 8500000L : 1500000L;
-            }
+            return demon.getCalculatedEP();
         }
         if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) {
             return 12500000L;

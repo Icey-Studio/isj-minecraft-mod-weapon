@@ -89,6 +89,8 @@ public class PrimordialPactItem extends Item {
 
     public static boolean isNamed(ItemStack stack) {
         if (ItemStackDataHelper.getBoolean(stack, "IsNamed")) return true;
+        String cName = ItemStackDataHelper.getString(stack, "CustomDemonName");
+        if (cName != null && !cName.isEmpty()) return true;
         Item item = stack.getItem();
         return item == ModItems.PRIMORDIAL_PACT_NAMED.get() || item == ModItems.PRIMORDIAL_PACT_AWAKENED.get() ||
                 item == ModItems.PRIMORDIAL_PACT_NOIR_NAMED.get() || item == ModItems.PRIMORDIAL_PACT_NOIR_AWAKENED.get() ||
@@ -125,19 +127,17 @@ public class PrimordialPactItem extends Item {
         String customName = ItemStackDataHelper.getString(stack, "CustomDemonName");
         boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord");
 
+        String displayName = !customName.isEmpty() ? customName : type.getColorName();
         if (isDemonLord) {
-            String displayName = !customName.isEmpty() ? customName : type.getColorName();
             return Component.literal("§4§lKhế Ước Chân Ma Vương: §c§l" + displayName + " §e[Thức Tỉnh]");
         } else if (hasBody && named) {
-            String displayName = !customName.isEmpty() ? customName : type.getColorName();
-            return Component.literal("§5§lKhế Ước Thức Tỉnh: §6§l" + displayName + " §e[Thể Xác & Tên]");
+            return Component.literal("§5§lKhế Ước Ma Tướng Thượng Cấp: §6§l" + displayName + " §e[Thể Xác & Tên]");
         } else if (hasBody) {
-            return Component.literal("§b§lKhế Ước Thể Xác: §e§l" + type.getColorName() + " §7(Đã Có Thể Xác Vật Lý)");
+            return Component.literal("§b§lKhế Ước Ma Tướng Thượng Cấp: §e§l" + displayName + " §7(Có Thể Xác)");
         } else if (named) {
-            String displayName = !customName.isEmpty() ? customName : type.getColorName();
-            return Component.literal("§a§lKhế Ước Danh Xưng: §6§l" + displayName + " §7(Đã Ban Danh Xưng)");
+            return Component.literal("§a§lKhế Ước Ma Tướng Thượng Cấp: §6§l" + displayName + " §7(Đã Ban Tên)");
         }
-        return Component.literal("§4§lKhế Ước Thủy Tổ: §c§l" + type.getColorName() + " §7(" + type.getTitleVi() + ")");
+        return Component.literal("§4§lKhế Ước Ma Tướng Thượng Cấp: §c§l" + type.getColorName() + " §7(" + type.getTitleVi() + ")");
     }
 
     public static int countSoulsInInventory(ServerPlayer player) {
@@ -205,29 +205,52 @@ public class PrimordialPactItem extends Item {
             if (targetDemon != null) {
                 ItemStackDataHelper.putFloat(stack, "CurrentHp", targetDemon.getHealth());
                 ItemStackDataHelper.putFloat(stack, "MaxHp", targetDemon.getMaxHealth());
+                ItemStackDataHelper.putFloat(stack, "AttackDamage", (float) targetDemon.getAttributeValue(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE));
+                ItemStackDataHelper.putLong(stack, "CalculatedEP", targetDemon.getCalculatedEP());
+                ItemStackDataHelper.putString(stack, "DemonRank", targetDemon.getDemonRankTitle());
                 String status = targetDemon.getTarget() != null
                         ? "§cĐang giao chiến: " + targetDemon.getTarget().getDisplayName().getString()
                         : (targetDemon.isOrderedToSit() ? "§eĐang canh giữ vị trí" : "§aĐi theo bảo vệ chủ nhân");
                 ItemStackDataHelper.putString(stack, "CombatState", status);
 
-                if (targetDemon.getTags().contains("TensuraDemonLordMob") || targetDemon.getEvolutionTier() >= 2) {
-                    ItemStackDataHelper.putBoolean(stack, "IsDemonLord", true);
-                    ItemStackDataHelper.putBoolean(stack, "IsAwakenedDemonLord", true);
-                    ItemStackDataHelper.putInt(stack, "EvolutionTier", Math.max(targetDemon.getEvolutionTier(), 2));
-                    ItemStackDataHelper.putString(stack, "CustomDemonName", targetDemon.getCustomDemonName());
+                boolean isDemonLord = targetDemon.getTags().contains("TensuraDemonLordMob");
+                ItemStackDataHelper.putBoolean(stack, "IsDemonLord", isDemonLord);
+                ItemStackDataHelper.putBoolean(stack, "IsAwakenedDemonLord", isDemonLord);
+
+                if (targetDemon.hasPhysicalBody()) {
+                    ItemStackDataHelper.putBoolean(stack, "HasPhysicalBody", true);
+                }
+
+                if (targetDemon.isNamed() || (targetDemon.getCustomDemonName() != null && !targetDemon.getCustomDemonName().isEmpty())) {
+                    ItemStackDataHelper.putBoolean(stack, "IsNamed", true);
+                    if (targetDemon.getCustomDemonName() != null && !targetDemon.getCustomDemonName().isEmpty()) {
+                        ItemStackDataHelper.putString(stack, "CustomDemonName", targetDemon.getCustomDemonName());
+                    }
                 }
             }
         } else {
-            // Khi đang nghỉ trong khế ước: Hồi phục sinh lực tự nhiên (+10 HP mỗi giây)
+            // Khi đang nghỉ trong khế ước: Hồi phục sinh lực tự nhiên
             if (entity.tickCount % 20 == 0) {
-                float currentHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", (float) type.getMaxHealth());
-                float maxHp = (float) type.getMaxHealth();
+                boolean hasBody = hasPhysicalBody(stack);
+                boolean named = isNamed(stack);
+                boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord");
+                double hpMul = (hasBody ? 4.0D : 1.0D) * (named ? 30.0D : 1.0D) * (isDemonLord ? 20.0D : 1.0D);
+                if (type == DemonType.NOIR) hpMul *= 1.2D;
+                float maxHp = (float) (type.getMaxHealth() * hpMul);
+                float currentHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", maxHp);
                 if (currentHp < maxHp) {
-                    float newHp = Math.min(maxHp, currentHp + 10.0F);
+                    float newHp = Math.min(maxHp, currentHp + Math.max(10.0F, maxHp * 0.01F));
                     ItemStackDataHelper.putFloat(stack, "CurrentHp", newHp);
                     ItemStackDataHelper.putFloat(stack, "MaxHp", maxHp);
                 }
             }
+        }
+
+        // Ticking nghiệp vụ ma giới: Quản gia hư không, Lãnh địa Blanc & Trọng tài Guy Crimson (Mỗi 40 ticks = 2s, Zero Lag)
+        if (entity.tickCount % 40 == 0 && !level.isClientSide() && entity instanceof ServerPlayer serverPlayer) {
+            AbyssalGovernanceManager.handleAutoHooverTick(serverPlayer, stack);
+            AbyssalGovernanceManager.handleProtectorateTick(serverPlayer, stack);
+            AbyssalGovernanceManager.checkGuyLifelineTick(serverPlayer, stack);
         }
     }
 
@@ -235,9 +258,19 @@ public class PrimordialPactItem extends Item {
     public net.minecraft.world.InteractionResult useOn(net.minecraft.world.item.context.UseOnContext context) {
         Level level = context.getLevel();
         BlockPos pos = context.getClickedPos();
+        Player player = context.getPlayer();
+
+        // SHIFT + CHUỘT PHẢI VÀO RƯƠNG: LIÊN KẾT RƯƠNG CĂN CỨ CHO QUẢN GIA HƯ KHÔNG
+        if (player instanceof ServerPlayer sp && player.isShiftKeyDown()) {
+            net.minecraft.world.level.block.entity.BlockEntity be = level.getBlockEntity(pos);
+            if (be instanceof net.minecraft.world.Container) {
+                AbyssalGovernanceManager.bindVault(sp, context.getItemInHand(), pos);
+                return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
+            }
+        }
+
         net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
         if (state.is(com.minhphuc.weapons.init.ModBlocks.INCUBATION_CAPSULE.get())) {
-            Player player = context.getPlayer();
             if (player instanceof ServerPlayer sp) {
                 BlockPos basePos = state.hasProperty(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF)
                         && state.getValue(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
@@ -301,7 +334,8 @@ public class PrimordialPactItem extends Item {
             if (targetDemon != null) {
                 targetDemon.teleportTo(player.getX() + player.getLookAngle().x * 2.0D, player.getY(), player.getZ() + player.getLookAngle().z * 2.0D);
                 boolean newSitting = !targetDemon.isOrderedToSit();
-                targetDemon.setOrderedToSit(newSitting);
+                targetDemon.setGuardMode(newSitting, targetDemon.blockPosition());
+                ItemStackDataHelper.putBoolean(stack, "IsGuarding", newSitting);
                 targetDemon.getNavigation().stop();
 
                 serverLevel.sendParticles(ParticleTypes.PORTAL, targetDemon.getX(), targetDemon.getY() + 1.0D, targetDemon.getZ(), 30, 0.4D, 0.6D, 0.4D, 0.1D);
@@ -310,7 +344,7 @@ public class PrimordialPactItem extends Item {
                 String effName = (ItemStackDataHelper.getBoolean(stack, "IsNamed") && !ItemStackDataHelper.getString(stack, "CustomDemonName").isEmpty())
                         ? ItemStackDataHelper.getString(stack, "CustomDemonName") : type.getColorName();
                 if (newSitting) {
-                    player.displayClientMessage(Component.literal("§e§l[" + effName + "] §6ĐÃ ĐƯỢC ĐẶT Ở CHẾ ĐỘ: §cĐỨNG CANH GIỮ VỊ TRÍ NÀY!"), true);
+                    player.displayClientMessage(Component.literal("§e§l[" + effName + "] §6ĐÃ ĐƯỢC ĐẶT Ở CHẾ ĐỘ: §eTUẦN TRA CANH GIỮ KHU VỰC RỘNG!"), true);
                 } else {
                     player.displayClientMessage(Component.literal("§e§l[" + effName + "] §6ĐÃ ĐƯỢC ĐẶT Ở CHẾ ĐỘ: §aĐI THEO BẢO VỆ CHỦ NHÂN!"), true);
                 }
@@ -319,58 +353,8 @@ public class PrimordialPactItem extends Item {
                 // ==========================================
                 // HIỆU TRIỆU XUYÊN KHÔNG GIAN KHI ĐI XA (CHUNK UNLOADED)
                 // ==========================================
-                double spawnX = player.getX() + player.getLookAngle().x * 2.0D;
-                double spawnY = player.getY();
-                double spawnZ = player.getZ() + player.getLookAngle().z * 2.0D;
-
-                PrimordialDemonEntity remoteDemon = ModEntities.PRIMORDIAL_DEMON.get().create(serverLevel);
+                PrimordialDemonEntity remoteDemon = summonRemoteDemon(serverLevel, (ServerPlayer) player, stack);
                 if (remoteDemon != null) {
-                    remoteDemon.moveTo(spawnX, spawnY, spawnZ, player.getYRot() + 180.0F, 0.0F);
-                    remoteDemon.setDemonType(type);
-                    remoteDemon.tame(player);
-
-                    boolean hasBody = hasPhysicalBody(stack);
-                    boolean isNamed = isNamed(stack);
-                    String customName = ItemStackDataHelper.getString(stack, "CustomDemonName");
-                    int tier = ItemStackDataHelper.getInt(stack, "EvolutionTier");
-                    boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord") || tier >= 2;
-
-                    remoteDemon.setPhysicalBody(hasBody);
-                    remoteDemon.setNamed(isNamed);
-                    remoteDemon.setEvolutionTier(tier);
-                    remoteDemon.setCustomDemonName(customName);
-                    remoteDemon.setWinged(type == DemonType.NOIR || isDemonLord);
-
-                    if (isDemonLord) {
-                        remoteDemon.addTag("TensuraDemonLordMob");
-                        remoteDemon.addTag("TensuraDemonLordCalm");
-                        remoteDemon.setEvolutionTier(Math.max(tier, 2));
-
-                        var hpAttr = remoteDemon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
-                        if (hpAttr != null) hpAttr.setBaseValue(hpAttr.getBaseValue() * 20.0D);
-                        var atkAttr = remoteDemon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-                        if (atkAttr != null) atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 10.0D) * 20.0D);
-                    }
-
-                    String savedSkills = ItemStackDataHelper.getString(stack, "PrimordialSkills");
-                    if (!savedSkills.isEmpty()) {
-                        remoteDemon.setRandomSkillIds(Arrays.asList(savedSkills.split(",")));
-                    }
-                    remoteDemon.ensureRandomSkills();
-
-                    float savedHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", remoteDemon.getMaxHealth());
-                    if (savedHp > 0) remoteDemon.setHealth(Math.min(savedHp, remoteDemon.getMaxHealth()));
-                    remoteDemon.setOrderedToSit(false);
-
-                    serverLevel.addFreshEntity(remoteDemon);
-                    ItemStackDataHelper.putString(stack, "DemonUUID", remoteDemon.getStringUUID());
-
-                    serverLevel.sendParticles(ParticleTypes.PORTAL, spawnX, spawnY + 1.0D, spawnZ, 50, 0.5D, 0.8D, 0.5D, 0.15D);
-                    serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, spawnX, spawnY + 1.0D, spawnZ, 30, 0.4D, 0.6D, 0.4D, 0.05D);
-                    serverLevel.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
-
-                    String effName = (!customName.isEmpty()) ? customName : type.getColorName();
-                    player.displayClientMessage(Component.literal("§d§l[HIỆU TRIỆU KHÔNG GIAN] §e" + effName + " §ađã xé rách không gian, lập tức dịch chuyển từ phương xa tới bảo vệ chủ nhân!"), true);
                     return InteractionResultHolder.consume(stack);
                 }
             } else {
@@ -404,24 +388,26 @@ public class PrimordialPactItem extends Item {
                     else if (isNamed) tier = 2;
                 }
 
-                boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord") || tier >= 2;
-                newDemon.setWinged(type == DemonType.NOIR || isDemonLord);
+                boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord");
 
+                newDemon.setWinged(type == DemonType.NOIR || isDemonLord);
                 newDemon.setPhysicalBody(hasBody);
                 newDemon.setNamed(isNamed);
                 newDemon.setEvolutionTier(tier);
                 newDemon.setCustomDemonName(customName);
 
+                if (isNamed) {
+                    newDemon.addTag("TensuraNamedMob");
+                }
+
                 if (isDemonLord) {
                     newDemon.addTag("TensuraDemonLordMob");
                     newDemon.addTag("TensuraDemonLordCalm");
-                    newDemon.setEvolutionTier(Math.max(tier, 2));
-
-                    var hpAttr = newDemon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
-                    if (hpAttr != null) hpAttr.setBaseValue(hpAttr.getBaseValue() * 20.0D);
-                    var atkAttr = newDemon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-                    if (atkAttr != null) atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 10.0D) * 20.0D);
                 }
+
+                newDemon.updateAttributesForType(type);
+                newDemon.updateDemonNametag();
+                newDemon.setCustomNameVisible(true);
 
                 // Đọc và khôi phục kỹ năng ngẫu nhiên đã lưu
                 String savedSkills = ItemStackDataHelper.getString(stack, "PrimordialSkills");
@@ -441,6 +427,10 @@ public class PrimordialPactItem extends Item {
                 ItemStackDataHelper.putBoolean(stack, "IsNamed", isNamed);
                 ItemStackDataHelper.putString(stack, "CustomDemonName", customName);
                 ItemStackDataHelper.putInt(stack, "EvolutionTier", tier);
+                if (isDemonLord) {
+                    ItemStackDataHelper.putBoolean(stack, "IsDemonLord", true);
+                    ItemStackDataHelper.putBoolean(stack, "IsAwakenedDemonLord", true);
+                }
 
                 // Khôi phục lượng máu đã lưu trong ấn chú
                 float savedHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", newDemon.getMaxHealth());
@@ -459,7 +449,18 @@ public class PrimordialPactItem extends Item {
                 serverLevel.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 2.0F, 1.0F);
 
                 String effectiveName = (isNamed && !customName.isEmpty()) ? customName : type.getColorName();
-                String titleRank = (hasBody && isNamed) ? "MA THẦN TỐI THƯỢNG" : (isNamed ? "THỦY TỔ ĐƯỢC BAN DANH" : (hasBody ? "THỦY TỔ NHỤC THỂ" : "THỦY TỔ ÁC MA"));
+                String titleRank;
+                if (isDemonLord) {
+                    titleRank = "CHÂN MA VƯƠNG THỨC TỈNH";
+                } else if (hasBody && isNamed) {
+                    titleRank = "MA THẦN TỐI THƯỢNG";
+                } else if (isNamed) {
+                    titleRank = "THỦY TỔ ĐƯỢC BAN DANH";
+                } else if (hasBody) {
+                    titleRank = "THỦY TỔ NHỤC THỂ";
+                } else {
+                    titleRank = "THỦY TỔ ÁC MA";
+                }
 
                 if (player instanceof ServerPlayer sp && sp.connection != null) {
                     sp.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§6§l★ " + titleRank + " XUẤT THẾ ★")));
@@ -529,31 +530,65 @@ public class PrimordialPactItem extends Item {
         boolean hasBody = hasPhysicalBody(stack);
         boolean isNamed = isNamed(stack);
         String customName = ItemStackDataHelper.getString(stack, "CustomDemonName");
-
-        double multiplier = (hasBody && isNamed) ? 7.0D : ((hasBody || isNamed) ? 5.0D : 1.0D);
-        float winRateBonus = (hasBody && isNamed) ? 0.08F : ((hasBody || isNamed) ? 0.05F : 0.0F);
-
-        float currentHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", (float) (type.getMaxHealth() * multiplier));
-        float maxHp = (float) (type.getMaxHealth() * multiplier);
-        float hpRatio = Math.max(0.0F, Math.min(1.0F, currentHp / maxHp));
-
-        // Line 1: Tên & Danh hiệu
-        String titleName = !customName.isEmpty() ? customName : type.getColorName().toUpperCase();
-        tooltip.add(Component.literal("§6§l" + titleName + " §7(" + type.getTitleVi() + ")"));
-
-        // Line 2: Huy hiệu tiến hóa
         boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord");
+
+        // 1. Tính toán các chỉ số nhân dồn
+        double hpMul = (hasBody ? 4.0D : 1.0D);
+        double dmgMul = (hasBody ? 30.0D : 1.0D);
+        if (isNamed) {
+            hpMul *= 30.0D;
+            dmgMul *= 30.0D;
+        }
         if (isDemonLord) {
-            tooltip.add(Component.literal("§4§l✦ CHÂN MA VƯƠNG THỨC TỈNH §c(x20 Sức mạnh Ma Thần)"));
-        } else if (hasBody && isNamed) {
-            tooltip.add(Component.literal("§5§l✦ THỨC TỈNH HOÀN MỸ §e(x7.0 Sức mạnh | +8% Boss)"));
-        } else if (hasBody) {
-            tooltip.add(Component.literal("§b§l✦ THỂ XÁC VẬT LÝ §e(x5.0 Sức mạnh | +5% Boss)"));
-        } else if (isNamed) {
-            tooltip.add(Component.literal("§a§l✦ ĐÃ BAN DANH XƯNG §e(x5.0 Sức mạnh | +5% Boss)"));
+            hpMul *= 20.0D;
+            dmgMul *= 20.0D;
+        }
+        if (type == DemonType.NOIR) {
+            hpMul *= 1.2D;
+            dmgMul *= 1.25D;
         }
 
-        // Line 3: Thanh máu MMORPG ngắn gọn (12 vạch)
+        float maxHp = ItemStackDataHelper.getFloat(stack, "MaxHp", (float) (type.getMaxHealth() * hpMul));
+        float currentHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", maxHp);
+        float hpRatio = maxHp > 0 ? Math.max(0.0F, Math.min(1.0F, currentHp / maxHp)) : 1.0F;
+
+        int dmg = (int) ItemStackDataHelper.getFloat(stack, "AttackDamage", (float) (type.getAttackDamage() * dmgMul));
+
+        // Ma Tố Lượng (EP)
+        long baseEp = switch (type) {
+            case ROUGE -> 2800000L;
+            case NOIR -> 2500000L;
+            case BLANC, JAUNE, VIOLET -> 2000000L;
+            case BLEU, VERT -> 1500000L;
+            default -> 1500000L;
+        };
+        double epMul = (hasBody ? 3.0D : 1.0D) * (isNamed ? 2.5D : 1.0D) * (isDemonLord ? 6.0D : 1.0D);
+        long calcEp = (long) (baseEp * epMul);
+        if (isDemonLord && calcEp < 40000000L) {
+            calcEp = 40000000L + (hasBody ? 20000000L : 0L);
+        }
+        long ep = ItemStackDataHelper.getLong(stack, "CalculatedEP", calcEp);
+        java.text.DecimalFormat epFmt = new java.text.DecimalFormat("#,###");
+
+        // Line 1: TÊN ÁC MA
+        String titleName = !customName.isEmpty() ? customName : type.getColorName().toUpperCase();
+        tooltip.add(Component.literal("§6§l✦ TÊN: §e§l" + titleName + " §7(" + type.getTitleVi() + ")"));
+
+        // Line 2: CẤP BẬC MA TỘC (Nếu chưa là ma vương thì mặc định là Ma Tướng Thượng Cấp)
+        if (isDemonLord) {
+            tooltip.add(Component.literal("§4§l✦ CẤP BẬC: §c§lCHÂN MA VƯƠNG THỨC TỈNH §4(Thần Cấp)"));
+        } else {
+            tooltip.add(Component.literal("§5§l✦ CẤP BẬC: §d§lMA TƯỚNG THƯỢNG CẤP §7(Archdemon)"));
+        }
+
+        // Line 3: THỂ XÁC VẬT LÝ
+        if (hasBody) {
+            tooltip.add(Component.literal("§b§l✦ THỂ XÁC: §a✔ ĐÃ CÓ THỂ XÁC VẬT LÝ §e(DMG x30, HP x4, EP x3)"));
+        } else {
+            tooltip.add(Component.literal("§b§l✦ THỂ XÁC: §7✖ CHƯA CÓ (Linh Thể Thuần Khiết)"));
+        }
+
+        // Line 4: THANH MÁU (HP BAR)
         int barLength = 12;
         int filled = (int) Math.round(hpRatio * barLength);
         StringBuilder bar = new StringBuilder("§8[");
@@ -569,16 +604,17 @@ public class PrimordialPactItem extends Item {
         bar.append("§8]");
         tooltip.add(Component.literal("§c❤ " + bar + " §f" + (int) currentHp + "/" + (int) maxHp + " HP §7(" + (int)(hpRatio * 100) + "%)"));
 
-        // Line 4: Sát thương & Boss Win Rate
-        int dmg = (int) (type.getAttackDamage() * multiplier);
-        int winRate = (int) ((type.getBossWinRate() + winRateBonus) * 100);
-        tooltip.add(Component.literal("§e⚔ " + dmg + " DMG §7| §6Boss: §a" + winRate + "% §7| §d+10 HP/s"));
+        // Line 5: SỨC MẠNH & MA TỐ LƯỢNG (EP)
+        tooltip.add(Component.literal("§e⚔ Sức Mạnh: §f" + dmg + " DMG §7| §d✦ EP: §b" + epFmt.format(ep) + " EP"));
 
-        // Line 5: Kỹ năng thức tỉnh ngẫu nhiên (1 dòng ngắn gọn)
+        // Line 6: KHÁNG TÍNH
+        tooltip.add(Component.literal("§3🛡 Kháng Tính: §fKháng Lửa, Rơi, Ngạt Thở & Miễn Nguyền Rủa/Độc"));
+
+        // Line 7: KỸ NĂNG THỨC TỈNH NGẪU NHIÊN
         String savedSkills = ItemStackDataHelper.getString(stack, "PrimordialSkills");
         if (!savedSkills.isEmpty()) {
             String[] skillIds = savedSkills.split(",");
-            StringBuilder skList = new StringBuilder("§d✦ Kỹ năng: ");
+            StringBuilder skList = new StringBuilder("§d⚡ Kỹ Năng: ");
             for (int i = 0; i < skillIds.length; i++) {
                 PrimordialSkillPool.SkillEntry entry = PrimordialSkillPool.getSkillById(skillIds[i].trim());
                 if (entry != null) {
@@ -589,11 +625,89 @@ public class PrimordialPactItem extends Item {
             tooltip.add(Component.literal(skList.toString()));
         }
 
-        // Line 6: Trạng thái & Hướng dẫn phím ngắn gọn
+        // Line 8: TÌNH TRẠNG HOẠT ĐỘNG
         if (summoned) {
-            tooltip.add(Component.literal("§a● Đang xuất thế §7[Chuột Phải: Bảng Lệnh | Shift: Đi theo/Canh]"));
+            String combatState = ItemStackDataHelper.getString(stack, "CombatState");
+            if (combatState.isEmpty()) combatState = "§aĐi theo bảo vệ chủ nhân";
+            tooltip.add(Component.literal("§a● Tình Trạng: " + combatState));
+            tooltip.add(Component.literal("  §8[Chuột Phải: Bảng Lệnh & Nghiệp Vụ | Shift + Chuột Phải: Dịch chuyển/Canh]"));
         } else {
-            tooltip.add(Component.literal("§7● Trong ấn chú §e[Chuột Phải để Triệu Hồi]"));
+            tooltip.add(Component.literal("§7● Tình Trạng: §eĐang nghỉ ngơi trong ấn chú (+10 HP/s)"));
+            tooltip.add(Component.literal("  §8[Chuột Phải để Triệu Hồi Xuất Thế]"));
         }
+
+        // Line 9: QUẢN GIA HƯ KHÔNG & RƯƠNG CĂN CỨ
+        if (ItemStackDataHelper.hasKey(stack, "BoundVault_Pos")) {
+            BlockPos vPos = BlockPos.of(ItemStackDataHelper.getLong(stack, "BoundVault_Pos", 0L));
+            boolean hoover = ItemStackDataHelper.getBoolean(stack, "AutoHoover_Enabled");
+            tooltip.add(Component.literal("§b📦 Rương Căn Cứ: §e[" + vPos.getX() + ", " + vPos.getY() + ", " + vPos.getZ() + "] " + (hoover ? "§a[Quản Gia: Bật]" : "§c[Quản Gia: Tắt]")));
+        } else {
+            tooltip.add(Component.literal("§8[Shift + Chuột Phải vào Rương: Đăng Ký Quản Gia Cất Đồ]"));
+        }
+    }
+
+    public static PrimordialDemonEntity summonRemoteDemon(ServerLevel serverLevel, ServerPlayer player, ItemStack stack) {
+        if (serverLevel == null || player == null || stack == null) return null;
+        DemonType type = getDemonType(stack);
+        if (type == null) return null;
+
+        double spawnX = player.getX() + player.getLookAngle().x * 2.0D;
+        double spawnY = player.getY();
+        double spawnZ = player.getZ() + player.getLookAngle().z * 2.0D;
+
+        PrimordialDemonEntity remoteDemon = ModEntities.PRIMORDIAL_DEMON.get().create(serverLevel);
+        if (remoteDemon != null) {
+            remoteDemon.moveTo(spawnX, spawnY, spawnZ, player.getYRot() + 180.0F, 0.0F);
+            remoteDemon.setDemonType(type);
+            remoteDemon.tame(player);
+
+            boolean hasBody = hasPhysicalBody(stack);
+            boolean isNamed = isNamed(stack);
+            String customName = ItemStackDataHelper.getString(stack, "CustomDemonName");
+            int tier = ItemStackDataHelper.getInt(stack, "EvolutionTier");
+            boolean isDemonLord = ItemStackDataHelper.getBoolean(stack, "IsDemonLord") || ItemStackDataHelper.getBoolean(stack, "IsAwakenedDemonLord");
+
+            remoteDemon.setPhysicalBody(hasBody);
+            remoteDemon.setNamed(isNamed);
+            remoteDemon.setEvolutionTier(tier);
+            remoteDemon.setCustomDemonName(customName);
+            remoteDemon.setWinged(type == DemonType.NOIR || isDemonLord);
+
+            if (isNamed) {
+                remoteDemon.addTag("TensuraNamedMob");
+            }
+
+            if (isDemonLord) {
+                remoteDemon.addTag("TensuraDemonLordMob");
+                remoteDemon.addTag("TensuraDemonLordCalm");
+            }
+
+            remoteDemon.updateAttributesForType(type);
+            remoteDemon.updateDemonNametag();
+            remoteDemon.setCustomNameVisible(true);
+
+            String savedSkills = ItemStackDataHelper.getString(stack, "PrimordialSkills");
+            if (!savedSkills.isEmpty()) {
+                remoteDemon.setRandomSkillIds(Arrays.asList(savedSkills.split(",")));
+            }
+            remoteDemon.ensureRandomSkills();
+
+            float savedHp = ItemStackDataHelper.getFloat(stack, "CurrentHp", remoteDemon.getMaxHealth());
+            if (savedHp > 0) remoteDemon.setHealth(Math.min(savedHp, remoteDemon.getMaxHealth()));
+            remoteDemon.setOrderedToSit(false);
+
+            serverLevel.addFreshEntity(remoteDemon);
+            ItemStackDataHelper.putBoolean(stack, "IsSummoned", true);
+            ItemStackDataHelper.putString(stack, "DemonUUID", remoteDemon.getStringUUID());
+
+            serverLevel.sendParticles(ParticleTypes.PORTAL, spawnX, spawnY + 1.0D, spawnZ, 50, 0.5D, 0.8D, 0.5D, 0.15D);
+            serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, spawnX, spawnY + 1.0D, spawnZ, 30, 0.4D, 0.6D, 0.4D, 0.05D);
+            serverLevel.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
+
+            String effName = (!customName.isEmpty()) ? customName : type.getColorName();
+            player.displayClientMessage(Component.literal("§d§l[HIỆU TRIỆU KHÔNG GIAN] §e" + effName + " §ađã xé rách không gian, lập tức xuất hiện bên cạnh bạn!"), true);
+            return remoteDemon;
+        }
+        return null;
     }
 }

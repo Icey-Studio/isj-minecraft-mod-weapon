@@ -23,6 +23,7 @@ public class ServerboundDemonCommandPacket {
     public static final int ACTION_STANCE_FOLLOW = 1;
     public static final int ACTION_STANCE_GUARD = 2;
     public static final int ACTION_DISMISS = 3;
+    public static final int ACTION_TOGGLE_MASSACRE = 4;
 
     private final int actionType;
     private final int skillIndex;
@@ -75,11 +76,54 @@ public class ServerboundDemonCommandPacket {
                     }
                 }
 
-                player.displayClientMessage(Component.literal("§e[Khế Ước] Ác Ma đang ở xa (khu vực chưa nạp). Hãy bấm §6Shift + Chuột Phải §evào Khế Ước để Hiệu Triệu Ác Ma tới ngay cạnh bạn!"), true);
+                // TỰ ĐỘNG HIỆU TRIỆU XUYÊN KHÔNG GIAN KHI BẤM "ĐI THEO" HOẶC "RA LỆNH KỸ NĂNG"
+                ItemStack pact = player.getMainHandItem();
+                if (!(pact.getItem() instanceof PrimordialPactItem)) pact = player.getOffhandItem();
+                if (!(pact.getItem() instanceof PrimordialPactItem)) {
+                    for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+                        ItemStack st = player.getInventory().getItem(i);
+                        if (st.getItem() instanceof PrimordialPactItem && ItemStackDataHelper.getBoolean(st, "IsSummoned")) {
+                            pact = st;
+                            break;
+                        }
+                    }
+                }
+
+                if (!pact.isEmpty() && pact.getItem() instanceof PrimordialPactItem) {
+                    boolean isGuarding = ItemStackDataHelper.getBoolean(pact, "IsGuarding");
+                    if (actionType == ACTION_STANCE_FOLLOW || (!isGuarding && actionType == ACTION_CAST_SKILL)) {
+                        PrimordialDemonEntity remoteDemon = PrimordialPactItem.summonRemoteDemon(level, player, pact);
+                        if (remoteDemon != null) {
+                            if (actionType == ACTION_STANCE_FOLLOW) {
+                                remoteDemon.setGuardMode(false, null);
+                                ItemStackDataHelper.putBoolean(pact, "IsGuarding", false);
+                            } else if (actionType == ACTION_CAST_SKILL) {
+                                remoteDemon.executeCommandedSkill(skillIndex, remoteDemon.getTarget());
+                            }
+                            return;
+                        }
+                    } else if (isGuarding) {
+                        player.displayClientMessage(Component.literal("§e[Khế Ước] Ác Ma đang tuần tra canh giữ ở khu vực đã chỉ định. Bấm nút §a[Đi Theo] §enếu muốn triệu tập Ác Ma về cạnh bạn!"), true);
+                        return;
+                    }
+                }
+
+                player.displayClientMessage(Component.literal("§e[Khế Ước] Ác Ma đang ở xa. Hãy bấm §6Shift + Chuột Phải §evào Khế Ước để Hiệu Triệu Ác Ma tới ngay cạnh bạn!"), true);
                 return;
             }
 
             PrimordialDemonEntity demon = demons.get(0);
+            ItemStack heldPact = player.getMainHandItem().getItem() instanceof PrimordialPactItem ? player.getMainHandItem()
+                    : (player.getOffhandItem().getItem() instanceof PrimordialPactItem ? player.getOffhandItem() : ItemStack.EMPTY);
+            if (!heldPact.isEmpty()) {
+                var targetType = PrimordialPactItem.getDemonType(heldPact);
+                for (PrimordialDemonEntity d : demons) {
+                    if (d.getDemonType() == targetType) {
+                        demon = d;
+                        break;
+                    }
+                }
+            }
 
             switch (actionType) {
                 case ACTION_CAST_SKILL -> {
@@ -88,18 +132,44 @@ public class ServerboundDemonCommandPacket {
                     player.displayClientMessage(Component.literal("§6§l[Mệnh Lệnh] §eĐã ra lệnh cho §c§l" + demon.getDemonType().getColorName().toUpperCase() + " §ethực hiện kỹ năng!"), true);
                 }
                 case ACTION_STANCE_FOLLOW -> {
-                    demon.setOrderedToSit(false);
+                    demon.setGuardMode(false, null);
+                    demon.setMassacreMode(false);
+                    if (!heldPact.isEmpty()) {
+                        ItemStackDataHelper.putBoolean(heldPact, "IsGuarding", false);
+                    }
+                    // Dịch chuyển ác ma đến cạnh chủ nhân nếu đang cách xa > 4 block
+                    if (demon.distanceToSqr(player) > 16.0D) {
+                        demon.teleportTo(player.getX() + player.getLookAngle().x * 2.0D, player.getY(), player.getZ() + player.getLookAngle().z * 2.0D);
+                        level.sendParticles(ParticleTypes.PORTAL, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 20, 0.3D, 0.5D, 0.3D, 0.05D);
+                        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.2F, 1.0F);
+                    }
                     player.displayClientMessage(Component.literal("§a§l[Mệnh Lệnh] §e" + demon.getDemonType().getColorName() + " §aĐANG ĐI THEO BẢO VỆ CHỦ NHÂN!"), true);
                 }
                 case ACTION_STANCE_GUARD -> {
-                    demon.setOrderedToSit(true);
+                    demon.setGuardMode(true, demon.blockPosition());
                     demon.getNavigation().stop();
-                    player.displayClientMessage(Component.literal("§c§l[Mệnh Lệnh] §e" + demon.getDemonType().getColorName() + " §cĐANG ĐỨNG CANH GIỮ VỊ TRÍ!"), true);
+                    if (!heldPact.isEmpty()) {
+                        ItemStackDataHelper.putBoolean(heldPact, "IsGuarding", true);
+                    }
+                    player.displayClientMessage(Component.literal("§e§l[Mệnh Lệnh] §6" + demon.getDemonType().getColorName() + " §eĐANG TUẦN TRA CANH GIỮ KHU VỰC RỘNG QUANH ĐÂY!"), true);
+                }
+                case ACTION_TOGGLE_MASSACRE -> {
+                    boolean nowMassacre = !demon.isMassacreMode();
+                    demon.setMassacreMode(nowMassacre);
+                    if (nowMassacre) {
+                        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.5F, 1.3F);
+                        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 40, 0.5D, 0.8D, 0.5D, 0.08D);
+                        demon.broadcastNearbyDialogue("Ara ara~ Theo mệnh lệnh của chủ nhân, ngôi làng này sẽ nhuốm sắc trắng của cái chết!", 48.0D);
+                        player.displayClientMessage(Component.literal("§4§l[CHẾ ĐỘ TÀN SÁT] §cBlanc đã bắt đầu tự động truy sát toàn bộ Dân Làng & Iron Golem trong bán kính 100m!"), true);
+                    } else {
+                        demon.broadcastNearbyDialogue("Ta sẽ thu tay lại theo ý ngài, chủ nhân~", 32.0D);
+                        player.displayClientMessage(Component.literal("§a§l[Mệnh Lệnh] §fĐã dừng chế độ Tàn Sát của Blanc!"), true);
+                    }
                 }
                 case ACTION_DISMISS -> {
                     level.sendParticles(ParticleTypes.DRAGON_BREATH, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 40, 0.5D, 0.8D, 0.5D, 0.1D);
                     level.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 0.8F);
-                    player.displayClientMessage(Component.literal("§a✔ Đã cho §e" + demon.getDemonType().getColorName() + " §alui về nghỉ ngơi trong Ấn Chú!"), true);
+                    player.displayClientMessage(Component.literal("§a✔ Đã cho §e" + demon.getEffectiveDemonName() + " §alui về nghỉ ngơi trong Ấn Chú!"), true);
 
                     // Cập nhật và lưu toàn bộ trạng thái tiến hóa, Ma Vương, máu, tên vào pact item trong túi đồ
                     for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
@@ -112,10 +182,13 @@ public class ServerboundDemonCommandPacket {
                                 ItemStackDataHelper.putFloat(st, "MaxHp", demon.getMaxHealth());
                                 ItemStackDataHelper.putInt(st, "EvolutionTier", demon.getEvolutionTier());
                                 ItemStackDataHelper.putBoolean(st, "HasPhysicalBody", demon.hasPhysicalBody());
-                                ItemStackDataHelper.putBoolean(st, "IsNamed", demon.isNamed());
-                                ItemStackDataHelper.putString(st, "CustomDemonName", demon.getCustomDemonName());
 
-                                boolean isDemonLord = demon.getTags().contains("TensuraDemonLordMob") || demon.getEvolutionTier() >= 2;
+                                String nameToSave = demon.getCustomDemonName();
+                                boolean isNamed = demon.isNamed() || (nameToSave != null && !nameToSave.isEmpty());
+                                ItemStackDataHelper.putBoolean(st, "IsNamed", isNamed);
+                                ItemStackDataHelper.putString(st, "CustomDemonName", nameToSave != null ? nameToSave : "");
+
+                                boolean isDemonLord = demon.getTags().contains("TensuraDemonLordMob");
                                 ItemStackDataHelper.putBoolean(st, "IsDemonLord", isDemonLord);
                                 ItemStackDataHelper.putBoolean(st, "IsAwakenedDemonLord", isDemonLord);
 

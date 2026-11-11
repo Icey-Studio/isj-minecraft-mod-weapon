@@ -62,6 +62,7 @@ public class IncubationCapsuleManager {
         public DemonType demonType = DemonType.NOIR;
         public boolean hasPhysicalBody = false;
         public boolean isNamed = false;
+        public boolean isDemonLord = false;
         public String customName = "";
         public float currentHp = 1000.0F;
         public float maxHp = 1000.0F;
@@ -301,9 +302,10 @@ public class IncubationCapsuleManager {
 
     private static void insertDemonToCapsule(Player player, ItemStack held, ActiveCapsule capsule, ServerLevel level) {
         capsule.demonType = PrimordialPactItem.getDemonType(held);
-        capsule.hasPhysicalBody = ItemStackDataHelper.getBoolean(held, "HasPhysicalBody");
-        capsule.isNamed = ItemStackDataHelper.getBoolean(held, "IsNamed");
+        capsule.hasPhysicalBody = PrimordialPactItem.hasPhysicalBody(held);
+        capsule.isNamed = PrimordialPactItem.isNamed(held);
         capsule.customName = ItemStackDataHelper.getString(held, "CustomDemonName");
+        capsule.isDemonLord = ItemStackDataHelper.getBoolean(held, "IsDemonLord") || ItemStackDataHelper.getBoolean(held, "IsAwakenedDemonLord");
         capsule.currentHp = ItemStackDataHelper.getFloat(held, "CurrentHp", (float) capsule.demonType.getMaxHealth());
         capsule.maxHp = ItemStackDataHelper.getFloat(held, "MaxHp", (float) capsule.demonType.getMaxHealth());
         capsule.state = CapsuleState.DEMON_INFUSED;
@@ -465,8 +467,12 @@ public class IncubationCapsuleManager {
                     float finalMaxHp = (float) c.demonType.getMaxHealth() * multiplier;
                     int numSkills = (c.evolutionChoice == 3) ? 5 : 3;
 
-                    boolean givesBody = (c.evolutionChoice == 1 || c.evolutionChoice == 3);
-                    boolean givesName = (c.evolutionChoice == 2 || c.evolutionChoice == 3);
+                    boolean givesBody = (c.evolutionChoice == 1 || c.evolutionChoice == 3) || c.hasPhysicalBody;
+                    boolean givesName = (c.evolutionChoice == 2 || c.evolutionChoice == 3) || c.isNamed;
+
+                    if (givesName && (c.customName == null || c.customName.isEmpty())) {
+                        c.customName = c.demonType.getRandomCanonName(level.getRandom());
+                    }
 
                     ItemStackDataHelper.putString(resultStack, "DemonType", c.demonType.name());
                     ItemStackDataHelper.putBoolean(resultStack, "HasPhysicalBody", givesBody);
@@ -475,6 +481,10 @@ public class IncubationCapsuleManager {
                     ItemStackDataHelper.putInt(resultStack, "EvolutionTier", c.evolutionChoice);
                     ItemStackDataHelper.putFloat(resultStack, "MaxHp", finalMaxHp);
                     ItemStackDataHelper.putFloat(resultStack, "CurrentHp", finalMaxHp);
+                    if (c.isDemonLord) {
+                        ItemStackDataHelper.putBoolean(resultStack, "IsDemonLord", true);
+                        ItemStackDataHelper.putBoolean(resultStack, "IsAwakenedDemonLord", true);
+                    }
 
                     List<PrimordialSkillPool.SkillEntry> skills = PrimordialSkillPool.rollRandomSkills(numSkills, level.getRandom());
                     StringBuilder sb = new StringBuilder();
