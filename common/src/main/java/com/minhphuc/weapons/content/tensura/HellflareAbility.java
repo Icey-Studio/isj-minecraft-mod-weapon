@@ -169,6 +169,39 @@ public class HellflareAbility {
         );
     }
 
+    public static void castFromDemon(ServerLevel level, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demon, Vec3 eyePos, Vec3 targetPos, ServerPlayer owner) {
+        if (level == null || demon == null) return;
+        double distance = eyePos.distanceTo(targetPos);
+        int flightTicks = Math.max(3, (int) (distance / 1.6D));
+
+        ActiveHellflare instance = new ActiveHellflare(level, owner, eyePos, targetPos, flightTicks);
+
+        Display.ItemDisplay projDisplay = EntityType.ITEM_DISPLAY.create(level);
+        if (projDisplay != null) {
+            projDisplay.moveTo(eyePos.x, eyePos.y, eyePos.z, 0.0F, 0.0F);
+            ItemDisplayAccessor piAcc = (ItemDisplayAccessor) projDisplay;
+            DisplayAccessor pdAcc = (DisplayAccessor) projDisplay;
+
+            piAcc.weapons$setItemStack(new ItemStack(com.minhphuc.weapons.init.ModItems.BLACK_FIRE.get()));
+            piAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+            pdAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.CENTER);
+            pdAcc.weapons$setViewRange(8.0F);
+            pdAcc.weapons$setTransformation(new Transformation(
+                    new Vector3f(0.0F, 0.0F, 0.0F),
+                    new Quaternionf(),
+                    new Vector3f(1.4F, 1.4F, 1.4F),
+                    null
+            ));
+            level.addFreshEntity(projDisplay);
+            instance.projectileDisplay = projDisplay;
+        }
+
+        ACTIVE_HELLFLARES.add(instance);
+
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z, SoundEvents.BLAZE_SHOOT, SoundSource.PLAYERS, 3.0F, 0.7F);
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z, SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.5F, 0.8F);
+    }
+
     public static void tickHellflares(ServerLevel level) {
         if (ACTIVE_HELLFLARES.isEmpty()) return;
 

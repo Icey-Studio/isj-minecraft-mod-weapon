@@ -130,27 +130,58 @@ public class DivineWeaponEvents {
 
                     return EventResult.interruptTrue();
                 }
-            }
 
-            // 3. Chuột phải vào sinh vật khi tay không: Thi triển Kỹ Năng Chân Ma Vương / Thần Linh Vũ Trang (Không có thời gian hồi chiêu)
-            if (player.getItemInHand(hand).isEmpty() && player instanceof ServerPlayer serverPlayer) {
-                boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
-                boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
-                boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
-
-                if (isTrueDemonLord || isWearingDivineArmor || isPrimordial) {
-                    int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
-                    boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
-                    int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
-
-                    ServerLevel sl = (ServerLevel) serverPlayer.level();
-                    if (selectedSkill < lordSkills) {
-                        TensuraSkillDispatcher.executeSkill(sl, serverPlayer, selectedSkill, hasCreation);
-                    } else if (isPrimordial) {
-                        int primordialSkillIdx = selectedSkill - lordSkills;
-                        com.minhphuc.weapons.content.tensura.PrimordialSkillDispatcher.castSkill(sl, serverPlayer, primordialSkillIdx);
+                // 2.5. Cầm Linh Hồn Giả (Fake Soul) chuột phải vào sinh vật -> Tráo Linh Hồn Giả và rút Linh Hồn thật không gây chết!
+                if (held.is(ModItems.FAKE_SOUL.get())) {
+                    if (player.level().isClientSide()) {
+                        return EventResult.interruptTrue();
+                    }
+                    if (player instanceof ServerPlayer sp && player.level() instanceof ServerLevel sl) {
+                        com.minhphuc.weapons.content.soul.FakeSoulItem.performSoulSwap(sl, sp, targetLiving, held);
                     }
                     return EventResult.interruptTrue();
+                }
+            }
+
+            // 3. Nếu GIỮ SHIFT + Chuột phải vào Dân Làng / Thương Nhân -> Cho phép mở giao diện Trao Đổi (Trade GUI) bình thường!
+            if (target instanceof net.minecraft.world.entity.npc.AbstractVillager && player.isShiftKeyDown()) {
+                return EventResult.pass();
+            }
+
+            // 4. Chuột phải vào sinh vật (KHÔNG giữ Shift khi click Dân Làng) khi tay không: Thi triển Kỹ Năng Chân Ma Vương / Thần Linh Vũ Trang / Nhập Xác
+            if (player.getItemInHand(hand).isEmpty()) {
+                if (player instanceof ServerPlayer serverPlayer) {
+                    if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(serverPlayer)) {
+                        com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.castSkill(serverPlayer);
+                        return EventResult.interruptTrue();
+                    }
+
+                    boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
+                    boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
+                    boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
+
+                    if (isTrueDemonLord || isWearingDivineArmor || isPrimordial) {
+                        int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
+                        boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
+                        int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
+
+                        ServerLevel sl = (ServerLevel) serverPlayer.level();
+                        if (selectedSkill < lordSkills) {
+                            TensuraSkillDispatcher.executeSkill(sl, serverPlayer, selectedSkill, hasCreation);
+                        } else if (isPrimordial) {
+                            int primordialSkillIdx = selectedSkill - lordSkills;
+                            com.minhphuc.weapons.content.tensura.PrimordialSkillDispatcher.castSkill(sl, serverPlayer, primordialSkillIdx);
+                        }
+                        return EventResult.interruptTrue();
+                    }
+                } else if (target instanceof net.minecraft.world.entity.npc.AbstractVillager) {
+                    boolean isWearingDivine = DivineArmorItem.isWearingAnyPiece(player);
+                    boolean isPossessing = com.minhphuc.weapons.client.ClientPossessionHandler.isLocalPlayerPossessing();
+                    boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
+                    boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(player);
+                    if (isTrueDemonLord || isWearingDivine || isPrimordial || isPossessing) {
+                        return EventResult.interruptTrue();
+                    }
                 }
             }
             return EventResult.pass();
@@ -158,6 +189,14 @@ public class DivineWeaponEvents {
     }
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
+        if (victim instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demon && demon.isTame()) {
+            if (source.getEntity() != null && demon.isAlliedTo(source.getEntity())) {
+                return EventResult.interruptFalse();
+            }
+            if (source.getDirectEntity() != null && demon.isAlliedTo(source.getDirectEntity())) {
+                return EventResult.interruptFalse();
+            }
+        }
         // Kiểm tra nếu mục tiêu đang trong trạng thái ngưng đọng thời gian của Bạt Đao Thuật hoặc Thiên Ma Kiếm
         if (com.minhphuc.weapons.content.darkgathering.ThienMaSwordAbility.isEntityFrozenInSession(victim)
                 || com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.isEntityFrozenInSession(victim)) {

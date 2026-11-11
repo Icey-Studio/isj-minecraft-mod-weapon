@@ -75,6 +75,7 @@ public class PurificationPillarAbility {
         public final BlockPos lightPos;
         public Display.ItemDisplay pillarDisplay;
         public int ticksAlive = 0;
+        public int maxDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma khế ước)
         public boolean villageRestored = false;
         public int villageScanAttempts = 0;
 
@@ -201,7 +202,31 @@ public class PurificationPillarAbility {
         }
     }
 
-    private static Vec3 findGroundBelow(ServerLevel level, Vec3 pos) {
+    public static ActivePurification spawnTemporaryPurification(ServerLevel level, Vec3 center, int durationTicks, ServerPlayer owner) {
+        BlockPos lightPos = BlockPos.containing(center);
+        if (level.getBlockState(lightPos).isAir()) {
+            level.setBlock(lightPos, Blocks.LIGHT.defaultBlockState().setValue(net.minecraft.world.level.block.LightBlock.LEVEL, 15), 3);
+        }
+        ActivePurification ap = new ActivePurification(level, owner, center, lightPos);
+        ap.maxDurationTicks = durationTicks;
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PURIFICATION_PILLAR)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_PURIFICATION_PILLAR, owner != null ? owner.getUUID() : java.util.UUID.randomUUID(), center, new Vec3(0, 1, 0), durationTicks, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+            ap.pillarDisplay = null;
+        } else {
+            ap.pillarDisplay = createPillarDisplay(level, center, 5.0F, 50.0F, 5.0F, 0x55FFAA);
+        }
+        ACTIVE_PURIFICATIONS.add(ap);
+
+        // Thanh tẩy tức thì các vòng tròn ma thuật tàn dư
+        com.minhphuc.weapons.content.tensura.ResidualMagicCircleManager.purgeCirclesInArea(level, center, 6.0D, 50.0D);
+
+        level.playSound(null, center.x, center.y + 5.0D, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 4.0F, 1.7F);
+        return ap;
+    }
+
+    public static Vec3 findGroundBelow(ServerLevel level, Vec3 pos) {
         BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos(
                 Math.floor(pos.x),
                 Math.floor(pos.y),
@@ -234,6 +259,11 @@ public class PurificationPillarAbility {
             if (p.level != serverLevel) continue;
 
             p.ticksAlive++;
+            if (p.maxDurationTicks > 0 && p.ticksAlive >= p.maxDurationTicks) {
+                p.cleanupDisplays();
+                it.remove();
+                continue;
+            }
             int elapsed = p.ticksAlive;
             double groundY = p.center.y;
 

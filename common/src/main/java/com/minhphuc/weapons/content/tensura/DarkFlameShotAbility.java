@@ -138,6 +138,21 @@ public class DarkFlameShotAbility {
         );
     }
 
+    public static void castFromDemon(ServerLevel level, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demon, Vec3 eyePos, Vec3 targetPos, ServerPlayer owner) {
+        if (level == null || demon == null) return;
+        ActiveDarkFlamePrison instance = new ActiveDarkFlamePrison(level, owner, eyePos, targetPos);
+        cancelCaster(level, demon.getUUID());
+        ACTIVE_PRISONS.add(instance);
+
+        ModMessages.sendToPlayers(level.players(),
+                new com.minhphuc.weapons.network.ClientboundHellflarePacket(demon.getUUID(), eyePos, targetPos, instance.prisonRadius, com.minhphuc.weapons.network.ClientboundHellflarePacket.PHASE_START));
+
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z,
+                SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.5F, 0.8F);
+        level.playSound(null, eyePos.x, eyePos.y, eyePos.z,
+                SoundEvents.FIRECHARGE_USE, SoundSource.PLAYERS, 2.0F, 0.65F);
+    }
+
     /**
      * Server Tick định kỳ cho toàn bộ các thực thể Dark Flame Prison (gọi từ TensuraEvents)
      */

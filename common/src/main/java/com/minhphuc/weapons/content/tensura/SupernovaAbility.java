@@ -1,5 +1,6 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
@@ -52,19 +53,30 @@ public class SupernovaAbility {
     public static class ActiveSupernova {
         public final ServerLevel level;
         public final ServerPlayer caster;
+        public final PrimordialDemonEntity demonCaster;
         public final Vec3 corePos;
         public int currentTick = 0;
-        public final int maxTicks = 380; // 19.0 giây
+        public final int detonationTick; // 340 for player, 35 for demon
+        public final int maxTicks;
 
         // Cột Plasma Vĩnh Cửu GPU Chuẩn Lời Chúc Tử Vong (100% OpenGL Additive Blending, 0 Entity Spam)
         public boolean isPillarActive = false;
         public Vec3 groundPos = null;
         public float beamHeight = 384.0F;
+        public int pillarDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma khế ước)
 
-        public ActiveSupernova(ServerLevel level, ServerPlayer caster, Vec3 corePos) {
+        public ActiveSupernova(ServerLevel level, ServerPlayer caster, PrimordialDemonEntity demonCaster, Vec3 corePos, int detonationTick, int pillarDurationTicks) {
             this.level = level;
             this.caster = caster;
+            this.demonCaster = demonCaster;
             this.corePos = corePos;
+            this.detonationTick = detonationTick;
+            this.pillarDurationTicks = pillarDurationTicks;
+            this.maxTicks = detonationTick + (pillarDurationTicks > 0 ? pillarDurationTicks : 40);
+        }
+
+        public ActiveSupernova(ServerLevel level, ServerPlayer caster, Vec3 corePos) {
+            this(level, caster, null, corePos, 340, -1);
         }
 
         public void cleanupDisplays() {
@@ -115,6 +127,23 @@ public class SupernovaAbility {
         }
     }
 
+    public static ActiveSupernova spawnTemporarySupernova(ServerLevel level, Vec3 corePos, int durationTicks, ServerPlayer caster, PrimordialDemonEntity demon) {
+        ActiveSupernova supernova = new ActiveSupernova(level, caster, demon, corePos, 35, durationTicks);
+        ACTIVE_SUPERNOVAS.add(supernova);
+
+        ClientboundSupernovaPacket packet = new ClientboundSupernovaPacket(corePos, ClientboundSupernovaPacket.PHASE_START);
+        if (caster != null) ModMessages.sendToPlayer(packet, caster);
+        for (ServerPlayer nearbyPlayer : level.players()) {
+            if (nearbyPlayer != caster && nearbyPlayer.position().distanceToSqr(corePos) <= 128 * 128) {
+                ModMessages.sendToPlayer(packet, nearbyPlayer);
+            }
+        }
+
+        level.playSound(null, corePos.x, corePos.y, corePos.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 4.0F, 0.7F);
+        level.playSound(null, corePos.x, corePos.y, corePos.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 4.0F, 0.5F);
+        return supernova;
+    }
+
     public static void tickSupernovas(ServerLevel level) {
         if (ACTIVE_SUPERNOVAS.isEmpty()) return;
 
@@ -124,7 +153,17 @@ public class SupernovaAbility {
                 ActiveSupernova s = iterator.next();
                 if (s.level != level) continue;
 
-                if (s.caster == null || !s.caster.isAlive() || s.caster.hasDisconnected()) {
+                if (s.caster == null && s.demonCaster == null) {
+                    s.cleanupDisplays();
+                    iterator.remove();
+                    continue;
+                }
+                if (s.caster != null && (!s.caster.isAlive() || s.caster.hasDisconnected())) {
+                    s.cleanupDisplays();
+                    iterator.remove();
+                    continue;
+                }
+                if (s.demonCaster != null && (!s.demonCaster.isAlive() || s.demonCaster.isRemoved())) {
                     s.cleanupDisplays();
                     iterator.remove();
                     continue;
@@ -133,16 +172,16 @@ public class SupernovaAbility {
                 s.currentTick++;
 
                 // ==============================================================
-                // GIAI ĐOẠN 1 (0 -> 339 ticks): LỖ ĐEN & LỰC HÚT CHÂN KHÔNG
+                // GIAI ĐOẠN 1 (0 -> detonationTick - 1): LỖ ĐEN & LỰC HÚT CHÂN KHÔNG
                 // ==============================================================
-                if (s.currentTick < 340) {
-                    double progress = s.currentTick / 340.0;
+                if (s.currentTick < s.detonationTick) {
+                    double progress = s.currentTick / (double) s.detonationTick;
 
                     // Hút các thực thể sống trong bán kính 55m xoáy vào tâm lỗ đen
                     AABB suctionZone = new AABB(s.corePos.x - 55, s.corePos.y - 25, s.corePos.z - 55,
                             s.corePos.x + 55, s.corePos.y + 35, s.corePos.z + 55);
                     List<LivingEntity> targets = s.level.getEntitiesOfClass(LivingEntity.class, suctionZone,
-                            e -> e.isAlive() && e != s.caster && !isAlliedToCaster(s.caster, e));
+                            e -> e.isAlive() && !isAlliedToSupernovaCaster(s, e));
 
                     for (LivingEntity target : targets) {
                         Vec3 towardCore = s.corePos.subtract(target.position());
@@ -166,9 +205,10 @@ public class SupernovaAbility {
                             s.level.sendParticles(ParticleTypes.DRAGON_BREATH, px, s.corePos.y, pz, 1, 0.05, 0.05, 0.05, 0.02);
                         }
                     }
-                    // Co thắt kỳ dị điểm (Singularity Compression) trước khi nổ (Tick 335 -> 339)
-                    if (s.currentTick >= 335) {
-                        float singularityProgress = (s.currentTick - 335) / 5.0F;
+                    // Co thắt kỳ dị điểm (Singularity Compression) trước khi nổ
+                    int compStart = Math.max(0, s.detonationTick - 5);
+                    if (s.currentTick >= compStart) {
+                        float singularityProgress = (s.currentTick - compStart) / 5.0F;
                         double radius = Math.max(0.3D, 8.0D * (1.0F - singularityProgress));
                         for (int i = 0; i < 8; i++) {
                             double angle = Math.toRadians((i * 45.0) + (s.currentTick * 25.0));
@@ -183,18 +223,16 @@ public class SupernovaAbility {
                 }
 
                 // ==============================================================
-                // GIAI ĐOẠN 2 (Tick 340): SIÊU TÂN TINH BỘC PHÁT (DETONATION) & THIÊN GIÁNG CỘT PLASMA
+                // GIAI ĐOẠN 2 (Tick == detonationTick): SIÊU TÂN TINH BỘC PHÁT (DETONATION) & THIÊN GIÁNG CỘT PLASMA
                 // ==============================================================
-                else if (s.currentTick == 340) {
-                    // 1. Gửi Packet kích hoạt 4 Impact Frame manga chớp sáng toàn màn hình
-                    // 1. Tìm vị trí mặt đất dưới tâm lỗ đen để phóng Cột Plasma
+                else if (s.currentTick == s.detonationTick) {
                     s.isPillarActive = true;
                     s.groundPos = findGroundBelow(s.level, s.corePos);
                     s.beamHeight = 384.0F; // 384m xuyên thẳng qua mọi tầng đá và mây trời
 
                     // Gửi Packet khởi kích CỘT PLASMA ĐA TẦNG THIÊN GIÁNG (GPU OpenGL Additive Blending)
                     ClientboundSupernovaPacket packet = new ClientboundSupernovaPacket(s.groundPos, ClientboundSupernovaPacket.PHASE_DETONATE);
-                    ModMessages.sendToPlayer(packet, s.caster);
+                    if (s.caster != null) ModMessages.sendToPlayer(packet, s.caster);
                     for (ServerPlayer nearbyPlayer : s.level.players()) {
                         if (nearbyPlayer != s.caster && nearbyPlayer.position().distanceToSqr(s.corePos) <= 128 * 128) {
                             ModMessages.sendToPlayer(packet, nearbyPlayer);
@@ -211,11 +249,11 @@ public class SupernovaAbility {
                     s.level.playSound(null, s.corePos.x, s.corePos.y, s.corePos.z,
                             SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 6.0F, 0.6F);
 
-                    // 3. Quét sát thương hủy diệt diện rộng 96m (KHÔNG PHÁ KHỐI)
+                    // 3. Quét sát thương hủy diệt diện rộng 96m
                     AABB blastZone = new AABB(s.corePos.x - 96, s.corePos.y - 45, s.corePos.z - 96,
                             s.corePos.x + 96, s.corePos.y + 65, s.corePos.z + 96);
                     List<LivingEntity> blastTargets = s.level.getEntitiesOfClass(LivingEntity.class, blastZone,
-                            e -> e.isAlive() && e != s.caster && !isAlliedToCaster(s.caster, e));
+                            e -> e.isAlive() && !isAlliedToSupernovaCaster(s, e));
 
                     for (LivingEntity target : blastTargets) {
                         target.removeAllEffects();
@@ -244,23 +282,48 @@ public class SupernovaAbility {
                         }
                     }
 
-                    s.caster.displayClientMessage(
-                            Component.literal("§5§l[SIÊU TÂN TINH] §dCột Plasma Vực Thẳm đã ngưng tụ vĩnh viễn! (Sử dụng Phong Sát Kĩ Năng để giải trừ)"),
-                            false
-                    );
+                    if (s.demonCaster != null && s.demonCaster.getDemonType() == DemonType.JAUNE) {
+                        s.demonCaster.applyCarreraBlockDestruction(s.groundPos, 4.0F);
+                    }
+
+                    if (s.caster != null) {
+                        if (s.pillarDurationTicks <= 0) {
+                            s.caster.displayClientMessage(
+                                    Component.literal("§5§l[SIÊU TÂN TINH] §dCột Plasma Vực Thẳm đã ngưng tụ vĩnh viễn! (Sử dụng Phong Sát Kĩ Năng để giải trừ)"),
+                                    false
+                            );
+                        } else {
+                            s.caster.displayClientMessage(
+                                    Component.literal("§6§l[SIÊU TÂN TINH] §eCột Plasma của Carrera đã bộc phá huỷ diệt chiến trường!"),
+                                    false
+                            );
+                        }
+                    }
                 }
 
                 // ==============================================================
-                // GIAI ĐOẠN 3 (Tick 341+): CỘT PLASMA THIÊN GIÁNG & VĨNH CỬU DUY TRÌ
+                // GIAI ĐOẠN 3 (Tick > detonationTick): CỘT PLASMA THIÊN GIÁNG & DUY TRÌ
                 // ==============================================================
                 if (s.isPillarActive) {
+                    if (s.pillarDurationTicks > 0 && s.currentTick >= s.detonationTick + s.pillarDurationTicks) {
+                        ClientboundSupernovaPacket packet = new ClientboundSupernovaPacket(s.corePos, ClientboundSupernovaPacket.PHASE_END);
+                        if (s.caster != null) ModMessages.sendToPlayer(packet, s.caster);
+                        for (ServerPlayer nearbyPlayer : s.level.players()) {
+                            if (nearbyPlayer != s.caster && nearbyPlayer.position().distanceToSqr(s.corePos) <= 128 * 128) {
+                                ModMessages.sendToPlayer(packet, nearbyPlayer);
+                            }
+                        }
+                        s.cleanupDisplays();
+                        iterator.remove();
+                        continue;
+                    }
                     // Điều tiết chu kỳ 4 ticks để đảm bảo ZERO-LAG
                     if (s.currentTick % 4 == 0) {
                         // 1. Lực hút vào tâm cột sáng (bán kính 28m)
                         AABB pillarPullZone = new AABB(s.corePos.x - 28, s.corePos.y - 30, s.corePos.z - 28,
                                 s.corePos.x + 28, s.corePos.y + 60, s.corePos.z + 28);
                         List<LivingEntity> pulled = s.level.getEntitiesOfClass(LivingEntity.class, pillarPullZone,
-                                e -> e.isAlive() && e != s.caster && !isAlliedToCaster(s.caster, e));
+                                e -> e.isAlive() && !isAlliedToSupernovaCaster(s, e));
 
                         for (LivingEntity target : pulled) {
                             Vec3 towardBeam = new Vec3(s.corePos.x - target.getX(), 0, s.corePos.z - target.getZ());
@@ -276,7 +339,7 @@ public class SupernovaAbility {
                             AABB damageZone = new AABB(s.corePos.x - 14, s.corePos.y - 30, s.corePos.z - 14,
                                     s.corePos.x + 14, s.corePos.y + 60, s.corePos.z + 14);
                             List<LivingEntity> dmgTargets = s.level.getEntitiesOfClass(LivingEntity.class, damageZone,
-                                    e -> e.isAlive() && e != s.caster && !isAlliedToCaster(s.caster, e));
+                                    e -> e.isAlive() && !isAlliedToSupernovaCaster(s, e));
 
                             for (LivingEntity t : dmgTargets) {
                                 t.hurt(s.level.damageSources().magic(), 80.0F);
@@ -307,8 +370,6 @@ public class SupernovaAbility {
             }
         }
     }
-
-
 
     private static Vec3 findGroundBelow(ServerLevel level, Vec3 pos) {
         BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos(
@@ -365,6 +426,19 @@ public class SupernovaAbility {
     }
 
     private static boolean isAlliedToCaster(ServerPlayer caster, LivingEntity entity) {
+        if (caster == null || entity == null) return false;
+        if (PrimordialDemonEntity.isContractedAllyOfPlayer(caster.getUUID(), entity)) return true;
         return entity.isAlliedTo(caster) || entity.getUUID().equals(caster.getUUID());
+    }
+
+    private static boolean isAlliedToSupernovaCaster(ActiveSupernova s, LivingEntity entity) {
+        if (entity == null) return true;
+        if (s.caster != null) {
+            return isAlliedToCaster(s.caster, entity);
+        }
+        if (s.demonCaster != null) {
+            return s.demonCaster.isImmuneOrFriendly(entity);
+        }
+        return false;
     }
 }

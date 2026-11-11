@@ -103,6 +103,8 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.AzathothAbility.tick(level);
             com.minhphuc.weapons.content.space.OrbitalStrikeManager.tickStrikes(level);
             com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.tick(level);
+            com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.tickDomains(level);
+            com.minhphuc.weapons.content.tensura.ApocalypseAbility.tickApocalypses(level);
         });
     }
 
@@ -110,6 +112,22 @@ public class TensuraEvents {
 
     public static void onPlayerTick(Player rawPlayer) {
         if (rawPlayer.level().isClientSide() || !(rawPlayer instanceof ServerPlayer sp)) return;
+
+        // 0. XỬ LÝ NHẬP XÁC ÁC MA THỦY TỔ (BẤM SHIFT ĐỂ TÁCH XÁC + HỒI PHỤC SIÊU TỐC)
+        if (PrimordialPossessionManager.isPossessing(sp)) {
+            if (sp.isShiftKeyDown()) {
+                PrimordialPossessionManager.stopPossession(sp, false);
+                return;
+            }
+            if (!sp.getAbilities().mayfly) {
+                sp.getAbilities().mayfly = true;
+                sp.onUpdateAbilities();
+            }
+            // Hồi phục sinh lực ma tộc 10 HP/s
+            if (sp.tickCount % 20 == 0 && sp.getHealth() < sp.getMaxHealth()) {
+                sp.heal(10.0F);
+            }
+        }
 
         // 1. CƠ CHẾ BAY (FLIGHT) CHO NGƯỜI CHƠI LÀ ÁC MA HOẶC MA VƯƠNG
         boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(sp) || PrimordialPlayerDataHelper.isDemonLord(sp);
@@ -440,6 +458,8 @@ public class TensuraEvents {
         return true;
     }
 
+    private static final ThreadLocal<Boolean> HANDLING_PRIMORDIAL_HURT = ThreadLocal.withInitial(() -> false);
+
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
         if (victim == null || victim.level().isClientSide()) return EventResult.pass();
 
@@ -534,6 +554,18 @@ public class TensuraEvents {
 
 
 
+        // XỬ LÝ SÁT THƯƠNG KHI NHẬP XÁC ÁC MA THỦY TỔ (BẢO VỆ PLAYER KHÔNG BỊ CHẾT)
+        if (victim instanceof ServerPlayer player && PrimordialPossessionManager.isPossessing(player)) {
+            if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL) || source.is(net.minecraft.world.damagesource.DamageTypes.IN_FIRE) || source.is(net.minecraft.world.damagesource.DamageTypes.ON_FIRE)) {
+                return EventResult.interruptFalse();
+            }
+            if (amount >= player.getHealth()) {
+                // Thân xác ác ma tử trận! Người chơi thoát xác an toàn về bản thể
+                PrimordialPossessionManager.stopPossession(player, true);
+                return EventResult.interruptFalse();
+            }
+        }
+
         if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isPrimordial(player)) {
             // Miễn nhiễm hoàn toàn sát thương ngã (Fall damage)
             if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) {
@@ -588,10 +620,46 @@ public class TensuraEvents {
             // Giai đoạn 2 (có thể xác nhưng chưa là Ma Vương): Quái thường có thể gây sát thương bình thường
         }
 
+        // Sát thương cận chiến khi Người chơi đang Nhập Xác Ác Ma Thủy Tổ
+        if (!HANDLING_PRIMORDIAL_HURT.get()
+                && source.getEntity() instanceof ServerPlayer attackerPlayer
+                && PrimordialPossessionManager.isPossessing(attackerPlayer)
+                && source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)) {
+            boolean hasBody = PrimordialPossessionManager.hasPhysicalBody(attackerPlayer);
+            DemonType type = PrimordialPossessionManager.getPossessedType(attackerPlayer);
+
+            boolean isBoss = (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss)
+                    || (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)
+                    || (victim instanceof net.minecraft.world.entity.monster.warden.Warden)
+                    || (victim instanceof net.minecraft.world.entity.animal.IronGolem)
+                    || (victim instanceof net.minecraft.world.entity.monster.ElderGuardian);
+
+            float atkDamage = hasBody ? 160.0F * 10.0F : 160.0F;
+            if (type == DemonType.NOIR && victim.level() instanceof ServerLevel sl) {
+                sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                        SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 2.0F, 0.7F);
+                sl.sendParticles(ParticleTypes.SWEEP_ATTACK, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 4, 0.3, 0.3, 0.3, 0.0);
+            }
+            float targetDmg = isBoss ? Math.max(amount, victim.getMaxHealth() * 0.25F) : Math.max(amount, atkDamage);
+            if (amount < targetDmg) {
+                try {
+                    HANDLING_PRIMORDIAL_HURT.set(true);
+                    victim.hurt(attackerPlayer.damageSources().mobAttack(attackerPlayer), targetDmg);
+                } finally {
+                    HANDLING_PRIMORDIAL_HURT.set(false);
+                }
+                return EventResult.interruptFalse();
+            }
+        }
+
         // =========================================================================
         // 3. CƠ CHẾ SÁT THƯƠNG CỦA NGƯỜI CHƠI THỦY TỔ ÁC MA KHI TẤN CÔNG (ATTACKER)
         // =========================================================================
-        if (source.getEntity() instanceof ServerPlayer attackerPlayer && PrimordialPlayerDataHelper.isPrimordial(attackerPlayer)) {
+        if (!HANDLING_PRIMORDIAL_HURT.get()
+                && source.getEntity() instanceof ServerPlayer attackerPlayer
+                && PrimordialPlayerDataHelper.isPrimordial(attackerPlayer)
+                && !PrimordialPossessionManager.isPossessing(attackerPlayer)
+                && source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)) {
             boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(attackerPlayer);
             boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(attackerPlayer);
 
@@ -698,6 +766,12 @@ public class TensuraEvents {
             // Kiểm tra rương tự nhiên để chèn Sách Cổ Khởi Nguyên Thủy Tổ
             TomeLootManager.onOpenContainer(sp, pos);
 
+            // 0. Tương tác La Bàn Thần Môn (Chuột phải đổi số cổng / Shift+Chuột phải mở GUI 0-9) khi đứng ngay cạnh Cổng 3D
+            if (hand == InteractionHand.MAIN_HAND
+                    && DimensionalSanctuaryAbility.tryInteractWithGateBlockClick(sp, pos, sp.isShiftKeyDown())) {
+                return EventResult.interruptFalse();
+            }
+
             // 1. Luôn ưu tiên hiến tế pháp trận triệu hồi ác ma trước
             if (PrimordialSummonRitual.offerSacrifice(sp, hand, Vec3.atCenterOf(pos))) {
                 return EventResult.interruptFalse();
@@ -724,6 +798,14 @@ public class TensuraEvents {
 
     public static EventResult onInteractEntity(Player player, Entity entity, InteractionHand hand) {
         if (player instanceof ServerPlayer sp) {
+            // Khi ở chế độ Khán Giả click vào Ác ma đã thuần phục của mình -> Bắt đầu Nhập Xác
+            if (entity instanceof PrimordialDemonEntity demon && demon.isAlive() && demon.isTame() && demon.isOwnedBy(sp)) {
+                if (sp.gameMode.getGameModeForPlayer() == net.minecraft.world.level.GameType.SPECTATOR) {
+                    PrimordialPossessionManager.startPossession(sp, demon);
+                    return EventResult.interruptTrue();
+                }
+            }
+
             if (PrimordialSummonRitual.offerSacrifice(sp, hand, entity.position())) {
                 return EventResult.interruptFalse();
             }
@@ -731,8 +813,20 @@ public class TensuraEvents {
             // Click trúng sinh vật để tiến hóa thành Ma Vương khi đủ 64 Linh Hồn
             if (hand == InteractionHand.MAIN_HAND && entity instanceof LivingEntity target && target.isAlive() && !(target instanceof Player)) {
                 ItemStack held = sp.getItemInHand(hand);
+
+                // Cầm Khung Xương Ma Thiết click vào sinh vật KHÔNG PHẢI Ác Ma Thủy Tổ
+                if (held.is(ModItems.ARTIFICIAL_SKELETON.get()) && !(target instanceof PrimordialDemonEntity)) {
+                    sp.displayClientMessage(Component.literal("§c§l✦ Sinh vật này không phải Ác Ma Thủy Tổ! Khung Xương Ma Thiết chỉ dùng để ban thể xác vật lý cho Ác Ma đã khế ước!"), true);
+                    return EventResult.interruptFalse();
+                }
+
                 boolean isHoldingSoul = held.is(ModItems.MOB_SOUL.get()) || held.is(ModItems.DEMON_LORD_SOUL.get());
                 int totalSouls = countTotalSouls(sp);
+
+                // Nếu click vào Dân Làng / Thương Nhân khi đang giữ Shift (mà KHÔNG cầm Linh Hồn trên tay) -> Nhường cho tính năng Trao Đổi (Trade GUI)
+                if (target instanceof net.minecraft.world.entity.npc.AbstractVillager && sp.isShiftKeyDown() && !isHoldingSoul) {
+                    return EventResult.pass();
+                }
 
                 if (isHoldingSoul || sp.isShiftKeyDown()) {
                     if (totalSouls >= 64) {
@@ -853,40 +947,14 @@ public class TensuraEvents {
         if (target instanceof PrimordialDemonEntity demon) {
             demon.addTag("TensuraDemonLordMob");
             demon.addTag("TensuraDemonLordCalm");
-            demon.setEvolutionTier(2); // Awakened Demon Lord
+            demon.setEvolutionTier(Math.max(demon.getEvolutionTier(), 2)); // Awakened Demon Lord
             demon.setWinged(true);
 
-            String oldName = demon.getCustomDemonName();
-            demon.setCustomDemonName("[Ma Vương] " + oldName);
-
-            // Tăng Máu x20 lần
-            var hpAttr = demon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
-            if (hpAttr != null) {
-                hpAttr.setBaseValue(hpAttr.getBaseValue() * 20.0D);
-                demon.setHealth((float) hpAttr.getValue());
-            }
-            // Sức mạnh x20 lần
-            var atkAttr = demon.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.ATTACK_DAMAGE);
-            if (atkAttr != null) {
-                atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 10.0D) * 20.0D);
-            }
-
-            // Đồng bộ trực tiếp vào Khế Ước trong túi người chơi (nếu có)
-            for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
-                ItemStack st = player.getInventory().getItem(i);
-                if (st.getItem() instanceof PrimordialPactItem) {
-                    DemonType pType = PrimordialPactItem.getDemonType(st);
-                    String pUuid = com.minhphuc.weapons.data.ItemStackDataHelper.getString(st, "DemonUUID");
-                    if (pType == demon.getDemonType() || demon.getStringUUID().equals(pUuid)) {
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putBoolean(st, "IsAwakenedDemonLord", true);
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putBoolean(st, "IsDemonLord", true);
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putInt(st, "EvolutionTier", 2);
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putFloat(st, "CurrentHp", demon.getHealth());
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putFloat(st, "MaxHp", demon.getMaxHealth());
-                        com.minhphuc.weapons.data.ItemStackDataHelper.putString(st, "CustomDemonName", demon.getCustomDemonName());
-                    }
-                }
-            }
+            String oldName = demon.getEffectiveDemonName();
+            demon.updateAttributesForType(demon.getDemonType());
+            demon.setHealth(demon.getMaxHealth());
+            demon.updateDemonNametag();
+            demon.syncToPactInOwnerInventory();
 
             sl.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
                     SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 3.0F, 0.8F);

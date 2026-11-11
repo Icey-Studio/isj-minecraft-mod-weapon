@@ -53,11 +53,12 @@ public class InfiniteDragonPrisonAbility {
         public final int tier;
         public final long createTick;
         public int ticksAlive = 0;
+        public int maxDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma)
         public final Map<BlockPos, BlockState> replacedBlocks = new ConcurrentHashMap<>();
 
         public ActivePrison(ServerLevel level, ServerPlayer caster, Vec3 center, double radius, int tier) {
             this.level = level;
-            this.casterUuid = caster.getUUID();
+            this.casterUuid = caster != null ? caster.getUUID() : UUID.randomUUID();
             this.center = center;
             this.radius = radius;
             this.tier = tier;
@@ -111,6 +112,22 @@ public class InfiniteDragonPrisonAbility {
                 true
         );
         player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Lồng giam 3D đa diện kim cương giam cầm vĩnh cửu. Đấm tay không để hóa giải!"));
+    }
+
+    public static ActivePrison spawnDemonPrison(ServerLevel level, ServerPlayer owner, UUID demonUuid, Vec3 center, double radius, int durationTicks) {
+        ActivePrison prison = new ActivePrison(level, owner, center, radius, 2);
+        prison.maxDurationTicks = durationTicks;
+        ACTIVE_PRISONS.add(prison);
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, demonUuid, center, new Vec3(0, 0, 1), durationTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
+        }
+
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2.0F, 1.2F);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.0F, 1.0F);
+        return prison;
     }
 
     /**
@@ -210,6 +227,11 @@ public class InfiniteDragonPrisonAbility {
                 if (prison.level != level) continue;
 
                 prison.ticksAlive++;
+                if (prison.maxDurationTicks > 0 && prison.ticksAlive >= prison.maxDurationTicks) {
+                    it.remove();
+                    cleanPrison(prison);
+                    continue;
+                }
                 Vec3 center = prison.center;
                 double r = prison.radius;
 
@@ -454,5 +476,26 @@ public class InfiniteDragonPrisonAbility {
         }
 
         return false;
+    }
+
+    public static int removePrisonsInArea(ServerLevel level, Vec3 center, double radius) {
+        if (ACTIVE_PRISONS.isEmpty() || level == null || center == null) return 0;
+        List<ActivePrison> toRemove = new ArrayList<>();
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == level && p.center.distanceTo(center) <= radius + p.radius) {
+                    toRemove.add(p);
+                }
+            }
+            for (ActivePrison p : toRemove) {
+                ACTIVE_PRISONS.remove(p);
+                cleanPrison(p);
+            }
+        }
+        if (!toRemove.isEmpty()) {
+            level.playSound(null, center.x, center.y, center.z, SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 1.2F);
+            level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1.0, center.z, 2, 0.5, 0.5, 0.5, 0);
+        }
+        return toRemove.size();
     }
 }

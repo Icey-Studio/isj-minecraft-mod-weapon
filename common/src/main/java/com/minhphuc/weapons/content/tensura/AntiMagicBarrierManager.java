@@ -219,6 +219,15 @@ public class AntiMagicBarrierManager {
         );
     }
 
+    public static ActiveBarrier spawnDemonBarrier(ServerLevel level, ServerPlayer owner, Vec3 center, double radius, double height) {
+        ActiveBarrier barrier = new ActiveBarrier(level, owner, center, radius, height, false);
+        buildDome(barrier);
+        ACTIVE_BARRIERS.add(barrier);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.0F, 1.0F);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2.5F, 1.4F);
+        return barrier;
+    }
+
     /**
      * Dân làng dựng kết giới khi Iron Golem ngã xuống (Bán kính 35, Cao 28).
      */
@@ -750,6 +759,28 @@ public class AntiMagicBarrierManager {
         }
 
         return false;
+    }
+
+    public static int removeBarriersInArea(ServerLevel level, Vec3 center, double radius, Entity exemptOwner) {
+        if (ACTIVE_BARRIERS.isEmpty() || level == null || center == null) return 0;
+        List<ActiveBarrier> toRemove = new ArrayList<>();
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier b : ACTIVE_BARRIERS) {
+                if (b.level == level && b.center.distanceTo(center) <= radius + b.radius) {
+                    if (exemptOwner != null && exemptOwner.getUUID().equals(b.casterUuid)) continue;
+                    toRemove.add(b);
+                }
+            }
+            for (ActiveBarrier b : toRemove) {
+                ACTIVE_BARRIERS.remove(b);
+                cleanBarrier(b);
+            }
+        }
+        if (!toRemove.isEmpty()) {
+            level.playSound(null, center.x, center.y, center.z, SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 1.2F);
+            level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1.0, center.z, 2, 0.5, 0.5, 0.5, 0);
+        }
+        return toRemove.size();
     }
 }
 

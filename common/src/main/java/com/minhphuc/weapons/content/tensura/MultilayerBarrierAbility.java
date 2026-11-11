@@ -344,6 +344,21 @@ public class MultilayerBarrierAbility {
         }
     }
 
+    public static ActiveMultilayer spawnDemonBarrier(ServerLevel level, ServerPlayer owner, UUID demonUuid, Vec3 center, double radius, int durationTicks) {
+        ActiveMultilayer barrier = new ActiveMultilayer(level, owner, true, center, radius, durationTicks, new Vec3(1, 0, 0), new Vec3(0, 0, 1));
+        ACTIVE_BARRIERS.add(barrier);
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_MULTILAYER_BARRIER)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_MULTILAYER_BARRIER, demonUuid, center, new Vec3(0, 0, 1), durationTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
+        }
+
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 2.5F, 1.4F);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 2.0F, 1.0F);
+        return barrier;
+    }
+
     private static BlockState getOriginalBlockState(ServerLevel level, BlockPos pos) {
         synchronized (ACTIVE_BARRIERS) {
             for (ActiveMultilayer b : ACTIVE_BARRIERS) {
@@ -687,7 +702,8 @@ public class MultilayerBarrierAbility {
                 AABB scanBox = new AABB(b.center.x - scanR, b.center.y - scanR, b.center.z - scanR,
                         b.center.x + scanR, b.center.y + scanR, b.center.z + scanR);
                 List<LivingEntity> nearbyEntities = level.getEntitiesOfClass(LivingEntity.class, scanBox,
-                        e -> e.isAlive() && !(e instanceof Player) && (e instanceof Monster || e instanceof Enemy));
+                        e -> e.isAlive() && !(e instanceof Player) && !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(b.casterUuid, e)
+                                && (e instanceof Monster || e instanceof Enemy || e instanceof net.minecraft.world.entity.npc.AbstractVillager));
                 for (LivingEntity m : nearbyEntities) {
                     if (b.isSphere) {
                         double dist = m.position().distanceTo(b.center);
@@ -744,5 +760,27 @@ public class MultilayerBarrierAbility {
                 }
             }
         }
+    }
+
+    public static int removeBarriersInArea(ServerLevel level, Vec3 center, double radius, Entity exemptOwner) {
+        if (ACTIVE_BARRIERS.isEmpty() || level == null || center == null) return 0;
+        List<ActiveMultilayer> toRemove = new ArrayList<>();
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveMultilayer b : ACTIVE_BARRIERS) {
+                if (b.level == level && b.center.distanceTo(center) <= radius + b.radius) {
+                    if (exemptOwner != null && exemptOwner.getUUID().equals(b.casterUuid)) continue;
+                    toRemove.add(b);
+                }
+            }
+            for (ActiveMultilayer b : toRemove) {
+                ACTIVE_BARRIERS.remove(b);
+                cleanBarrier(b);
+            }
+        }
+        if (!toRemove.isEmpty()) {
+            level.playSound(null, center.x, center.y, center.z, SoundEvents.GLASS_BREAK, SoundSource.HOSTILE, 2.5F, 1.2F);
+            level.sendParticles(ParticleTypes.ELECTRIC_SPARK, center.x, center.y + 1.0, center.z, 20, 0.5, 0.5, 0.5, 0.1);
+        }
+        return toRemove.size();
     }
 }

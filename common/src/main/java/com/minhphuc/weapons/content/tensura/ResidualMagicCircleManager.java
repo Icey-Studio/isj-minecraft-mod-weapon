@@ -178,7 +178,8 @@ public class ResidualMagicCircleManager {
                     LivingEntity::isAlive
             );
             for (LivingEntity e : inBlast) {
-                if (PrimordialDemonEntity.isTargetImmune(e)) continue;
+                if (e instanceof PrimordialDemonEntity pde && pde.isTame()) continue;
+                if (e instanceof net.minecraft.world.entity.player.Player p && PrimordialPlayerDataHelper.isDemonLord(p)) continue;
                 e.hurt(level.damageSources().explosion(null, null), 120.0F);
                 Vec3 knock = e.position().subtract(pos).normalize().scale(1.2D);
                 e.setDeltaMovement(knock.x, 0.4D, knock.z);
@@ -203,7 +204,8 @@ public class ResidualMagicCircleManager {
                     LivingEntity::isAlive
             );
             for (LivingEntity e : inPoison) {
-                if (PrimordialDemonEntity.isTargetImmune(e)) continue;
+                if (e instanceof PrimordialDemonEntity pde && pde.isTame()) continue;
+                if (e instanceof net.minecraft.world.entity.player.Player p && PrimordialPlayerDataHelper.isDemonLord(p)) continue;
                 e.addEffect(new MobEffectInstance(MobEffects.POISON, 200, 2));
                 e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 2));
                 e.hurt(level.damageSources().magic(), 45.0F);
@@ -249,7 +251,8 @@ public class ResidualMagicCircleManager {
                         LivingEntity::isAlive
                 );
                 for (LivingEntity e : inPillar) {
-                    if (PrimordialDemonEntity.isTargetImmune(e)) continue;
+                    if (e instanceof PrimordialDemonEntity pde && pde.isTame()) continue;
+                if (e instanceof net.minecraft.world.entity.player.Player p && PrimordialPlayerDataHelper.isDemonLord(p)) continue;
                     e.hurt(level.damageSources().magic(), 300.0F);
                     e.setDeltaMovement(0, 1.4D, 0);
                     e.hasImpulse = true;
@@ -282,7 +285,8 @@ public class ResidualMagicCircleManager {
                         LivingEntity::isAlive
                 );
                 for (LivingEntity e : inDisint) {
-                    if (PrimordialDemonEntity.isTargetImmune(e)) continue;
+                    if (e instanceof PrimordialDemonEntity pde && pde.isTame()) continue;
+                if (e instanceof net.minecraft.world.entity.player.Player p && PrimordialPlayerDataHelper.isDemonLord(p)) continue;
                     e.hurt(level.damageSources().magic(), 360.0F);
                     e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 160, 3));
                     e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 3));

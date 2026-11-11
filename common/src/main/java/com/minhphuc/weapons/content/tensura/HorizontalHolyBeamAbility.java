@@ -220,7 +220,12 @@ public class HorizontalHolyBeamAbility {
             AABB box = new AABB(cur.x - 3.2, cur.y - 3.2, cur.z - 3.2,
                     cur.x + 3.2, cur.y + 3.2, cur.z + 3.2);
 
-            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive());
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> {
+                if (e == caster || !e.isAlive()) return false;
+                if (caster instanceof ServerPlayer sp && PrimordialDemonEntity.isContractedAllyOfPlayer(sp.getUUID(), e)) return false;
+                if (caster instanceof PrimordialDemonEntity demon && demon.isImmuneOrFriendly(e)) return false;
+                return true;
+            });
             for (LivingEntity victim : victims) {
                 // Tước bỏ mọi phòng ngự
                 victim.removeEffect(MobEffects.REGENERATION);
@@ -400,7 +405,12 @@ public class HorizontalHolyBeamAbility {
             AABB box = new AABB(cur.x - 3.4, cur.y - 3.4, cur.z - 3.4,
                     cur.x + 3.4, cur.y + 3.4, cur.z + 3.4);
 
-            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive());
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> {
+                if (e == caster || !e.isAlive()) return false;
+                if (caster instanceof ServerPlayer sp && PrimordialDemonEntity.isContractedAllyOfPlayer(sp.getUUID(), e)) return false;
+                if (caster instanceof PrimordialDemonEntity demon && demon.isImmuneOrFriendly(e)) return false;
+                return true;
+            });
             for (LivingEntity victim : victims) {
                 // Tước bỏ toàn bộ trạng thái phòng ngự
                 victim.removeEffect(MobEffects.REGENERATION);

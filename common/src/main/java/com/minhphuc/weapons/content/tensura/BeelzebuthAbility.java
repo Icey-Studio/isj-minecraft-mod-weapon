@@ -192,6 +192,9 @@ public class BeelzebuthAbility {
                     entity.hasImpulse = true;
 
                     if (entity instanceof LivingEntity living) {
+                        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), living)) {
+                            continue;
+                        }
                         if (roll.isOverdrive()) {
                             // BẠO KÍCH: Nuốt chửng 100% mọi thực thể
                             level.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -306,7 +309,8 @@ public class BeelzebuthAbility {
             double pullRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_BEELZEBUTH) ? 8.0D : 4.5D;
             AABB pullBox = new AABB(currentPos.x - pullRadius, currentPos.y - 3.5D, currentPos.z - pullRadius,
                     currentPos.x + pullRadius, currentPos.y + 4.0D, currentPos.z + pullRadius);
-            List<Entity> pullTargets = d.level.getEntities((Entity) null, pullBox, e -> e != d.caster && e.isAlive());
+            List<Entity> pullTargets = d.level.getEntities((Entity) null, pullBox,
+                    e -> e != d.caster && e.isAlive() && (d.caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(d.caster.getUUID(), e)));
             for (Entity e : pullTargets) {
                 Vec3 pull = currentPos.subtract(e.position()).normalize().scale(0.85D);
                 e.setDeltaMovement(pull.x, pull.y * 0.4D + 0.15D, pull.z);

@@ -19,7 +19,6 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.util.Mth;
-import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.Display;
@@ -62,6 +61,7 @@ public class DragonNovaAbility {
     public static class ActiveDragonNova {
         public final ServerLevel level;
         public final ServerPlayer caster;
+        public final com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demonCaster;
         public int currentTick = 0;
         public final int totalTicks = 75;
         public Vec3 lastHitPos = null;
@@ -69,9 +69,14 @@ public class DragonNovaAbility {
         // Ma Pháp Trận Tím 3D Dưới Chân
         public Display.ItemDisplay groundCircle = null;
 
-        public ActiveDragonNova(ServerLevel level, ServerPlayer caster) {
+        public ActiveDragonNova(ServerLevel level, ServerPlayer caster, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demonCaster) {
             this.level = level;
             this.caster = caster;
+            this.demonCaster = demonCaster;
+        }
+
+        public ActiveDragonNova(ServerLevel level, ServerPlayer caster) {
+            this(level, caster, null);
         }
 
         public void cleanupDisplays() {
@@ -93,12 +98,46 @@ public class DragonNovaAbility {
     private static final DustParticleOptions ELECTRIC_CYAN_DUST = new DustParticleOptions(new Vector3f(0.0F, 0.95F, 1.0F), 1.8F);
     private static final DustParticleOptions STARLIGHT_WHITE_DUST = new DustParticleOptions(new Vector3f(0.95F, 1.0F, 1.0F), 2.2F);
 
+    public static boolean castFromDemon(ServerLevel level, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demon, ServerPlayer owner) {
+        if (demon == null || level == null) return false;
+        if (ACTIVE_NOVAS.stream().anyMatch(n -> n.demonCaster == demon)) return false;
+
+        ActiveDragonNova nova = new ActiveDragonNova(level, owner, demon);
+
+        // Gửi packet tới client với 75 ticks để cả 3 hồi đều hiển thị trọn vẹn:
+        // Hồi 1 (0-30): Quả cầu hạt nhân plasma Starlight
+        // Hồi 2 (30-55): Chùm Plasma Đỏ 3D cực đại 75m
+        // Hồi 3 (55-75): Cột Plasma Đỏ & Trắng chọc trời 140m + Sóng xung kích cầu + 24 nhánh sét
+        ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_DRAGON_NOVA, demon.getUUID(), demon.position(), demon.getLookAngle(), 75, ClientboundCinematicSkillPacket.ACTION_START, 1.2f
+        ));
+
+        Vec3 groundPos = demon.position().add(0, 0.05D, 0);
+        nova.groundCircle = createMagicCircleDisplay(level, groundPos, ModItems.BEELZEBUTH_MAGIC_CIRCLE.get(), 3.5F, 0x9400D3);
+
+        ACTIVE_NOVAS.add(nova);
+
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 3.5F, 1.4F);
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 3.5F, 0.8F);
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 4.0F, 0.6F);
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.WARDEN_ROAR, SoundSource.HOSTILE, 2.5F, 0.7F);
+
+        demon.announceSkill("竜星爆炎覇: Long Tinh Bộc Viêm Bá");
+        demon.broadcastNearbyDialogue("Long Tinh Bộc Viêm Bá! Vạn tượng quy tẫn!", 48.0D);
+        return true;
+    }
+
     /**
      * Kiểm tra điều kiện mở khóa: Chỉ cần mặc Áo Giáp Thần Thoại (Divine Armor)
      * Không cần thức tỉnh Chân Ma Vương, không cần hồi năng lượng / ma lực
      */
     public static boolean canCast(ServerPlayer player) {
         if (player == null) return false;
+        if (PrimordialPossessionManager.isPossessing(player)) return true;
         return DivineArmorItem.isWearingAnyPiece(player);
     }
 
@@ -143,9 +182,6 @@ public class DragonNovaAbility {
 
         ACTIVE_NOVAS.add(nova);
 
-        // Vươn cánh tay hướng ra trước khai mở tuyệt kỹ
-        player.swing(InteractionHand.MAIN_HAND, true);
-
         // 2. Gửi Title chuẩn Kanji & Latin
         if (player.connection != null) {
             player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§d§l竜星爆炎覇")));
@@ -189,13 +225,21 @@ public class DragonNovaAbility {
 
             if (nova.level != level) continue;
 
-            if (nova.caster == null || !nova.caster.isAlive() || nova.caster.hasDisconnected()) {
-                nova.cleanupDisplays();
-                iterator.remove();
-                continue;
+            if (nova.demonCaster != null) {
+                if (!nova.demonCaster.isAlive()) {
+                    nova.cleanupDisplays();
+                    iterator.remove();
+                    continue;
+                }
+            } else {
+                if (nova.caster == null || !nova.caster.isAlive() || nova.caster.hasDisconnected()) {
+                    nova.cleanupDisplays();
+                    iterator.remove();
+                    continue;
+                }
             }
 
-            ServerPlayer caster = nova.caster;
+            LivingEntity caster = nova.demonCaster != null ? nova.demonCaster : nova.caster;
             int tick = nova.currentTick;
 
             // =========================================================================
@@ -216,25 +260,21 @@ public class DragonNovaAbility {
                 }
 
                 // 2. HIỆU ỨNG TẬP HỢP CÁC LINH TỬ (SPIRITRONS GATHERING):
-                // Hàng vạn đốm sáng linh tử tím & hồng neon từ không gian bay vút hội tụ thẳng vào lòng bàn tay người chơi
-                Vec3 look = caster.getLookAngle();
-                Vec3 rightVec = new Vec3(-look.z, 0, look.x).normalize();
+                // Hàng vạn đốm sáng linh tử tinh khiết từ quả cầu 7.5m không gian bay vút vào ngực người chơi
                 Vec3 casterChest = caster.position().add(0, 1.2D, 0);
-                Vec3 handPos = casterChest.add(look.scale(0.85D)).add(rightVec.scale(0.35D));
-
                 for (int i = 0; i < 45; i++) {
                     double u = RANDOM.nextDouble();
                     double v = RANDOM.nextDouble();
                     double theta = u * 2.0D * Math.PI;
                     double phi = Math.acos(2.0D * v - 1.0D);
-                    double r = 3.0D + RANDOM.nextDouble() * 3.5D;
+                    double r = 4.0D + RANDOM.nextDouble() * 3.5D;
 
-                    double sx = handPos.x + r * Math.sin(phi) * Math.cos(theta);
-                    double sy = handPos.y + r * Math.sin(phi) * Math.sin(theta);
-                    double sz = handPos.z + r * Math.cos(phi);
+                    double sx = casterChest.x + r * Math.sin(phi) * Math.cos(theta);
+                    double sy = casterChest.y + r * Math.sin(phi) * Math.sin(theta);
+                    double sz = casterChest.z + r * Math.cos(phi);
 
                     Vec3 spawnPos = new Vec3(sx, sy, sz);
-                    Vec3 inwardVelocity = handPos.subtract(spawnPos).normalize().scale(0.85D);
+                    Vec3 inwardVelocity = casterChest.subtract(spawnPos).normalize().scale(0.85D);
 
                     if (i % 3 == 0) {
                         level.sendParticles(SPIRITRON_PINK, spawnPos.x, spawnPos.y, spawnPos.z, 0,
@@ -246,15 +286,6 @@ public class DragonNovaAbility {
                         level.sendParticles(ELECTRIC_CYAN_DUST, spawnPos.x, spawnPos.y, spawnPos.z, 0,
                                 inwardVelocity.x, inwardVelocity.y, inwardVelocity.z, 0.85D);
                     }
-                }
-
-                // Điểm tụ sáng rực rỡ ở lòng bàn tay giơ ra (ngưng tụ năng lượng siêu việt)
-                level.sendParticles(SPIRITRON_PURPLE, handPos.x, handPos.y, handPos.z, 4, 0.08D, 0.08D, 0.08D, 0.02D);
-                level.sendParticles(SPIRITRON_PINK, handPos.x, handPos.y, handPos.z, 3, 0.06D, 0.06D, 0.06D, 0.02D);
-                level.sendParticles(ParticleTypes.END_ROD, handPos.x, handPos.y, handPos.z, 2, 0.04D, 0.04D, 0.04D, 0.01D);
-                if (tick >= 14) {
-                    level.sendParticles(ELECTRIC_CYAN_DUST, handPos.x, handPos.y, handPos.z, 3, 0.06D, 0.06D, 0.06D, 0.01D);
-                    level.sendParticles(ParticleTypes.FLASH, handPos.x, handPos.y, handPos.z, 1, 0, 0, 0, 0);
                 }
 
                 // 3. Hạt tụ lực xoay quanh người chơi cuốn xoáy dữ dội (chuẩn Milim)
@@ -294,6 +325,7 @@ public class DragonNovaAbility {
 
                 // 4. Thập Tự Quang Mang (Cross Star Flare) rực sáng cực độ trước khi khai hỏa
                 if (tick >= 24) {
+                    Vec3 look = caster.getLookAngle();
                     Vec3 focusPos = caster.getEyePosition().add(look.scale(1.8D));
                     Vec3 right = new Vec3(-look.z, 0, look.x).normalize();
                     Vec3 up = look.cross(right).normalize();
@@ -328,21 +360,22 @@ public class DragonNovaAbility {
                 if (tick == 30) {
                     nova.cleanupDisplays();
 
-                    // Vung tay khai hỏa luồng pháo cực đại
-                    caster.swing(InteractionHand.MAIN_HAND, true);
-
                     // CỘT SÁNG 3D ĐA TẦNG CỰC ĐẠI CHUẨN MILIM NAVA
-                    // Khi bật chế độ Điện Ảnh 3D: Triệt tiêu 100% cột vuông ItemDisplay lỗi thời, chuyển sang Client OpenGL CGL 32-sided Smooth Cylinder
+                    // Khi bật chế độ Điện Ảnh 3D: Dựng hoàn toàn bằng GPU ClientCinematicSkillRenderer (Chùm Plasma Đỏ 3D Chuẩn Lời Chúc Tử Vong)
                     if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DRAGON_NOVA)) {
-                        HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, origin, look, maxRange, 4.5F, 0xFF55DD, 8.0F, 0xFF0044, 40);
+                        HorizontalHolyBeamAbility.spawn3DBeamDisplay(level, origin, look, maxRange, 4.5F, 0xFFFFFF, 8.0F, 0xFF1744, 40);
                     }
 
-                    // THOẠI KINH ĐIỂN CỦA MILIM KHI KHAI HỎA
-                    for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, caster.getBoundingBox().inflate(64.0D))) {
-                        p.displayClientMessage(
-                            Component.literal("§d§l[MILIM NAVA] §e«Drago-Nova cực hạn xuất lực!! Hủy diệt toàn bộ đất trời tan thành cát bụi!!»"),
-                            false
-                        );
+                    // THOẠI KINH ĐIỂN CỦA MILIM / THỦY TỔ KHI KHAI HỎA
+                    if (nova.demonCaster != null) {
+                        nova.demonCaster.broadcastNearbyDialogue("竜星爆炎覇! Drago-Nova cực hạn xuất lực!! Hủy diệt toàn bộ tan thành cát bụi!!", 64.0D);
+                    } else {
+                        for (ServerPlayer p : level.getEntitiesOfClass(ServerPlayer.class, caster.getBoundingBox().inflate(64.0D))) {
+                            p.displayClientMessage(
+                                Component.literal("§d§l[MILIM NAVA] §e«Drago-Nova cực hạn xuất lực!! Hủy diệt toàn bộ đất trời tan thành cát bụi!!»"),
+                                false
+                            );
+                        }
                     }
 
                     level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, caster.getX(), caster.getY() + 1.2D, caster.getZ(), 2, 0.5D, 0.5D, 0.5D, 0);
@@ -372,21 +405,24 @@ public class DragonNovaAbility {
                 Vec3 up = look.cross(right).normalize();
                 double helixRadius = 1.6D;
 
-                // 1. Phá hủy địa hình mạnh mẽ (khoét rãnh hầm bán kính 4 block giống hệt Milim)
-                int tunnelRadius = 4;
-                int tunnelRadiusSq = tunnelRadius * tunnelRadius;
-                for (double d = 1.0D; d < beamDist; d += 2.0D) {
-                    Vec3 carvePt = origin.add(look.scale(d));
-                    BlockPos centerBp = BlockPos.containing(carvePt);
+                // 1. Phá hủy địa hình mạnh mẽ (khoét rãnh hầm bán kính 4 block giống hệt Milim - Carrera hoặc Người chơi)
+                boolean canBreakBlocks = (nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE);
+                if (canBreakBlocks) {
+                    int tunnelRadius = 4;
+                    int tunnelRadiusSq = tunnelRadius * tunnelRadius;
+                    for (double d = 1.0D; d < beamDist; d += 2.0D) {
+                        Vec3 carvePt = origin.add(look.scale(d));
+                        BlockPos centerBp = BlockPos.containing(carvePt);
 
-                    for (int bx = -tunnelRadius; bx <= tunnelRadius; bx++) {
-                        for (int by = -tunnelRadius; by <= tunnelRadius; by++) {
-                            for (int bz = -tunnelRadius; bz <= tunnelRadius; bz++) {
-                                if (bx * bx + by * by + bz * bz <= tunnelRadiusSq) {
-                                    BlockPos bp = centerBp.offset(bx, by, bz);
-                                    BlockState state = level.getBlockState(bp);
-                                    if (!state.isAir() && state.getBlock() != Blocks.BEDROCK && state.getDestroySpeed(level, bp) >= 0.0F) {
-                                        level.destroyBlock(bp, false);
+                        for (int bx = -tunnelRadius; bx <= tunnelRadius; bx++) {
+                            for (int by = -tunnelRadius; by <= tunnelRadius; by++) {
+                                for (int bz = -tunnelRadius; bz <= tunnelRadius; bz++) {
+                                    if (bx * bx + by * by + bz * bz <= tunnelRadiusSq) {
+                                        BlockPos bp = centerBp.offset(bx, by, bz);
+                                        BlockState state = level.getBlockState(bp);
+                                        if (!state.isAir() && state.getBlock() != Blocks.BEDROCK && state.getDestroySpeed(level, bp) >= 0.0F) {
+                                            level.destroyBlock(bp, false);
+                                        }
                                     }
                                 }
                             }
@@ -420,31 +456,29 @@ public class DragonNovaAbility {
                     }
                 }
 
-                // 3. Vẽ chùm tia hạt năng lượng cực đại chuẩn Milim
-                for (double d = 1.0D; d < beamDist; d += 0.5D) {
-                    Vec3 corePt = origin.add(look.scale(d));
-
-                    if (Math.round(d) % 6 == 0) {
-                        level.sendParticles(ParticleTypes.SONIC_BOOM, corePt.x, corePt.y, corePt.z, 1, 0, 0, 0, 0);
+                // 3. Hiệu ứng hạt dọc chùm tia (Khi bật Điện Ảnh 3D: Tối ưu sạch sẽ để làm nổi bật Chùm Plasma Đỏ 3D)
+                boolean isCinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DRAGON_NOVA);
+                if (isCinematic) {
+                    for (double d = 2.0D; d < beamDist; d += 3.0D) {
+                        Vec3 corePt = origin.add(look.scale(d));
+                        if (Math.round(d) % 12 == 0) {
+                            level.sendParticles(ParticleTypes.SONIC_BOOM, corePt.x, corePt.y, corePt.z, 1, 0, 0, 0, 0);
+                        }
+                        if (RANDOM.nextFloat() < 0.25F) {
+                            level.sendParticles(ParticleTypes.LAVA, corePt.x, corePt.y, corePt.z, 1, 0.4D, 0.4D, 0.4D, 0.05D);
+                            level.sendParticles(ParticleTypes.FLAME, corePt.x, corePt.y, corePt.z, 1, 0.3D, 0.3D, 0.3D, 0.02D);
+                        }
                     }
-                    level.sendParticles(ParticleTypes.FLASH, corePt.x, corePt.y, corePt.z, 1, 0.4D, 0.4D, 0.4D, 0);
-                    level.sendParticles(SPIRITRON_PINK, corePt.x, corePt.y, corePt.z, 3, 1.0D, 1.0D, 1.0D, 0.08D);
-                    level.sendParticles(SPIRITRON_PURPLE, corePt.x, corePt.y, corePt.z, 2, 0.8D, 0.8D, 0.8D, 0.08D);
-                    level.sendParticles(ParticleTypes.FLAME, corePt.x, corePt.y, corePt.z, 3, 1.2D, 1.2D, 1.2D, 0.1D);
-                    level.sendParticles(ParticleTypes.DRAGON_BREATH, corePt.x, corePt.y, corePt.z, 2, 0.8D, 0.8D, 0.8D, 0.05D);
-                    level.sendParticles(ParticleTypes.ELECTRIC_SPARK, corePt.x, corePt.y, corePt.z, 2, 0.8D, 0.8D, 0.8D, 0.1D);
-
-                    // Xoắn kép năng lượng
-                    double angle = (d * 1.6D) + (tick * 0.85D);
-                    Vec3 offset1 = right.scale(Math.cos(angle) * helixRadius).add(up.scale(Math.sin(angle) * helixRadius));
-                    Vec3 offset2 = right.scale(-Math.cos(angle) * helixRadius).add(up.scale(-Math.sin(angle) * helixRadius));
-                    Vec3 h1 = corePt.add(offset1);
-                    Vec3 h2 = corePt.add(offset2);
-
-                    level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0.03D);
-                    level.sendParticles(NEON_MAGENTA_DUST, h1.x, h1.y, h1.z, 1, 0, 0, 0, 0);
-                    level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0.03D);
-                    level.sendParticles(DEEP_PURPLE_DUST, h2.x, h2.y, h2.z, 1, 0, 0, 0, 0);
+                } else {
+                    for (double d = 1.0D; d < beamDist; d += 0.8D) {
+                        Vec3 corePt = origin.add(look.scale(d));
+                        if (Math.round(d) % 8 == 0) {
+                            level.sendParticles(ParticleTypes.SONIC_BOOM, corePt.x, corePt.y, corePt.z, 1, 0, 0, 0, 0);
+                        }
+                        level.sendParticles(ParticleTypes.FLASH, corePt.x, corePt.y, corePt.z, 1, 0.2D, 0.2D, 0.2D, 0);
+                        level.sendParticles(ParticleTypes.FLAME, corePt.x, corePt.y, corePt.z, 2, 0.5D, 0.5D, 0.5D, 0.05D);
+                        level.sendParticles(ParticleTypes.LAVA, corePt.x, corePt.y, corePt.z, 1, 0.4D, 0.4D, 0.4D, 0.05D);
+                    }
                 }
 
                 // Điểm va chạm bắn tung tóe chấn động
@@ -458,7 +492,7 @@ public class DragonNovaAbility {
                 if (tick % 2 == 0) {
                     AABB beamBounds = new AABB(origin, hitPos).inflate(5.0D);
                     List<LivingEntity> potentialTargets = level.getEntitiesOfClass(LivingEntity.class, beamBounds,
-                            e -> e != caster && e.isAlive());
+                            e -> !isAlliedToNovaCaster(nova, e) && e.isAlive());
 
                     for (LivingEntity target : potentialTargets) {
                         Vec3 targetPos = target.getEyePosition();
@@ -482,7 +516,11 @@ public class DragonNovaAbility {
                             // Sát thương ma pháp xuyên giáp cực lớn
                             target.addTag("DragonNovaDamage");
                             target.hurt(level.damageSources().magic(), 500.0F);
-                            target.hurt(level.damageSources().playerAttack(caster), 1500.0F);
+                            if (caster instanceof ServerPlayer sp) {
+                                target.hurt(level.damageSources().playerAttack(sp), 1500.0F);
+                            } else {
+                                target.hurt(level.damageSources().mobAttack(caster), 1500.0F);
+                            }
                             target.removeTag("DragonNovaDamage");
 
                             // Thiêu đốt ngọn lửa ma long 20s không thể dập tắt
@@ -506,17 +544,20 @@ public class DragonNovaAbility {
 
                 BlockPos impactCenter = BlockPos.containing(hit);
 
-                // 1. Phá hủy địa hình tạo Hố Bom khổng lồ bán kính 10 blocks (sâu -6 đến 8) chuẩn Milim
-                int craterRadius = 10;
-                int craterRadiusSq = craterRadius * craterRadius;
-                for (int cx = -craterRadius; cx <= craterRadius; cx++) {
-                    for (int cz = -craterRadius; cz <= craterRadius; cz++) {
-                        for (int cy = -6; cy <= 8; cy++) {
-                            if (cx * cx + cz * cz + cy * cy <= craterRadiusSq) {
-                                BlockPos craterPos = impactCenter.offset(cx, cy, cz);
-                                BlockState cState = level.getBlockState(craterPos);
-                                if (!cState.isAir() && cState.getBlock() != Blocks.BEDROCK && cState.getDestroySpeed(level, craterPos) >= 0) {
-                                    level.destroyBlock(craterPos, false);
+                // 1. Phá hủy địa hình tạo Hố Bom khổng lồ bán kính 10 blocks (sâu -6 đến 8) chuẩn Milim (Carrera hoặc Người chơi)
+                boolean canBreakBlocks = (nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE);
+                if (canBreakBlocks) {
+                    int craterRadius = 10;
+                    int craterRadiusSq = craterRadius * craterRadius;
+                    for (int cx = -craterRadius; cx <= craterRadius; cx++) {
+                        for (int cz = -craterRadius; cz <= craterRadius; cz++) {
+                            for (int cy = -6; cy <= 8; cy++) {
+                                if (cx * cx + cz * cz + cy * cy <= craterRadiusSq) {
+                                    BlockPos craterPos = impactCenter.offset(cx, cy, cz);
+                                    BlockState cState = level.getBlockState(craterPos);
+                                    if (!cState.isAir() && cState.getBlock() != Blocks.BEDROCK && cState.getDestroySpeed(level, craterPos) >= 0) {
+                                        level.destroyBlock(craterPos, false);
+                                    }
                                 }
                             }
                         }
@@ -595,11 +636,20 @@ public class DragonNovaAbility {
                     drawJaggedLightning(level, hit.add(0, 10.0D, 0), strikeTarget, 0.6D);
                 }
 
-                // 9. SÁT THƯƠNG ĐẶC BIỆT ĐẠI VỤ NỔ (Bán kính 28m)
+                // 9. Phá vỡ ma pháp trận & kết giới thù địch
+                if (nova.demonCaster != null) {
+                    nova.demonCaster.dispelOpposingMagic(hit, 28.0D);
+                } else {
+                    AntiMagicBarrierManager.removeBarriersInArea(level, hit, 28.0D, caster);
+                    MultilayerBarrierAbility.removeBarriersInArea(level, hit, 28.0D, caster);
+                    com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removePrisonsInArea(level, hit, 28.0D);
+                }
+
+                // 10. SÁT THƯƠNG ĐẶC BIỆT ĐẠI VỤ NỔ (Bán kính 28m)
                 AABB blastArea = new AABB(hit.x - 28.0D, hit.y - 14.0D, hit.z - 28.0D,
                                           hit.x + 28.0D, hit.y + 24.0D, hit.z + 28.0D);
                 List<LivingEntity> blastVictims = level.getEntitiesOfClass(LivingEntity.class, blastArea,
-                        e -> e != caster && e.isAlive());
+                        e -> !isAlliedToNovaCaster(nova, e) && e.isAlive());
 
                 for (LivingEntity victim : blastVictims) {
                     double dist = victim.position().distanceTo(hit);
@@ -608,7 +658,7 @@ public class DragonNovaAbility {
                         if (victim instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity velgrynd) {
                             velgrynd.broadcastDialogue("Không thể nào... Năng lượng Tinh Tố này... Là Milim sao...?! Rudra...!");
                             velgrynd.setDragonLayers(0);
-                            velgrynd.hurt(level.damageSources().playerAttack(caster), 10000.0F);
+                            velgrynd.hurt(caster instanceof ServerPlayer sp ? level.damageSources().playerAttack(sp) : level.damageSources().mobAttack(caster), 10000.0F);
                             continue;
                         }
 
@@ -628,7 +678,7 @@ public class DragonNovaAbility {
                             // Rút 90% HP Boss hiện tại hoặc tối thiểu 3,000 sát thương
                             float bossDamage = Math.max(3000.0F, victim.getHealth() * 0.90F);
                             victim.hurt(level.damageSources().magic(), 1000.0F);
-                            victim.hurt(level.damageSources().playerAttack(caster), bossDamage);
+                            victim.hurt(caster instanceof ServerPlayer sp ? level.damageSources().playerAttack(sp) : level.damageSources().mobAttack(caster), bossDamage);
 
                             victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 400, 3));
                             victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 400, 3));
@@ -638,8 +688,10 @@ public class DragonNovaAbility {
                             victim.setDeltaMovement(new Vec3(0, 2.2D, 0));
                         } else {
                             // Quái thường: Nhận 5,000 sát thương, xóa sổ trực tiếp
-                            TensuraEvents.handleMobDeathDrop(caster, victim);
-                            victim.hurt(level.damageSources().playerAttack(caster), 5000.0F);
+                            if (nova.caster != null) {
+                                TensuraEvents.handleMobDeathDrop(nova.caster, victim);
+                            }
+                            victim.hurt(caster instanceof ServerPlayer sp ? level.damageSources().playerAttack(sp) : level.damageSources().mobAttack(caster), 5000.0F);
                             if (victim.isAlive()) {
                                 victim.discard();
                             }
@@ -651,10 +703,12 @@ public class DragonNovaAbility {
                     }
                 }
 
-                caster.displayClientMessage(
-                    Component.literal("§d§l[LONG TINH BỘC VIÊM BÁ] §fBáo cáo. Siêu Tân Tinh hủy diệt đã xóa sổ hoàn toàn thực thể mục tiêu và địa hình!"),
-                    true
-                );
+                if (nova.caster != null) {
+                    nova.caster.displayClientMessage(
+                        Component.literal("§d§l[LONG TINH BỘC VIÊM BÁ] §fBáo cáo. Siêu Tân Tinh hủy diệt đã xóa sổ hoàn toàn thực thể mục tiêu và địa hình!"),
+                        true
+                    );
+                }
             }
 
             // =========================================================================
@@ -766,5 +820,36 @@ public class DragonNovaAbility {
         t = Mth.clamp(t, 0.0D, 1.0D);
         Vec3 closest = A.add(AB.scale(t));
         return P.distanceToSqr(closest);
+    }
+
+    public static boolean isAlliedToNovaCaster(ActiveDragonNova nova, LivingEntity target) {
+        if (target == null) return false;
+        if (nova.demonCaster != null) {
+            if (target == nova.demonCaster) return true;
+            if (target instanceof net.minecraft.world.entity.npc.Villager
+                    || target instanceof net.minecraft.world.entity.npc.WanderingTrader
+                    || target instanceof net.minecraft.world.entity.animal.IronGolem
+                    || target instanceof net.minecraft.world.entity.animal.SnowGolem) {
+                return true;
+            }
+            if (target instanceof net.minecraft.world.entity.TamableAnimal tamable && tamable.isTame()) {
+                if (nova.demonCaster.getOwnerUUID() != null && nova.demonCaster.getOwnerUUID().equals(tamable.getOwnerUUID())) {
+                    return true;
+                }
+            }
+            if (nova.demonCaster.getOwnerUUID() != null && target.getUUID().equals(nova.demonCaster.getOwnerUUID())) {
+                return true;
+            }
+            if (target instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity otherDemon) {
+                if (nova.demonCaster.getOwnerUUID() != null && nova.demonCaster.getOwnerUUID().equals(otherDemon.getOwnerUUID())) {
+                    return true;
+                }
+            }
+        }
+        if (nova.caster != null) {
+            if (target == nova.caster) return true;
+            if (target instanceof net.minecraft.world.entity.TamableAnimal tamable && tamable.isOwnedBy(nova.caster)) return true;
+        }
+        return false;
     }
 }

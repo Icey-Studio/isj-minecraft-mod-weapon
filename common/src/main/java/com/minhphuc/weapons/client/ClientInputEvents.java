@@ -1,10 +1,12 @@
 package com.minhphuc.weapons.client;
 
+import com.minhphuc.weapons.client.renderer.ClientCinematicSkillRenderer;
 import com.minhphuc.weapons.init.ModKeyBindings;
 import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.network.ServerboundCastBeelzebuthPacket;
 import com.minhphuc.weapons.network.ServerboundCycleSkillPacket;
 import com.minhphuc.weapons.network.ServerboundFireTaisuiStarPacket;
+import com.minhphuc.weapons.network.ServerboundInteractGatePacket;
 import com.minhphuc.weapons.network.ServerboundTengaiSwordSkillPacket;
 import dev.architectury.event.events.client.ClientTickEvent;
 import dev.architectury.event.events.common.InteractionEvent;
@@ -61,10 +63,29 @@ public class ClientInputEvents {
                 return;
             }
 
-            ItemStack heldStack = player.getItemInHand(hand);
-            boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+            // Nhìn vào Cánh Cửa Dị Giới 3D + Chuột Phải: Xoay kênh La Bàn 0–9 (hoặc Shift+Chuột Phải mở Bảng La Bàn)
+            if (ClientCinematicSkillRenderer.isLookingAtDimensionalGate(player)) {
+                long now = System.currentTimeMillis();
+                if (now - lastRightClickCastTime >= 150) {
+                    lastRightClickCastTime = now;
+                    ModMessages.sendToServer(new ServerboundInteractGatePacket(player.isShiftKeyDown()));
+                }
+                return;
+            }
 
-            if (heldStack.isEmpty() || isWearingDivine) {
+            // Nếu đang giữ Shift và nhắm vào Dân Làng / Thương Nhân -> Ưu tiên mở giao diện Trao Đổi (Trade GUI), không tung skill
+            if (player.isShiftKeyDown() && net.minecraft.client.Minecraft.getInstance().crosshairPickEntity instanceof net.minecraft.world.entity.npc.AbstractVillager) {
+                return;
+            }
+
+            ItemStack heldStack = player.getItemInHand(hand);
+            if (heldStack.is(com.minhphuc.weapons.init.ModItems.FAKE_SOUL.get()) && net.minecraft.client.Minecraft.getInstance().crosshairPickEntity instanceof net.minecraft.world.entity.LivingEntity) {
+                return;
+            }
+            boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+            boolean isPossessing = com.minhphuc.weapons.client.ClientPossessionHandler.isLocalPlayerPossessing();
+
+            if (heldStack.isEmpty() || isWearingDivine || isPossessing) {
                 long now = System.currentTimeMillis();
                 if (now - lastRightClickCastTime >= 100) {
                     lastRightClickCastTime = now;

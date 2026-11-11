@@ -28,6 +28,7 @@ import org.joml.Vector3f;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.UUID;
 import java.util.Iterator;
 import java.util.List;
 
@@ -52,18 +53,23 @@ public class NihilityCollapseAbility {
     public static class ActiveCollapse {
         public final ServerLevel level;
         public final ServerPlayer caster;
+        public final com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demonCaster;
         public final Vec3 center;
         public final double targetElevY;
         public int currentTick = 0;
-        public final int maxTicks = 295; // ~14.75 giây (Kéo dài hồi 3 cho typography chuẩn điện ảnh)
+        public final int detonationTick;
+        public final int maxTicks;
 
         // Ma Pháp Trận 3D Phát Quang Dưới Mặt Đất (Long Tinh Bộc Viêm Bá)
         public Display.ItemDisplay magicCircleDisplay = null;
 
-        public ActiveCollapse(ServerLevel level, ServerPlayer caster, Vec3 center) {
+        public ActiveCollapse(ServerLevel level, ServerPlayer caster, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demonCaster, Vec3 center, int detonationTick, int maxTicks) {
             this.level = level;
             this.caster = caster;
+            this.demonCaster = demonCaster;
             this.center = center;
+            this.detonationTick = detonationTick;
+            this.maxTicks = maxTicks;
 
             // Xuyên lên mặt đất nếu người chơi thi triển trong hang / không gian kín
             int surfaceY = level.getHeight(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, (int) center.x, (int) center.z);
@@ -74,15 +80,54 @@ public class NihilityCollapseAbility {
             }
         }
 
+        public ActiveCollapse(ServerLevel level, ServerPlayer caster, Vec3 center) {
+            this(level, caster, null, center, 225, 295);
+        }
+
         public void cleanup() {
             if (magicCircleDisplay != null && magicCircleDisplay.isAlive()) {
                 magicCircleDisplay.discard();
                 magicCircleDisplay = null;
             }
+            if (caster != null && caster.isAlive()) {
+                caster.setNoGravity(false);
+            }
+            if (demonCaster != null && demonCaster.isAlive()) {
+                demonCaster.setNoGravity(false);
+            }
         }
     }
 
     public static final List<ActiveCollapse> ACTIVE_COLLAPSES = Collections.synchronizedList(new ArrayList<>());
+
+    public static void castFromDemon(ServerLevel level, com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity demon, ServerPlayer owner) {
+        if (demon == null || level == null) return;
+        Vec3 center = demon.position();
+        ActiveCollapse collapse = new ActiveCollapse(level, owner, demon, center, 35, 120);
+
+        Vec3 groundPos = center.add(0, 0.05D, 0);
+        collapse.magicCircleDisplay = createMagicCircleDisplay(level, groundPos, ModItems.BEELZEBUTH_MAGIC_CIRCLE.get(), 4.5F, 0x9400D3);
+        ACTIVE_COLLAPSES.add(collapse);
+
+        demon.setNoGravity(true);
+        demon.setDeltaMovement(0, 0.35D, 0);
+
+        ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
+                demon.getUUID(), center, collapse.targetElevY, 120, ClientboundNihilityCinematicPacket.PHASE_START
+        );
+        if (owner != null) ModMessages.sendToPlayer(packet, owner);
+        for (ServerPlayer nearbyPlayer : level.players()) {
+            if (nearbyPlayer != owner && nearbyPlayer.position().distanceToSqr(center) <= 128 * 128) {
+                ModMessages.sendToPlayer(packet, nearbyPlayer);
+            }
+        }
+
+        level.playSound(null, center.x, center.y, center.z,
+                ModSoundEvents.ATOMIC_CHARGE.get(), SoundSource.PLAYERS, 3.0F, 1.0F);
+
+        demon.announceSkill("LỜI CHÚC TỬ VONG (Death Blessing)");
+        demon.broadcastNearbyDialogue("Vạn vật hãy cúi đầu trước phán quyết tuyệt đối của Quỷ Vương Thủy Tổ!", 48.0D);
+    }
 
     public static void cast(ServerLevel level, ServerPlayer caster) {
         if (caster == null || level == null) return;
@@ -97,13 +142,14 @@ public class NihilityCollapseAbility {
 
         ACTIVE_COLLAPSES.add(collapse);
 
-        // 2. Cung cấp trạng thái kháng sát thương và chuẩn bị bay lơ lửng
+        // 2. Cung cấp trạng thái kháng sát thương và nâng trọng lực
+        caster.setNoGravity(true);
         caster.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 300, 4, false, false));
         caster.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 400, 0, false, false));
 
-        // 3. Gửi Packet kích hoạt Chuỗi Camera & Hiệu ứng Đồ Họa Đỉnh Cao cho người dùng và người xem
+        // 3. Gửi Packet kích hoạt Chuỗi Camera & Hiệu ứng Đồ Họa Đỉnh Cao cho người dùng và người xem (kèm targetElevY để client nội suy 144Hz)
         ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                caster.getUUID(), center, 295, ClientboundNihilityCinematicPacket.PHASE_START
+                caster.getUUID(), center, collapse.targetElevY, 295, ClientboundNihilityCinematicPacket.PHASE_START
         );
         ModMessages.sendToPlayer(packet, caster);
         for (ServerPlayer nearbyPlayer : level.players()) {
@@ -140,7 +186,17 @@ public class NihilityCollapseAbility {
                 ActiveCollapse c = iterator.next();
                 if (c.level != level) continue;
 
-                if (c.caster == null || !c.caster.isAlive() || c.caster.hasDisconnected()) {
+                if (c.caster == null && c.demonCaster == null) {
+                    c.cleanup();
+                    iterator.remove();
+                    continue;
+                }
+                if (c.caster != null && (!c.caster.isAlive() || c.caster.hasDisconnected())) {
+                    c.cleanup();
+                    iterator.remove();
+                    continue;
+                }
+                if (c.demonCaster != null && (!c.demonCaster.isAlive() || c.demonCaster.isRemoved())) {
                     c.cleanup();
                     iterator.remove();
                     continue;
@@ -148,131 +204,109 @@ public class NihilityCollapseAbility {
 
                 c.currentTick++;
 
-                // 0. Cập nhật nâng người chơi bay lên cao (xuyên lên trên mặt đất nếu trong hang) quan sát toàn cảnh ma pháp
+                // 0. Cập nhật nâng ác ma (nếu ác ma thi triển) hoặc người chơi (nếu người chơi tự thi triển) bay lên cao
                 double targetElevY = c.targetElevY;
-                if (c.currentTick <= 40) {
-                    float elevProgress = c.currentTick / 40.0F;
-                    float elevEase = elevProgress * elevProgress * (3.0F - 2.0F * elevProgress);
-                    double currentY = c.center.y + ((targetElevY - c.center.y) * elevEase);
-                    c.caster.teleportTo(c.center.x, currentY, c.center.z);
-                } else {
-                    c.caster.teleportTo(c.center.x, targetElevY, c.center.z);
-                }
-                c.caster.setDeltaMovement(0, 0, 0);
-                c.caster.resetFallDistance();
-                c.caster.setAirSupply(c.caster.getMaxAirSupply());
+                if (c.demonCaster != null) {
+                    c.demonCaster.setNoGravity(true);
+                    c.demonCaster.setDeltaMovement(0, 0, 0);
+                    c.demonCaster.resetFallDistance();
 
-                // 1. Cập nhật xoay & phóng đại Ma Pháp Trận 3D (Long Tinh Bộc Viêm Bá)
-                if (c.magicCircleDisplay != null && c.magicCircleDisplay.isAlive()) {
-                    float circleScale;
-                    if (c.currentTick < 50) {
-                        float p = c.currentTick / 50.0F;
-                        circleScale = 3.5F + (p * 22.0F); // 3.5m -> 25.5m
-                    } else if (c.currentTick < 225) {
-                        float p = (c.currentTick - 50.0F) / 175.0F;
-                        circleScale = 25.5F + (p * 14.5F); // 25.5m -> 40.0m
+                    if (c.currentTick <= 40) {
+                        float elevProgress = c.currentTick / 40.0F;
+                        float elevEase = elevProgress * elevProgress * (3.0F - 2.0F * elevProgress);
+                        double currentY = c.center.y + ((targetElevY - c.center.y) * elevEase);
+                        if (c.currentTick % 2 == 0 || c.currentTick == 40) {
+                            c.demonCaster.teleportTo(c.center.x, currentY, c.center.z);
+                        }
                     } else {
-                        circleScale = 40.0F;
-                    }
-
-                    Quaternionf rot = new Quaternionf()
-                            .rotateX((float) Math.toRadians(90.0F))
-                            .rotateZ((float) Math.toRadians(c.currentTick * 5.0F));
-                    updateDisplayTransformation(c.magicCircleDisplay, circleScale, rot);
-                }
-
-                // ==============================================================
-                // HỒI 1 (0 -> 50 ticks / 2.5s): LÃNH ĐỊA HẮC ÁM & KẾT GIỚI KHÔNG GIAN
-                // ==============================================================
-                if (c.currentTick <= 50) {
-                    if (c.currentTick % 10 == 0) {
-                        AABB zone = new AABB(c.center.x - 70, c.center.y - 20, c.center.z - 70,
-                                c.center.x + 70, c.center.y + 60, c.center.z + 70);
-                        List<LivingEntity> targets = c.level.getEntitiesOfClass(LivingEntity.class, zone,
-                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
-
-                        for (LivingEntity target : targets) {
-                            target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 60, 1, false, false));
-                            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 5, false, false));
+                        if (c.demonCaster.position().distanceToSqr(c.center.x, targetElevY, c.center.z) > 2.25) {
+                            c.demonCaster.teleportTo(c.center.x, targetElevY, c.center.z);
                         }
                     }
+                } else if (c.caster != null) {
+                    c.caster.setNoGravity(true);
+                    c.caster.setDeltaMovement(0, 0, 0);
+                    c.caster.resetFallDistance();
+                    c.caster.setAirSupply(c.caster.getMaxAirSupply());
 
-                    // Hạt hư vô đen-tím viền ngoài kết giới
-                    if (c.currentTick % 4 == 0 && c.level.hasNearbyAlivePlayer(c.center.x, c.center.y, c.center.z, 64.0)) {
-                        for (int i = 0; i < 16; i++) {
-                            double angle = Math.toRadians((i * 22.5) + (c.currentTick * 3.0));
-                            double px = c.center.x + Math.cos(angle) * 35.0;
-                            double pz = c.center.z + Math.sin(angle) * 35.0;
-                            c.level.sendParticles(VOID_PURPLE, px, c.center.y + 1.0, pz, 1, 0.1, 0.5, 0.1, 0.02);
+                    if (c.currentTick <= 40) {
+                        float elevProgress = c.currentTick / 40.0F;
+                        float elevEase = elevProgress * elevProgress * (3.0F - 2.0F * elevProgress);
+                        double currentY = c.center.y + ((targetElevY - c.center.y) * elevEase);
+                        if (c.currentTick % 5 == 0 || c.currentTick == 40) {
+                            c.caster.teleportTo(c.center.x, currentY, c.center.z);
+                        }
+                    } else {
+                        if (c.caster.position().distanceToSqr(c.center.x, targetElevY, c.center.z) > 2.25) {
+                            c.caster.teleportTo(c.center.x, targetElevY, c.center.z);
                         }
                     }
                 }
 
-                // ==============================================================
-                // HỒI 2 (50 -> 110 ticks / 3.0s): LIỆT KHÔNG VŨ TRỤ & NGHỊCH CHUYỂN TRỌNG LỰC
-                // ==============================================================
-                else if (c.currentTick <= 110) {
-                    Vec3 riftCenter = c.center.add(0, 35, 0);
+                // 1. Cập nhật xoay & phóng đại Ma Pháp Trận 3D (Cập nhật mỗi 3 ticks + nội suy mượt trên client, giảm 67% packet metadata)
+                if (c.magicCircleDisplay != null && c.magicCircleDisplay.isAlive()) {
+                    if (c.currentTick % 3 == 0) {
+                        float circleScale;
+                        if (c.currentTick < c.detonationTick) {
+                            float p = c.currentTick / (float) c.detonationTick;
+                            circleScale = 3.5F + (p * 36.5F); // 3.5m -> 40.0m
+                        } else {
+                            circleScale = 40.0F;
+                        }
 
-                    // Trọng lực nghịch đảo: Hút toàn bộ mob bay lơ lửng ngược lên bầu trời (chạy mỗi 2 ticks để giảm tải CPU & packet)
-                    if (c.currentTick % 2 == 0) {
-                        AABB vacuumZone = new AABB(c.center.x - 55, c.center.y - 10, c.center.z - 55,
-                                c.center.x + 55, c.center.y + 40, c.center.z + 55);
+                        Quaternionf rot = new Quaternionf()
+                                .rotateX((float) Math.toRadians(90.0F))
+                                .rotateZ((float) Math.toRadians(c.currentTick * 5.0F));
+                        updateDisplayTransformation(c.magicCircleDisplay, circleScale, rot);
+                    }
+                }
+
+                // ==============================================================
+                // HỒI 1 & 2: LÃNH ĐỊA HẮC ÁM & HÚT MỤC TIÊU LƠ LỬNG
+                // ==============================================================
+                if (c.currentTick < c.detonationTick) {
+                    Vec3 riftCenter = c.center.add(0, 25, 0);
+                    if (c.currentTick % 4 == 0) {
+                        AABB vacuumZone = new AABB(c.center.x - 65, c.center.y - 15, c.center.z - 65,
+                                c.center.x + 65, c.center.y + 50, c.center.z + 65);
                         List<LivingEntity> vacuumTargets = c.level.getEntitiesOfClass(LivingEntity.class, vacuumZone,
-                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
+                                e -> e.isAlive() && !isAlliedToCollapseCaster(c, e));
 
                         for (LivingEntity target : vacuumTargets) {
+                            target.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 40, 1, false, false));
+                            target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 5, false, false));
                             Vec3 toRift = riftCenter.subtract(target.position());
                             double dist = toRift.length();
                             if (dist > 1.5) {
-                                Vec3 liftVelocity = toRift.normalize().scale(0.50).add(0, 0.32, 0);
+                                Vec3 liftVelocity = toRift.normalize().scale(0.55).add(0, 0.35, 0);
                                 target.setDeltaMovement(liftVelocity);
                                 target.hurtMarked = true;
                             }
                         }
                     }
 
-                    // Hạt tinh vân và plasma xoay tròn quanh tâm hội tụ
-                    if (c.currentTick % 3 == 0 && c.level.hasNearbyAlivePlayer(riftCenter.x, riftCenter.y, riftCenter.z, 64.0)) {
+                    if (c.currentTick % 3 == 0 && c.level.hasNearbyAlivePlayer(c.center.x, c.center.y, c.center.z, 64.0)) {
                         for (int i = 0; i < 8; i++) {
                             double angle = Math.toRadians((i * 45.0) + (c.currentTick * 12.0));
-                            double px = riftCenter.x + Math.cos(angle) * 8.0;
-                            double pz = riftCenter.z + Math.sin(angle) * 8.0;
-                            c.level.sendParticles(ParticleTypes.REVERSE_PORTAL, px, riftCenter.y, pz, 2, 0.2, 0.2, 0.2, 0.05);
-                            c.level.sendParticles(ParticleTypes.DRAGON_BREATH, px, riftCenter.y, pz, 1, 0.1, 0.1, 0.1, 0.02);
+                            double px = c.center.x + Math.cos(angle) * 12.0;
+                            double pz = c.center.z + Math.sin(angle) * 12.0;
+                            c.level.sendParticles(ParticleTypes.REVERSE_PORTAL, px, c.center.y + 2.0, pz, 2, 0.2, 0.2, 0.2, 0.05);
+                            c.level.sendParticles(ParticleTypes.DRAGON_BREATH, px, c.center.y + 2.0, pz, 1, 0.1, 0.1, 0.1, 0.02);
                         }
                     }
                 }
 
                 // ==============================================================
-                // HỒI 3 (110 -> 224 ticks / ~5.75s): ĐIỂM TĨNH LẶNG TUYỆT ĐỐI ("LỜI CHÚC TỬ VONG")
-                // ==============================================================
-                else if (c.currentTick <= 224) {
-                    // Đóng băng toàn bộ mục tiêu đang lơ lửng trên không (chạy mỗi 3 ticks giảm 67% bão packet chuyển động)
-                    if (c.currentTick % 3 == 0) {
-                        AABB freezeZone = new AABB(c.center.x - 60, c.center.y - 10, c.center.z - 60,
-                                c.center.x + 60, c.center.y + 50, c.center.z + 60);
-                        List<LivingEntity> frozenTargets = c.level.getEntitiesOfClass(LivingEntity.class, freezeZone,
-                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
-
-                        for (LivingEntity target : frozenTargets) {
-                            target.setDeltaMovement(0, 0.02, 0);
-                            target.hurtMarked = true;
-                        }
-                    }
-                }
-
-                // ==============================================================
-                // HỒI 4 (225 -> 295 ticks / ~3.5s): ĐẠI BỘC PHÁT - PHÁN QUYẾT TUYỆT ĐỐI (INSTANT DEATH)
+                // HỒI 4: ĐẠI BỘC PHÁT - PHÁN QUYẾT TUYỆT ĐỐI (INSTANT DEATH & CỘT PLASMA TỬ VONG)
                 // ==============================================================
                 else {
-                    // KÍCH NỔ CỰC ĐẠI TẠI TICK 225
-                    if (c.currentTick == 225) {
-                        // 1. Gửi Packet Detonate kích hoạt Impact Frames & Plasma Beam Column phía Client
+                    // KÍCH NỔ CỰC ĐẠI TẠI TICK detonationTick
+                    if (c.currentTick == c.detonationTick) {
+                        UUID casterUuid = c.demonCaster != null ? c.demonCaster.getUUID() : (c.caster != null ? c.caster.getUUID() : UUID.randomUUID());
                         ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                                c.caster.getUUID(), c.center, 295, ClientboundNihilityCinematicPacket.PHASE_DETONATE
+                                casterUuid, c.center, c.targetElevY, c.maxTicks, ClientboundNihilityCinematicPacket.PHASE_DETONATE
                         );
-                        ModMessages.sendToPlayer(packet, c.caster);
+                        if (c.caster != null) ModMessages.sendToPlayer(packet, c.caster);
                         for (ServerPlayer nearbyPlayer : c.level.players()) {
                             if (nearbyPlayer != c.caster && nearbyPlayer.position().distanceToSqr(c.center) <= 128 * 128) {
                                 ModMessages.sendToPlayer(packet, nearbyPlayer);
@@ -287,56 +321,63 @@ public class NihilityCollapseAbility {
                         AABB blastZone = new AABB(c.center.x - 70, c.center.y - 25, c.center.z - 70,
                                 c.center.x + 70, c.center.y + 70, c.center.z + 70);
                         List<LivingEntity> blastTargets = c.level.getEntitiesOfClass(LivingEntity.class, blastZone,
-                                e -> e.isAlive() && e != c.caster && !isAlliedToCaster(c.caster, e));
+                                e -> e.isAlive() && !isAlliedToCollapseCaster(c, e));
 
                         for (LivingEntity target : blastTargets) {
-                            // Xóa sạch mọi lớp kháng sát thương, hiệu ứng buff, bất tử
                             target.removeAllEffects();
                             target.invulnerableTime = 0;
-
-                            // Tiêu diệt lập tức (One-Hit Kill)
                             target.hurt(c.level.damageSources().magic(), Float.MAX_VALUE);
                             if (target.isAlive()) {
                                 target.setHealth(0.0F);
                                 target.die(c.level.damageSources().magic());
                             }
 
-                            // Hiệu ứng bốc hơi linh hồn & rơi vật phẩm Linh Hồn (Mob Soul)
                             c.level.sendParticles(ParticleTypes.SOUL,
                                     target.getX(), target.getY() + 0.5, target.getZ(),
-                                    20, 0.4, 0.6, 0.4, 0.05);
+                                    8, 0.3, 0.4, 0.3, 0.03);
                             c.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME,
                                     target.getX(), target.getY() + 0.5, target.getZ(),
-                                    15, 0.3, 0.5, 0.3, 0.04);
+                                    6, 0.2, 0.3, 0.2, 0.02);
 
                             target.spawnAtLocation(new ItemStack(ModItems.MOB_SOUL.get()));
                         }
 
-                        // 4. Sóng Xung Kích Hạt Nở Rộng 60m
-                        for (int ring = 1; ring <= 6; ring++) {
-                            double radius = ring * 10.0;
-                            for (int i = 0; i < 24; i++) {
-                                double angle = Math.toRadians(i * 15.0);
+                        // 4. Sóng Xung Kích Hạt Nở Rộng (2 vòng Sonic Boom sắc bén + Spiritron Cyan)
+                        for (int ring = 1; ring <= 4; ring++) {
+                            double radius = ring * 15.0;
+                            for (int i = 0; i < 16; i++) {
+                                double angle = Math.toRadians(i * 22.5);
                                 double px = c.center.x + Math.cos(angle) * radius;
                                 double pz = c.center.z + Math.sin(angle) * radius;
-                                c.level.sendParticles(SPIRITRON_CYAN, px, c.center.y + 0.5, pz, 2, 0.2, 0.2, 0.2, 0.05);
-                                c.level.sendParticles(ParticleTypes.SONIC_BOOM, px, c.center.y + 1.0, pz, 1, 0, 0, 0, 0);
+                                c.level.sendParticles(SPIRITRON_CYAN, px, c.center.y + 0.5, pz, 1, 0.1, 0.1, 0.1, 0.05);
+                                if (ring <= 2 && i % 2 == 0) {
+                                    c.level.sendParticles(ParticleTypes.SONIC_BOOM, px, c.center.y + 1.0, pz, 1, 0, 0, 0, 0);
+                                }
                             }
+                        }
+
+                        if (c.demonCaster != null && c.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE) {
+                            c.demonCaster.applyCarreraBlockDestruction(c.center, 4.0F);
                         }
                     }
                 }
 
-                // Dọn dẹp kết thúc ở tick 295
+                // Dọn dẹp kết thúc
                 if (c.currentTick >= c.maxTicks) {
-                    // Cung cấp Slow Falling và Kháng ngã kéo dài để người chơi tự do quan sát trên không hoặc đáp xuống an toàn
-                    c.caster.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600, 0, false, false));
-                    c.caster.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 200, 2, false, false));
-                    c.caster.resetFallDistance();
+                    if (c.demonCaster != null && c.demonCaster.isAlive()) {
+                        c.demonCaster.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 300, 0, false, false));
+                        c.demonCaster.resetFallDistance();
+                    } else if (c.caster != null) {
+                        c.caster.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 600, 0, false, false));
+                        c.caster.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 200, 2, false, false));
+                        c.caster.resetFallDistance();
+                    }
 
+                    UUID casterUuid = c.demonCaster != null ? c.demonCaster.getUUID() : (c.caster != null ? c.caster.getUUID() : UUID.randomUUID());
                     ClientboundNihilityCinematicPacket packet = new ClientboundNihilityCinematicPacket(
-                            c.caster.getUUID(), c.center, 295, ClientboundNihilityCinematicPacket.PHASE_END
+                            casterUuid, c.center, c.targetElevY, c.maxTicks, ClientboundNihilityCinematicPacket.PHASE_END
                     );
-                    ModMessages.sendToPlayer(packet, c.caster);
+                    if (c.caster != null) ModMessages.sendToPlayer(packet, c.caster);
                     for (ServerPlayer nearbyPlayer : c.level.players()) {
                         if (nearbyPlayer != c.caster && nearbyPlayer.position().distanceToSqr(c.center) <= 128 * 128) {
                             ModMessages.sendToPlayer(packet, nearbyPlayer);
@@ -362,6 +403,7 @@ public class NihilityCollapseAbility {
             display.setGlowingTag(true);
             dispAcc.weapons$setGlowColorOverride(glowColor);
             dispAcc.weapons$setViewRange(4.5F);
+            dispAcc.weapons$setTransformationInterpolationDuration(3);
 
             Quaternionf rotation = new Quaternionf().rotateX((float) Math.toRadians(90.0F));
             dispAcc.weapons$setTransformation(new Transformation(
@@ -418,6 +460,19 @@ public class NihilityCollapseAbility {
     }
 
     private static boolean isAlliedToCaster(ServerPlayer caster, LivingEntity entity) {
+        if (caster == null || entity == null) return false;
+        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(caster.getUUID(), entity)) return true;
         return entity.isAlliedTo(caster) || entity.getUUID().equals(caster.getUUID());
+    }
+
+    private static boolean isAlliedToCollapseCaster(ActiveCollapse c, LivingEntity entity) {
+        if (entity == null) return true;
+        if (c.caster != null) {
+            return isAlliedToCaster(c.caster, entity);
+        }
+        if (c.demonCaster != null) {
+            return c.demonCaster.isImmuneOrFriendly(entity);
+        }
+        return false;
     }
 }

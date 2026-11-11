@@ -519,15 +519,14 @@ public class MilimEntity extends Monster {
             currentPos = currentPos.add(dir.scale(step));
 
             // 1. Hiệu ứng hạt dọc theo thân cột pháo năng lượng cực đại
-            if (Math.round(d) % 6 == 0) {
+            if (Math.round(d) % 10 == 0) {
                 sl.sendParticles(ParticleTypes.SONIC_BOOM, currentPos.x, currentPos.y, currentPos.z, 1, 0, 0, 0, 0);
             }
-            sl.sendParticles(ParticleTypes.FLASH, currentPos.x, currentPos.y, currentPos.z, 1, 0.4, 0.4, 0.4, 0);
-            sl.sendParticles(SPIRITRON_PINK, currentPos.x, currentPos.y, currentPos.z, 4, 1.2, 1.2, 1.2, 0.08);
-            sl.sendParticles(SPIRITRON_PURPLE, currentPos.x, currentPos.y, currentPos.z, 3, 1.0, 1.0, 1.0, 0.08);
-            sl.sendParticles(ParticleTypes.FLAME, currentPos.x, currentPos.y, currentPos.z, 4, 1.5, 1.5, 1.5, 0.1);
-            sl.sendParticles(ParticleTypes.DRAGON_BREATH, currentPos.x, currentPos.y, currentPos.z, 3, 1.0, 1.0, 1.0, 0.05);
-            sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, currentPos.x, currentPos.y, currentPos.z, 2, 0.8, 0.8, 0.8, 0.1);
+            if (d % 3.0 < 1.0) {
+                sl.sendParticles(ParticleTypes.FLASH, currentPos.x, currentPos.y, currentPos.z, 1, 0.4, 0.4, 0.4, 0);
+                sl.sendParticles(ParticleTypes.LAVA, currentPos.x, currentPos.y, currentPos.z, 1, 0.5, 0.5, 0.5, 0.05);
+                sl.sendParticles(ParticleTypes.FLAME, currentPos.x, currentPos.y, currentPos.z, 2, 0.5, 0.5, 0.5, 0.05);
+            }
 
             // 2. Sát thương thực thể (Xuyên mọi giáp & xóa sạch buff)
             AABB hitBox = new AABB(currentPos.x - 4.5, currentPos.y - 4.5, currentPos.z - 4.5,

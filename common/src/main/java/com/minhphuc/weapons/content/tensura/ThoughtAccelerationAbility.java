@@ -121,7 +121,8 @@ public class ThoughtAccelerationAbility {
         if (player.tickCount % 5 == 0) {
             AABB slowBox = player.getBoundingBox().inflate(18.0D);
             List<LivingEntity> enemies = sl.getEntitiesOfClass(LivingEntity.class, slowBox,
-                    e -> e != player && e.isAlive() && (e instanceof Enemy || (e instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player)));
+                    e -> e != player && e.isAlive() && !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), e)
+                            && (e instanceof Enemy || e instanceof net.minecraft.world.entity.npc.AbstractVillager || (e instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player)));
             for (LivingEntity enemy : enemies) {
                 enemy.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 3, false, false, false));
             }

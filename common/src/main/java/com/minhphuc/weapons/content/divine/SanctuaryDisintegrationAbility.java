@@ -1017,7 +1017,8 @@ public class SanctuaryDisintegrationAbility {
                 center.x + radius, center.y + 14.0D, center.z + radius
         );
 
-        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster);
+        List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e != caster && (caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(caster.getUUID(), e)));
         List<String> victimNames = new ArrayList<>();
         int destroyedCount = 0;
         DamageSource dmgSource = (caster != null) ? level.damageSources().playerAttack(caster) : level.damageSources().genericKill();
