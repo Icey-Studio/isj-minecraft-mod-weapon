@@ -86,8 +86,14 @@ public class PrimordialPossessionManager {
     }
 
     public static boolean isDemonLord(Player player) {
-        if (!isPossessing(player)) return false;
-        return EntityDataHelper.getCustomData(player).getBoolean(NBT_IS_DEMON_LORD);
+        if (!isPossessing(player)) {
+            return EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord")
+                    || EntityDataHelper.getCustomData(player).getBoolean("TensuraAwakenedDemonLord");
+        }
+        CompoundTag tag = EntityDataHelper.getCustomData(player);
+        return tag.getBoolean(NBT_IS_DEMON_LORD)
+                || tag.getBoolean("TensuraTrueDemonLord")
+                || tag.getBoolean("TensuraAwakenedDemonLord");
     }
 
     public static int getSelectedSkillIndex(Player player) {
@@ -206,10 +212,16 @@ public class PrimordialPossessionManager {
         float remainingHp = player.getHealth();
 
         String preGameModeStr = tag.getString(NBT_PRE_GAMEMODE);
-        GameType preGameMode = GameType.SPECTATOR;
+        GameType preGameMode = GameType.SURVIVAL;
         try {
             preGameMode = GameType.valueOf(preGameModeStr);
         } catch (Exception ignored) {}
+
+        // Nếu chế độ chơi trước đó là Spectator (do người chơi đổi sang để click nhập xác)
+        // thì khi tách xác phải khôi phục về SURVIVAL để chơi bình thường, tránh kẹt trong Spectator!
+        if (preGameMode == GameType.SPECTATOR) {
+            preGameMode = GameType.SURVIVAL;
+        }
 
         float preHp = tag.getFloat(NBT_PRE_HP);
         if (preHp <= 0) preHp = 20.0F;
@@ -232,23 +244,28 @@ public class PrimordialPossessionManager {
         tag.remove(NBT_DEMON_MAX_HP);
         tag.remove(NBT_DEMON_ATK);
 
-        // Khôi phục lượng máu & sát thương gốc của Player
+        // Khôi phục lượng máu & sát thương gốc của Player (đặc biệt Chân Ma Vương có 80 HP vĩnh viễn)
+        boolean isLord = PrimordialPlayerDataHelper.isDemonLord(player);
+        double originalMaxHp = isLord ? 80.0D : 20.0D;
         var maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
         if (maxHealthAttr != null) {
-            maxHealthAttr.setBaseValue(20.0D);
+            maxHealthAttr.setBaseValue(originalMaxHp);
         }
         var atkAttr = player.getAttribute(Attributes.ATTACK_DAMAGE);
         if (atkAttr != null) {
-            atkAttr.setBaseValue(1.0D);
+            atkAttr.setBaseValue(isLord ? 8.0D : 1.0D);
         }
-        player.setHealth(Math.min(preHp, player.getMaxHealth()));
+        player.setHealth(Math.min(preHp > 0 ? preHp : (float) originalMaxHp, player.getMaxHealth()));
 
         // Trả lại gamemode gốc
         player.setGameMode(preGameMode);
-        if (preGameMode != GameType.CREATIVE && preGameMode != GameType.SPECTATOR) {
-            boolean canFly = PrimordialPlayerDataHelper.isPrimordial(player) || PrimordialPlayerDataHelper.isDemonLord(player);
+        boolean canFly = PrimordialPlayerDataHelper.isPrimordial(player) || isLord;
+        if (preGameMode != GameType.CREATIVE) {
             player.getAbilities().mayfly = canFly;
             player.getAbilities().flying = false;
+            if (canFly) {
+                player.getAbilities().setFlyingSpeed(0.08F);
+            }
             player.onUpdateAbilities();
         }
 

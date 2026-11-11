@@ -121,6 +121,7 @@ public class TensuraEvents {
             }
             if (!sp.getAbilities().mayfly) {
                 sp.getAbilities().mayfly = true;
+                sp.getAbilities().setFlyingSpeed(0.08F);
                 sp.onUpdateAbilities();
             }
             // Hồi phục sinh lực ma tộc 10 HP/s
@@ -134,8 +135,17 @@ public class TensuraEvents {
         if (canFlyTensura) {
             if (!sp.getAbilities().mayfly) {
                 sp.getAbilities().mayfly = true;
+                sp.getAbilities().setFlyingSpeed(0.08F);
+                sp.onUpdateAbilities();
+            } else if (sp.tickCount % 20 == 0) {
+                // Đồng bộ định kỳ mỗi giây (20 ticks) đảm bảo Client không bị mất quyền bay
+                sp.getAbilities().setFlyingSpeed(0.08F);
                 sp.onUpdateAbilities();
             }
+        } else if (!sp.isCreative() && !sp.isSpectator() && sp.getAbilities().mayfly) {
+            sp.getAbilities().mayfly = false;
+            sp.getAbilities().flying = false;
+            sp.onUpdateAbilities();
         }
 
         // 2. TƯƠNG TÁC CHÀO HỎI KHI NGƯỜI CHƠI BIẾN THÀNH ÁC MA GẶP CÁC ÁC MA KHÁC (Mỗi 40 ticks = 2s)
@@ -179,6 +189,20 @@ public class TensuraEvents {
                 net.minecraft.network.chat.Component.literal("§6§l[WEAPONS MOD] §eChào mừng bạn! Đã nhận §b§lKhởi Nguyên Thần Thư§e. Hãy cầm sách nhấn §a[Chuột Phải] §eđể xem toàn bộ công thức và chiêu thức! 📜✨"),
                 false
             );
+        }
+
+        // Đồng bộ quyền bay và lượng máu tối đa cho Chân Ma Vương / Thủy Tổ Ác Ma khi đăng nhập lại thế giới
+        boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(player) || PrimordialPlayerDataHelper.isDemonLord(player);
+        if (canFlyTensura) {
+            if (PrimordialPlayerDataHelper.isDemonLord(player)) {
+                var attr = player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                if (attr != null && attr.getBaseValue() < 80.0D) {
+                    attr.setBaseValue(80.0D);
+                }
+            }
+            player.getAbilities().mayfly = true;
+            player.getAbilities().setFlyingSpeed(0.08F);
+            player.onUpdateAbilities();
         }
     }
 
@@ -359,17 +383,12 @@ public class TensuraEvents {
 
         // Dân làng tử trận tuyệt đối KHÔNG triệu hồi ác ma
 
-        // Nếu người chơi chết: Reset toàn bộ thân phận Thủy Tổ Ác Ma & Kỹ Năng Tiến Hóa theo luật chơi
+        // Nếu người chơi chết: Xử lý Thủy Tổ Ác Ma theo luật chơi (Giữ lại căn nguyên Ma Vương vĩnh cửu)
         if (victim instanceof ServerPlayer deadPlayer) {
             com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.resetOnDeath(deadPlayer);
-            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer) || PrimordialPlayerDataHelper.isDemonLord(deadPlayer)) {
+            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer)) {
                 PrimordialPlayerDataHelper.resetOnDeath(deadPlayer);
-                if (!deadPlayer.isCreative() && !deadPlayer.isSpectator()) {
-                    deadPlayer.getAbilities().mayfly = false;
-                    deadPlayer.getAbilities().flying = false;
-                    deadPlayer.onUpdateAbilities();
-                }
-                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Cá thể đã tử trận! Toàn bộ căn nguyên Thủy Tổ Ác Ma & Ma Vương đã tan biến.");
+                VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Thân xác Thủy Tổ Ác Ma tạm thời tiêu biến!");
             }
             return EventResult.pass();
         }

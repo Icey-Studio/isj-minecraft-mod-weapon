@@ -61,6 +61,11 @@ public class DemonLordAwakeningOrbItem extends Item {
             var attr = serverPlayer.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH); if (attr != null && attr.getBaseValue() < 80.0D) { attr.setBaseValue(80.0D); }
             serverPlayer.setHealth(serverPlayer.getMaxHealth());
 
+            // Kích hoạt ngay quyền bay lượn trên không trung cho Chân Ma Vương
+            serverPlayer.getAbilities().mayfly = true;
+            serverPlayer.getAbilities().setFlyingSpeed(0.08F);
+            serverPlayer.onUpdateAbilities();
+
             // Hiệu ứng và ban phước
             serverPlayer.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 1, false, false, true));
             serverPlayer.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 1200, 1, false, false, true));
