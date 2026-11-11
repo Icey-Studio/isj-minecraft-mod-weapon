@@ -50,23 +50,78 @@ public class InfiniteDragonPrisonAbility {
         public final UUID casterUuid;
         public final Vec3 center;
         public final double radius;
+        public final double domeHeight;
+        public final double skirtDepth;
         public final int tier;
         public final long createTick;
         public int ticksAlive = 0;
         public int maxDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma)
         public final Map<BlockPos, BlockState> replacedBlocks = new ConcurrentHashMap<>();
 
-        public ActivePrison(ServerLevel level, ServerPlayer caster, Vec3 center, double radius, int tier) {
+        public ActivePrison(ServerLevel level, ServerPlayer caster, Vec3 center, double radius, double domeHeight, double skirtDepth, int tier) {
             this.level = level;
             this.casterUuid = caster != null ? caster.getUUID() : UUID.randomUUID();
             this.center = center;
             this.radius = radius;
+            this.domeHeight = Math.max(radius, domeHeight);
+            this.skirtDepth = Math.max(3.0, skirtDepth);
             this.tier = tier;
             this.createTick = level.getGameTime();
         }
     }
 
     private static final List<ActivePrison> ACTIVE_PRISONS = Collections.synchronizedList(new ArrayList<>());
+
+    /**
+     * Dò tìm mặt đất thật sự bên dưới tọa độ (x, startY, z), xuyên qua toàn bộ tán lá cây, thân gỗ, cỏ, hoa, dây leo
+     * để đảm bảo Lồng Giam Vô Hạn luôn chạm khít mặt đất mà không bị treo lơ lửng trên ngọn cây.
+     */
+    public static double findTrueGroundY(ServerLevel level, double x, double startY, double z) {
+        int bx = net.minecraft.util.Mth.floor(x);
+        int bz = net.minecraft.util.Mth.floor(z);
+        int maxY = Math.min(level.getMaxBuildHeight() - 1, net.minecraft.util.Mth.floor(startY) + 2);
+        int minY = level.getMinBuildHeight();
+
+        BlockPos.MutableBlockPos mpos = new BlockPos.MutableBlockPos();
+        for (int y = maxY; y >= minY; y--) {
+            mpos.set(bx, y, bz);
+            BlockState state = level.getBlockState(mpos);
+            if (state.isAir() || !state.getFluidState().isEmpty() || state.canBeReplaced()) continue;
+            // Bỏ qua toàn bộ lá cây, thân gỗ, hoa, chồi cây, dây leo, mạng nhện
+            if (state.is(net.minecraft.tags.BlockTags.LEAVES)
+                    || state.is(net.minecraft.tags.BlockTags.LOGS)
+                    || state.is(net.minecraft.tags.BlockTags.FLOWERS)
+                    || state.is(net.minecraft.tags.BlockTags.SAPLINGS)
+                    || state.is(net.minecraft.tags.BlockTags.CROPS)
+                    || state.is(net.minecraft.world.level.block.Blocks.VINE)
+                    || state.is(net.minecraft.world.level.block.Blocks.COBWEB)
+                    || state.is(net.minecraft.world.level.block.Blocks.BAMBOO)) {
+                continue;
+            }
+            if (state.isSolid()) {
+                return y + 1.0D;
+            }
+        }
+        return startY;
+    }
+
+    /**
+     * Quét mặt đất thật sự quanh chu vi bán kính r để tìm độ sâu chân váy lồng giam (skirtDepth),
+     * đảm bảo địa hình dốc hoặc thung lũng không bao giờ tạo ra khe hở ở đáy bán cầu.
+     */
+    public static double computePerimeterSkirtDepth(ServerLevel level, double centerX, double groundY, double centerZ, double radius) {
+        double minPerimeterY = groundY;
+        for (int i = 0; i < 12; i++) {
+            double ang = i * Math.PI * 2.0D / 12.0D;
+            double px = centerX + Math.cos(ang) * radius;
+            double pz = centerZ + Math.sin(ang) * radius;
+            double py = findTrueGroundY(level, px, groundY + 8.0D, pz);
+            if (py < minPerimeterY) {
+                minPerimeterY = py;
+            }
+        }
+        return Math.max(3.5D, Math.min(24.0D, (groundY - minPerimeterY) + 2.5D));
+    }
 
     private static BlockState getOriginalBlockState(ServerLevel level, BlockPos pos) {
         synchronized (ACTIVE_PRISONS) {
@@ -89,17 +144,24 @@ public class InfiniteDragonPrisonAbility {
             default -> 20.0;
         };
 
-        Vec3 center = player.position().add(0, 1.0, 0);
+        double castY = player.getY();
+        double groundY = findTrueGroundY(level, player.getX(), castY, player.getZ());
+        double skirtDepth = computePerimeterSkirtDepth(level, player.getX(), groundY, player.getZ(), radius);
+        // Nếu người chơi đang bay trên cao hoặc đứng trên ngọn cây, vòm bán cầu tự động vươn cao từ mặt đất bao trọn cả người chơi & mục tiêu trên không
+        double domeHeight = Math.max(radius, (castY - groundY) + radius * 0.85D);
 
-        // Kích hoạt kết giới đa diện kim cương 3D thuần túy, hoàn toàn không đặt khối vuông vào thế giới
+        Vec3 center = new Vec3(player.getX(), groundY, player.getZ());
+        Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+
+        // Kích hoạt Lồng Giam Bán Cầu Đa Trùng 3D (chạm khít mặt đất, bỏ qua cây cối, ánh kim vàng & thất sắc trong suốt)
         if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
-                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, player.getUUID(), center, player.getLookAngle(), 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, player.getUUID(), center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
             ));
         }
 
         // Cho phép người chơi tạo không giới hạn số lượng Long Giam Vô Hạn (kể cả chồng đè lên nhau)
-        ActivePrison prison = new ActivePrison(level, player, center, radius, tier);
+        ActivePrison prison = new ActivePrison(level, player, center, radius, domeHeight, skirtDepth, tier);
         ACTIVE_PRISONS.add(prison);
 
         level.playSound(null, center.x, center.y, center.z,
@@ -108,20 +170,26 @@ public class InfiniteDragonPrisonAbility {
                 SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.0F, 1.0F);
 
         player.displayClientMessage(
-                Component.literal("§6§l[LONG GIAM VÔ HẠN] §eĐã triển khai lồng giam kim cương 3D (" + (int) radius + "m - Mức " + tier + ")!"),
+                Component.literal("§6§l[LONG GIAM VÔ HẠN] §eĐã triển khai Lồng Giam Bán Cầu 3D (" + (int) radius + "m - Cao " + (int) domeHeight + "m - Mức " + tier + ")!"),
                 true
         );
-        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Lồng giam 3D đa diện kim cương giam cầm vĩnh cửu. Đấm tay không để hóa giải!"));
+        player.sendSystemMessage(Component.literal("§e✦ Long Giam Vô Hạn: Lồng giam bán cầu đa diện 3D chạm khít mặt đất giam cầm vĩnh cửu. Đấm tay không để hóa giải!"));
     }
 
-    public static ActivePrison spawnDemonPrison(ServerLevel level, ServerPlayer owner, UUID demonUuid, Vec3 center, double radius, int durationTicks) {
-        ActivePrison prison = new ActivePrison(level, owner, center, radius, 2);
+    public static ActivePrison spawnDemonPrison(ServerLevel level, ServerPlayer owner, UUID demonUuid, Vec3 rawCenter, double radius, int durationTicks) {
+        double groundY = findTrueGroundY(level, rawCenter.x, rawCenter.y, rawCenter.z);
+        double skirtDepth = computePerimeterSkirtDepth(level, rawCenter.x, groundY, rawCenter.z, radius);
+        double domeHeight = Math.max(radius, (rawCenter.y - groundY) + radius * 0.85D);
+        Vec3 center = new Vec3(rawCenter.x, groundY, rawCenter.z);
+        Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+
+        ActivePrison prison = new ActivePrison(level, owner, center, radius, domeHeight, skirtDepth, 2);
         prison.maxDurationTicks = durationTicks;
         ACTIVE_PRISONS.add(prison);
 
         if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
-                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, demonUuid, center, new Vec3(0, 0, 1), durationTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, demonUuid, center, domeParams, durationTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
             ));
         }
 
@@ -234,43 +302,70 @@ public class InfiniteDragonPrisonAbility {
                 }
                 Vec3 center = prison.center;
                 double r = prison.radius;
+                double h = prison.domeHeight;
+                double skirt = prison.skirtDepth;
 
-                // 1. Hiệu ứng hạt ánh sáng hoàng kim lấp lánh (mỗi 4 ticks, chỉ gửi khi có người chơi gần)
+                // 1. Hiệu ứng hạt ánh sáng hoàng kim lấp lánh dọc vành đáy chạm đất & vòm bán cầu (mỗi 4 ticks)
                 if (prison.ticksAlive % 4 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, r + 24.0D)) {
                     for (int ang = 0; ang < 360; ang += 20) {
                         double rad = Math.toRadians(ang);
                         double x = center.x + Math.cos(rad) * r;
                         double z = center.z + Math.sin(rad) * r;
 
-                        level.sendParticles(GOLD_BARRIER, x, center.y, z, 1, 0, 0, 0, 0);
-                        level.sendParticles(GOLD_BARRIER, x, center.y + (r * 0.5), z, 1, 0, 0, 0, 0);
-                        level.sendParticles(GOLD_BARRIER, x, center.y - (r * 0.5), z, 1, 0, 0, 0, 0);
+                        level.sendParticles(GOLD_BARRIER, x, center.y + 0.1D, z, 1, 0, 0, 0, 0);
+                        level.sendParticles(GOLD_BARRIER, center.x + Math.cos(rad) * (r * 0.866D), center.y + (h * 0.5D), center.z + Math.sin(rad) * (r * 0.866D), 1, 0, 0, 0, 0);
 
                         if (level.random.nextFloat() <= 0.15F) {
-                            level.sendParticles(ParticleTypes.END_ROD, x, center.y + (level.random.nextDouble() - 0.5) * r, z, 1, 0, 0, 0, 0.02);
+                            level.sendParticles(ParticleTypes.END_ROD, x, center.y + level.random.nextDouble() * h * 0.6D, z, 1, 0, 0, 0, 0.02);
                         }
                     }
                 }
 
-                AABB prisonBox = new AABB(center.x - r - 2, center.y - r - 2, center.z - r - 2,
-                        center.x + r + 2, center.y + r + 2, center.z + r + 2);
-                List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, prisonBox, e -> e.isAlive() && !(e instanceof Player));
+                AABB prisonBox = new AABB(center.x - r - 2.0D, center.y - skirt - 2.0D, center.z - r - 2.0D,
+                        center.x + r + 2.0D, center.y + h + 2.0D, center.z + r + 2.0D);
+                List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, prisonBox,
+                        e -> e.isAlive() && !(e instanceof Player) && !PrimordialDemonEntity.isContractedAllyOfPlayer(prison.casterUuid, e));
 
-                // 2. Giam cầm trường lực kim cương 3D: Quái chỉ có thể vào từ bên ngoài, KHÔNG THỂ RA ngoài (Chạy liên tục mỗi tick)
+                // 2. Giam cầm trường lực Lồng Bán Cầu Đa Diện 3D (Chạm đất + Bao quát trên không):
+                // Quái chỉ có thể vào từ bên ngoài, KHÔNG THỂ RA ngoài qua vách bán cầu hoặc nóc bán cầu!
                 for (LivingEntity e : entities) {
-                    double dist = e.position().distanceTo(center);
-                    if (dist <= r + 0.5 && dist > r - 1.2) {
-                        Vec3 toCenter = center.subtract(e.position()).normalize();
-                        e.setDeltaMovement(toCenter.scale(0.85));
-                        if (dist > r - 0.4) {
-                            e.setPos(center.x - toCenter.x * (r - 0.6), e.getY(), center.z - toCenter.z * (r - 0.6));
+                    double dx = e.getX() - center.x;
+                    double dz = e.getZ() - center.z;
+                    double horizDist = Math.hypot(dx, dz);
+                    double dy = e.getY() - center.y;
+
+                    // Tính khoảng cách chuẩn hóa theo hình bán cầu (Ellipsoid trên mặt đất + Hình trụ chân váy âm xuống đất)
+                    double normDist;
+                    if (dy >= 0.0D) {
+                        normDist = Math.hypot(horizDist / r, dy / h);
+                    } else if (dy >= -skirt) {
+                        normDist = horizDist / r;
+                    } else {
+                        normDist = 2.0D;
+                    }
+
+                    if (normDist <= 1.05D && normDist > 0.90D) {
+                        double targetY = Math.clamp(e.getY(), center.y, center.y + h * 0.75D);
+                        Vec3 toInterior = new Vec3(center.x - e.getX(), targetY - e.getY(), center.z - e.getZ());
+                        if (toInterior.lengthSqr() > 1e-4D) {
+                            toInterior = toInterior.normalize();
+                        }
+                        e.setDeltaMovement(toInterior.scale(0.85D));
+                        if (normDist > 0.96D && horizDist > 0.1D) {
+                            double maxHoriz = r * 0.88D * (dy > 0 ? Math.sqrt(Math.max(0.1D, 1.0D - Math.min(0.9D, (dy / h) * (dy / h)))) : 1.0D);
+                            if (horizDist > maxHoriz) {
+                                double scale = maxHoriz / horizDist;
+                                e.setPos(center.x + dx * scale, Math.min(e.getY(), center.y + h * 0.88D), center.z + dz * scale);
+                            } else if (dy > h * 0.88D) {
+                                e.setPos(e.getX(), center.y + h * 0.85D, e.getZ());
+                            }
                         }
                         e.hurtMarked = true;
                         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX(), e.getY() + 1.0, e.getZ(), 4, 0.2, 0.2, 0.2, 0.1);
                     }
 
                     // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting mỗi 20 ticks)
-                    if (prison.ticksAlive % 20 == 0 && dist <= r && e instanceof Mob mob) {
+                    if (prison.ticksAlive % 20 == 0 && normDist <= 1.0D && e instanceof Mob mob) {
                         mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 60, 1));
                         for (LivingEntity other : entities) {
                             if (other != mob && other.isAlive()) {
@@ -286,7 +381,9 @@ public class InfiniteDragonPrisonAbility {
                     boolean cageBroken = false;
 
                     for (LivingEntity e : entities) {
-                        double dist = e.position().distanceTo(center);
+                        double horizDist = Math.hypot(e.getX() - center.x, e.getZ() - center.z);
+                        double dy = e.getY() - center.y;
+                        boolean insideDome = horizDist <= r && dy >= -skirt && dy <= h;
 
                         boolean isPrimordial = e instanceof PrimordialDemonEntity;
                         boolean isMilim = e instanceof MilimEntity;
@@ -294,7 +391,7 @@ public class InfiniteDragonPrisonAbility {
                         boolean isVelgrynd = e instanceof VelgryndEntity;
 
                         // Kiểm tra điều kiện phá lồng theo Mức (Tier)
-                        if (dist <= r) {
+                        if (insideDome) {
                             // Cứu Thế Quyền Hiện: Khi bị giam sẽ lập tức chuyển sang dạng võ thần tay không và đấm vỡ lồng giam
                             if (e instanceof com.minhphuc.weapons.entity.darkgathering.CuuTheQuyenHienEntity ct) {
                                 ct.setBareHanded(true);
@@ -448,9 +545,10 @@ public class InfiniteDragonPrisonAbility {
         synchronized (ACTIVE_PRISONS) {
             for (ActivePrison prison : ACTIVE_PRISONS) {
                 if (prison.level == player.level() && prison.casterUuid.equals(player.getUUID())) {
-                    double dist = eyePos.distanceTo(prison.center);
-                    double diff = Math.abs(dist - prison.radius);
-                    if ((diff <= 3.0 || dist <= prison.radius + 1.0) && diff < minDiff) {
+                    double horizDist = Math.hypot(eyePos.x - prison.center.x, eyePos.z - prison.center.z);
+                    double dy = eyePos.y - prison.center.y;
+                    double diff = Math.abs(horizDist - prison.radius);
+                    if ((diff <= 4.0 || (horizDist <= prison.radius + 2.0 && dy >= -prison.skirtDepth - 2.0 && dy <= prison.domeHeight + 2.0)) && diff < minDiff) {
                         minDiff = diff;
                         found = prison;
                     }

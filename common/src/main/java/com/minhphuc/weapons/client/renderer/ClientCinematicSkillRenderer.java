@@ -915,40 +915,115 @@ public final class ClientCinematicSkillRenderer {
 
 
     // =========================================================================
-    // 14. LỒNG GIAM VÔ HẠN (INFINITE DRAGON PRISON - 20-SIDED DIAMOND BARRIER)
+    // 14. LỒNG GIAM VÔ HẠN (INFINITE DRAGON PRISON - GEODESIC HEMISPHERE CAGE DOME)
     // =========================================================================
+    private static final int[] PRISMATIC_7_COLORS = {
+            0xFF1744, // Đỏ Hồng Ngọc
+            0xFF9100, // Cam Hổ Phách
+            0xFFEA00, // Vàng Hoàng Kim
+            0x00E676, // Lục Bảo Ngọc
+            0x00E5FF, // Lam Thiên Thanh
+            0x2979FF, // Chàm Tinh Tú
+            0xD500F9  // Tím Thạch Anh
+    };
+
     private static void renderDragonPrison(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
         float r = skill.powerMultiplier();
         if (r <= 0.1f) r = 12.0f;
         float fade = (age < skill.totalTicks() - 10) ? 1.0f : (float) Math.max(0.0, (skill.totalTicks() - age) / 10.0f);
-        int opacity = Math.clamp(Math.round(fade * 110.0f), 0, 255);
 
-        // Khối đa diện kim cương 20 mặt (10 đỉnh xích đạo, 2 đỉnh cực)
-        int sides = 10;
-        Vec3 top = new Vec3(0, r * 0.95, 0);
-        Vec3 bot = new Vec3(0, -r * 0.95, 0);
+        // Đọc chiều cao vòm bán cầu (domeHeight) & độ sâu chân váy âm đất (skirtDepth) từ vector direction
+        Vec3 params = skill.direction();
+        float domeHeight = (params != null && params.x >= r) ? (float) params.x : r;
+        float skirtDepth = (params != null && params.y >= 1.0) ? (float) params.y : 4.0f;
 
-        for (int i = 0; i < sides; i++) {
-            double a1 = i * Math.PI * 2.0 / sides + age * 0.015;
-            double a2 = (i + 1) * Math.PI * 2.0 / sides + age * 0.015;
-            Vec3 p1 = new Vec3(Math.cos(a1) * r, 0.0, Math.sin(a1) * r);
-            Vec3 p2 = new Vec3(Math.cos(a2) * r, 0.0, Math.sin(a2) * r);
+        // Hiệu ứng bung lồng bán cầu mượt mà trong 15 ticks đầu (giống Cầu Hộ Thân Đa Trùng Kết Giới)
+        float deployProg = Math.min(1.0f, age / 15.0f);
+        float currentR = r * (0.4f + 0.6f * deployProg);
+        float currentH = domeHeight * (0.4f + 0.6f * deployProg);
 
-            // Mặt tam giác bán trong suốt hướng đỉnh trên (Vàng kim hoàng gia)
-            quad(v, m, p1, p2, top, top, 0xFFD700, opacity);
-            // Mặt tam giác bán trong suốt hướng đỉnh dưới (Lam ngọc thiên thanh)
-            quad(v, m, p2, p1, bot, bot, 0x00E5FF, opacity);
-
-            // Khung viền kim cương phát quang lập thể
-            stroke(v, m, p1, p2, 0.22f, fade * 0.90f, 0xFFD700);
-            stroke(v, m, p1, top, 0.18f, fade * 0.85f, 0x64FFDA);
-            stroke(v, m, p1, bot, 0.18f, fade * 0.85f, 0x40C4FF);
+        if (age < 15.0f) {
+            float burstAlpha = (1.0f - deployProg) * fade * 0.9f;
+            ring(v, m, 0.15f, currentR, 0.35f, 0xFFD700, burstAlpha);
+            renderHexagonRing(v, m, 0.15f, currentR, 0.28f, 0xFFEA00, burstAlpha * 0.85f, age * 0.04f);
         }
 
-        // 3 Vành đai hoàng kim long ngữ xoay quanh xích đạo và 2 bán cầu
-        renderHexagonRing(v, m, 0.0f, r * 1.02f, 0.28f, 0xFFD700, fade * 0.85f, age * 0.025f);
-        renderHexagonRing(v, m, r * 0.45f, r * 0.72f, 0.22f, 0xFFAB00, fade * 0.75f, -age * 0.035f);
-        renderHexagonRing(v, m, -r * 0.45f, r * 0.72f, 0.22f, 0xFFAB00, fade * 0.75f, -age * 0.035f);
+        // 1. LỚP LỒNG BÁN CẦU ĐA DIỆN HOÀNG KIM CHỦ ĐẠO (Geodesic Hemisphere Cage - Trong suốt nhìn xuyên rõ ràng)
+        renderGeodesicPrisonHemisphere(v, m, currentR, currentH, skirtDepth, fade * 0.46f, false);
+
+        // 2. LỚP LỒNG ĐA DIỆN THẤT SẮC LẤP LÁNH BÊN TRONG (7-Color Prismatic Iridescent Inner Geodesic Lattice)
+        renderGeodesicPrisonHemisphere(v, m, currentR * 0.96f, currentH * 0.96f, skirtDepth, fade * 0.32f, true);
+
+        // 3. VÀNH ĐAI PHONG ẤN CHẠM KHÍT MẶT ĐẤT (Ground-Sealing Base Rings)
+        ring(v, m, 0.05f, currentR, 0.22f, 0xFFD700, fade * 0.75f);
+        renderHexagonRing(v, m, 0.08f, currentR * 0.99f, 0.18f, 0xFFEA00, fade * 0.60f, 0.0f);
+    }
+
+    private static void renderGeodesicPrisonHemisphere(VertexConsumer v, Matrix4f m, float radius, float domeHeight,
+                                                       float skirtDepth, float alpha, boolean prismaticMode) {
+        int rings = 7;
+        int sectors = 14;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        // Độ đục mặt kính cực kỳ trong suốt (22% của alpha) để người chơi nhìn xuyên qua dễ dàng
+        int quadOpacity = Math.clamp((int) (opacity * 0.22f), 0, 255);
+
+        // A. Chân váy lồng giam âm xuống mặt đất (-skirtDepth -> 0) đảm bảo địa hình dốc hay dưới tán cây đều KHÔNG CÓ KHE HỞ
+        float skirtTopY = 0.0f;
+        float skirtBotY = -skirtDepth;
+        for (int s = 0; s < sectors; s++) {
+            double theta1 = s * Math.PI * 2.0 / sectors;
+            double theta2 = (s + 1) * Math.PI * 2.0 / sectors;
+
+            float x1 = (float) (Math.cos(theta1) * radius);
+            float z1 = (float) (Math.sin(theta1) * radius);
+            float x2 = (float) (Math.cos(theta2) * radius);
+            float z2 = (float) (Math.sin(theta2) * radius);
+
+            int color = prismaticMode ? PRISMATIC_7_COLORS[s % PRISMATIC_7_COLORS.length] : 0xFFD700;
+            quad(v, m, x1, skirtBotY, z1, x2, skirtBotY, z2, x2, skirtTopY, z2, x1, skirtTopY, z1, color, quadOpacity);
+            stroke(v, m, x1, skirtBotY, z1, x1, skirtTopY, z1, 0.11f, alpha * 0.85f, color);
+        }
+
+        // B. Vòm Bán Cầu Đa Diện (0 -> domeHeight) giống hệt cấu trúc lồng của Đa Trùng Kết Giới
+        for (int r = 0; r < rings; r++) {
+            double phi1 = (r * Math.PI * 0.5) / rings;
+            double phi2 = ((r + 1) * Math.PI * 0.5) / rings;
+
+            float y1 = (float) (Math.sin(phi1) * domeHeight);
+            float y2 = (float) (Math.sin(phi2) * domeHeight);
+            float rad1 = (float) (Math.cos(phi1) * radius);
+            float rad2 = (float) (Math.cos(phi2) * radius);
+
+            for (int s = 0; s < sectors; s++) {
+                double theta1 = s * Math.PI * 2.0 / sectors;
+                double theta2 = (s + 1) * Math.PI * 2.0 / sectors;
+
+                float x1 = (float) (Math.cos(theta1) * rad1);
+                float z1 = (float) (Math.sin(theta1) * rad1);
+
+                float x2 = (float) (Math.cos(theta2) * rad1);
+                float z2 = (float) (Math.sin(theta2) * rad1);
+
+                float x3 = (float) (Math.cos(theta2) * rad2);
+                float z3 = (float) (Math.sin(theta2) * rad2);
+
+                float x4 = (float) (Math.cos(theta1) * rad2);
+                float z4 = (float) (Math.sin(theta1) * rad2);
+
+                int cellColor = prismaticMode
+                        ? PRISMATIC_7_COLORS[(r + s) % PRISMATIC_7_COLORS.length]
+                        : ((r + s) % 3 == 0 ? 0xFFEA00 : 0xFFD700);
+                int wireColor = prismaticMode
+                        ? PRISMATIC_7_COLORS[(r + s) % PRISMATIC_7_COLORS.length]
+                        : 0xFFD700;
+
+                quad(v, m, x1, y1, z1, x2, y1, z2, x3, y2, z3, x4, y2, z4, cellColor, quadOpacity);
+                stroke(v, m, x1, y1, z1, x2, y1, z2, 0.12f, alpha * 0.90f, wireColor);
+                stroke(v, m, x2, y1, z2, x3, y2, z3, 0.12f, alpha * 0.90f, wireColor);
+                stroke(v, m, x3, y2, z3, x4, y2, z4, 0.12f, alpha * 0.90f, wireColor);
+                stroke(v, m, x4, y2, z4, x1, y1, z1, 0.12f, alpha * 0.90f, wireColor);
+            }
+        }
     }
 
     // =========================================================================
