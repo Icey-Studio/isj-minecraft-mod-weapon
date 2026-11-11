@@ -27,11 +27,32 @@ import java.util.List;
  */
 public class UniversalSenseAbility {
 
+    public static boolean isHostileThreat(LivingEntity entity, net.minecraft.world.entity.player.Player player) {
+        if (entity == null || player == null) return false;
+        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), entity)) {
+            return false;
+        }
+        if (entity instanceof net.minecraft.world.entity.Mob mob && mob.getTarget() == player) {
+            return true;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity pde && !pde.isTame()) {
+            return true;
+        }
+        if (entity instanceof net.minecraft.world.entity.monster.Enemy || entity instanceof net.minecraft.world.entity.monster.Monster) {
+            return true;
+        }
+        if (entity instanceof MilimEntity || entity instanceof VelgryndEntity) {
+            return true;
+        }
+        return false;
+    }
+
     public static void cast(ServerLevel level, ServerPlayer player, int tier) {
+        // Mở rộng phạm vi Cảm Nhận Vạn Năng gấp 8 lần theo yêu cầu
         double radius = switch (tier) {
-            case 1 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 16.0 : 10.0;
-            case 2 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 32.0 : 20.0;
-            default -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 48.0 : 25.0;
+            case 1 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 128.0 : 80.0;
+            case 2 -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 256.0 : 160.0;
+            default -> SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 384.0 : 200.0;
         };
 
         boolean canSeeThroughGround = tier >= 2;
@@ -43,12 +64,28 @@ public class UniversalSenseAbility {
                 SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1.2F, 1.8F);
 
         // Hiệu ứng sóng quét tâm thức xung quanh người chơi
-        level.sendParticles(ParticleTypes.GLOW, player.getX(), player.getY() + 1.0, player.getZ(), 80, radius * 0.3, 1.0, radius * 0.3, 0.05);
+        level.sendParticles(ParticleTypes.GLOW, player.getX(), player.getY() + 1.0, player.getZ(), 80, Math.min(24.0, radius * 0.15), 1.0, Math.min(24.0, radius * 0.15), 0.05);
 
         AABB box = player.getBoundingBox().inflate(radius);
         List<LivingEntity> list = level.getEntitiesOfClass(LivingEntity.class, box, e -> e.isAlive() && e != player);
 
+        // Ưu tiên nhận diện các sinh vật thù địch có thể tấn công người chơi trước, sau đó sắp xếp theo khoảng cách
+        list.sort((a, b) -> {
+            boolean aHostile = isHostileThreat(a, player);
+            boolean bHostile = isHostileThreat(b, player);
+            if (aHostile != bHostile) {
+                return aHostile ? -1 : 1;
+            }
+            boolean aTargeting = (a instanceof net.minecraft.world.entity.Mob ma && ma.getTarget() == player);
+            boolean bTargeting = (b instanceof net.minecraft.world.entity.Mob mb && mb.getTarget() == player);
+            if (aTargeting != bTargeting) {
+                return aTargeting ? -1 : 1;
+            }
+            return Double.compare(a.distanceToSqr(player), b.distanceToSqr(player));
+        });
+
         int detectedCount = 0;
+        int hostileCount = 0;
 
         for (LivingEntity e : list) {
             double distSq = e.distanceToSqr(player);
@@ -67,9 +104,15 @@ public class UniversalSenseAbility {
                 continue;
             }
 
-            // Phát sáng 15 giây (300 ticks) viền sáng qua tường
-            e.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0, false, false));
-            level.sendParticles(ParticleTypes.END_ROD, e.getX(), e.getY() + e.getBbHeight() + 0.5, e.getZ(), 10, 0.2, 0.2, 0.2, 0.02);
+            boolean hostile = isHostileThreat(e, player);
+            if (hostile) {
+                hostileCount++;
+            }
+
+            // Phát sáng 20 giây (400 ticks) cho sinh vật thù địch, 15 giây (300 ticks) cho sinh vật thường
+            e.addEffect(new MobEffectInstance(MobEffects.GLOWING, hostile ? 400 : 300, 0, false, false));
+            level.sendParticles(hostile ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.END_ROD,
+                    e.getX(), e.getY() + e.getBbHeight() + 0.5, e.getZ(), 10, 0.2, 0.2, 0.2, 0.02);
             detectedCount++;
         }
 
@@ -83,7 +126,7 @@ public class UniversalSenseAbility {
         }
 
         player.displayClientMessage(
-                Component.literal("§b§l[CẢM NHẬN VẠN NĂNG] §e(Mức " + tier + ") §fĐã phát hiện §a" + detectedCount + " §fsinh vật trong phạm vi §b" + (int) radius + "m§f!"),
+                Component.literal("§b§l[CẢM NHẬN VẠN NĂNG] §e(Mức " + tier + " - " + (int) radius + "m) §fPhát hiện §c§l" + hostileCount + " Kẻ Địch Thù Địch §f/ Tổng §a" + detectedCount + " §fsinh vật!"),
                 true
         );
     }

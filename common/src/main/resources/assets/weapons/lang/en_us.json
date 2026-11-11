@@ -386,5 +386,7 @@
   "item.weapons.warding_earplugs": "Warding Earplugs",
   "item.weapons.bodhi_effigy_empty": "Bodhi Effigy (Empty)",
   "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest",
-  "item.weapons.stellar_remote": "The Stellar Remote"
+  "item.weapons.stellar_remote": "The Stellar Remote",
+  "item.weapons.fake_soul": "Fake Soul",
+  "skill.weapons.apocalypse": "Apocalypse (Judgment Day)"
 }

@@ -55,4 +55,46 @@ public class EntitySoulItem extends Item {
         }
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
     }
+
+    public static ItemStack createSoulFor(net.minecraft.world.entity.LivingEntity victim) {
+        if (victim == null) return ItemStack.EMPTY;
+        net.minecraft.world.item.Item soulItem;
+        if (victim instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            soulItem = com.minhphuc.weapons.init.ModItems.MILIM_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity) {
+            soulItem = com.minhphuc.weapons.init.ModItems.VELGRYND_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            soulItem = com.minhphuc.weapons.init.ModItems.VELZARD_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity) {
+            soulItem = com.minhphuc.weapons.init.ModItems.PRIMORDIAL_DEMON_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.monster.warden.Warden) {
+            soulItem = com.minhphuc.weapons.init.ModItems.WARDEN_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) {
+            soulItem = com.minhphuc.weapons.init.ModItems.ENDER_DRAGON_SOUL.get();
+        } else if (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss) {
+            soulItem = com.minhphuc.weapons.init.ModItems.WITHER_SOUL.get();
+        } else {
+            soulItem = com.minhphuc.weapons.init.ModItems.MOB_SOUL.get();
+        }
+
+        ItemStack soulStack = new ItemStack(soulItem);
+        String entityTypeId = net.minecraft.world.entity.EntityType.getKey(victim.getType()).toString();
+        com.minhphuc.weapons.data.ItemStackDataHelper.putString(soulStack, "EntityTypeId", entityTypeId);
+
+        boolean isBaby = false;
+        if (victim instanceof net.minecraft.world.entity.AgeableMob ageable) {
+            isBaby = ageable.isBaby();
+        }
+        com.minhphuc.weapons.data.ItemStackDataHelper.putBoolean(soulStack, "IsBaby", isBaby);
+
+        if (victim.hasCustomName() && victim.getCustomName() != null) {
+            com.minhphuc.weapons.data.ItemStackDataHelper.putString(soulStack, "CustomName", victim.getCustomName().getString());
+        }
+
+        String entityName = victim.getName().getString();
+        com.minhphuc.weapons.data.ItemStackDataHelper.putString(soulStack, "EntityDisplayName", entityName);
+        soulStack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME,
+                Component.literal("§b§lLinh Hồn: §e" + entityName + (isBaby ? " §d(Con Nhỏ)" : " §a(Trưởng Thành)")));
+        return soulStack;
+    }
 }

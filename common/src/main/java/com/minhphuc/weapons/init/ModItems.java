@@ -223,6 +223,9 @@ public class ModItems {
     public static final RegistrySupplier<Item> MOB_SOUL = ITEMS.register("mob_soul",
             () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MOB, new Item.Properties()));
 
+    public static final RegistrySupplier<Item> FAKE_SOUL = ITEMS.register("fake_soul",
+            () -> new com.minhphuc.weapons.content.soul.FakeSoulItem(new Item.Properties()));
+
     // ==========================================
     // MODULE: CARRERA'S GOLDEN GUN & MA ĐẠN (TENSURA LN)
     // ==========================================
@@ -554,6 +557,7 @@ public class ModItems {
                         output.accept(ENDER_DRAGON_SOUL.get());
                         output.accept(WITHER_SOUL.get());
                         output.accept(MOB_SOUL.get());
+                        output.accept(FAKE_SOUL.get());
                     })
             ));
 
