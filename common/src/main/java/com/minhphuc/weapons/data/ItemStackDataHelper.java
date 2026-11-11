@@ -53,4 +53,25 @@ public class ItemStackDataHelper {
     public static void putFloat(ItemStack stack, String key, float value) {
         CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putFloat(key, value));
     }
+
+    public static long getLong(ItemStack stack, String key, long defaultValue) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        if (customData != null && customData.copyTag().contains(key)) {
+            return customData.copyTag().getLong(key);
+        }
+        return defaultValue;
+    }
+
+    public static void putLong(ItemStack stack, String key, long value) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.putLong(key, value));
+    }
+
+    public static boolean hasKey(ItemStack stack, String key) {
+        CustomData customData = stack.get(DataComponents.CUSTOM_DATA);
+        return customData != null && customData.copyTag().contains(key);
+    }
+
+    public static void remove(ItemStack stack, String key) {
+        CustomData.update(DataComponents.CUSTOM_DATA, stack, tag -> tag.remove(key));
+    }
 }

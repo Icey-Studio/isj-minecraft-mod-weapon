@@ -42,6 +42,10 @@
   "item.weapons.abyssal_claw_despair": "Abyssal Claw of Despair",
   "item.weapons.void_claw_calamity": "Void Claw of Calamity",
   "item.weapons.kubo_spawn_egg": "Kūbō Spawn Egg",
+  "item.weapons.demon_lord_kubo_spawn_egg": "Demon Lord Kūbō Spawn Egg",
+  "entity.weapons.demon_lord_kubo": "Demon Lord Kūbō",
+  "item.weapons.vo_nguyet_minh_phoi_spawn_egg": "Moonless Luminous Embryo Spawn Egg",
+  "entity.weapons.vo_nguyet_minh_phoi": "Moonless Luminous Embryo",
   "entity.weapons.kubo": "Kūbō (Black Sun)",
   "item.weapons.golden_gun": "Golden Gun (Carrera's Revolver)",
   "item.weapons.carrera_bullet_judgement": "Judgement Speed Bullet",
@@ -211,6 +215,8 @@
   "block.weapons.domain_barrier_vert": "Domain Barrier: Emerald Aegis (Vert)",
   "block.weapons.dragon_prison_barrier": "Dragon Prison Barrier",
   "item.weapons.dragon_prison_barrier": "Dragon Prison Barrier Block",
+  "block.weapons.black_fire": "Unextinguishable Black Fire",
+  "item.weapons.black_fire": "Unextinguishable Black Fire",
   "block.weapons.anti_magic_barrier": "Anti-Magic Barrier",
   "block.weapons.multilayer_barrier": "Multilayer Barrier",
   "entity.weapons.primordial_demon": "Primordial Demon",
@@ -379,5 +385,8 @@
   "item.weapons.marbas_spawn_egg": "Great Demon Marbas Spawn Egg",
   "item.weapons.warding_earplugs": "Warding Earplugs",
   "item.weapons.bodhi_effigy_empty": "Bodhi Effigy (Empty)",
-  "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest"
+  "item.weapons.bodhi_effigy_monk": "Bodhi Effigy: Evil Sutra High Priest",
+  "item.weapons.stellar_remote": "The Stellar Remote",
+  "item.weapons.fake_soul": "Fake Soul",
+  "skill.weapons.apocalypse": "Apocalypse (Judgment Day)"
 }

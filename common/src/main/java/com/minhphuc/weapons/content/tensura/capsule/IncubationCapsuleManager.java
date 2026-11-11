@@ -62,6 +62,7 @@ public class IncubationCapsuleManager {
         public DemonType demonType = DemonType.NOIR;
         public boolean hasPhysicalBody = false;
         public boolean isNamed = false;
+        public boolean isDemonLord = false;
         public String customName = "";
         public float currentHp = 1000.0F;
         public float maxHp = 1000.0F;
@@ -301,9 +302,10 @@ public class IncubationCapsuleManager {
 
     private static void insertDemonToCapsule(Player player, ItemStack held, ActiveCapsule capsule, ServerLevel level) {
         capsule.demonType = PrimordialPactItem.getDemonType(held);
-        capsule.hasPhysicalBody = ItemStackDataHelper.getBoolean(held, "HasPhysicalBody");
-        capsule.isNamed = ItemStackDataHelper.getBoolean(held, "IsNamed");
+        capsule.hasPhysicalBody = PrimordialPactItem.hasPhysicalBody(held);
+        capsule.isNamed = PrimordialPactItem.isNamed(held);
         capsule.customName = ItemStackDataHelper.getString(held, "CustomDemonName");
+        capsule.isDemonLord = ItemStackDataHelper.getBoolean(held, "IsDemonLord") || ItemStackDataHelper.getBoolean(held, "IsAwakenedDemonLord");
         capsule.currentHp = ItemStackDataHelper.getFloat(held, "CurrentHp", (float) capsule.demonType.getMaxHealth());
         capsule.maxHp = ItemStackDataHelper.getFloat(held, "MaxHp", (float) capsule.demonType.getMaxHealth());
         capsule.state = CapsuleState.DEMON_INFUSED;
@@ -428,23 +430,28 @@ public class IncubationCapsuleManager {
                 double cx = c.pos.getX() + 0.5D;
                 double cy = c.pos.getY() + 1.2D;
                 double cz = c.pos.getZ() + 0.5D;
+                boolean playerNear = level.hasNearbyAlivePlayer(cx, cy, cz, 32.0D);
 
-                // Hào quang chói lòa 4 giây (80 tick) che khuất hoàn toàn bên trong
-                level.sendParticles(ParticleTypes.FLASH, cx, cy, cz, 4, 0.2, 0.5, 0.2, 0);
-                level.sendParticles(ParticleTypes.END_ROD, cx, cy, cz, 25, 0.35, 0.8, 0.35, 0.08);
-                level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy, cz, 20, 0.4, 0.8, 0.4, 0.15);
-                level.sendParticles(ParticleTypes.PORTAL, cx, cy, cz, 15, 0.3, 0.5, 0.3, 0.1);
+                // Hào quang chói lòa 4 giây (80 tick) che khuất hoàn toàn bên trong (chạy mỗi 2 ticks khi có người chơi)
+                if (playerNear && c.animTicks % 2 == 0) {
+                    level.sendParticles(ParticleTypes.FLASH, cx, cy, cz, 2, 0.2, 0.5, 0.2, 0);
+                    level.sendParticles(ParticleTypes.END_ROD, cx, cy, cz, 12, 0.35, 0.8, 0.35, 0.08);
+                    level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, cx, cy, cz, 10, 0.4, 0.8, 0.4, 0.15);
+                    level.sendParticles(ParticleTypes.PORTAL, cx, cy, cz, 8, 0.3, 0.5, 0.3, 0.1);
+                }
 
                 if (c.animTicks % 15 == 0) {
                     level.playSound(null, cx, cy, cz, SoundEvents.BEACON_POWER_SELECT, SoundSource.BLOCKS, 2.0F, 1.2F);
                     level.playSound(null, cx, cy, cz, SoundEvents.CONDUIT_ATTACK_TARGET, SoundSource.BLOCKS, 2.0F, 1.4F);
                 }
 
-                updateText(c,
-                        "§6§l✦ ĐANG DUNG HỢP NHỤC THỂ & TÁI CẤU TRÚC MA THẦN ✦\n" +
-                        "§eTiến độ: §f" + (c.animTicks * 100 / 80) + "% §7(Còn " + String.format("%.1f", (80 - c.animTicks) / 20.0F) + "s)\n" +
-                        "§dÁnh sáng ma pháp đang chói lòa!"
-                );
+                if (c.animTicks % 4 == 0 || c.animTicks >= 80) {
+                    updateText(c,
+                            "§6§l✦ ĐANG DUNG HỢP NHỤC THỂ & TÁI CẤU TRÚC MA THẦN ✦\n" +
+                            "§eTiến độ: §f" + (c.animTicks * 100 / 80) + "% §7(Còn " + String.format("%.1f", (80 - c.animTicks) / 20.0F) + "s)\n" +
+                            "§dÁnh sáng ma pháp đang chói lòa!"
+                    );
+                }
 
                 if (c.animTicks >= 80) {
                     level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, cx, cy, cz, 3, 0.2, 0.4, 0.2, 0);
@@ -460,8 +467,12 @@ public class IncubationCapsuleManager {
                     float finalMaxHp = (float) c.demonType.getMaxHealth() * multiplier;
                     int numSkills = (c.evolutionChoice == 3) ? 5 : 3;
 
-                    boolean givesBody = (c.evolutionChoice == 1 || c.evolutionChoice == 3);
-                    boolean givesName = (c.evolutionChoice == 2 || c.evolutionChoice == 3);
+                    boolean givesBody = (c.evolutionChoice == 1 || c.evolutionChoice == 3) || c.hasPhysicalBody;
+                    boolean givesName = (c.evolutionChoice == 2 || c.evolutionChoice == 3) || c.isNamed;
+
+                    if (givesName && (c.customName == null || c.customName.isEmpty())) {
+                        c.customName = c.demonType.getRandomCanonName(level.getRandom());
+                    }
 
                     ItemStackDataHelper.putString(resultStack, "DemonType", c.demonType.name());
                     ItemStackDataHelper.putBoolean(resultStack, "HasPhysicalBody", givesBody);
@@ -470,6 +481,10 @@ public class IncubationCapsuleManager {
                     ItemStackDataHelper.putInt(resultStack, "EvolutionTier", c.evolutionChoice);
                     ItemStackDataHelper.putFloat(resultStack, "MaxHp", finalMaxHp);
                     ItemStackDataHelper.putFloat(resultStack, "CurrentHp", finalMaxHp);
+                    if (c.isDemonLord) {
+                        ItemStackDataHelper.putBoolean(resultStack, "IsDemonLord", true);
+                        ItemStackDataHelper.putBoolean(resultStack, "IsAwakenedDemonLord", true);
+                    }
 
                     List<PrimordialSkillPool.SkillEntry> skills = PrimordialSkillPool.rollRandomSkills(numSkills, level.getRandom());
                     StringBuilder sb = new StringBuilder();

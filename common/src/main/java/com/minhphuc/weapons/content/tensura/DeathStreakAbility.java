@@ -1,5 +1,8 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
@@ -164,6 +167,16 @@ public class DeathStreakAbility {
             }
         }
         return false;
+    }
+
+    public static void destroyAllCircles(net.minecraft.world.level.Level level) {
+        for (Iterator<ActiveDeathStreak> it = ACTIVE_STREAKS.iterator(); it.hasNext(); ) {
+            ActiveDeathStreak s = it.next();
+            if (s.level == level) {
+                s.cleanupDisplays();
+                it.remove();
+            }
+        }
     }
 
     public static Item getCircleItem(DemonType type) {
@@ -410,10 +423,19 @@ public class DeathStreakAbility {
                     s.beamTriggered = true;
 
                     // 1. Tạo Cột Sáng Cực Đại 3 Lớp từ trời giáng xuống
-                    float beamHeight = 120.0F;
-                    s.megaBeamOuter = createMegaBeamDisplay(s.level, s.center, 26.0F, beamHeight, 26.0F, s.glowColor);
-                    s.megaBeamBody = createMegaBeamDisplay(s.level, s.center, 16.0F, beamHeight, 16.0F, s.glowColor);
-                    s.megaBeamCore = createMegaBeamDisplay(s.level, s.center, 8.0F, beamHeight, 8.0F, 0xFFFFFF);
+                    if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_CHROMATIC_PILLAR)) {
+                        float demonCode = (s.demonType != null) ? (float) s.demonType.ordinal() : 2.0f;
+                        ModMessages.sendToPlayers(s.level.players(), new ClientboundCinematicSkillPacket(
+                                SkillVisualConfig.SKILL_CHROMATIC_PILLAR,
+                                s.caster != null ? s.caster.getUUID() : java.util.UUID.randomUUID(),
+                                s.center, new Vec3(0, 1, 0), 80, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+                        ));
+                    } else {
+                        float beamHeight = 384.0F;
+                        s.megaBeamOuter = createMegaBeamDisplay(s.level, s.center, 26.0F, beamHeight, 26.0F, s.glowColor);
+                        s.megaBeamBody = createMegaBeamDisplay(s.level, s.center, 16.0F, beamHeight, 16.0F, s.glowColor);
+                        s.megaBeamCore = createMegaBeamDisplay(s.level, s.center, 8.0F, beamHeight, 8.0F, 0xFFFFFF);
+                    }
 
                     // 2. Tạo 2 Vòng Sóng Xung Kích linh tử cuộn xuống
                     s.shockwave1 = createShockwaveDisplay(s.level, s.center, 40.0D, 24.0F, s.glowColor);
@@ -593,7 +615,7 @@ public class DeathStreakAbility {
                     BlockPos p = center.offset(dx, dy, dz);
                     BlockState st = level.getBlockState(p);
                     if (!st.isAir() && st.getBlock() != Blocks.BEDROCK) {
-                        level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+                        level.setBlock(p, Blocks.AIR.defaultBlockState(), 50);
                     }
                 }
             }

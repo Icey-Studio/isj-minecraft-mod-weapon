@@ -149,7 +149,15 @@ public class DivineSalvationHelper {
                 ItemStack matStack = matEntity.getItem();
 
                 if (soulEntity.distanceToSqr(matEntity) <= 3.0D * 3.0D) {
-                    EntityType<?> targetEntity = mapItemToEntity(matStack.getItem());
+                    EntityType<?> targetEntity = null;
+                    String entityTypeId = com.minhphuc.weapons.data.ItemStackDataHelper.getString(soulStack, "EntityTypeId");
+                    if (!entityTypeId.isEmpty()) {
+                        targetEntity = EntityType.byString(entityTypeId).orElse(null);
+                    }
+                    if (targetEntity == null) {
+                        targetEntity = mapItemToEntity(matStack.getItem());
+                    }
+
                     if (targetEntity != null) {
                         // Tiêu hao 1 item từ mỗi stack
                         soulStack.shrink(1);
@@ -165,8 +173,25 @@ public class DivineSalvationHelper {
                         net.minecraft.world.entity.Entity spawned = targetEntity.create(level);
                         if (spawned != null) {
                             spawned.moveTo(spawnPos.x, spawnPos.y + 0.2D, spawnPos.z, level.random.nextFloat() * 360.0F, 0.0F);
+
+                            // Kiểm tra con nhỏ (baby) hay con trưởng thành từ NBT Linh Hồn
+                            boolean isBaby = com.minhphuc.weapons.data.ItemStackDataHelper.getBoolean(soulStack, "IsBaby");
+                            if (isBaby && spawned instanceof net.minecraft.world.entity.AgeableMob ageable) {
+                                ageable.setBaby(true);
+                            }
+
+                            // Khôi phục tên đã lưu nếu có
+                            String customName = com.minhphuc.weapons.data.ItemStackDataHelper.getString(soulStack, "CustomName");
+                            if (!customName.isEmpty()) {
+                                spawned.setCustomName(Component.literal(customName));
+                                spawned.setCustomNameVisible(true);
+                            }
+
                             if (spawned instanceof Mob mob) {
                                 mob.finalizeSpawn(level, level.getCurrentDifficultyAt(BlockPos.containing(spawnPos)), MobSpawnType.EVENT, null);
+                                if (isBaby && mob instanceof net.minecraft.world.entity.AgeableMob ageable) {
+                                    ageable.setBaby(true);
+                                }
                             }
                             if (spawned instanceof TamableAnimal tamable && caster != null) {
                                 tamable.tame(caster);
@@ -179,8 +204,9 @@ public class DivineSalvationHelper {
                             level.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z, SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 2.5F, 1.1F);
 
                             if (caster instanceof ServerPlayer sp) {
+                                String ageText = isBaby ? " §d(Con Nhỏ)" : " §a(Trưởng Thành)";
                                 sp.displayClientMessage(
-                                        Component.literal("§a§l[TÁI SINH THÁNH QUANG] §fĐã phục sinh thành công: §e" + spawned.getDisplayName().getString() + " §f✨🕊️"),
+                                        Component.literal("§a§l[TÁI SINH THÁNH QUANG] §fĐã phục sinh thành công: §e" + spawned.getDisplayName().getString() + ageText + " §f✨🕊️"),
                                         true
                                 );
                             }
@@ -224,6 +250,16 @@ public class DivineSalvationHelper {
             return EntityType.IRON_GOLEM;
         } else if (item == Items.SNOWBALL || item == Items.SNOW_BLOCK) {
             return EntityType.SNOW_GOLEM;
+        } else if (item == Items.COD || item == Items.COOKED_COD || item == Items.SALMON || item == Items.COOKED_SALMON) {
+            return EntityType.POLAR_BEAR;
+        } else if (item == Items.SWEET_BERRIES || item == Items.GLOW_BERRIES) {
+            return EntityType.FOX;
+        } else if (item == Items.BAMBOO) {
+            return EntityType.PANDA;
+        } else if (item == Items.SEAGRASS || item == Items.TURTLE_SCUTE || item == Items.TURTLE_HELMET) {
+            return EntityType.TURTLE;
+        } else if (item == Items.WATER_BUCKET || item == Items.AXOLOTL_BUCKET) {
+            return EntityType.AXOLOTL;
         } else if (item == Items.EMERALD || item == Items.EMERALD_BLOCK || item == Items.BOOK) {
             return EntityType.VILLAGER;
         }
@@ -246,14 +282,14 @@ public class DivineSalvationHelper {
                     BlockState state = level.getBlockState(mpos);
 
                     if (state.is(Blocks.COBWEB)) {
-                        level.setBlock(mpos, Blocks.AIR.defaultBlockState(), 3);
+                        level.setBlock(mpos, Blocks.AIR.defaultBlockState(), 50);
                         level.sendParticles(ParticleTypes.HAPPY_VILLAGER, mpos.getX() + 0.5D, mpos.getY() + 0.5D, mpos.getZ() + 0.5D, 2, 0.2D, 0.2D, 0.2D, 0.02D);
                         cleanedBlocks++;
                     } else if (state.is(Blocks.MOSSY_COBBLESTONE)) {
-                        level.setBlock(mpos, Blocks.COBBLESTONE.defaultBlockState(), 3);
+                        level.setBlock(mpos, Blocks.COBBLESTONE.defaultBlockState(), 50);
                         cleanedBlocks++;
                     } else if (state.is(Blocks.MOSSY_STONE_BRICKS)) {
-                        level.setBlock(mpos, Blocks.STONE_BRICKS.defaultBlockState(), 3);
+                        level.setBlock(mpos, Blocks.STONE_BRICKS.defaultBlockState(), 50);
                         cleanedBlocks++;
                     }
                 }

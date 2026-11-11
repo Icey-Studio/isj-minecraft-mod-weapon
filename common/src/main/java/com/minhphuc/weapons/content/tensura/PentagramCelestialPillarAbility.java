@@ -1,5 +1,8 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
@@ -92,6 +95,13 @@ public class PentagramCelestialPillarAbility {
     }
 
     private static final List<ActiveCelestialPillar> ACTIVE_PILLARS = new ArrayList<>();
+
+    public static void clearAllPillars() {
+        for (ActiveCelestialPillar p : ACTIVE_PILLARS) {
+            p.cleanup();
+        }
+        ACTIVE_PILLARS.clear();
+    }
 
     public static boolean destroyCircleIfMatches(Display.ItemDisplay display) {
         if (display == null) return false;
@@ -225,21 +235,30 @@ public class PentagramCelestialPillarAbility {
             if (elapsed == 30 && !p.beamTriggered) {
                 p.beamTriggered = true;
 
-                // Tạo Cột Sáng 3D khổng lồ cao 60m giáng từ mây trời xuống xuyên tâm 5 tầng
-                p.lightBeam = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, p.level);
-                p.lightBeam.setPos(p.center.x, p.center.y + 25.0D, p.center.z);
-                ((ItemDisplayAccessor) p.lightBeam).weapons$setItemStack(new ItemStack(ModItems.DISINTEGRATION_LIGHT_BEAM.get()));
-                ((ItemDisplayAccessor) p.lightBeam).weapons$setItemTransform(ItemDisplayContext.FIXED);
+                if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_CHROMATIC_PILLAR)) {
+                    float demonCode = (p.demonType != null) ? (float) p.demonType.ordinal() : 1.0f;
+                    ModMessages.sendToPlayers(p.level.players(), new ClientboundCinematicSkillPacket(
+                            SkillVisualConfig.SKILL_CHROMATIC_PILLAR,
+                            p.caster != null ? p.caster.getUUID() : java.util.UUID.randomUUID(),
+                            p.center, new Vec3(0, 1, 0), 80, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+                    ));
+                } else {
+                    // Tạo Cột Sáng 3D khổng lồ cao 60m giáng từ mây trời xuống xuyên tâm 5 tầng (Legacy)
+                    p.lightBeam = new Display.ItemDisplay(EntityType.ITEM_DISPLAY, p.level);
+                    p.lightBeam.setPos(p.center.x, p.center.y + 25.0D, p.center.z);
+                    ((ItemDisplayAccessor) p.lightBeam).weapons$setItemStack(new ItemStack(ModItems.DISINTEGRATION_LIGHT_BEAM.get()));
+                    ((ItemDisplayAccessor) p.lightBeam).weapons$setItemTransform(ItemDisplayContext.FIXED);
 
-                Transformation beamTrans = new Transformation(
-                        new Vector3f(0, 0, 0),
-                        new Quaternionf(),
-                        new Vector3f(16.0F, 65.0F, 16.0F),
-                        new Quaternionf()
-                );
-                ((DisplayAccessor) p.lightBeam).weapons$setTransformation(beamTrans);
-                p.lightBeam.addTag("PentagramPillarDisplay");
-                p.level.addFreshEntity(p.lightBeam);
+                    Transformation beamTrans = new Transformation(
+                            new Vector3f(0, 0, 0),
+                            new Quaternionf(),
+                            new Vector3f(16.0F, 65.0F, 16.0F),
+                            new Quaternionf()
+                    );
+                    ((DisplayAccessor) p.lightBeam).weapons$setTransformation(beamTrans);
+                    p.lightBeam.addTag("PentagramPillarDisplay");
+                    p.level.addFreshEntity(p.lightBeam);
+                }
 
                 // Âm thanh thiên phạt chấn động
                 p.level.playSound(null, p.center.x, p.center.y, p.center.z,

@@ -42,6 +42,10 @@
   "item.weapons.abyssal_claw_despair": "Vuốt Hắc Ám Tuyệt Vọng (Abyssal Claw of Despair)",
   "item.weapons.void_claw_calamity": "Vuốt Hư Vô Tai Ương (Void Claw of Calamity)",
   "item.weapons.kubo_spawn_egg": "Trứng Tạo Không Vong",
+  "item.weapons.demon_lord_kubo_spawn_egg": "Trứng Tạo Ma Vương Không Vong",
+  "entity.weapons.demon_lord_kubo": "Ma Vương Không Vong",
+  "item.weapons.vo_nguyet_minh_phoi_spawn_egg": "Trứng Tạo Vô Nguyệt Minh Phôi",
+  "entity.weapons.vo_nguyet_minh_phoi": "Vô Nguyệt Minh Phôi",
   "entity.weapons.kubo": "Không Vong (Kūbō)",
   "item.weapons.golden_gun": "Súng Lục Hoàng Kim (Carrera's Golden Gun)",
   "item.weapons.carrera_bullet_judgement": "Đạn Thần Tốc Phán Quyết (Judgement)",
@@ -211,6 +215,8 @@
   "block.weapons.domain_barrier_vert": "Khối Kết Giới Lãnh Địa: Lục Bảo (Vert)",
   "block.weapons.dragon_prison_barrier": "Khối Kết Giới Long Giam Vô Hạn",
   "item.weapons.dragon_prison_barrier": "Khối Kết Giới Long Giam Vô Hạn",
+  "block.weapons.black_fire": "Hắc Viêm Bất Diệt",
+  "item.weapons.black_fire": "Hắc Viêm Bất Diệt",
   "block.weapons.anti_magic_barrier": "Khối Kháng Ma Kết Giới",
   "block.weapons.multilayer_barrier": "Khối Đa Trùng Kết Giới",
   "entity.weapons.primordial_demon": "Ác Ma Thủy Tổ",
@@ -379,5 +385,8 @@
   "item.weapons.marbas_spawn_egg": "Trứng Sinh Ra Đại Ác Ma Marbas",
   "item.weapons.warding_earplugs": "Bông Bịt Tai Phong Ấn",
   "item.weapons.bodhi_effigy_empty": "Hình Nhân Gỗ Bồ Đề (Rỗng)",
-  "item.weapons.bodhi_effigy_monk": "Hình Nhân Gỗ: Tà Kinh Đại Tăng"
+  "item.weapons.bodhi_effigy_monk": "Hình Nhân Gỗ: Tà Kinh Đại Tăng",
+  "item.weapons.stellar_remote": "Thiết Bị Điều Khiển Quỹ Đạo (The Stellar Remote)",
+  "item.weapons.fake_soul": "Linh Hồn Giả (Fake Soul)",
+  "skill.weapons.apocalypse": "Ngày Tận Thế (Apocalypse)"
 }

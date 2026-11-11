@@ -1,7 +1,9 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ClientboundTengaiSlashEffectPacket;
 import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.Rotations;
@@ -95,10 +97,10 @@ public class TengaiKyuseiSwordAbility {
             return false;
         }
 
-        // Tìm mục tiêu quái vật/boss trong tầm nhìn 24 blocks
+        // Tìm mục tiêu quái vật/boss trong tầm nhìn
         Vec3 eyePos = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        double reach = 24.0D;
+        double reach = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_REVERSE_TIME_SLASH) ? 36.0D : 24.0D;
         Vec3 endReach = eyePos.add(look.scale(reach));
 
         AABB searchBox = player.getBoundingBox().expandTowards(look.scale(reach)).inflate(2.0D);
@@ -198,6 +200,12 @@ public class TengaiKyuseiSwordAbility {
         }
 
         // 3. GỬI GÓI TIN CHUYỂN MÀN HÌNH THẾ GIỚI THÀNH TRẮNG ĐEN (MONOCHROME MANGA)
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_REVERSE_TIME_SLASH)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_REVERSE_TIME_SLASH, player.getUUID(), player.position(), look, ActiveReverseSlash.TOTAL_TICKS, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        }
+
         // Gửi cho người tung chiêu và người chơi lân cận trong phạm vi 40 blocks
         for (ServerPlayer sp : level.players()) {
             if (sp.distanceToSqr(player) <= 40 * 40) {

@@ -1,10 +1,13 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
@@ -30,8 +33,44 @@ import java.util.List;
 public class PrimordialSkillDispatcher {
 
     public static void castSkill(ServerLevel level, ServerPlayer player, int skillIndex) {
-        DemonType type = PrimordialPlayerDataHelper.getPrimordialType(player);
+        DemonType type = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.getPossessedType(player)
+                : PrimordialPlayerDataHelper.getPrimordialType(player);
         if (type == null) return;
+
+        // 1. Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Skill Nullification Seal)
+        if (SkillNullificationAbility.isPlayerSealed(player)) {
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ [PHONG SÁT KỸ NĂNG] Toàn bộ kỹ năng và sức mạnh Ác Ma của bạn đang bị phong ấn!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+            return;
+        }
+
+        // 2. Kiểm tra Kháng Ma Kết Giới (Anti-Magic Barrier)
+        // Ma Tố bị triệt tiêu hoàn toàn. Duy nhất kỹ năng Spiritrons (Skill 7: Linh Tử Bộc Phát) có thể xuyên thấu!
+        if (AntiMagicBarrierManager.isInBarrier(level, player.position())) {
+            if (skillIndex != 6) {
+                player.displayClientMessage(
+                        Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Ma Tố bị triệt tiêu! Kỹ năng Ác Ma bị phong ấn (Ngoại trừ: Linh Tử Bộc Phát)!"),
+                        true
+                );
+                level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                        SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+                level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+                return;
+            }
+        }
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PRIMORDIAL_DEMON)) {
+            float demonCode = (float) (type.ordinal() * 10 + skillIndex);
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_PRIMORDIAL_DEMON, player.getUUID(), player.position(), player.getLookAngle(), 60, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+            ));
+        }
 
         // Skill 0 (Skill 1): Tà Khứ Vũ Thê Tử (Chung cho 7 Ác Ma)
         if (skillIndex == 0) {
@@ -39,8 +78,12 @@ public class PrimordialSkillDispatcher {
             return;
         }
 
-        boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
-        boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
+        boolean hasBody = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.hasPhysicalBody(player)
+                : PrimordialPlayerDataHelper.hasPhysicalBody(player);
+        boolean isDemonLord = PrimordialPossessionManager.isPossessing(player)
+                ? PrimordialPossessionManager.isDemonLord(player)
+                : PrimordialPlayerDataHelper.isDemonLord(player);
 
         // Skill 5 (Skill 6): Ngũ Trọng Ma Trận Cột Sáng Thiên Khấu (Chung cho các Ác Ma khác, riêng Jaune là Cấm Thuật Hạt Nhân Supernova)
         if (skillIndex == 5) {
@@ -100,6 +143,7 @@ public class PrimordialSkillDispatcher {
 
     private static void dealDamage(ServerPlayer player, LivingEntity victim, float baseDmg, boolean hasBody, boolean isDemonLord) {
         if (victim == null || !victim.isAlive() || victim == player) return;
+        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), victim)) return;
         boolean isBoss = (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss)
                 || (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)
                 || (victim instanceof net.minecraft.world.entity.monster.warden.Warden)

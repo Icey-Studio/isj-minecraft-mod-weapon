@@ -1,9 +1,12 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.SkillPowerRoll;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -97,37 +100,47 @@ public class BeelzebuthAbility {
         Vec3 look = player.getLookAngle();
         float yaw = player.getYRot();
         float pitch = player.getXRot();
-        double maxDist = 14.0D;
+        double maxDist = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_BEELZEBUTH) ? 24.0D : 14.0D;
 
-        // Triệu hồi Đầu Rồng Hư Không Bạo Thực Vương (3D Model Display Entity, FIXED orientation)
-        Display.ItemDisplay display = EntityType.ITEM_DISPLAY.create(level);
-        if (display != null) {
-            Vec3 spawnPos = start.add(look.scale(2.0D));
-            display.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, yaw, pitch);
-            display.setYRot(yaw);
-            display.setXRot(pitch);
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_BEELZEBUTH);
+        Display.ItemDisplay display = null;
 
-            ItemDisplayAccessor itemDisplayAcc = (ItemDisplayAccessor) display;
-            DisplayAccessor displayAcc = (DisplayAccessor) display;
-
-            itemDisplayAcc.weapons$setItemStack(new ItemStack(ModItems.BEELZEBUTH_DRAGON_MAW.get()));
-            itemDisplayAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
-            displayAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED); // Khối 3D cố định theo góc nhìn
-            display.setGlowingTag(true);
-            displayAcc.weapons$setGlowColorOverride(0xAA00FF); // Hào quang tím neon ma vương
-            displayAcc.weapons$setViewRange(10.0F);
-
-            // Kích thước 3D ban đầu: rộng 3.5m, cao 3.5m, dài 4.2m
-            displayAcc.weapons$setTransformation(new Transformation(
-                    new Vector3f(0.0F, 0.0F, 0.0F),
-                    new Quaternionf(),
-                    new Vector3f(3.5F, 3.5F, 4.2F),
-                    null
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_BEELZEBUTH, player.getUUID(), start, look, 24, ClientboundCinematicSkillPacket.ACTION_START, roll.multiplier
             ));
+        } else {
+            // Triệu hồi Đầu Rồng Hư Không Bạo Thực Vương (3D Model Display Entity, FIXED orientation)
+            display = EntityType.ITEM_DISPLAY.create(level);
+            if (display != null) {
+                Vec3 spawnPos = start.add(look.scale(2.0D));
+                display.moveTo(spawnPos.x, spawnPos.y, spawnPos.z, yaw, pitch);
+                display.setYRot(yaw);
+                display.setXRot(pitch);
 
-            level.addFreshEntity(display);
-            ACTIVE_DRAGONS.add(new ActiveBeelzebuthDragon(level, player, start, look, yaw, pitch, display, 24, roll)); // 1.2 giây
+                ItemDisplayAccessor itemDisplayAcc = (ItemDisplayAccessor) display;
+                DisplayAccessor displayAcc = (DisplayAccessor) display;
+
+                itemDisplayAcc.weapons$setItemStack(new ItemStack(ModItems.BEELZEBUTH_DRAGON_MAW.get()));
+                itemDisplayAcc.weapons$setItemTransform(ItemDisplayContext.FIXED);
+                displayAcc.weapons$setBillboardConstraints(Display.BillboardConstraints.FIXED); // Khối 3D cố định theo góc nhìn
+                display.setGlowingTag(true);
+                displayAcc.weapons$setGlowColorOverride(0xAA00FF); // Hào quang tím neon ma vương
+                displayAcc.weapons$setViewRange(10.0F);
+
+                // Kích thước 3D ban đầu: rộng 3.5m, cao 3.5m, dài 4.2m
+                displayAcc.weapons$setTransformation(new Transformation(
+                        new Vector3f(0.0F, 0.0F, 0.0F),
+                        new Quaternionf(),
+                        new Vector3f(3.5F, 3.5F, 4.2F),
+                        null
+                ));
+
+                level.addFreshEntity(display);
+            }
         }
+
+        ACTIVE_DRAGONS.add(new ActiveBeelzebuthDragon(level, player, start, look, yaw, pitch, display, 24, roll)); // 1.2 giây
 
         int devouredEntities = 0;
         int devouredItems = 0;
@@ -179,6 +192,9 @@ public class BeelzebuthAbility {
                     entity.hasImpulse = true;
 
                     if (entity instanceof LivingEntity living) {
+                        if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), living)) {
+                            continue;
+                        }
                         if (roll.isOverdrive()) {
                             // BẠO KÍCH: Nuốt chửng 100% mọi thực thể
                             level.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -289,17 +305,20 @@ public class BeelzebuthAbility {
                 d.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, currentPos.x, currentPos.y, currentPos.z, 2, 0.2D, 0.2D, 0.2D, 0.02D);
             }
 
-            // 4. Lực hút chân không ma vương kéo sinh vật vào miệng rồng (bán kính 4.5m)
-            AABB pullBox = new AABB(currentPos.x - 4.5D, currentPos.y - 3.5D, currentPos.z - 4.5D,
-                    currentPos.x + 4.5D, currentPos.y + 4.0D, currentPos.z + 4.5D);
-            List<Entity> pullTargets = d.level.getEntities((Entity) null, pullBox, e -> e != d.caster && e.isAlive());
+            // 4. Lực hút chân không ma vương kéo sinh vật vào miệng rồng
+            double pullRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_BEELZEBUTH) ? 8.0D : 4.5D;
+            AABB pullBox = new AABB(currentPos.x - pullRadius, currentPos.y - 3.5D, currentPos.z - pullRadius,
+                    currentPos.x + pullRadius, currentPos.y + 4.0D, currentPos.z + pullRadius);
+            List<Entity> pullTargets = d.level.getEntities((Entity) null, pullBox,
+                    e -> e != d.caster && e.isAlive() && (d.caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(d.caster.getUUID(), e)));
             for (Entity e : pullTargets) {
                 Vec3 pull = currentPos.subtract(e.position()).normalize().scale(0.85D);
                 e.setDeltaMovement(pull.x, pull.y * 0.4D + 0.15D, pull.z);
                 e.hasImpulse = true;
 
-                // Nuốt chửng khi chạm vào khoang miệng rồng (bán kính 3m)
-                if (e.position().distanceToSqr(currentPos) <= 9.0D) {
+                // Nuốt chửng khi chạm vào khoang miệng rồng
+                double biteDistSq = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_BEELZEBUTH) ? 25.0D : 9.0D;
+                if (e.position().distanceToSqr(currentPos) <= biteDistSq) {
                     if (e instanceof LivingEntity living) {
                         SkillPowerRoll roll = d.powerRoll;
                         if (roll != null && roll.isOverdrive()) {

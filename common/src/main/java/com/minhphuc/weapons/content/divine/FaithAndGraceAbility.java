@@ -1,8 +1,11 @@
 package com.minhphuc.weapons.content.divine;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -110,6 +113,12 @@ public class FaithAndGraceAbility {
         ActiveFaithAndGrace instance = new ActiveFaithAndGrace(level, player, groundCenter);
         ACTIVE_INSTANCES.add(instance);
 
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_FAITH_AND_GRACE)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_FAITH_AND_GRACE, player.getUUID(), groundCenter, player.getLookAngle(), 100, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+        }
+
         // Âm thanh khởi phát: Tiếng thánh ca thiên đường ngân vang
         level.playSound(null, groundCenter.x, groundCenter.y + 10.0D, groundCenter.z,
                 SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 4.0F, 0.8F);
@@ -137,7 +146,7 @@ public class FaithAndGraceAbility {
                 instance.ticksAlive++;
 
                 Vec3 center = instance.center;
-                double areaRadius = 20.0D; // 40x40 block
+                double areaRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_FAITH_AND_GRACE) ? 26.0D : 20.0D; // 52x52 block
                 double maxHeight = 70.0D;
 
                 // GIAI ĐOẠN 1: Chiếu sáng từ trên trời giáng xuống đất (15 ticks đầu)
@@ -146,29 +155,35 @@ public class FaithAndGraceAbility {
                     double currentBeamBottom = center.y + (1.0D - progress) * maxHeight;
 
                     // Hạt ánh sáng thánh khiết lao thẳng từ trời xuống
-                    for (int i = 0; i < 8; i++) {
-                        double ox = (level.random.nextDouble() - 0.5D) * 6.0D;
-                        double oz = (level.random.nextDouble() - 0.5D) * 6.0D;
-                        level.sendParticles(ParticleTypes.END_ROD, center.x + ox, currentBeamBottom + level.random.nextDouble() * 5.0D, center.z + oz, 1, 0, -1.5D, 0, 0.1D);
-                        level.sendParticles(GOLDEN_LIGHT, center.x + ox, currentBeamBottom, center.z + oz, 1, 0, -1.0D, 0, 0.05D);
+                    if (level.hasNearbyAlivePlayer(center.x, center.y, center.z, 64.0D)) {
+                        for (int i = 0; i < 8; i++) {
+                            double ox = (level.random.nextDouble() - 0.5D) * 6.0D;
+                            double oz = (level.random.nextDouble() - 0.5D) * 6.0D;
+                            level.sendParticles(ParticleTypes.END_ROD, center.x + ox, currentBeamBottom + level.random.nextDouble() * 5.0D, center.z + oz, 1, 0, -1.5D, 0, 0.1D);
+                            level.sendParticles(GOLDEN_LIGHT, center.x + ox, currentBeamBottom, center.z + oz, 1, 0, -1.0D, 0, 0.05D);
+                        }
                     }
 
                     if (instance.ticksAlive == 15) {
-                        // Tiếp đất! Tạo ItemDisplay cột sáng khổng lồ 40x40
+                        // Tiếp đất! Tạo ItemDisplay cột sáng khổng lồ nếu không phải chế độ điện ảnh
                         instance.fullyLanded = true;
-                        instance.pillarDisplay = createPillarDisplay(level, center, 20.0F, (float) maxHeight, 20.0F, 0xFFDF00);
+                        if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_FAITH_AND_GRACE)) {
+                            instance.pillarDisplay = createPillarDisplay(level, center, 20.0F, (float) maxHeight, 20.0F, 0xFFDF00);
+                        }
 
                         level.playSound(null, center.x, center.y, center.z,
                                 SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 3.0F, 1.4F);
                         level.playSound(null, center.x, center.y, center.z,
                                 SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 2.5F, 1.1F);
 
-                        level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1.0D, center.z, 3, 0.5D, 0.5D, 0.5D, 0);
-                        level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y + 1.0D, center.z, 1, 0, 0, 0, 0);
+                        if (level.hasNearbyAlivePlayer(center.x, center.y, center.z, 64.0D)) {
+                            level.sendParticles(ParticleTypes.FLASH, center.x, center.y + 1.0D, center.z, 3, 0.5D, 0.5D, 0.5D, 0);
+                            level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, center.x, center.y + 1.0D, center.z, 1, 0, 0, 0, 0);
+                        }
                     }
                 } else {
                     // GIAI ĐOẠN 2: Thánh Quang rực rỡ bao phủ toàn bộ vùng 40x40
-                    if (instance.ticksAlive % 4 == 0) {
+                    if (instance.ticksAlive % 4 == 0 && level.hasNearbyAlivePlayer(center.x, center.y, center.z, 64.0D)) {
                         // Sinh hạt hào quang viền quanh vùng 40x40
                         double angle = level.random.nextDouble() * Math.PI * 2;
                         double r = level.random.nextDouble() * areaRadius;
@@ -183,8 +198,8 @@ public class FaithAndGraceAbility {
                         // Tái sinh linh hồn từ item trên đất
                         DivineSalvationHelper.processSoulResurrection(level, center, 20.0D, instance.caster);
 
-                        // Phục hưng làng mạc bỏ hoang
-                        if (instance.ticksAlive % 20 == 0) {
+                        // Phục hưng làng mạc bỏ hoang (chạy 1 lần duy nhất tại tick 20 để tránh scan 16,000 blocks liên tục)
+                        if (instance.ticksAlive == 20) {
                             DivineSalvationHelper.restoreAbandonedVillage(level, BlockPos.containing(center), 22, instance.caster);
                         }
 

@@ -1,0 +1,20 @@
+{
+  "atomic_charge": {
+    "category": "players",
+    "sounds": [
+      "weapons:atomic_charge"
+    ]
+  },
+  "atomic_blast": {
+    "category": "players",
+    "sounds": [
+      "weapons:atomic_blast"
+    ]
+  },
+  "supernova_sequence": {
+    "category": "players",
+    "sounds": [
+      "weapons:supernova_sequence"
+    ]
+  }
+}

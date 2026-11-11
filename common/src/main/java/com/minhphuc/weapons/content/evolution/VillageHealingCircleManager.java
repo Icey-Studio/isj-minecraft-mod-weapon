@@ -67,8 +67,8 @@ public class VillageHealingCircleManager {
             circle.ticksAlive++;
             Vec3 c = circle.center;
 
-            // 1. Vẽ cột sáng xanh lam chọc trời (Cyan Beacon Pillar) & Vòng tròn ma thuật mặt đất mỗi 8 ticks (giảm 65% tải mạng)
-            if (circle.ticksAlive % 8 == 0) {
+            // 1. Vẽ cột sáng xanh lam chọc trời (Cyan Beacon Pillar) & Vòng tròn ma thuật mặt đất mỗi 8 ticks (chỉ khi có người chơi gần đó)
+            if (circle.ticksAlive % 8 == 0 && level.hasNearbyAlivePlayer(c.x, c.y, c.z, 64.0D)) {
                 // Cột sáng thẳng đứng lên 45 block
                 for (double y = 0; y < 45.0; y += 3.0) {
                     level.sendParticles(CYAN_DUST, c.x, c.y + y, c.z, 1, 0.1, 0.1, 0.1, 0);

@@ -1,11 +1,14 @@
 package com.minhphuc.weapons.entity.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.HorizontalHolyBeamAbility;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
 import com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper;
 import com.minhphuc.weapons.content.tensura.TensuraDialogueManager;
 import com.minhphuc.weapons.init.ModItems;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -302,7 +305,7 @@ public class MilimEntity extends Monster {
         return super.hurt(source, finalDamage);
     }
 
-    private void cancelDragonNova() {
+    public void cancelDragonNova() {
         this.setCastingState(0);
         this.setChannelingTicks(0);
         this.lockedTargetDirection = null;
@@ -502,9 +505,11 @@ public class MilimEntity extends Monster {
         sl.playSound(null, this.getX(), this.getY(), this.getZ(),
                 SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 4.5F, 1.4F);
 
-        // Hiển thị Cột Sáng 3D đa tầng (Giống Cú Bắn Granit nhưng với quy mô Long Tinh Bộc Viêm Bá cực đại)
+        // Hiển thị Chùm Tia Sáng Long Tinh Bộc Viêm Bá chuẩn điện ảnh (loại bỏ cột vuông ItemDisplay)
         double maxDistance = 70.0D;
-        HorizontalHolyBeamAbility.spawn3DBeamDisplay(sl, startPos, dir, maxDistance, 4.5F, 0xFF55DD, 8.0F, 0xFF0044, 40);
+        ModMessages.sendToPlayers(sl.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_DRAGON_NOVA, this.getUUID(), startPos, dir, 55, ClientboundCinematicSkillPacket.ACTION_START, 1.2f
+        ));
 
         // Bắn tia quét hủy diệt
         double step = 1.0D;
@@ -514,15 +519,14 @@ public class MilimEntity extends Monster {
             currentPos = currentPos.add(dir.scale(step));
 
             // 1. Hiệu ứng hạt dọc theo thân cột pháo năng lượng cực đại
-            if (Math.round(d) % 6 == 0) {
+            if (Math.round(d) % 10 == 0) {
                 sl.sendParticles(ParticleTypes.SONIC_BOOM, currentPos.x, currentPos.y, currentPos.z, 1, 0, 0, 0, 0);
             }
-            sl.sendParticles(ParticleTypes.FLASH, currentPos.x, currentPos.y, currentPos.z, 1, 0.4, 0.4, 0.4, 0);
-            sl.sendParticles(SPIRITRON_PINK, currentPos.x, currentPos.y, currentPos.z, 4, 1.2, 1.2, 1.2, 0.08);
-            sl.sendParticles(SPIRITRON_PURPLE, currentPos.x, currentPos.y, currentPos.z, 3, 1.0, 1.0, 1.0, 0.08);
-            sl.sendParticles(ParticleTypes.FLAME, currentPos.x, currentPos.y, currentPos.z, 4, 1.5, 1.5, 1.5, 0.1);
-            sl.sendParticles(ParticleTypes.DRAGON_BREATH, currentPos.x, currentPos.y, currentPos.z, 3, 1.0, 1.0, 1.0, 0.05);
-            sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, currentPos.x, currentPos.y, currentPos.z, 2, 0.8, 0.8, 0.8, 0.1);
+            if (d % 3.0 < 1.0) {
+                sl.sendParticles(ParticleTypes.FLASH, currentPos.x, currentPos.y, currentPos.z, 1, 0.4, 0.4, 0.4, 0);
+                sl.sendParticles(ParticleTypes.LAVA, currentPos.x, currentPos.y, currentPos.z, 1, 0.5, 0.5, 0.5, 0.05);
+                sl.sendParticles(ParticleTypes.FLAME, currentPos.x, currentPos.y, currentPos.z, 2, 0.5, 0.5, 0.5, 0.05);
+            }
 
             // 2. Sát thương thực thể (Xuyên mọi giáp & xóa sạch buff)
             AABB hitBox = new AABB(currentPos.x - 4.5, currentPos.y - 4.5, currentPos.z - 4.5,

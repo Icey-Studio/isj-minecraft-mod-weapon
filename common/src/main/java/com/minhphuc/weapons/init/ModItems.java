@@ -169,6 +169,12 @@ public class ModItems {
     public static final RegistrySupplier<Item> KUBO_SPAWN_EGG = ITEMS.register("kubo_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.KUBO, 0x0A0512, 0x9333EA, new Item.Properties()));
 
+    public static final RegistrySupplier<Item> DEMON_LORD_KUBO_SPAWN_EGG = ITEMS.register("demon_lord_kubo_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.DEMON_LORD_KUBO, 0x0A0512, 0xF97316, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> VO_NGUYET_MINH_PHOI_SPAWN_EGG = ITEMS.register("vo_nguyet_minh_phoi_spawn_egg",
+            () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.VO_NGUYET_MINH_PHOI, 0x06020E, 0x8B5CF6, new Item.Properties()));
+
     public static final RegistrySupplier<Item> CUU_THE_QUYEN_HIEN_SPAWN_EGG = ITEMS.register("cuu_the_quyen_hien_spawn_egg",
             () -> new dev.architectury.core.item.ArchitecturySpawnEggItem(com.minhphuc.weapons.entity.ModEntities.CUU_THE_QUYEN_HIEN, 0x111318, 0xE5E7EB, new Item.Properties()));
 
@@ -216,6 +222,9 @@ public class ModItems {
 
     public static final RegistrySupplier<Item> MOB_SOUL = ITEMS.register("mob_soul",
             () -> new com.minhphuc.weapons.content.soul.EntitySoulItem(com.minhphuc.weapons.content.soul.SoulType.MOB, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> FAKE_SOUL = ITEMS.register("fake_soul",
+            () -> new com.minhphuc.weapons.content.soul.FakeSoulItem(new Item.Properties()));
 
     // ==========================================
     // MODULE: CARRERA'S GOLDEN GUN & MA ĐẠN (TENSURA LN)
@@ -303,6 +312,8 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> BLACK_FIRE = ITEMS.register("black_fire",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.BLACK_FIRE.get(), new Item.Properties()));
 
     // ==========================================
     // MODULE: CHƯỚC NHIỆT LONG VELGRYND (SCORCH DRAGON)
@@ -342,6 +353,12 @@ public class ModItems {
     // ==========================================
     public static final RegistrySupplier<Item> MAGISTEEL_PHONE = ITEMS.register("magisteel_phone",
             () -> new com.minhphuc.weapons.content.tensura.MagisteelSmartphoneItem(new Item.Properties()));
+
+    // ==========================================
+    // MODULE: THE SHOOTING STAR (THE STELLAR REMOTE)
+    // ==========================================
+    public static final RegistrySupplier<Item> STELLAR_REMOTE = ITEMS.register("stellar_remote",
+            () -> new com.minhphuc.weapons.content.space.StellarRemoteItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // ==========================================
     // MODULE: BỒN CHỨA & KHUNG XƯƠNG THỂ XÁC NHÂN TẠO
@@ -508,6 +525,7 @@ public class ModItems {
                         output.accept(DRAGON_SEED.get());
                         output.accept(VELGRYND_REVERSE_SCALE.get());
                         output.accept(MAGISTEEL_PHONE.get());
+                        output.accept(STELLAR_REMOTE.get());
                         output.accept(MILIM_DRAGON_CONTRACT.get());
 
                         // Bạch Băng Long Velzard
@@ -521,6 +539,8 @@ public class ModItems {
                         output.accept(ABYSSAL_CLAW_DESPAIR.get());
                         output.accept(VOID_CLAW_CALAMITY.get());
                         output.accept(KUBO_SPAWN_EGG.get());
+                        output.accept(DEMON_LORD_KUBO_SPAWN_EGG.get());
+                        output.accept(VO_NGUYET_MINH_PHOI_SPAWN_EGG.get());
                         output.accept(KUBO_SUMMON_CORE.get());
                         output.accept(CUU_THE_QUYEN_HIEN_SPAWN_EGG.get());
                         output.accept(SHIGARAKI_TANUKI_EMPTY.get());
@@ -537,6 +557,7 @@ public class ModItems {
                         output.accept(ENDER_DRAGON_SOUL.get());
                         output.accept(WITHER_SOUL.get());
                         output.accept(MOB_SOUL.get());
+                        output.accept(FAKE_SOUL.get());
                     })
             ));
 

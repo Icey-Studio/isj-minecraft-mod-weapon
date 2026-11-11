@@ -1,8 +1,11 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -58,6 +61,13 @@ public class HorizontalHolyBeamAbility {
     }
 
     private static final List<ActiveHorizontalBeam> ACTIVE_BEAMS = new ArrayList<>();
+
+    public static void clearAllBeams() {
+        for (ActiveHorizontalBeam b : ACTIVE_BEAMS) {
+            b.discard();
+        }
+        ACTIVE_BEAMS.clear();
+    }
 
     public static void tickBeams(ServerLevel level) {
         if (ACTIVE_BEAMS.isEmpty()) return;
@@ -173,7 +183,15 @@ public class HorizontalHolyBeamAbility {
     public static void fireGraniteBlast(ServerLevel level, LivingEntity caster, Vec3 startPos, Vec3 dir, double range, float damage) {
         dir = dir.normalize();
 
-        spawn3DBeamDisplay(level, startPos, dir, range, 3.2F, 0xFFFFFF, 5.5F, 0xFFAA00, 30);
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_GRANITE_BLAST);
+        if (cinematic) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_GRANITE_BLAST, caster != null ? caster.getUUID() : java.util.UUID.randomUUID(), startPos, dir, 30, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+            ));
+            if (range < 72.0D) range = 72.0D;
+        } else {
+            spawn3DBeamDisplay(level, startPos, dir, range, 3.2F, 0xFFFFFF, 5.5F, 0xFFAA00, 30);
+        }
 
         // Cứu Thế Quyền Hiện phát hiện đại pháo Granit và chủ động né tránh
         AABB beamWarnArea = new AABB(startPos, startPos.add(dir.scale(range))).inflate(8.0D);
@@ -202,7 +220,12 @@ public class HorizontalHolyBeamAbility {
             AABB box = new AABB(cur.x - 3.2, cur.y - 3.2, cur.z - 3.2,
                     cur.x + 3.2, cur.y + 3.2, cur.z + 3.2);
 
-            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive());
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> {
+                if (e == caster || !e.isAlive()) return false;
+                if (caster instanceof ServerPlayer sp && PrimordialDemonEntity.isContractedAllyOfPlayer(sp.getUUID(), e)) return false;
+                if (caster instanceof PrimordialDemonEntity demon && demon.isImmuneOrFriendly(e)) return false;
+                return true;
+            });
             for (LivingEntity victim : victims) {
                 // Tước bỏ mọi phòng ngự
                 victim.removeEffect(MobEffects.REGENERATION);
@@ -306,8 +329,20 @@ public class HorizontalHolyBeamAbility {
             }
         }
 
-        // Tạo 3D Beam Display với tầm bắn và độ dày hoành tráng
-        spawn3DBeamDisplay(level, startPos, dir, range, 3.4F, coreColor, 5.8F, outerColor, 32);
+        // Khi bật Chế độ Điện Ảnh 3D: Gửi packet hiển thị 3D Cylinder Beam chuẩn Milim & Ryu Granite Blast
+        // Triệt tiêu hoàn toàn cột khối vuông ItemDisplay lỗi thời
+        boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_SPIRITRON_OUTBURST);
+        if (cinematic) {
+            float demonCode = (type != null) ? (float) type.ordinal() : -1.0f;
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_SPIRITRON_OUTBURST,
+                    caster != null ? caster.getUUID() : java.util.UUID.randomUUID(),
+                    startPos, dir, 36, ClientboundCinematicSkillPacket.ACTION_START, demonCode
+            ));
+        } else {
+            // Fallback cột vuông ItemDisplay cũ
+            spawn3DBeamDisplay(level, startPos, dir, range, 3.4F, coreColor, 5.8F, outerColor, 32);
+        }
 
         // 2. TÍNH TOÁN VA CHẠM, SÁT THƯƠNG & XÉ RÁCH KHÔNG GIAN THEO MÀU SẮC
         double step = 1.0D;
@@ -370,7 +405,12 @@ public class HorizontalHolyBeamAbility {
             AABB box = new AABB(cur.x - 3.4, cur.y - 3.4, cur.z - 3.4,
                     cur.x + 3.4, cur.y + 3.4, cur.z + 3.4);
 
-            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> e != caster && e.isAlive());
+            List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, box, e -> {
+                if (e == caster || !e.isAlive()) return false;
+                if (caster instanceof ServerPlayer sp && PrimordialDemonEntity.isContractedAllyOfPlayer(sp.getUUID(), e)) return false;
+                if (caster instanceof PrimordialDemonEntity demon && demon.isImmuneOrFriendly(e)) return false;
+                return true;
+            });
             for (LivingEntity victim : victims) {
                 // Tước bỏ toàn bộ trạng thái phòng ngự
                 victim.removeEffect(MobEffects.REGENERATION);

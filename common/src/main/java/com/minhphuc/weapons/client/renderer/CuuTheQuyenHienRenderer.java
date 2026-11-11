@@ -26,8 +26,8 @@ public class CuuTheQuyenHienRenderer extends MobRenderer<CuuTheQuyenHienEntity, 
 
     @Override
     protected void scale(CuuTheQuyenHienEntity entity, PoseStack poseStack, float partialTickTime) {
-        // Tỉ lệ to lớn và đô con hơn người chơi (1.22x) tạo cảm giác đồ sộ uy áp
-        float scale = 1.22F;
+        // Tỉ lệ to lớn uy mãnh của Ascended Shogun boss (khoảng 2.5 - 3 khối block)
+        float scale = 1.32F;
         poseStack.scale(scale, scale, scale);
     }
 }

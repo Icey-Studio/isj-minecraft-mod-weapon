@@ -59,23 +59,30 @@ public class VelgryndModel extends HumanoidModel<VelgryndEntity> {
 
         PartDefinition head = partdefinition.getChild("head");
         PartDefinition body = partdefinition.getChild("body");
-        PartDefinition rightArm = partdefinition.getChild("right_arm");
 
-        // --- 1. ODANGO TWIN BUNS & GOLDEN PINS ---
+        // Alex slim 3px arms model
+        partdefinition.addOrReplaceChild("left_arm", CubeListBuilder.create()
+                .texOffs(32, 48).addBox(-1.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F),
+                PartPose.offset(5.0F, 2.5F, 0.0F));
+        PartDefinition rightArm = partdefinition.addOrReplaceChild("right_arm", CubeListBuilder.create()
+                .texOffs(40, 16).addBox(-2.0F, -2.0F, -2.0F, 3.0F, 12.0F, 4.0F),
+                PartPose.offset(-5.0F, 2.5F, 0.0F));
+
+        // --- 1. ODANGO TWIN SPACE BUNS & BLACK RIBBONS ---
         head.addOrReplaceChild("odango_left", CubeListBuilder.create()
-                .texOffs(0, 0).addBox(3.0F, -9.5F, -1.5F, 3.2F, 3.2F, 3.2F),
+                .texOffs(0, 0).addBox(2.8F, -10.2F, -1.6F, 3.4F, 3.4F, 3.4F),
                 PartPose.ZERO);
         head.addOrReplaceChild("odango_right", CubeListBuilder.create()
-                .texOffs(0, 0).mirror().addBox(-6.2F, -9.5F, -1.5F, 3.2F, 3.2F, 3.2F),
+                .texOffs(0, 0).mirror().addBox(-6.2F, -10.2F, -1.6F, 3.4F, 3.4F, 3.4F),
                 PartPose.ZERO);
 
-        // Golden hairpins inserting through buns
+        // Black ribbon ties hanging under space buns
         head.addOrReplaceChild("golden_pin_left", CubeListBuilder.create()
-                .texOffs(40, 2).addBox(2.2F, -10.2F, -0.5F, 5.0F, 1.0F, 1.0F),
-                PartPose.rotation(0.0F, 0.0F, 0.25F));
+                .texOffs(40, 2).addBox(2.6F, -7.8F, -0.8F, 3.0F, 3.2F, 1.6F),
+                PartPose.rotation(0.0F, 0.0F, 0.15F));
         head.addOrReplaceChild("golden_pin_right", CubeListBuilder.create()
-                .texOffs(40, 2).mirror().addBox(-7.2F, -10.2F, -0.5F, 5.0F, 1.0F, 1.0F),
-                PartPose.rotation(0.0F, 0.0F, -0.25F));
+                .texOffs(40, 2).mirror().addBox(-5.6F, -7.8F, -0.8F, 3.0F, 3.2F, 1.6F),
+                PartPose.rotation(0.0F, 0.0F, -0.15F));
 
         // Long flowing azure hair extending down past the waist
         head.addOrReplaceChild("long_hair_back", CubeListBuilder.create()
@@ -133,6 +140,7 @@ public class VelgryndModel extends HumanoidModel<VelgryndEntity> {
         this.sashRibbon.xRot = 0.1F + Mth.cos(ageInTicks * 0.08F) * 0.08F;
         this.sideHairLeft.zRot = Mth.sin(ageInTicks * 0.06F) * 0.03F;
         this.sideHairRight.zRot = -Mth.sin(ageInTicks * 0.06F) * 0.03F;
+        this.cheongsamSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
 
         // Quạt lông vũ: Hiện khi đang cầm quạt hoặc đang tấn công
         boolean showFan = entity.isHoldingFan() || entity.swingTime > 0;

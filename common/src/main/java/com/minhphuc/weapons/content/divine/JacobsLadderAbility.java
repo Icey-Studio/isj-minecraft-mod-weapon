@@ -1,8 +1,11 @@
 package com.minhphuc.weapons.content.divine;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -113,6 +116,13 @@ public class JacobsLadderAbility {
         return closest;
     }
 
+    public static void clearAllLadders() {
+        for (ActiveLadder l : ACTIVE_LADDERS) {
+            l.cleanupDisplays();
+        }
+        ACTIVE_LADDERS.clear();
+    }
+
     /**
      * Kích hoạt tuyệt kĩ: Tà Khứ Vũ Thê Tử (Jacob's Ladder)
      */
@@ -158,6 +168,12 @@ public class JacobsLadderAbility {
         // Gieo xúc xắc xuất lực ngẫu nhiên
         SkillPowerRoll roll = SkillPowerRoll.roll();
         roll.announceAndPlayEffects(player, "Tà Khứ Vũ Thê Tử (Jacob's Ladder)");
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_JACOBS_LADDER)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_JACOBS_LADDER, player.getUUID(), targetCenter, player.getLookAngle(), 65, ClientboundCinematicSkillPacket.ACTION_START, roll.multiplier
+            ));
+        }
 
         // Tổng thời lượng 65 ticks (~3.25 giây: 15 ticks gọi thiên sứ + 50 ticks cột sáng)
         ActiveLadder ladder = new ActiveLadder(level, player, targetCenter, 65, roll);
@@ -220,7 +236,7 @@ public class JacobsLadderAbility {
             l.ticksRemaining--;
             int elapsed = l.totalTicks - l.ticksRemaining;
 
-            double halfSize = 2.0D;
+            double halfSize = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_JACOBS_LADDER) ? 6.0D : 2.0D;
             double minX = l.center.x - halfSize;
             double maxX = l.center.x + halfSize;
             double minZ = l.center.z - halfSize;
@@ -249,9 +265,11 @@ public class JacobsLadderAbility {
 
                 // KHÓA CHÂN TỨC THÌ (Light Binding): Ghim chặt mục tiêu không cho chạy thoát (Quét mỗi 4 ticks)
                 if (elapsed % 4 == 0) {
-                    AABB bindZone = new AABB(l.center.x - 3.5D, groundY - 1.0D, l.center.z - 3.5D,
-                            l.center.x + 3.5D, groundY + 30.0D, l.center.z + 3.5D);
-                    List<LivingEntity> boundVictims = l.level.getEntitiesOfClass(LivingEntity.class, bindZone, e -> e != l.caster && e.isAlive());
+                    double bindRadius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_JACOBS_LADDER) ? 8.0D : 3.5D;
+                    AABB bindZone = new AABB(l.center.x - bindRadius, groundY - 1.0D, l.center.z - bindRadius,
+                            l.center.x + bindRadius, groundY + 30.0D, l.center.z + bindRadius);
+                    List<LivingEntity> boundVictims = l.level.getEntitiesOfClass(LivingEntity.class, bindZone,
+                            e -> e != l.caster && e.isAlive() && (l.caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(l.caster.getUUID(), e)));
                     for (LivingEntity v : boundVictims) {
                         v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 30, 255, false, false, true));
                         v.addEffect(new MobEffectInstance(MobEffects.JUMP, 30, -255, false, false, true));
@@ -273,13 +291,15 @@ public class JacobsLadderAbility {
             if (elapsed >= 15 && !l.beamSpawned) {
                 l.beamSpawned = true;
 
-                // 1. Cột sáng vỏ ngoài hình vuông 4x4, cao 50m lên trời
-                Display.ItemDisplay outerBeam = createBeamDisplay(l.level, l.center, 4.0F, 50.0F, 4.0F, 0xFFFFFF);
-                if (outerBeam != null) l.beamDisplays.add(outerBeam);
+                if (!SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_JACOBS_LADDER)) {
+                    // 1. Cột sáng vỏ ngoài hình vuông 4x4, cao 50m lên trời
+                    Display.ItemDisplay outerBeam = createBeamDisplay(l.level, l.center, 4.0F, 50.0F, 4.0F, 0xFFFFFF);
+                    if (outerBeam != null) l.beamDisplays.add(outerBeam);
 
-                // 2. Lõi sáng trung tâm 2.6x2.6 trắng chói lòa
-                Display.ItemDisplay innerCore = createBeamDisplay(l.level, l.center, 2.6F, 50.0F, 2.6F, 0xFFFFFF);
-                if (innerCore != null) l.beamDisplays.add(innerCore);
+                    // 2. Lõi sáng trung tâm 2.6x2.6 trắng chói lòa
+                    Display.ItemDisplay innerCore = createBeamDisplay(l.level, l.center, 2.6F, 50.0F, 2.6F, 0xFFFFFF);
+                    if (innerCore != null) l.beamDisplays.add(innerCore);
+                }
 
                 // Âm thanh thiên phạt chấn động thế giới
                 l.level.playSound(null, l.center.x, groundY, l.center.z,
@@ -322,7 +342,8 @@ public class JacobsLadderAbility {
                 // GÂY SÁT THƯƠNG TỐI ĐA DUY NHẤT 1 LẦN
                 if (!l.damageDealt) {
                     l.damageDealt = true;
-                    List<LivingEntity> strikeTargets = l.level.getEntitiesOfClass(LivingEntity.class, pillarBox, e -> e != l.caster && e.isAlive());
+                    List<LivingEntity> strikeTargets = l.level.getEntitiesOfClass(LivingEntity.class, pillarBox,
+                            e -> e != l.caster && e.isAlive() && (l.caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(l.caster.getUUID(), e)));
                     DamageSource dmgSource = (l.caster != null) ? l.level.damageSources().playerAttack(l.caster) : l.level.damageSources().magic();
 
                     for (LivingEntity victim : strikeTargets) {

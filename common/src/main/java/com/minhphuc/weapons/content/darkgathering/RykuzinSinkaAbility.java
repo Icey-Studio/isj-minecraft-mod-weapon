@@ -1,5 +1,7 @@
 package com.minhphuc.weapons.content.darkgathering;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ClientboundSyncRykuzinStatePacket;
 import com.minhphuc.weapons.network.ClientboundTengaiSlashEffectPacket;
 import com.minhphuc.weapons.network.ModMessages;
@@ -58,6 +60,12 @@ public class RykuzinSinkaAbility {
         } else {
             ACTIVE_PLAYERS.add(uuid);
             ModMessages.sendToPlayer(new ClientboundSyncRykuzinStatePacket(true), player);
+
+            if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_RYKUZIN_SINKA)) {
+                ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                        SkillVisualConfig.SKILL_RYKUZIN_SINKA, player.getUUID(), player.position(), player.getLookAngle(), 60, ClientboundCinematicSkillPacket.ACTION_START, 1.0f
+                ));
+            }
 
             player.connection.send(new ClientboundSetTitlesAnimationPacket(5, 30, 10));
             player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§e§l[TIÊN TRI: BẬT]")));

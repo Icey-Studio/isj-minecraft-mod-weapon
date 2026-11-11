@@ -76,7 +76,7 @@ public class DomainBarrierBlock extends Block {
                     for (int dy = -6; dy <= 12; dy++) {
                         BlockPos p = pos.offset(dx, dy, dz);
                         if (isAnyDomainBarrier(level.getBlockState(p).getBlock())) {
-                            level.setBlock(p, Blocks.AIR.defaultBlockState(), 2);
+                            level.setBlock(p, Blocks.AIR.defaultBlockState(), 50);
                         }
                     }
                 }
@@ -100,6 +100,11 @@ public class DomainBarrierBlock extends Block {
         player.sendSystemMessage(
                 Component.literal("§6✦ Lãnh Địa Ma Thuật đã sụp đổ hoàn toàn trước uy áp của bạn! Ác ma bị phản phệ rơi vào trạng thái choáng váng.")
         );
+    }
+
+    @Override
+    public float getShadeBrightness(BlockState state, BlockGetter level, BlockPos pos) {
+        return 1.0F;
     }
 
     @Override

@@ -163,6 +163,16 @@ public class PrimordialSummonRitual {
      * Khởi tạo Pháp Trận Chờ Vật Tế (Gọi từ Pháp Điển Sách)
      */
     public static void startWaitingRitual(ServerLevel level, ServerPlayer caster, Vec3 groundPos, DemonType demonType, boolean isWinged) {
+        if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(level, groundPos)) {
+            if (caster != null) {
+                caster.displayClientMessage(
+                        Component.literal("§c⚠️ Không thể tiến hành nghi thức triệu hồi Ác Ma bên trong Kháng Ma Kết Giới! Nồng độ ma tử đã bị triệt tiêu!"),
+                        true
+                );
+            }
+            return;
+        }
+
         Vec3 center = findGroundBelow(level, groundPos);
         SacrificeRequirement sacrifice = rollSacrifice(demonType);
 
@@ -228,6 +238,10 @@ public class PrimordialSummonRitual {
      * Triệu hồi khẩn cấp / Huyết tế (Từ Dân làng, Phù thủy, Kẻ cướp tự hy sinh)
      */
     public static void startImmediate(ServerLevel level, Vec3 groundPos, DemonType demonType, LivingEntity target) {
+        if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(level, groundPos)) {
+            return; // Kháng Ma Kết Giới triệt tiêu hoàn toàn nghi thức huyết tế triệu hồi Ác Ma
+        }
+
         Vec3 center = findGroundBelow(level, groundPos);
         ActiveSummon ritual = new ActiveSummon(level, null, center, demonType, demonType == DemonType.NOIR, null, SummonState.RISING, 90);
         ritual.initialTarget = target;

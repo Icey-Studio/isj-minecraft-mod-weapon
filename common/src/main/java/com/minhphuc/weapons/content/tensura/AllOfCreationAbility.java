@@ -382,7 +382,7 @@ public class AllOfCreationAbility {
         if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return 12500000L;
         if (entity instanceof VelgryndEntity) return 74350000L;
         if (entity instanceof PrimordialDemonEntity demon) {
-            return (demon.hasPhysicalBody() && demon.isNamed()) ? 40000000L : 2800000L;
+            return demon.getCalculatedEP();
         }
         if (entity instanceof Player player) {
             boolean isLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");

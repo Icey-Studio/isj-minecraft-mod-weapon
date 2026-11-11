@@ -11,12 +11,12 @@ import net.minecraft.client.renderer.entity.layers.RenderLayer;
 import net.minecraft.client.renderer.texture.OverlayTexture;
 import net.minecraft.resources.ResourceLocation;
 
-public class DemonEyesLayer extends RenderLayer<PrimordialDemonEntity, PrimordialDemonModel> {
+public class DemonEyesLayer extends RenderLayer<PrimordialDemonEntity, PrimordialDemonModel<PrimordialDemonEntity>> {
 
     private static final ResourceLocation FALLBACK =
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_noir.png");
 
-    public DemonEyesLayer(RenderLayerParent<PrimordialDemonEntity, PrimordialDemonModel> parent) {
+    public DemonEyesLayer(RenderLayerParent<PrimordialDemonEntity, PrimordialDemonModel<PrimordialDemonEntity>> parent) {
         super(parent);
     }
 

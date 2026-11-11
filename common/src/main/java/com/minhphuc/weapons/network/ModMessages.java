@@ -93,6 +93,61 @@ public class ModMessages {
                 ClientboundSyncRykuzinStatePacket::encode,
                 ClientboundSyncRykuzinStatePacket::new,
                 ClientboundSyncRykuzinStatePacket::handle);
+
+        CHANNEL.register(ClientboundNihilityCinematicPacket.class,
+                ClientboundNihilityCinematicPacket::encode,
+                ClientboundNihilityCinematicPacket::new,
+                ClientboundNihilityCinematicPacket::handle);
+
+        CHANNEL.register(ClientboundSupernovaPacket.class,
+                ClientboundSupernovaPacket::encode,
+                ClientboundSupernovaPacket::new,
+                ClientboundSupernovaPacket::handle);
+
+        CHANNEL.register(ClientboundOrbitalStrikePacket.class,
+                ClientboundOrbitalStrikePacket::encode,
+                ClientboundOrbitalStrikePacket::new,
+                ClientboundOrbitalStrikePacket::handle);
+
+        CHANNEL.register(ClientboundAzathothPacket.class,
+                ClientboundAzathothPacket::encode,
+                ClientboundAzathothPacket::new,
+                ClientboundAzathothPacket::handle);
+
+        CHANNEL.register(ClientboundHellflarePacket.class,
+                ClientboundHellflarePacket::encode,
+                ClientboundHellflarePacket::new,
+                ClientboundHellflarePacket::handle);
+
+        CHANNEL.register(ClientboundCinematicSkillPacket.class,
+                ClientboundCinematicSkillPacket::encode,
+                ClientboundCinematicSkillPacket::new,
+                ClientboundCinematicSkillPacket::handle);
+
+        CHANNEL.register(ClientboundOpenGateDialPacket.class,
+                ClientboundOpenGateDialPacket::encode,
+                ClientboundOpenGateDialPacket::new,
+                ClientboundOpenGateDialPacket::handle);
+
+        CHANNEL.register(ServerboundGateDialActionPacket.class,
+                ServerboundGateDialActionPacket::encode,
+                ServerboundGateDialActionPacket::new,
+                ServerboundGateDialActionPacket::handle);
+
+        CHANNEL.register(ServerboundInteractGatePacket.class,
+                ServerboundInteractGatePacket::encode,
+                ServerboundInteractGatePacket::new,
+                ServerboundInteractGatePacket::handle);
+
+        CHANNEL.register(ServerboundAbyssalActionPacket.class,
+                ServerboundAbyssalActionPacket::encode,
+                ServerboundAbyssalActionPacket::new,
+                ServerboundAbyssalActionPacket::handle);
+
+        CHANNEL.register(ClientboundSyncPossessionPacket.class,
+                ClientboundSyncPossessionPacket::encode,
+                ClientboundSyncPossessionPacket::new,
+                ClientboundSyncPossessionPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

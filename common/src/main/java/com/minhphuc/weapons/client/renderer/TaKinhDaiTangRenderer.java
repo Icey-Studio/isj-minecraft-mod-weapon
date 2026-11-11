@@ -16,6 +16,7 @@ public class TaKinhDaiTangRenderer extends MobRenderer<TaKinhDaiTangEntity, TaKi
     public TaKinhDaiTangRenderer(EntityRendererProvider.Context context) {
         super(context, new TaKinhDaiTangModel(context.bakeLayer(TaKinhDaiTangModel.LAYER_LOCATION)), 0.55F);
         this.addLayer(new ItemInHandLayer<>(this, context.getItemInHandRenderer()));
+        this.addLayer(new TaKinhDaiTangGlowLayer(this));
     }
 
     @Override

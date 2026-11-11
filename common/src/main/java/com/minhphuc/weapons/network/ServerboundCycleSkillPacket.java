@@ -32,6 +32,11 @@ public class ServerboundCycleSkillPacket {
             ServerPlayer player = (ServerPlayer) context.getPlayer();
             if (player == null) return;
 
+            if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(player)) {
+                com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.cycleSkill(player);
+                return;
+            }
+
             ItemStack mainHand = player.getMainHandItem();
             ItemStack offHand = player.getOffhandItem();
             ItemStack clawStack = mainHand.getItem() instanceof com.minhphuc.weapons.content.tensura.PrimordialClawItem
