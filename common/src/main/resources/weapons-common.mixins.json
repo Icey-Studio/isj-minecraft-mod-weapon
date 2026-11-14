@@ -12,7 +12,12 @@
     "TextDisplayAccessor",
     "InteractionAccessor",
     "MobAccessor",
-    "ServerPlayerMixin"
+    "MixinMob",
+    "MixinCreeper",
+    "MixinVillager",
+    "ServerPlayerMixin",
+    "LevelMixin",
+    "BiomeMixin"
   ],
   "client": [
     "ItemPropertiesAccessor",

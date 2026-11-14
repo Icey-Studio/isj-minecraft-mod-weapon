@@ -103,13 +103,17 @@ public class HellflareAbility {
     public static void cast(ServerLevel level, ServerPlayer player) {
         Vec3 eyePos = player.getEyePosition(1.0F);
         Vec3 lookVec = player.getLookAngle();
-        Vec3 targetPos = eyePos.add(lookVec.scale(20.0D));
+        long now = level.getGameTime();
+        boolean senseActive = TensuraSkillHelper.isUniversalSenseActive(player.getUUID(), now);
+        double seekRange = senseActive ? 40.0D : 24.0D;
+        Vec3 targetPos = eyePos.add(lookVec.scale(senseActive ? 28.0D : 20.0D));
 
-        // Ưu tiên raycast trúng thẳng vào mob mục tiêu nếu có
-        AABB reachBox = player.getBoundingBox().inflate(24.0D);
-        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, reachBox, ent -> ent != player && ent.isAlive())) {
-            AABB mobBox = e.getBoundingBox().inflate(0.5D);
-            var opt = mobBox.clip(eyePos, eyePos.add(lookVec.scale(24.0D)));
+        // Ưu tiên raycast trúng thẳng vào mob mục tiêu nếu có (mở rộng tầm khóa nếu đang bật Cảm Nhận Vạn Năng)
+        AABB reachBox = player.getBoundingBox().inflate(seekRange);
+        for (LivingEntity e : level.getEntitiesOfClass(LivingEntity.class, reachBox, ent -> TensuraSkillHelper.isValidSkillTarget(player, ent))) {
+            double inflateAmt = (senseActive && TensuraSkillHelper.isTargetSensedBy(player.getUUID(), e, now)) ? 1.4D : 0.5D;
+            AABB mobBox = e.getBoundingBox().inflate(inflateAmt);
+            var opt = mobBox.clip(eyePos, eyePos.add(lookVec.scale(seekRange)));
             if (opt.isPresent()) {
                 targetPos = e.position().add(0, e.getBbHeight() * 0.5D, 0);
                 break;
@@ -407,11 +411,16 @@ public class HellflareAbility {
                     level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 3.0F, 1.2F);
                     level.playSound(null, center.x, center.y, center.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.5F, 0.8F);
 
-                    AABB blastBox = new AABB(center.x - 5.5D, center.y - 5.5D, center.z - 5.5D,
-                                             center.x + 5.5D, center.y + 5.5D, center.z + 5.5D);
+                    boolean prisonCombo = com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.isInPrison(level, center);
+                    AABB blastBox = new AABB(center.x - (prisonCombo ? 7.5D : 5.5D), center.y - 5.5D, center.z - (prisonCombo ? 7.5D : 5.5D),
+                                             center.x + (prisonCombo ? 7.5D : 5.5D), center.y + 5.5D, center.z + (prisonCombo ? 7.5D : 5.5D));
                     List<LivingEntity> blastVictims = level.getEntitiesOfClass(LivingEntity.class, blastBox, LivingEntity::isAlive);
 
-                    float baseFinalDamage = 70.0F;
+                    float baseFinalDamage = prisonCombo ? 105.0F : 70.0F;
+                    if (prisonCombo && hf.caster != null) {
+                        hf.caster.displayClientMessage(Component.literal("§6§l✦ [CỘNG HƯỞNG: LỒNG GIAM VÔ HẠN × HẮC VIÊM NGỤC] §eUy lực bùng nổ +50%!"), true);
+                        level.sendParticles(ParticleTypes.END_ROD, center.x, center.y, center.z, 35, 2.0, 2.0, 2.0, 0.15);
+                    }
 
                     for (LivingEntity victim : blastVictims) {
                         if (victim == hf.caster) continue;

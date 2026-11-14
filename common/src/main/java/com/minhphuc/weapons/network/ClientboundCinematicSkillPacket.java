@@ -83,11 +83,35 @@ public class ClientboundCinematicSkillPacket {
                 com.minhphuc.weapons.client.renderer.ClientCinematicSkillRenderer.receive(
                         this.skillId, this.casterUuid, pos, dir, this.totalTicks, this.powerMultiplier
                 );
-                if (this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_MULTILAYER_BARRIER
+                if (this.skillId == com.minhphuc.weapons.config.SkillVisualConfig.SKILL_SPATIAL_MARK) {
+                    // dirZ >= 0.5 là đồng bộ ngầm (khi bấm G / đăng nhập / cập nhật lại slot sau khi xóa) -> không chiếu lại góc máy mở ma pháp
+                    if (this.dirZ < 0.5) {
+                        com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
+                                this.skillId, this.casterUuid, pos, dir, Math.min(this.totalTicks, 45), this.powerMultiplier
+                        );
+                    }
+                } else if (this.skillId == com.minhphuc.weapons.config.SkillVisualConfig.SKILL_SPATIAL_TELEPORT) {
+                    int mode = (int) Math.round(this.dirX);
+                    int sub = (int) Math.round(this.dirY);
+                    if (mode == 2) {
+                        // Chế độ Ma Pháp Trận cố định: chỉ đổi góc quay 35 ticks khi mới tạo vòng trận (sub == 0)
+                        if (sub == 0 && !com.minhphuc.weapons.client.ClientCinematicSkillHandler.isActive()) {
+                            com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
+                                    this.skillId, this.casterUuid, pos, dir, 35, this.powerMultiplier
+                            );
+                        }
+                    } else if ((mode == 1 || mode == 3) && sub < 0) {
+                        // Gửi sinh vật/vật phẩm tới Ấn Ký -> chỉ vẽ Ma Pháp Trận tại điểm đi / tia sáng ở đích, KHÔNG khóa camera player
+                    } else {
+                        com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
+                                this.skillId, this.casterUuid, pos, dir, this.totalTicks, this.powerMultiplier
+                        );
+                    }
+                } else if (this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_MULTILAYER_BARRIER
                         && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY) {
                     com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
                             this.skillId, this.casterUuid, pos, dir, this.totalTicks, this.powerMultiplier
-                    );
+                     );
                 }
             } else if (this.action == ACTION_STOP) {
                 com.minhphuc.weapons.client.renderer.ClientCinematicSkillRenderer.stop(this.skillId, pos);

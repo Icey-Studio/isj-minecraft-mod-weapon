@@ -148,6 +148,21 @@ public class ModMessages {
                 ClientboundSyncPossessionPacket::encode,
                 ClientboundSyncPossessionPacket::new,
                 ClientboundSyncPossessionPacket::handle);
+
+        CHANNEL.register(ClientboundSyncBarrierPacket.class,
+                ClientboundSyncBarrierPacket::encode,
+                ClientboundSyncBarrierPacket::new,
+                ClientboundSyncBarrierPacket::handle);
+
+        CHANNEL.register(ClientboundSyncSkillStatePacket.class,
+                ClientboundSyncSkillStatePacket::encode,
+                ClientboundSyncSkillStatePacket::new,
+                ClientboundSyncSkillStatePacket::handle);
+
+        CHANNEL.register(ServerboundSkillActionPacket.class,
+                ServerboundSkillActionPacket::encode,
+                ServerboundSkillActionPacket::new,
+                ServerboundSkillActionPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

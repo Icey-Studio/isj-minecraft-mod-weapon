@@ -6,13 +6,16 @@ import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.divine.PurificationPillarAbility;
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
+import com.minhphuc.weapons.content.evolution.UniversalSenseAbility;
 import com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager;
+import com.minhphuc.weapons.content.tensura.ApocalypseAbility;
 import com.minhphuc.weapons.content.tensura.DarkFlameShotAbility;
 import com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility;
 import com.minhphuc.weapons.content.tensura.DragonNovaAbility;
 import com.minhphuc.weapons.content.tensura.HellflareAbility;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
 import com.minhphuc.weapons.content.tensura.NihilityCollapseAbility;
+import com.minhphuc.weapons.content.tensura.SpatialTeleportAbility;
 import com.minhphuc.weapons.content.tensura.SupernovaAbility;
 import com.minhphuc.weapons.content.tensura.VoiceOfTheWorld;
 import com.minhphuc.weapons.content.tensura.PrimordialPactItem;
@@ -214,6 +217,17 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
+                // Kiểm tra xem còn bất kỳ Ác Ma nào CHƯA bị giữ Khế Ước trong người chơi hay không
+                boolean anyUncontracted = false;
+                for (DemonType dt : DemonType.values()) {
+                    if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                        anyUncontracted = true;
+                        break;
+                    }
+                }
+                if (!anyUncontracted) {
+                    return false;
+                }
                 AABB checkArea = new AABB(this.blockPosition()).inflate(64.0D);
                 if (!sl.getEntitiesOfClass(PrimordialDemonEntity.class, checkArea).isEmpty()) {
                     return false;
@@ -287,7 +301,22 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
         // Random DemonType khi spawn tự nhiên (không phải triệu hồi)
         if (spawnType == net.minecraft.world.entity.MobSpawnType.NATURAL
-                || spawnType == net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION) {
+                || spawnType == net.minecraft.world.entity.MobSpawnType.CHUNK_GENERATION
+                || spawnType == net.minecraft.world.entity.MobSpawnType.EVENT
+                || spawnType == net.minecraft.world.entity.MobSpawnType.PATROL) {
+            ServerLevel sl = level.getLevel();
+            // Lọc bỏ các Ác Ma đang nằm trong Khế Ước của người chơi
+            List<DemonType> uncontracted = new ArrayList<>();
+            for (DemonType dt : DemonType.values()) {
+                if (sl == null || !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                    uncontracted.add(dt);
+                }
+            }
+            if (uncontracted.isEmpty()) {
+                this.discard();
+                return spawnData;
+            }
+
             // Tỷ lệ spawn theo độ hiếm (tổng = 100):
             // Rouge: 5%  | Noir: 5%   (Hiếm nhất - Thủy Tổ mạnh nhất)
             // Blanc: 10% | Jaune: 10% (Hiếm - Thủy Tổ mạnh)
@@ -310,6 +339,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
             } else {
                 chosen = DemonType.VERT;        // 75-99: 25%
             }
+            // Nếu Ác Ma quay trúng đang có Khế Ước trong túi người chơi -> Đổi sang Ác Ma chưa có Khế Ước
+            if (!uncontracted.contains(chosen)) {
+                chosen = uncontracted.get(this.random.nextInt(uncontracted.size()));
+            }
             this.setDemonType(chosen);
             this.setWinged(true); // Toàn bộ Thủy Tổ Ác Ma đều sở hữu cánh và khả năng bay
 
@@ -323,7 +356,6 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (chosen == DemonType.JAUNE) {
                     this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(ModItems.GOLDEN_GUN.get()));
                 }
-                ServerLevel sl = level.getLevel();
                 if (sl != null) {
                     BlockPos p = this.blockPosition();
                     String vMsg = "Cảnh báo. Phát hiện Thủy Tổ Ác Ma " + chosen.getColorName() + " (" + chosen.getTitleVi() + ") đã hiện thân cùng Thể Xác Vật Lý tại tọa độ [" + p.getX() + ", " + p.getY() + ", " + p.getZ() + "]!";
@@ -731,11 +763,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (target == null) return true;
         if (target == this) return true;
         if (this.isTame() && this.isAlliedTo(target)) return true;
-        if (this.isMassacreMode() && (target instanceof net.minecraft.world.entity.npc.AbstractVillager || target instanceof net.minecraft.world.entity.animal.IronGolem || target instanceof net.minecraft.world.entity.animal.SnowGolem)) {
-            return false; // Trong chế độ Tàn Sát, Dân Làng và Iron Golem KHÔNG được miễn nhiễm!
+        if (this.getOwner() != null && target == this.getOwner()) return true;
+        if (this.isMassacreMode()) {
+            return false; // Trong chế độ Tàn Sát, TOÀN BỘ sinh vật (bao gồm Dân Làng đang ngủ, Golem, thú nuôi hoang, quái vật) đều KHÔNG được miễn nhiễm!
         }
         if (isTargetImmune(target)) return true;
-        if (this.getOwner() != null && target == this.getOwner()) return true;
         return false;
     }
 
@@ -745,6 +777,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
      */
     public void applyCarreraBlockDestruction(Vec3 center, float radius) {
         if (!(this.level() instanceof ServerLevel sl) || center == null) return;
+        if (!com.minhphuc.weapons.content.tensura.TensuraSkillHelper.canDestroyTerrain(sl, this)) return;
         int r = Math.min(3, Math.round(radius));
         BlockPos cPos = BlockPos.containing(center);
         int destroyed = 0;
@@ -1829,6 +1862,12 @@ public class PrimordialDemonEntity extends TamableAnimal {
     private void summonSupportMinions() {
         if (!(this.level() instanceof ServerLevel sl)) return;
 
+        boolean canSummonBleu = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.BLEU);
+        boolean canSummonVert = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.VERT);
+        if (!canSummonBleu && !canSummonVert) {
+            return; // Cả Bleu và Vert đều đang nằm trong Khế Ước của người chơi -> Rouge không thể triệu hồi!
+        }
+
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 2.0F, 1.2F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BELL_BLOCK, SoundSource.HOSTILE, 2.5F, 0.8F);
 
@@ -1836,33 +1875,37 @@ public class PrimordialDemonEntity extends TamableAnimal {
         for (ServerPlayer p : sl.players()) {
             if (p.position().distanceTo(this.position()) <= 48.0D) {
                 p.displayClientMessage(
-                        Component.literal("§c§l[ROUGE - GUY CRIMSON] §eRa đây, Bleu, Vert! Hãy cho kẻ này thấy thế nào là sức mạnh của Khởi Nguyên!"),
+                        Component.literal("§c§l[ROUGE - GUY CRIMSON] §eRa đây, " + (canSummonBleu && canSummonVert ? "Bleu, Vert" : (canSummonBleu ? "Bleu" : "Vert")) + "! Hãy cho kẻ này thấy thế nào là sức mạnh của Khởi Nguyên!"),
                         false
                 );
             }
         }
 
-        // 1. Triệu hồi Rain (Bleu) - Băng Cực Hỗ Trợ
-        PrimordialDemonEntity rain = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
-        rain.setDemonType(DemonType.BLEU);
-        rain.setSupportMinion(true);
-        rain.setPhysicalBody(true);
-        rain.setWinged(true);
-        rain.moveTo(this.getX() + 3.0D, this.getY(), this.getZ() + 3.0D, this.getYRot(), 0.0F);
-        rain.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
-        if (this.getTarget() != null) rain.setTarget(this.getTarget());
-        sl.addFreshEntity(rain);
+        // 1. Triệu hồi Rain (Bleu) - Băng Cực Hỗ Trợ (Chỉ khi người chơi không giữ Khế Ước của Bleu)
+        if (canSummonBleu) {
+            PrimordialDemonEntity rain = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
+            rain.setDemonType(DemonType.BLEU);
+            rain.setSupportMinion(true);
+            rain.setPhysicalBody(true);
+            rain.setWinged(true);
+            rain.moveTo(this.getX() + 3.0D, this.getY(), this.getZ() + 3.0D, this.getYRot(), 0.0F);
+            rain.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+            if (this.getTarget() != null) rain.setTarget(this.getTarget());
+            sl.addFreshEntity(rain);
+        }
 
-        // 2. Triệu hồi Misery (Vert) - Kết Giới Hỗ Trợ
-        PrimordialDemonEntity misery = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
-        misery.setDemonType(DemonType.VERT);
-        misery.setSupportMinion(true);
-        misery.setPhysicalBody(true);
-        misery.setWinged(true);
-        misery.moveTo(this.getX() - 3.0D, this.getY(), this.getZ() - 3.0D, this.getYRot(), 0.0F);
-        misery.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
-        if (this.getTarget() != null) misery.setTarget(this.getTarget());
-        sl.addFreshEntity(misery);
+        // 2. Triệu hồi Misery (Vert) - Kết Giới Hỗ Trợ (Chỉ khi người chơi không giữ Khế Ước của Vert)
+        if (canSummonVert) {
+            PrimordialDemonEntity misery = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
+            misery.setDemonType(DemonType.VERT);
+            misery.setSupportMinion(true);
+            misery.setPhysicalBody(true);
+            misery.setWinged(true);
+            misery.moveTo(this.getX() - 3.0D, this.getY(), this.getZ() - 3.0D, this.getYRot(), 0.0F);
+            misery.finalizeSpawn(sl, sl.getCurrentDifficultyAt(this.blockPosition()), net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+            if (this.getTarget() != null) misery.setTarget(this.getTarget());
+            sl.addFreshEntity(misery);
+        }
     }
 
     @Override
@@ -2675,7 +2718,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
             this.getLookControl().setLookAt(target, 30.0F, 30.0F);
         }
 
-        // Toàn bộ kỹ năng Khế Ước (100 -> 112) được mở khóa hoàn toàn, không cần ràng buộc Tên hay Thể Xác!
+        // Toàn bộ kỹ năng Khế Ước (100 -> 116) được mở khóa hoàn toàn, không cần ràng buộc Tên hay Thể Xác!
         if (skillIndex >= 100) {
             switch (skillIndex) {
                 case 100 -> executeContractAntiMagicBarrier(target);
@@ -2691,6 +2734,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 case 110 -> executeContractSupernova(target);
                 case 111 -> executeContractDimensionalSanctuary(target);
                 case 112 -> executeContractDragonNova(target);
+                case 113 -> executeContractSpatialMark(target);
+                case 114 -> executeContractSpatialTeleport(target);
+                case 115 -> executeContractUniversalSense(target);
+                case 116 -> executeContractApocalypse(target);
             }
             this.triggerSkillCooldown(30);
             return;
@@ -2909,6 +2956,39 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (!(this.level() instanceof ServerLevel sl)) return;
         ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
         DragonNovaAbility.castFromDemon(sl, this, owner);
+    }
+
+    public void executeContractSpatialMark(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        if (owner == null) return;
+        announceSkill("Ma Pháp Không Gian: Đánh Dấu (Spatial Mark)");
+        SpatialTeleportAbility.castMarkFromDemon(sl, owner, this);
+    }
+
+    public void executeContractSpatialTeleport(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        if (owner == null) return;
+        announceSkill("Ma Pháp Không Gian: Dịch Chuyển (Spatial Teleportation)");
+        SpatialTeleportAbility.castTeleportFromDemon(sl, owner, this);
+    }
+
+    public void executeContractUniversalSense(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        announceSkill("Cảm Nhận Vạn Năng (Universal Sense)");
+        UniversalSenseAbility.castFromDemon(sl, this, owner);
+    }
+
+    public void executeContractApocalypse(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
+        if (owner != null) {
+            com.minhphuc.weapons.content.tensura.TensuraSkillHelper.recordDemonResonance(owner.getUUID(), "apocalypse", sl.getGameTime(), 140);
+        }
+        announceSkill("Ngày Tận Thế (Apocalypse)");
+        ApocalypseAbility.castFromDemon(sl, this, owner);
     }
 
     // =========================================================================
@@ -3363,25 +3443,46 @@ public class PrimordialDemonEntity extends TamableAnimal {
                         this.demon.setMassacreMode(false);
                         this.demon.setTarget(null);
                         if (this.demon.getOwner() instanceof ServerPlayer owner) {
-                            owner.sendSystemMessage(Component.literal("§f§l[BLANC - TESTAROSSA] §c\"Ara ara~ Toàn bộ sinh mạng trong ngôi làng này đã bị xóa sổ sạch sẽ theo ý chủ nhân.\""));
-                            owner.displayClientMessage(Component.literal("§4§l[TÀN SÁT HOÀN TẤT] §fBlanc đã tiêu diệt toàn bộ Dân Làng & Iron Golem trong phạm vi 100m!"), true);
+                            String dName = this.demon.getEffectiveDemonName();
+                            owner.sendSystemMessage(Component.literal("§4§l[" + dName.toUpperCase() + "] §c\"Toàn bộ sinh mạng trong vùng đất này đã bị xóa sổ sạch sẽ theo ý chủ nhân.\""));
+                            owner.displayClientMessage(Component.literal("§4§l[TÀN SÁT HOÀN TẤT] §f" + dName + " đã tiêu diệt toàn bộ sinh vật trong phạm vi 100m!"), true);
                         }
                     }
                     return;
                 }
             }
 
+            // Đánh thức ngay lập tức nếu mục tiêu (như Dân Làng) đang ngủ trên giường để đảm bảo truy sát triệt để 100%
+            if (this.currentVictim.isSleeping()) {
+                this.currentVictim.stopSleeping();
+            }
+
             this.demon.setTarget(this.currentVictim);
             this.demon.getLookControl().setLookAt(this.currentVictim, 40.0F, 40.0F);
             double dist = this.demon.distanceTo(this.currentVictim);
 
-            if (dist > 18.0D || (dist > 5.0D && this.demon.tickCount % 25 == 0)) {
+            if (dist > 14.0D || (dist > 4.0D && this.demon.tickCount % 20 == 0) || !this.demon.getSensing().hasLineOfSight(this.currentVictim)) {
                 Vec3 vPos = this.currentVictim.position();
-                this.demon.teleportTo(vPos.x + (this.demon.getRandom().nextDouble() - 0.5D) * 2.5D, vPos.y + 0.5D, vPos.z + (this.demon.getRandom().nextDouble() - 0.5D) * 2.5D);
-                sl.sendParticles(ParticleTypes.END_ROD, this.demon.getX(), this.demon.getY() + 1.0D, this.demon.getZ(), 15, 0.3D, 0.5D, 0.3D, 0.05D);
+                this.demon.teleportTo(vPos.x + (this.demon.getRandom().nextDouble() - 0.5D) * 1.5D, vPos.y + 0.2D, vPos.z + (this.demon.getRandom().nextDouble() - 0.5D) * 1.5D);
+                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, this.demon.getX(), this.demon.getY() + 1.0D, this.demon.getZ(), 15, 0.3D, 0.5D, 0.3D, 0.05D);
                 sl.playSound(null, this.demon.getX(), this.demon.getY(), this.demon.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.5F, 1.4F);
             } else {
                 this.demon.getNavigation().moveTo(this.currentVictim, 1.6D);
+            }
+
+            // Sóng xung kích tàn sát diện rộng quanh Ác Ma (giết sạch cả Dân Làng đang ngủ trên giường & mọi sinh vật lân cận)
+            if (this.demon.tickCount % 10 == 0) {
+                List<LivingEntity> nearbyVictims = sl.getEntitiesOfClass(
+                        LivingEntity.class,
+                        this.demon.getBoundingBox().inflate(10.0D, 6.0D, 10.0D),
+                        this::isValidMassacreVictim
+                );
+                for (LivingEntity v : nearbyVictims) {
+                    if (v.isSleeping()) {
+                        v.stopSleeping();
+                    }
+                    this.demon.dealDemonicDamage(v, (float) Math.max(500.0D, this.demon.getAttackDamage() * 2.5D));
+                }
             }
 
             if (dist <= 4.5D && this.demon.tickCount % 10 == 0) {
@@ -3399,16 +3500,22 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
         }
 
+        private boolean isValidMassacreVictim(LivingEntity e) {
+            if (e == null || e == this.demon || !e.isAlive()) return false;
+            if (this.demon.isAlliedTo(e)) return false;
+            if (this.demon.getOwner() != null && e == this.demon.getOwner()) return false;
+            if (e instanceof Player p && (p.isCreative() || p.isSpectator())) return false;
+            return true;
+        }
+
         private LivingEntity findNextVictim() {
             List<LivingEntity> victims = this.demon.level().getEntitiesOfClass(
                     LivingEntity.class,
-                    this.demon.getBoundingBox().inflate(100.0D, 40.0D, 100.0D),
-                    e -> e.isAlive() && (e instanceof net.minecraft.world.entity.npc.AbstractVillager
-                            || e instanceof net.minecraft.world.entity.animal.IronGolem
-                            || e instanceof net.minecraft.world.entity.animal.SnowGolem)
+                    this.demon.getBoundingBox().inflate(100.0D, 45.0D, 100.0D),
+                    this::isValidMassacreVictim
             );
             if (victims.isEmpty()) return null;
-            // Ưu tiên giết Iron Golem bảo vệ làng trước hoặc mục tiêu gần nhất
+            // Ưu tiên giết Iron Golem bảo vệ trước, sau đó đến mục tiêu gần nhất (bao gồm Dân Làng đang ngủ, quái, thú, sinh vật...)
             victims.sort((a, b) -> {
                 boolean aGolem = a instanceof net.minecraft.world.entity.animal.IronGolem;
                 boolean bGolem = b instanceof net.minecraft.world.entity.animal.IronGolem;

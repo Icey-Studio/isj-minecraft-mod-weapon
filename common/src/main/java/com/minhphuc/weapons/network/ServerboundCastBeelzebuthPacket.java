@@ -31,6 +31,7 @@ public class ServerboundCastBeelzebuthPacket {
 
             if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(player)) {
                 com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.castSkill(player);
+                com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(player);
                 return;
             }
 
@@ -46,13 +47,12 @@ public class ServerboundCastBeelzebuthPacket {
                 int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
 
                 if (selectedSkill < lordSkills) {
-                    // Thi triển Kỹ năng Ma Vương / Thần Linh Vũ Trang (Không có thời gian hồi chiêu)
                     TensuraSkillDispatcher.executeSkill(serverLevel, player, selectedSkill, hasCreation);
                 } else if (isPrimordial) {
-                    // Kỹ năng độc bản của Thủy Tổ Ác Ma
                     int primordialSkillIdx = selectedSkill - lordSkills;
                     PrimordialSkillDispatcher.castSkill(serverLevel, player, primordialSkillIdx);
                 }
+                com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(player);
             }
         });
     }

@@ -129,10 +129,12 @@ public class LuciferReplicationAbility {
             level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, pt.x, pt.y + 1.0D, pt.z, 10, 0.8D, 0.8D, 0.8D, 0.08D);
             level.sendParticles(ParticleTypes.LAVA, pt.x, pt.y + 0.5D, pt.z, 4, 0.5D, 0.5D, 0.5D, 0.02D);
 
-            BlockPos bp = BlockPos.containing(pt);
-            BlockState st = level.getBlockState(bp);
-            if (!st.isAir() && st.getDestroySpeed(level, bp) >= 0.0F && level.random.nextFloat() <= 0.6F) {
-                level.destroyBlock(bp, false);
+            if (TensuraSkillHelper.canDestroyTerrain(level, player)) {
+                BlockPos bp = BlockPos.containing(pt);
+                BlockState st = level.getBlockState(bp);
+                if (!st.isAir() && st.getDestroySpeed(level, bp) >= 0.0F && level.random.nextFloat() <= 0.6F) {
+                    level.destroyBlock(bp, false);
+                }
             }
 
             AABB box = new AABB(pt.x - 2.5D, pt.y - 1.5D, pt.z - 2.5D, pt.x + 2.5D, pt.y + 2.5D, pt.z + 2.5D);

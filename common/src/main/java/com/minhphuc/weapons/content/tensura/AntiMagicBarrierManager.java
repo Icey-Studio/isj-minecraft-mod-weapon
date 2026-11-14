@@ -5,6 +5,8 @@ import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModBlocks;
+import com.minhphuc.weapons.network.ClientboundSyncBarrierPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -113,6 +115,30 @@ public class AntiMagicBarrierManager {
     }
 
     /**
+     * Lấy độ cao mái vòm lý thuyết tại tọa độ (x, z) để chặn đứng toàn bộ mưa/tuyết ngay tại mặt vòm.
+     */
+    public static int getDomeRoofY(net.minecraft.world.level.Level level, int x, int z) {
+        if (ACTIVE_BARRIERS.isEmpty() || level == null) return Integer.MIN_VALUE;
+        int maxRoof = Integer.MIN_VALUE;
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier barrier : ACTIVE_BARRIERS) {
+                if (barrier.level == level) {
+                    double dx = (x + 0.5) - barrier.center.x;
+                    double dz = (z + 0.5) - barrier.center.z;
+                    double distSq = dx * dx + dz * dz;
+                    double R = barrier.radius;
+                    if (distSq <= R * R) {
+                        double normR = Math.sqrt(distSq) / R;
+                        double roof = barrier.center.y + barrier.height * Math.sqrt(Math.max(0.0, 1.0 - normR * normR));
+                        maxRoof = Math.max(maxRoof, (int) Math.ceil(roof));
+                    }
+                }
+            }
+        }
+        return maxRoof;
+    }
+
+    /**
      * Tự động quét và kích hoạt Kháng Ma Kết Giới ngẫu nhiên lâu lâu tại các ngôi làng.
      */
     public static void checkAndSpawnVillageBarriers(ServerLevel level) {
@@ -161,8 +187,10 @@ public class AntiMagicBarrierManager {
         double height = 40.0;
         ActiveBarrier barrier = new ActiveBarrier(level, null, center, radius, height, true);
         barrier.durability = 350;
+        AntiMagicVillageRestorer.purifyBarrierArea(level, barrier);
         buildDome(barrier);
         ACTIVE_BARRIERS.add(barrier);
+        syncBarrierAdded(barrier);
 
         level.playSound(null, center.x, center.y, center.z,
                 SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 4.0F, 0.7F);
@@ -202,8 +230,10 @@ public class AntiMagicBarrierManager {
         double height = 70.0; // Tăng chiều cao tương xứng giữ tỉ lệ vòm chuẩn
 
         ActiveBarrier barrier = new ActiveBarrier(level, player, center, radius, height, false);
+        AntiMagicVillageRestorer.purifyBarrierArea(level, barrier);
         buildDome(barrier);
         ACTIVE_BARRIERS.add(barrier);
+        syncBarrierAdded(barrier);
 
         level.playSound(null, center.x, center.y, center.z,
                 SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.0F, 1.0F);
@@ -221,8 +251,10 @@ public class AntiMagicBarrierManager {
 
     public static ActiveBarrier spawnDemonBarrier(ServerLevel level, ServerPlayer owner, Vec3 center, double radius, double height) {
         ActiveBarrier barrier = new ActiveBarrier(level, owner, center, radius, height, false);
+        AntiMagicVillageRestorer.purifyBarrierArea(level, barrier);
         buildDome(barrier);
         ACTIVE_BARRIERS.add(barrier);
+        syncBarrierAdded(barrier);
         level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.0F, 1.0F);
         level.playSound(null, center.x, center.y, center.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2.5F, 1.4F);
         return barrier;
@@ -256,8 +288,10 @@ public class AntiMagicBarrierManager {
         double height = 28.0;
 
         ActiveBarrier barrier = new ActiveBarrier(level, null, deathPos, radius, height, true);
+        AntiMagicVillageRestorer.purifyBarrierArea(level, barrier);
         buildDome(barrier);
         ACTIVE_BARRIERS.add(barrier);
+        syncBarrierAdded(barrier);
 
         level.playSound(null, deathPos.x, deathPos.y, deathPos.z,
                 SoundEvents.BELL_BLOCK, SoundSource.BLOCKS, 3.0F, 0.8F);
@@ -482,6 +516,36 @@ public class AntiMagicBarrierManager {
             }
         }
         barrier.replacedBlocks.clear();
+        syncBarrierRemoved(barrier);
+    }
+
+    private static void syncBarrierAdded(ActiveBarrier b) {
+        if (b != null && b.level != null) {
+            ModMessages.sendToPlayers(b.level.players(), new ClientboundSyncBarrierPacket(
+                    b.id, ClientboundSyncBarrierPacket.ACTION_ADD, b.center, b.radius, b.height, b.lowestYOffset, b.isVillager
+            ));
+        }
+    }
+
+    private static void syncBarrierRemoved(ActiveBarrier b) {
+        if (b != null && b.level != null) {
+            ModMessages.sendToPlayers(b.level.players(), new ClientboundSyncBarrierPacket(
+                    b.id, ClientboundSyncBarrierPacket.ACTION_REMOVE, b.center, 0, 0, 0, false
+            ));
+        }
+    }
+
+    public static void syncBarriersToPlayer(ServerPlayer player) {
+        if (player == null || player.serverLevel() == null) return;
+        synchronized (ACTIVE_BARRIERS) {
+            for (ActiveBarrier b : ACTIVE_BARRIERS) {
+                if (b.level == player.serverLevel()) {
+                    ModMessages.sendToPlayer(new ClientboundSyncBarrierPacket(
+                            b.id, ClientboundSyncBarrierPacket.ACTION_ADD, b.center, b.radius, b.height, b.lowestYOffset, b.isVillager
+                    ), player);
+                }
+            }
+        }
     }
 
     public static void cleanPlayerBarriers(UUID playerUuid) {
@@ -507,6 +571,11 @@ public class AntiMagicBarrierManager {
                     cleanBarrier(b);
                 }
             }
+        }
+        if (level instanceof ServerLevel sl) {
+            ModMessages.sendToPlayers(sl.players(), new ClientboundSyncBarrierPacket(
+                    UUID.randomUUID(), ClientboundSyncBarrierPacket.ACTION_CLEAR, Vec3.ZERO, 0, 0, 0, false
+            ));
         }
     }
 
@@ -548,6 +617,11 @@ public class AntiMagicBarrierManager {
                         level.sendParticles(LIME_BARRIER, midX, center.y + (H * 0.5), midZ, 1, 0, 0, 0, 0);
                     }
                     level.sendParticles(ParticleTypes.HAPPY_VILLAGER, center.x, center.y + H, center.z, 2, 0.4, 0.1, 0.4, 0);
+                }
+
+                // 1.1. Duy trì phước lành hoa màu, tan băng, chống tuyết lún mỗi 40 ticks
+                if (barrier.ticksAlive % 40 == 0) {
+                    AntiMagicVillageRestorer.tickBarrierBlessings(level, barrier);
                 }
 
                 // 2. Quét thực thể trong phạm vi kết giới từ mặt đất tới nóc vòm (Throttling: mỗi 20 ticks = 1s, chỉ lọc Mob thù địch)

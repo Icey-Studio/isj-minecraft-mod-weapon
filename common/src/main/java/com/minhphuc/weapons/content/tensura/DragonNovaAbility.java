@@ -65,6 +65,7 @@ public class DragonNovaAbility {
         public int currentTick = 0;
         public final int totalTicks = 75;
         public Vec3 lastHitPos = null;
+        public boolean twinResonance = false;
 
         // Ma Pháp Trận Tím 3D Dưới Chân
         public Display.ItemDisplay groundCircle = null;
@@ -103,6 +104,9 @@ public class DragonNovaAbility {
         if (ACTIVE_NOVAS.stream().anyMatch(n -> n.demonCaster == demon)) return false;
 
         ActiveDragonNova nova = new ActiveDragonNova(level, owner, demon);
+        if (owner != null) {
+            TensuraSkillHelper.recordDemonResonance(owner.getUUID(), "dragon_nova", level.getGameTime(), 140);
+        }
 
         // Gửi packet tới client với 75 ticks để cả 3 hồi đều hiển thị trọn vẹn:
         // Hồi 1 (0-30): Quả cầu hạt nhân plasma Starlight
@@ -167,6 +171,10 @@ public class DragonNovaAbility {
         // KHÔNG CẦN HỒI NĂNG LƯỢNG / KHÔNG CẦN HỒI CHIÊU: Có thể dùng liên tục khi hoàn tất mỗi lượt!
 
         ActiveDragonNova nova = new ActiveDragonNova(level, player);
+        if (TensuraSkillHelper.consumeDemonResonance(player, "dragon_nova", level.getGameTime())) {
+            nova.twinResonance = true;
+            player.displayClientMessage(Component.literal("§d§l✦ [CỘNG HƯỞNG CHỦ-TỚ × DRAGO-NOVA] §eSát thương tinh trần tăng +25%!"), true);
+        }
 
         boolean cinematic = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_DRAGON_NOVA);
         if (cinematic) {
@@ -406,7 +414,8 @@ public class DragonNovaAbility {
                 double helixRadius = 1.6D;
 
                 // 1. Phá hủy địa hình mạnh mẽ (khoét rãnh hầm bán kính 4 block giống hệt Milim - Carrera hoặc Người chơi)
-                boolean canBreakBlocks = (nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE);
+                boolean canBreakBlocks = ((nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE))
+                        && TensuraSkillHelper.canDestroyTerrain(level, nova.demonCaster != null ? nova.demonCaster : caster);
                 if (canBreakBlocks) {
                     int tunnelRadius = 4;
                     int tunnelRadiusSq = tunnelRadius * tunnelRadius;
@@ -431,7 +440,7 @@ public class DragonNovaAbility {
                 }
 
                 // 2. Gây cháy lớn cho địa hình xung quanh (ngoại vi bán kính 7 blocks giống hệt Milim)
-                if (tick == 30 || tick == 42) {
+                if ((tick == 30 || tick == 42) && canBreakBlocks) {
                     int fireRadius = 7;
                     int fireRadiusSq = fireRadius * fireRadius;
                     for (double d = 2.0D; d < beamDist; d += 4.0D) {
@@ -514,12 +523,13 @@ public class DragonNovaAbility {
                             target.hasImpulse = true;
 
                             // Sát thương ma pháp xuyên giáp cực lớn
+                            float resMult = nova.twinResonance ? 1.25F : 1.0F;
                             target.addTag("DragonNovaDamage");
-                            target.hurt(level.damageSources().magic(), 500.0F);
+                            target.hurt(level.damageSources().magic(), 500.0F * resMult);
                             if (caster instanceof ServerPlayer sp) {
-                                target.hurt(level.damageSources().playerAttack(sp), 1500.0F);
+                                target.hurt(level.damageSources().playerAttack(sp), 1500.0F * resMult);
                             } else {
-                                target.hurt(level.damageSources().mobAttack(caster), 1500.0F);
+                                target.hurt(level.damageSources().mobAttack(caster), 1500.0F * resMult);
                             }
                             target.removeTag("DragonNovaDamage");
 
@@ -545,7 +555,8 @@ public class DragonNovaAbility {
                 BlockPos impactCenter = BlockPos.containing(hit);
 
                 // 1. Phá hủy địa hình tạo Hố Bom khổng lồ bán kính 10 blocks (sâu -6 đến 8) chuẩn Milim (Carrera hoặc Người chơi)
-                boolean canBreakBlocks = (nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE);
+                boolean canBreakBlocks = ((nova.demonCaster == null) || (nova.demonCaster.getDemonType() == com.minhphuc.weapons.entity.tensura.DemonType.JAUNE))
+                        && TensuraSkillHelper.canDestroyTerrain(level, nova.demonCaster != null ? nova.demonCaster : caster);
                 if (canBreakBlocks) {
                     int craterRadius = 10;
                     int craterRadiusSq = craterRadius * craterRadius;
@@ -565,13 +576,15 @@ public class DragonNovaAbility {
                 }
 
                 // 2. Vành đai biển lửa bao phủ mặt đất bán kính 16m chuẩn Milim
-                int impactFireRadius = 16;
-                for (int ix = -impactFireRadius; ix <= impactFireRadius; ix++) {
-                    for (int iz = -impactFireRadius; iz <= impactFireRadius; iz++) {
-                        if (ix * ix + iz * iz <= impactFireRadius * impactFireRadius && RANDOM.nextFloat() < 0.55F) {
-                            BlockPos floorPos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, impactCenter.offset(ix, 0, iz));
-                            if (level.getBlockState(floorPos).isAir() && level.getBlockState(floorPos.below()).isSolid()) {
-                                level.setBlockAndUpdate(floorPos, Blocks.FIRE.defaultBlockState());
+                if (canBreakBlocks) {
+                    int impactFireRadius = 16;
+                    for (int ix = -impactFireRadius; ix <= impactFireRadius; ix++) {
+                        for (int iz = -impactFireRadius; iz <= impactFireRadius; iz++) {
+                            if (ix * ix + iz * iz <= impactFireRadius * impactFireRadius && RANDOM.nextFloat() < 0.55F) {
+                                BlockPos floorPos = level.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, impactCenter.offset(ix, 0, iz));
+                                if (level.getBlockState(floorPos).isAir() && level.getBlockState(floorPos.below()).isSolid()) {
+                                    level.setBlockAndUpdate(floorPos, Blocks.FIRE.defaultBlockState());
+                                }
                             }
                         }
                     }

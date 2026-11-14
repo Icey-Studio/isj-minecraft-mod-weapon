@@ -196,6 +196,19 @@ public class HarvestFestival {
 
                 // Thức tỉnh thành Chân Ma Vương
                 EntityDataHelper.getCustomData(r.player).putBoolean("TensuraTrueDemonLord", true);
+                EntityDataHelper.getCustomData(r.player).putBoolean("TensuraAwakenedDemonLord", true);
+
+                // Tăng vĩnh viễn lượng máu tối đa lên 40 tim (80 HP)
+                var hpAttr = r.player.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                if (hpAttr != null && hpAttr.getBaseValue() < 80.0D) {
+                    hpAttr.setBaseValue(80.0D);
+                }
+                r.player.setHealth(r.player.getMaxHealth());
+
+                // Kích hoạt ngay quyền bay lượn trên không trung cho Chân Ma Vương
+                r.player.getAbilities().mayfly = true;
+                r.player.getAbilities().setFlyingSpeed(0.08F);
+                r.player.onUpdateAbilities();
 
                 // Nếu là Hoàng Sắc Thủy Tổ (Jaune), ban tặng Thần Khí Súng Lục Hoàng Kim
                 if (PrimordialPlayerDataHelper.getPrimordialType(r.player) == DemonType.JAUNE) {

@@ -450,19 +450,13 @@ public class AbyssalGovernanceManager {
             // TÌM TỌA ĐỘ AN TOÀN TUYỆT ĐỐI - KHÔNG BAO GIỜ BỊ KẸT TRONG ĐÁ
             BlockPos safePos = findSafeTeleportPos(level, foundPos, isNether, isUnderground);
 
-            // Dịch chuyển tức thời
-            player.teleportTo(safePos.getX() + 0.5D, safePos.getY() + 0.1D, safePos.getZ() + 0.5D);
-            player.fallDistance = 0.0F;
-
             // Ban phát buff bảo vệ hạ cánh chống ngạt thở, chống dung nham & nhìn đêm
-            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 160, 4, false, false));
-            player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 160, 0, false, false));
-            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 240, 0, false, false));
+            player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 4, false, false));
+            player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 240, 0, false, false));
+            player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 300, 0, false, false));
 
-            // Hiệu ứng hạt Cổng Ma Giới
-            level.sendParticles(ParticleTypes.PORTAL, safePos.getX() + 0.5D, safePos.getY() + 1.0D, safePos.getZ() + 0.5D, 60, 0.6D, 1.0D, 0.6D, 0.2D);
-            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, safePos.getX() + 0.5D, safePos.getY() + 0.5D, safePos.getZ() + 0.5D, 30, 0.4D, 0.4D, 0.4D, 0.05D);
-            level.playSound(null, safePos.getX(), safePos.getY(), safePos.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.5F, 1.0F);
+            // Thi triển hiệu ứng Ma Pháp Trận Không Gian 3D & 6 Góc Máy Điện Ảnh (giống hệt skill Dịch Chuyển)
+            SpatialTeleportAbility.executeCinematicDemonTeleport(level, player, safePos, destTitle);
 
             announceVoiceOfTheWorld(player, "Cổng Ma Giới đã kết nối thành công tới " + destTitle + " tại [" + safePos.getX() + ", " + safePos.getY() + ", " + safePos.getZ() + "]. Nơi này đã được đánh dấu chinh phục!");
         } else {
@@ -482,14 +476,12 @@ public class AbyssalGovernanceManager {
         ServerLevel level = player.serverLevel();
 
         BlockPos safePos = findSafeTeleportPos(level, vaultPos, false, false);
-        player.teleportTo(safePos.getX() + 0.5D, safePos.getY() + 0.1D, safePos.getZ() + 0.5D);
-        player.fallDistance = 0.0F;
-        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 4, false, false));
+        player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 160, 4, false, false));
 
-        level.sendParticles(ParticleTypes.PORTAL, safePos.getX() + 0.5D, safePos.getY() + 1.0D, safePos.getZ() + 0.5D, 40, 0.5D, 0.8D, 0.5D, 0.1D);
-        level.playSound(null, safePos.getX(), safePos.getY(), safePos.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.5F, 1.0F);
+        // Thi triển hiệu ứng Ma Pháp Trận Không Gian 3D & 6 Góc Máy Điện Ảnh khi dịch chuyển về Rương Căn Cứ
+        SpatialTeleportAbility.executeCinematicDemonTeleport(level, player, safePos, "Rương Căn Cứ");
 
-        player.displayClientMessage(Component.literal("§a✔ [Cổng Không Gian] Đã xé rách thứ nguyên trở về Rương Căn Cứ an toàn!"), true);
+        player.displayClientMessage(Component.literal("§a✔ [Cổng Không Gian] Đã mở ma pháp trận thứ nguyên dịch chuyển về Rương Căn Cứ!"), true);
         announceVoiceOfTheWorld(player, "Đã mở cổng thứ nguyên trở về Rương Căn Cứ an toàn.");
     }
 

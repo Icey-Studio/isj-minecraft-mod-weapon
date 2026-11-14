@@ -68,11 +68,17 @@ public class PrimordialPlayerDataHelper {
 
     public static boolean isDemonLord(Player player) {
         if (player == null) return false;
+        CompoundTag tag = EntityDataHelper.getCustomData(player);
+        boolean playerIsLord = tag.getBoolean("TensuraTrueDemonLord")
+                || tag.getBoolean("TensuraAwakenedDemonLord")
+                || tag.getBoolean("TensuraDemonLord")
+                || player.getTags().contains("TensuraTrueDemonLord")
+                || player.getTags().contains("TensuraDemonLordMob");
+        if (playerIsLord) return true;
         if (PrimordialPossessionManager.isPossessing(player)) {
             return PrimordialPossessionManager.isDemonLord(player);
         }
-        CompoundTag tag = EntityDataHelper.getCustomData(player);
-        return tag.getBoolean("TensuraTrueDemonLord");
+        return false;
     }
 
     public static int getSelectedSkillIndex(Player player) {
@@ -99,10 +105,8 @@ public class PrimordialPlayerDataHelper {
         tag.remove(NBT_PRIMORDIAL_TYPE);
         tag.remove(NBT_PHYSICAL_BODY);
         tag.remove(NBT_SELECTED_SKILL);
-        // Reset luôn trạng thái Ma Vương khi chết theo luật chơi
-        tag.remove("TensuraTrueDemonLord");
-        tag.remove("TensuraHasSeed");
-        tag.remove("TensuraCollectedSouls");
+        // Lưu ý: Tuyệt đối KHÔNG xóa TensuraTrueDemonLord / TensuraAwakenedDemonLord khi chết,
+        // vì đây là tiến hóa linh hồn vĩnh cửu của Chân Ma Vương.
     }
 
     public static int getDemonColor(DemonType type) {

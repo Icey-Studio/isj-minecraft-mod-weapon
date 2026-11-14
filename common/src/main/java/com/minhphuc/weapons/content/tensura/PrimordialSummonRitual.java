@@ -242,6 +242,21 @@ public class PrimordialSummonRitual {
             return; // Kháng Ma Kết Giới triệt tiêu hoàn toàn nghi thức huyết tế triệu hồi Ác Ma
         }
 
+        // Nếu Ác Ma này đang có Khế Ước trong người của bất kỳ người chơi nào -> Các sinh vật khác KHÔNG THỂ triệu hồi!
+        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, demonType)) {
+            DemonType replacement = null;
+            for (DemonType candidate : DemonType.values()) {
+                if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, candidate)) {
+                    replacement = candidate;
+                    break;
+                }
+            }
+            if (replacement == null) {
+                return; // Toàn bộ 7 Ác Ma đều đang nằm trong Khế Ước của người chơi -> Hủy triệu hồi!
+            }
+            demonType = replacement;
+        }
+
         Vec3 center = findGroundBelow(level, groundPos);
         ActiveSummon ritual = new ActiveSummon(level, null, center, demonType, demonType == DemonType.NOIR, null, SummonState.RISING, 90);
         ritual.initialTarget = target;

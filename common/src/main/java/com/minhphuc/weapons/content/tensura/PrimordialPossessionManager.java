@@ -86,8 +86,14 @@ public class PrimordialPossessionManager {
     }
 
     public static boolean isDemonLord(Player player) {
-        if (!isPossessing(player)) return false;
-        return EntityDataHelper.getCustomData(player).getBoolean(NBT_IS_DEMON_LORD);
+        if (!isPossessing(player)) {
+            return EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord")
+                    || EntityDataHelper.getCustomData(player).getBoolean("TensuraAwakenedDemonLord");
+        }
+        CompoundTag tag = EntityDataHelper.getCustomData(player);
+        return tag.getBoolean(NBT_IS_DEMON_LORD)
+                || tag.getBoolean("TensuraTrueDemonLord")
+                || tag.getBoolean("TensuraAwakenedDemonLord");
     }
 
     public static int getSelectedSkillIndex(Player player) {
@@ -206,10 +212,16 @@ public class PrimordialPossessionManager {
         float remainingHp = player.getHealth();
 
         String preGameModeStr = tag.getString(NBT_PRE_GAMEMODE);
-        GameType preGameMode = GameType.SPECTATOR;
+        GameType preGameMode = GameType.SURVIVAL;
         try {
             preGameMode = GameType.valueOf(preGameModeStr);
         } catch (Exception ignored) {}
+
+        // Nếu chế độ chơi trước đó là Spectator (do người chơi đổi sang để click nhập xác)
+        // thì khi tách xác phải khôi phục về SURVIVAL để chơi bình thường, tránh kẹt trong Spectator!
+        if (preGameMode == GameType.SPECTATOR) {
+            preGameMode = GameType.SURVIVAL;
+        }
 
         float preHp = tag.getFloat(NBT_PRE_HP);
         if (preHp <= 0) preHp = 20.0F;
@@ -232,23 +244,28 @@ public class PrimordialPossessionManager {
         tag.remove(NBT_DEMON_MAX_HP);
         tag.remove(NBT_DEMON_ATK);
 
-        // Khôi phục lượng máu & sát thương gốc của Player
+        // Khôi phục lượng máu & sát thương gốc của Player (đặc biệt Chân Ma Vương có 80 HP vĩnh viễn)
+        boolean isLord = PrimordialPlayerDataHelper.isDemonLord(player);
+        double originalMaxHp = isLord ? 80.0D : 20.0D;
         var maxHealthAttr = player.getAttribute(Attributes.MAX_HEALTH);
         if (maxHealthAttr != null) {
-            maxHealthAttr.setBaseValue(20.0D);
+            maxHealthAttr.setBaseValue(originalMaxHp);
         }
         var atkAttr = player.getAttribute(Attributes.ATTACK_DAMAGE);
         if (atkAttr != null) {
-            atkAttr.setBaseValue(1.0D);
+            atkAttr.setBaseValue(isLord ? 8.0D : 1.0D);
         }
-        player.setHealth(Math.min(preHp, player.getMaxHealth()));
+        player.setHealth(Math.min(preHp > 0 ? preHp : (float) originalMaxHp, player.getMaxHealth()));
 
         // Trả lại gamemode gốc
         player.setGameMode(preGameMode);
-        if (preGameMode != GameType.CREATIVE && preGameMode != GameType.SPECTATOR) {
-            boolean canFly = PrimordialPlayerDataHelper.isPrimordial(player) || PrimordialPlayerDataHelper.isDemonLord(player);
+        boolean canFly = PrimordialPlayerDataHelper.isPrimordial(player) || isLord;
+        if (preGameMode != GameType.CREATIVE) {
             player.getAbilities().mayfly = canFly;
             player.getAbilities().flying = false;
+            if (canFly) {
+                player.getAbilities().setFlyingSpeed(0.08F);
+            }
             player.onUpdateAbilities();
         }
 
@@ -351,8 +368,8 @@ public class PrimordialPossessionManager {
             }
         }
 
-        // 3. Đại ma pháp khế ước (100..112) - Mở khóa toàn bộ không cần ràng buộc
-        for (int i = 100; i <= 112; i++) {
+        // 3. Đại ma pháp khế ước (100..116) - Mở khóa toàn bộ không cần ràng buộc
+        for (int i = 100; i <= 116; i++) {
             list.add(i);
         }
 
@@ -383,6 +400,10 @@ public class PrimordialPossessionManager {
             case 110 -> "Siêu Tân Tinh (Supernova)";
             case 111 -> "Dị Giới Thần Môn (Sanctuary Gate)";
             case 112 -> "Long Tinh Bộc Viêm Bá (Dragon Nova)";
+            case 113 -> "Đánh Dấu (Spatial Mark)";
+            case 114 -> "Dịch Chuyển (Spatial Teleportation)";
+            case 115 -> "Cảm Nhận Vạn Năng (Universal Sense)";
+            case 116 -> "Ngày Tận Thế (Apocalypse)";
             default -> {
                 if (skillId >= 20 && skillId < 30) {
                     int rIdx = skillId - 20;
@@ -398,32 +419,94 @@ public class PrimordialPossessionManager {
         };
     }
 
-    /**
-     * Bấm phím Z: Chuyển đổi skill đang chọn
-     */
     public static void cycleSkill(ServerPlayer player) {
+        cycleSkill(player, false);
+    }
+
+    /**
+     * Bấm phím Z (hoặc Shift + Z để lùi): Chuyển đổi skill đang chọn
+     */
+    public static void cycleSkill(ServerPlayer player, boolean reverse) {
         if (!isPossessing(player)) return;
         List<Integer> available = getAvailableSkills(player);
         if (available.isEmpty()) return;
 
         int currentSkill = getSelectedSkillIndex(player);
         int currentPos = available.indexOf(currentSkill);
-        int nextPos = (currentPos + 1) % available.size();
+        if (currentPos < 0) currentPos = 0;
+        int nextPos = reverse
+                ? (currentPos - 1 + available.size()) % available.size()
+                : (currentPos + 1) % available.size();
         int nextSkill = available.get(nextPos);
 
-        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, nextSkill);
+        selectSkillAtPos(player, available, nextSkill, nextPos);
+    }
+
+    public static void selectSkillById(ServerPlayer player, int skillId) {
+        if (!isPossessing(player)) return;
+        List<Integer> available = getAvailableSkills(player);
+        int pos = available.indexOf(skillId);
+        if (pos < 0) return;
+        selectSkillAtPos(player, available, skillId, pos);
+    }
+
+    private static void selectSkillAtPos(ServerPlayer player, List<Integer> available, int skillId, int pos) {
+        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, skillId);
         syncToClient(player);
 
-        String name = getSkillDisplayName(player, nextSkill);
+        String name = getSkillDisplayName(player, skillId);
         String demonName = getPossessedType(player) != null ? getPossessedType(player).getColorName() : "THỦY TỔ";
         player.displayClientMessage(
-                Component.literal("§5§l[" + demonName.toUpperCase() + "] §fKỹ năng [" + (nextPos + 1) + "/" + available.size() + "]: §e§l" + name),
+                Component.literal("§5§l[" + demonName.toUpperCase() + "] §fKỹ năng [" + (pos + 1) + "/" + available.size() + "]: §e§l" + name),
                 true
         );
 
-        float pitch = 1.0F + ((nextPos % 10) * 0.12F);
+        float pitch = 1.0F + ((pos % 10) * 0.12F);
         player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, pitch);
+    }
+
+    private static int resolveAwakenedRandomSkillId(ServerPlayer player, int slotSkill) {
+        if (slotSkill < 20 || slotSkill >= 30) return -1;
+        int rIdx = slotSkill - 20;
+        String skillsStr = EntityDataHelper.getCustomData(player).getString(NBT_SKILLS);
+        String[] rSkills = skillsStr.split(",");
+        if (rIdx < rSkills.length) {
+            var entry = PrimordialSkillPool.getSkillById(rSkills[rIdx].trim());
+            if (entry != null) return entry.id();
+        }
+        return -1;
+    }
+
+    public static boolean isPossessionSkillAllowedInAntiMagicBarrier(ServerPlayer player, int skill) {
+        if (skill == 6 || skill == 7 || skill == 104 || skill == 111 || skill == 115) {
+            return true;
+        }
+        int randId = resolveAwakenedRandomSkillId(player, skill);
+        return randId == PrimordialSkillPool.SKILL_DISINTEGRATION
+                || randId == PrimordialSkillPool.SKILL_JACOB_LADDER
+                || randId == PrimordialSkillPool.SKILL_TIME_FREEZE
+                || randId == PrimordialSkillPool.SKILL_BLACK_FLASH;
+    }
+
+    public static boolean isPossessionSkillAllowedWhenSealed(ServerPlayer player, int skill) {
+        int randId = resolveAwakenedRandomSkillId(player, skill);
+        return randId == PrimordialSkillPool.SKILL_TIME_FREEZE
+                || randId == PrimordialSkillPool.SKILL_BLACK_FLASH;
+    }
+
+    public static int getPossessionCooldownTicks(ServerPlayer player, int skill) {
+        if (skill == 113) return 10;
+        if (skill == 114 || skill == 115) return 40;
+        if (skill == 100 || skill == 105 || skill == 106 || skill == 107) return 60;
+        if (skill == 7 || skill == 8 || skill == 109 || skill == 110 || skill == 112 || skill == 116) return 120;
+        if (skill >= 20 && skill < 30) {
+            int randId = resolveAwakenedRandomSkillId(player, skill);
+            if (randId == PrimordialSkillPool.SKILL_ALKAID_CHAOS || randId == PrimordialSkillPool.SKILL_SPACE_TELEPORT) return 20;
+            if (randId == PrimordialSkillPool.SKILL_DRAGON_NOVA || randId == PrimordialSkillPool.SKILL_BEELZEBUTH) return 100;
+            return 40;
+        }
+        return 30;
     }
 
     /**
@@ -433,6 +516,29 @@ public class PrimordialPossessionManager {
         if (!isPossessing(player)) return;
         ServerLevel level = player.serverLevel();
         int skill = getSelectedSkillIndex(player);
+
+        // Đồng bộ luật Kháng Ma Kết Giới & Phong Sát cho toàn bộ kỹ năng Nhập Xác
+        if (SkillNullificationAbility.isPlayerSealed(player) && !isPossessionSkillAllowedWhenSealed(player, skill)) {
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ [PHONG SÁT KỸ NĂNG] Ma pháp Ác Ma bị phong ấn, chỉ còn dùng được Kiếm Thuật Vật Lý!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            return;
+        }
+        if (AntiMagicBarrierManager.isInBarrier(level, player.position()) && !isPossessionSkillAllowedInAntiMagicBarrier(player, skill)) {
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Ma Tố bị triệt tiêu! Chỉ dùng được: §eLinh Tử Bộc Phát, Disintegration, Phép Màu Thần Linh, Cảm Nhận Vạn Năng, Kiếm Thuật Vật Lý hoặc Dị Giới Thần Môn!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
+            level.sendParticles(ParticleTypes.SMOKE, player.getX(), player.getY() + 1.0, player.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+            return;
+        }
+
+        if (!TensuraSkillHelper.checkAndStartCooldown(player, "possess_" + skill, getPossessionCooldownTicks(player, skill), getSkillDisplayName(player, skill))) {
+            return;
+        }
 
         // Kỹ năng Bản năng (0..6)
         if (skill >= 0 && skill <= 6) {
@@ -456,6 +562,10 @@ public class PrimordialPossessionManager {
             case 110 -> com.minhphuc.weapons.content.tensura.SupernovaAbility.cast(level, player);
             case 111 -> com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.cast(level, player);
             case 112 -> com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(level, player);
+            case 113 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castMark(level, player);
+            case 114 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castTeleport(level, player);
+            case 115 -> com.minhphuc.weapons.content.evolution.UniversalSenseAbility.cast(level, player, 3);
+            case 116 -> com.minhphuc.weapons.content.tensura.ApocalypseAbility.cast(level, player);
             default -> {
                 // Kỹ năng ngẫu nhiên thức tỉnh (20..29)
                 if (skill >= 20 && skill < 30) {
@@ -475,6 +585,7 @@ public class PrimordialPossessionManager {
 
     private static void executeAwakenedRandomSkill(ServerLevel level, ServerPlayer player, PrimordialSkillPool.SkillEntry entry) {
         if (entry == null) return;
+        float demonAtk = Math.max(60.0F, EntityDataHelper.getCustomData(player).getFloat(NBT_DEMON_ATK));
         player.displayClientMessage(Component.literal("§6§l[THỨC TỈNH] §eThi triển: " + entry.displayNameVi() + "!"), true);
         switch (entry.id()) {
             case PrimordialSkillPool.SKILL_BEELZEBUTH -> BeelzebuthAbility.executeBeelzebuth(level, player);
@@ -484,8 +595,9 @@ public class PrimordialPossessionManager {
                 level.playSound(null, targetPos.x, targetPos.y, targetPos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 0.8F);
                 level.sendParticles(ParticleTypes.FLASH, targetPos.x, targetPos.y + 1.0D, targetPos.z, 3, 0, 0, 0, 0);
                 level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, targetPos.x, targetPos.y + 1.0D, targetPos.z, 3, 1.0, 1.0, 1.0, 0);
-                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(targetPos, targetPos).inflate(10.0D), ent -> ent != player && ent.isAlive())) {
-                    e.hurt(player.damageSources().magic(), 800.0F);
+                float snapDmg = Math.max(800.0F, demonAtk * 5.0F);
+                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, new net.minecraft.world.phys.AABB(targetPos, targetPos).inflate(10.0D), ent -> TensuraSkillHelper.isValidSkillTarget(player, ent))) {
+                    e.hurt(player.damageSources().magic(), snapDmg);
                 }
             }
             case PrimordialSkillPool.SKILL_POWER_BEAM -> HorizontalHolyBeamAbility.cast(level, player);
@@ -494,8 +606,9 @@ public class PrimordialPossessionManager {
                 player.teleportTo(dest.x, dest.y, dest.z);
                 level.playSound(null, dest.x, dest.y, dest.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.2F);
                 level.sendParticles(ParticleTypes.PORTAL, dest.x, dest.y + 1.0D, dest.z, 50, 0.6, 0.8, 0.6, 0.1);
-                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(5.0D), ent -> ent != player && ent.isAlive())) {
-                    e.hurt(player.damageSources().magic(), 450.0F);
+                float tpDmg = Math.max(450.0F, demonAtk * 3.0F);
+                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(5.0D), ent -> TensuraSkillHelper.isValidSkillTarget(player, ent))) {
+                    e.hurt(player.damageSources().magic(), tpDmg);
                 }
             }
             case PrimordialSkillPool.SKILL_REALITY_ILLUSION -> {
@@ -509,8 +622,9 @@ public class PrimordialPossessionManager {
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 2.0F, 1.2F);
                 level.sendParticles(ParticleTypes.SOUL, player.getX(), player.getY() + 1.0D, player.getZ(), 50, 3.0, 1.2, 3.0, 0.1);
                 float totalHealed = 0;
-                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(10.0D), ent -> ent != player && ent.isAlive())) {
-                    e.hurt(player.damageSources().magic(), 350.0F);
+                float drainDmg = Math.max(350.0F, demonAtk * 2.5F);
+                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(10.0D), ent -> TensuraSkillHelper.isValidSkillTarget(player, ent))) {
+                    e.hurt(player.damageSources().magic(), drainDmg);
                     totalHealed += 50.0F;
                 }
                 if (totalHealed > 0) player.heal(totalHealed);
@@ -518,14 +632,15 @@ public class PrimordialPossessionManager {
             case PrimordialSkillPool.SKILL_MIND_BLAST -> {
                 level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.5F, 1.5F);
                 level.sendParticles(ParticleTypes.SONIC_BOOM, player.getX(), player.getY() + 1.0D, player.getZ(), 3, 1.0, 0.5, 1.0, 0);
-                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(12.0D), ent -> ent != player && ent.isAlive())) {
+                float mindDmg = Math.max(400.0F, demonAtk * 2.8F);
+                for (net.minecraft.world.entity.LivingEntity e : level.getEntitiesOfClass(net.minecraft.world.entity.LivingEntity.class, player.getBoundingBox().inflate(12.0D), ent -> TensuraSkillHelper.isValidSkillTarget(player, ent))) {
                     e.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 160, 0));
                     e.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.CONFUSION, 160, 1));
-                    e.hurt(player.damageSources().magic(), 400.0F);
+                    e.hurt(player.damageSources().magic(), mindDmg);
                 }
             }
             case PrimordialSkillPool.SKILL_TAISUI_STARS -> com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.cast(level, player);
-            case PrimordialSkillPool.SKILL_ALKAID_CHAOS -> com.minhphuc.weapons.content.darkgathering.AlkaidAbility.cast(level, player);
+            case PrimordialSkillPool.SKILL_ALKAID_CHAOS -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castCombatBlink(level, player);
             case PrimordialSkillPool.SKILL_JACOB_LADDER -> com.minhphuc.weapons.content.divine.JacobsLadderAbility.cast(level, player, ItemStack.EMPTY);
             case PrimordialSkillPool.SKILL_DISINTEGRATION -> com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
             case PrimordialSkillPool.SKILL_HEAVENLY_JUDGMENT -> PentagramCelestialPillarAbility.cast(level, player);
@@ -563,6 +678,7 @@ public class PrimordialPossessionManager {
         ModMessages.sendToPlayer(packet, player);
         // Gửi cho người chơi xung quanh để họ cũng thấy đúng Skin Ác Ma của player này
         ModMessages.sendToPlayers(player.serverLevel().players(), packet);
+        TensuraSkillHelper.syncSkillStateToClient(player);
     }
 
     // =========================================================================

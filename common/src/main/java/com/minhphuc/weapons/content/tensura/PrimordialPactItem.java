@@ -119,6 +119,46 @@ public class PrimordialPactItem extends Item {
         return ItemStackDataHelper.getBoolean(stack, "IsSummoned");
     }
 
+    /**
+     * Kiểm tra xem một người chơi cụ thể có đang giữ Khế Ước của Ác Ma (DemonType) này trong người hay không.
+     * Nếu người chơi vứt cuốn khế ước ra đất hoặc cất vào rương (không còn trong người) -> trả về false.
+     */
+    public static boolean hasContractForDemonInInventory(Player player, DemonType type) {
+        if (player == null || type == null) return false;
+        for (int i = 0; i < player.getInventory().getContainerSize(); i++) {
+            ItemStack stack = player.getInventory().getItem(i);
+            if (!stack.isEmpty() && stack.getItem() instanceof PrimordialPactItem) {
+                if (getDemonType(stack) == type) {
+                    return true;
+                }
+            }
+        }
+        if (player.containerMenu != null) {
+            ItemStack carried = player.containerMenu.getCarried();
+            if (!carried.isEmpty() && carried.getItem() instanceof PrimordialPactItem && getDemonType(carried) == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Kiểm tra xem có bất kỳ người chơi nào trên Server đang sở hữu Khế Ước của Ác Ma này trong người hay không.
+     * Dùng để khóa Ác Ma đó không được spawn tự nhiên và không thể bị các sinh vật khác triệu hồi.
+     */
+    public static boolean isDemonContractedInAnyPlayerInventory(ServerLevel level, DemonType type) {
+        if (level == null || type == null || level.getServer() == null) return false;
+        for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
+            if (hasContractForDemonInInventory(player, type)) {
+                return true;
+            }
+            if (PrimordialPossessionManager.isPossessing(player) && PrimordialPossessionManager.getPossessedType(player) == type) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public Component getName(ItemStack stack) {
         DemonType type = getDemonType(stack);

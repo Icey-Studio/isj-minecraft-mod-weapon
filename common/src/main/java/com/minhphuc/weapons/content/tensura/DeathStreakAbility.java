@@ -452,9 +452,9 @@ public class DeathStreakAbility {
                             SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 4.0F, 0.6F);
 
                     // Xử lý Phá Hủy Block:
-                    // NẾU LÀ MA VƯƠNG: Phá hủy toàn bộ block trong bán kính 18 block!
+                    // NẾU LÀ MA VƯƠNG (và không bật Bảo Vệ Địa Hình): Phá hủy toàn bộ block trong bán kính 18 block!
                     // NẾU CHƯA LÀ MA VƯƠNG: Tuyệt đối KHÔNG phá hủy block!
-                    if (s.isDemonLord) {
+                    if (s.isDemonLord && TensuraSkillHelper.canDestroyTerrain(s.level, s.caster)) {
                         destroyBlocksInRadius(s.level, BlockPos.containing(s.center), 18);
                     }
                 }

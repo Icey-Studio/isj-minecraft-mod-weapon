@@ -17,13 +17,22 @@ import java.util.function.Supplier;
 
 public class ServerboundCycleSkillPacket {
 
+    private final boolean reverse;
+
     public ServerboundCycleSkillPacket() {
+        this(false);
+    }
+
+    public ServerboundCycleSkillPacket(boolean reverse) {
+        this.reverse = reverse;
     }
 
     public ServerboundCycleSkillPacket(FriendlyByteBuf buf) {
+        this.reverse = buf.isReadable() && buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
+        buf.writeBoolean(this.reverse);
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
@@ -33,7 +42,8 @@ public class ServerboundCycleSkillPacket {
             if (player == null) return;
 
             if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(player)) {
-                com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.cycleSkill(player);
+                com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.cycleSkill(player, this.reverse);
+                com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(player);
                 return;
             }
 
@@ -73,8 +83,11 @@ public class ServerboundCycleSkillPacket {
                     int totalSkills = lordSkills + (isPrimordial ? 7 : 0);
 
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
-                    int next = (current + 1) % totalSkills;
+                    int next = this.reverse
+                            ? (current - 1 + totalSkills) % totalSkills
+                            : (current + 1) % totalSkills;
                     EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", next);
+                    com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(player);
 
                     String skillName;
                     if (next < lordSkills) {

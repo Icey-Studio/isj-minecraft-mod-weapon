@@ -156,14 +156,15 @@ public class ServerboundDemonCommandPacket {
                 case ACTION_TOGGLE_MASSACRE -> {
                     boolean nowMassacre = !demon.isMassacreMode();
                     demon.setMassacreMode(nowMassacre);
+                    String dName = demon.getEffectiveDemonName();
                     if (nowMassacre) {
                         level.playSound(null, demon.getX(), demon.getY(), demon.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.5F, 1.3F);
                         level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 40, 0.5D, 0.8D, 0.5D, 0.08D);
-                        demon.broadcastNearbyDialogue("Ara ara~ Theo mệnh lệnh của chủ nhân, ngôi làng này sẽ nhuốm sắc trắng của cái chết!", 48.0D);
-                        player.displayClientMessage(Component.literal("§4§l[CHẾ ĐỘ TÀN SÁT] §cBlanc đã bắt đầu tự động truy sát toàn bộ Dân Làng & Iron Golem trong bán kính 100m!"), true);
+                        demon.broadcastNearbyDialogue("Theo mệnh lệnh tối thượng của chủ nhân, toàn bộ sinh vật tại vùng đất này sẽ bị xóa sổ sạch sẽ!", 48.0D);
+                        player.displayClientMessage(Component.literal("§4§l[CHẾ ĐỘ TÀN SÁT] §c" + dName + " đã bắt đầu tự động tàn sát toàn bộ sinh vật (kể cả Dân Làng đang ngủ) trong bán kính 100m!"), true);
                     } else {
-                        demon.broadcastNearbyDialogue("Ta sẽ thu tay lại theo ý ngài, chủ nhân~", 32.0D);
-                        player.displayClientMessage(Component.literal("§a§l[Mệnh Lệnh] §fĐã dừng chế độ Tàn Sát của Blanc!"), true);
+                        demon.broadcastNearbyDialogue("Ta sẽ thu tay lại theo ý ngài, chủ nhân.", 32.0D);
+                        player.displayClientMessage(Component.literal("§a§l[Mệnh Lệnh] §fĐã dừng chế độ Tàn Sát của " + dName + "!"), true);
                     }
                 }
                 case ACTION_DISMISS -> {

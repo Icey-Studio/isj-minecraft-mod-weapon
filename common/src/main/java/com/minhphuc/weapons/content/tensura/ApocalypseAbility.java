@@ -53,6 +53,7 @@ public class ApocalypseAbility {
     public static class ActiveApocalypse {
         public final ServerLevel level;
         public final ServerPlayer caster;
+        public final PrimordialDemonEntity sourceDemon;
         public final Vec3 center;
         public int tick = 0;
         public final int maxTicks = 85;
@@ -64,13 +65,14 @@ public class ApocalypseAbility {
         public Display.ItemDisplay skyRuneRing;
         public Display.ItemDisplay verticalCrest;
 
-        public ActiveApocalypse(ServerLevel level, ServerPlayer caster, Vec3 center,
+        public ActiveApocalypse(ServerLevel level, ServerPlayer caster, PrimordialDemonEntity sourceDemon, Vec3 center,
                                 Display.ItemDisplay groundCircle,
                                 Display.ItemDisplay midSoulRing,
                                 Display.ItemDisplay skyRuneRing,
                                 Display.ItemDisplay verticalCrest) {
             this.level = level;
             this.caster = caster;
+            this.sourceDemon = sourceDemon;
             this.center = center;
             this.groundCircle = groundCircle;
             this.midSoulRing = midSoulRing;
@@ -87,8 +89,17 @@ public class ApocalypseAbility {
     }
 
     public static void cast(ServerLevel level, ServerPlayer player) {
-        Vec3 center = player.position();
+        if (level == null || player == null) return;
+        startApocalypse(level, player, null, player.position(), "NGÀY TẬN THẾ");
+    }
 
+    public static void castFromDemon(ServerLevel level, PrimordialDemonEntity demon, ServerPlayer owner) {
+        if (level == null || demon == null || !demon.isAlive()) return;
+        String label = demon.getEffectiveDemonName().toUpperCase() + ": NGÀY TẬN THẾ";
+        startApocalypse(level, owner, demon, demon.position(), label);
+    }
+
+    private static void startApocalypse(ServerLevel level, ServerPlayer caster, PrimordialDemonEntity sourceDemon, Vec3 center, String titleLabel) {
         Display.ItemDisplay groundCircle = createFlatDisplay(level, center, 0.08D, 0.5F,
                 ModItems.DISINTEGRATION_GROUND_ARRAY.get(), 0xFFCC0022);
         Display.ItemDisplay midSoulRing = createFlatDisplay(level, center, 5.5D, 0.5F,
@@ -98,7 +109,7 @@ public class ApocalypseAbility {
         Display.ItemDisplay verticalCrest = createVerticalDisplay(level, center, 17.5D, 0.5F,
                 ModItems.DISINTEGRATION_VERTICAL_CREST.get(), 0xFFFF0044);
 
-        ACTIVE_APOCALYPSES.add(new ActiveApocalypse(level, player, center,
+        ACTIVE_APOCALYPSES.add(new ActiveApocalypse(level, caster, sourceDemon, center,
                 groundCircle, midSoulRing, skyRuneRing, verticalCrest));
 
         // Hiệu ứng âm thanh & thông báo mở màn Ngày Tận Thế
@@ -109,12 +120,14 @@ public class ApocalypseAbility {
         level.playSound(null, center.x, center.y, center.z,
                 SoundEvents.TRIDENT_THUNDER.value(), SoundSource.PLAYERS, 2.5F, 0.7F);
 
-        player.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§4§l✦ NGÀY TẬN THẾ ✦")));
-        player.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c§oPhán Quyết Linh Hồn Khởi Động...")));
-        player.displayClientMessage(
-                Component.literal("§4§l[NGÀY TẬN THẾ] §cĐại Ma Trận Phán Quyết Linh Hồn đã bao phủ bán kính §e64m§c!"),
-                true
-        );
+        if (caster != null) {
+            caster.connection.send(new ClientboundSetTitleTextPacket(Component.literal("§4§l✦ " + titleLabel + " ✦")));
+            caster.connection.send(new ClientboundSetSubtitleTextPacket(Component.literal("§c§oPhán Quyết Linh Hồn Khởi Động...")));
+            caster.displayClientMessage(
+                    Component.literal("§4§l[" + titleLabel + "] §cĐại Ma Trận Phán Quyết Linh Hồn đã bao phủ bán kính §e64m§c!"),
+                    true
+            );
+        }
     }
 
     public static void tickApocalypses(ServerLevel level) {
@@ -125,7 +138,10 @@ public class ApocalypseAbility {
             ActiveApocalypse ap = it.next();
             if (ap.level != level) continue;
 
-            if (ap.caster == null || !ap.caster.isAlive() || ap.caster.hasDisconnected()) {
+            boolean sourceInvalid = (ap.sourceDemon != null)
+                    ? (!ap.sourceDemon.isAlive() || (ap.caster != null && ap.caster.hasDisconnected()))
+                    : (ap.caster == null || !ap.caster.isAlive() || ap.caster.hasDisconnected());
+            if (sourceInvalid) {
                 ap.cleanup();
                 it.remove();
                 continue;
@@ -177,16 +193,20 @@ public class ApocalypseAbility {
                 if (ap.tick % 4 == 0) {
                     AABB box = new AABB(ap.center, ap.center).inflate(APOCALYPSE_RADIUS);
                     List<LivingEntity> targets = level.getEntitiesOfClass(LivingEntity.class, box,
-                            e -> e.isAlive() && e != ap.caster);
+                            e -> e.isAlive() && e != ap.caster && e != ap.sourceDemon);
 
-                    Vec3 playerChest = ap.caster.position().add(0, 1.1D, 0);
+                    Vec3 streamAnchor = (ap.sourceDemon != null)
+                            ? ap.sourceDemon.position().add(0, 1.2D, 0)
+                            : ap.caster.position().add(0, 1.1D, 0);
                     int streamCount = 0;
 
                     for (LivingEntity target : targets) {
-                        if (PrimordialDemonEntity.isContractedAllyOfPlayer(ap.caster.getUUID(), target)) continue;
+                        if (ap.caster != null && PrimordialDemonEntity.isContractedAllyOfPlayer(ap.caster.getUUID(), target)) continue;
                         if (target instanceof VelgryndEntity || target instanceof MilimEntity) continue;
 
-                        boolean hostile = UniversalSenseAbility.isHostileThreat(target, ap.caster);
+                        boolean hostile = ap.caster != null
+                                ? UniversalSenseAbility.isHostileThreat(target, ap.caster)
+                                : (target instanceof net.minecraft.world.entity.monster.Enemy || target instanceof net.minecraft.world.entity.monster.Monster);
                         Vec3 tPos = target.position().add(0, target.getBbHeight() * 0.5D, 0);
 
                         if (hostile) {
@@ -200,11 +220,11 @@ public class ApocalypseAbility {
                             level.sendParticles(ParticleTypes.HAPPY_VILLAGER, tPos.x, tPos.y + 0.4D, tPos.z, 2, 0.25D, 0.25D, 0.25D, 0.02D);
                         }
 
-                        // Dòng chảy hạt linh hồn bay từ mục tiêu về ngực người chơi (giới hạn số tia mỗi tick để mượt)
+                        // Dòng chảy hạt linh hồn bay từ mục tiêu về ngực người thi triển (giới hạn số tia mỗi tick để mượt)
                         if (streamCount < 20) {
                             streamCount++;
                             double progressStream = (ap.tick - 30) / 30.0D;
-                            Vec3 streamPos = tPos.lerp(playerChest, progressStream);
+                            Vec3 streamPos = tPos.lerp(streamAnchor, progressStream);
                             level.sendParticles(ParticleTypes.SCULK_SOUL, streamPos.x, streamPos.y, streamPos.z, 2, 0.08D, 0.08D, 0.08D, 0.01D);
                             level.sendParticles(ParticleTypes.SOUL, streamPos.x, streamPos.y, streamPos.z, 1, 0.05D, 0.05D, 0.05D, 0.01D);
                         }
@@ -219,7 +239,7 @@ public class ApocalypseAbility {
             // =====================================================================
             else if (ap.tick == 60 && !ap.judgmentExecuted) {
                 ap.judgmentExecuted = true;
-                executeApocalypseHarvest(level, ap.caster, ap.center);
+                executeApocalypseHarvest(level, ap.caster, ap.sourceDemon, ap.center);
             }
             // =====================================================================
             // GIAI ĐOẠN 4 (Ticks 61..85): THU HỒI ĐẠI MA TRẬN & DƯ CHẤN
@@ -247,16 +267,23 @@ public class ApocalypseAbility {
         }
     }
 
-    private static void executeApocalypseHarvest(ServerLevel level, ServerPlayer caster, Vec3 center) {
-        AABB box = new AABB(center, center).inflate(APOCALYPSE_RADIUS);
+    private static void executeApocalypseHarvest(ServerLevel level, ServerPlayer caster, PrimordialDemonEntity sourceDemon, Vec3 center) {
+        long now = level.getGameTime();
+        boolean senseSynergy = caster != null && TensuraSkillHelper.isUniversalSenseActive(caster.getUUID(), now);
+        boolean twinResonance = sourceDemon == null && TensuraSkillHelper.consumeDemonResonance(caster, "apocalypse", now);
+        double effectiveRadius = APOCALYPSE_RADIUS * (senseSynergy ? 1.15D : 1.0D) * (twinResonance ? 1.15D : 1.0D);
+
+        AABB box = new AABB(center, center).inflate(effectiveRadius);
         List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, box,
-                e -> e.isAlive() && e != caster);
+                e -> e.isAlive() && e != caster && e != sourceDemon);
 
         int hostileKilledCount = 0;
         int peacefulSwappedCount = 0;
         int totalSoulsHarvested = 0;
+        int sensedBonusCount = 0;
         boolean inventoryFull = false;
         boolean exemptedBossPresent = false;
+        Vec3 dropFallbackPos = (caster != null) ? caster.position() : center;
 
         for (LivingEntity target : entities) {
             // 1. Không ảnh hưởng người chơi ở chế độ Sáng Tạo / Khán Giả
@@ -265,7 +292,7 @@ public class ApocalypseAbility {
             }
 
             // 2. Riêng Ác Ma đã kí khế ước với người chơi KHÔNG bị ảnh hưởng
-            if (PrimordialDemonEntity.isContractedAllyOfPlayer(caster.getUUID(), target)) {
+            if (caster != null && PrimordialDemonEntity.isContractedAllyOfPlayer(caster.getUUID(), target)) {
                 continue;
             }
 
@@ -277,16 +304,18 @@ public class ApocalypseAbility {
                 continue;
             }
 
-            boolean isHostile = UniversalSenseAbility.isHostileThreat(target, caster);
+            boolean isHostile = caster != null
+                    ? UniversalSenseAbility.isHostileThreat(target, caster)
+                    : (target instanceof net.minecraft.world.entity.monster.Enemy || target instanceof net.minecraft.world.entity.monster.Monster);
 
             if (isHostile) {
                 // =================================================================
                 // SINH VẬT XẤU XA / THÙ ĐỊCH: RÚT LINH HỒN & GIẾT CHẾT TỨC KHẮC
                 // =================================================================
                 ItemStack soulStack = EntitySoulItem.createSoulFor(target);
-                if (!caster.getInventory().add(soulStack)) {
-                    inventoryFull = true;
-                    ItemEntity drop = new ItemEntity(level, caster.getX(), caster.getY() + 0.5D, caster.getZ(), soulStack);
+                if (caster == null || !caster.getInventory().add(soulStack)) {
+                    if (caster != null) inventoryFull = true;
+                    ItemEntity drop = new ItemEntity(level, dropFallbackPos.x, dropFallbackPos.y + 0.5D, dropFallbackPos.z, soulStack);
                     drop.setNoPickUpDelay();
                     level.addFreshEntity(drop);
                 }
@@ -300,14 +329,25 @@ public class ApocalypseAbility {
                         1, 0.0D, 0.0D, 0.0D, 0.0D);
 
                 // Kích hoạt rơi linh hồn Ma Vương phụ trợ nếu có
-                TensuraEvents.handleMobDeathDrop(caster, target);
+                if (caster != null) {
+                    TensuraEvents.handleMobDeathDrop(caster, target);
+                }
 
-                // Giết chết tức khắc
+                // Giết chết tức khắc (cộng hưởng mạnh hơn nếu mục tiêu đang bị Cảm Nhận Vạn Năng khóa dấu)
+                boolean wasSensed = caster != null && TensuraSkillHelper.isTargetSensedBy(caster.getUUID(), target, now);
+                if (wasSensed) {
+                    sensedBonusCount++;
+                    level.sendParticles(ParticleTypes.GLOW, target.getX(), target.getY() + 1.2D, target.getZ(),
+                            12, 0.3D, 0.5D, 0.3D, 0.05D);
+                }
                 target.invulnerableTime = 0;
-                target.hurt(caster.damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+                target.hurt(level.damageSources().fellOutOfWorld(), Float.MAX_VALUE);
+                if (target.isAlive() && (wasSensed || twinResonance)) {
+                    target.hurt(level.damageSources().magic(), 50000.0F);
+                }
                 if (target.isAlive()) {
                     target.setHealth(0.0F);
-                    target.die(caster.damageSources().playerAttack(caster));
+                    target.die(caster != null ? caster.damageSources().playerAttack(caster) : level.damageSources().magic());
                 }
             } else {
                 // =================================================================
@@ -317,9 +357,9 @@ public class ApocalypseAbility {
                 target.addTag(FakeSoulItem.TAG_HAS_FAKE_SOUL);
 
                 ItemStack soulStack = EntitySoulItem.createSoulFor(target);
-                if (!caster.getInventory().add(soulStack)) {
-                    inventoryFull = true;
-                    ItemEntity drop = new ItemEntity(level, caster.getX(), caster.getY() + 0.5D, caster.getZ(), soulStack);
+                if (caster == null || !caster.getInventory().add(soulStack)) {
+                    if (caster != null) inventoryFull = true;
+                    ItemEntity drop = new ItemEntity(level, dropFallbackPos.x, dropFallbackPos.y + 0.5D, dropFallbackPos.z, soulStack);
                     drop.setNoPickUpDelay();
                     level.addFreshEntity(drop);
                 }
@@ -344,12 +384,21 @@ public class ApocalypseAbility {
         level.playSound(null, center.x, center.y, center.z,
                 SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 2.0F, 0.85F);
 
+        if (caster == null) return;
+
+        String synergyNote = "";
+        if (senseSynergy || twinResonance) {
+            synergyNote = "\n§b• Cộng Hưởng Thức Tỉnh: "
+                    + (senseSynergy ? "§e[Cảm Nhận Vạn Năng: +15% Bán Kính, khóa " + sensedBonusCount + " mục tiêu] " : "")
+                    + (twinResonance ? "§d[Cộng Hưởng Chủ-Tớ]" : "");
+        }
+
         // Thông báo tổng kết
         caster.sendSystemMessage(Component.literal(
                 "§4§l✦ [NGÀY TẬN THẾ - PHÁN QUYẾT HOÀN TẤT] ✦\n" +
                 "§c• Đã rút linh hồn & xóa sổ sinh vật thù địch: §e" + hostileKilledCount + "\n" +
                 "§b• Đã tráo Linh Hồn Giả & rút linh hồn sinh vật hiền lành (không gây chết): §a" + peacefulSwappedCount + "\n" +
-                "§d• Tổng số Linh Hồn thu hoạch vào túi đồ: §6§l" + totalSoulsHarvested + " Linh Hồn"
+                "§d• Tổng số Linh Hồn thu hoạch vào túi đồ: §6§l" + totalSoulsHarvested + " Linh Hồn" + synergyNote
         ));
 
         if (exemptedBossPresent) {

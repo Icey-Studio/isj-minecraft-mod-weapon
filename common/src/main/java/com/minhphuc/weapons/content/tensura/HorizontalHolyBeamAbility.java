@@ -252,24 +252,26 @@ public class HorizontalHolyBeamAbility {
             }
 
             // Thiêu đốt mặt đất và làm vỡ các khối yếu (lá, mạng nhện, băng...)
-            BlockPos groundPos = BlockPos.containing(cur).below();
-            if (level.getBlockState(groundPos).isSolid() && level.getBlockState(groundPos.above()).isAir()) {
-                if (level.random.nextFloat() < 0.4F) {
-                    level.setBlockAndUpdate(groundPos.above(), Blocks.FIRE.defaultBlockState());
+            if (TensuraSkillHelper.canDestroyTerrain(level, caster)) {
+                BlockPos groundPos = BlockPos.containing(cur).below();
+                if (level.getBlockState(groundPos).isSolid() && level.getBlockState(groundPos.above()).isAir()) {
+                    if (level.random.nextFloat() < 0.4F) {
+                        level.setBlockAndUpdate(groundPos.above(), Blocks.FIRE.defaultBlockState());
+                    }
                 }
-            }
 
-            // Phá vỡ thực vật / mạng nhện / hoa cỏ cản đường luồng pháo
-            BlockPos centerPos = BlockPos.containing(cur);
-            for (int ox = -1; ox <= 1; ox++) {
-                for (int oy = -1; oy <= 1; oy++) {
-                    for (int oz = -1; oz <= 1; oz++) {
-                        BlockPos checkPos = centerPos.offset(ox, oy, oz);
-                        net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(checkPos);
-                        if (bs.is(Blocks.COBWEB) || bs.is(Blocks.SHORT_GRASS) || bs.is(Blocks.TALL_GRASS)
-                                || bs.is(Blocks.SEAGRASS) || bs.is(Blocks.KELP) || bs.is(Blocks.SNOW)
-                                || bs.is(Blocks.ICE) || bs.is(Blocks.VINE)) {
-                            level.destroyBlock(checkPos, false);
+                // Phá vỡ thực vật / mạng nhện / hoa cỏ cản đường luồng pháo
+                BlockPos centerPos = BlockPos.containing(cur);
+                for (int ox = -1; ox <= 1; ox++) {
+                    for (int oy = -1; oy <= 1; oy++) {
+                        for (int oz = -1; oz <= 1; oz++) {
+                            BlockPos checkPos = centerPos.offset(ox, oy, oz);
+                            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(checkPos);
+                            if (bs.is(Blocks.COBWEB) || bs.is(Blocks.SHORT_GRASS) || bs.is(Blocks.TALL_GRASS)
+                                    || bs.is(Blocks.SEAGRASS) || bs.is(Blocks.KELP) || bs.is(Blocks.SNOW)
+                                    || bs.is(Blocks.ICE) || bs.is(Blocks.VINE)) {
+                                level.destroyBlock(checkPos, false);
+                            }
                         }
                     }
                 }
@@ -471,24 +473,26 @@ public class HorizontalHolyBeamAbility {
             }
 
             // Thiêu đốt mặt đất và làm vỡ các khối yếu
-            BlockPos groundPos = BlockPos.containing(cur).below();
-            if (level.getBlockState(groundPos).isSolid() && level.getBlockState(groundPos.above()).isAir()) {
-                if (level.random.nextFloat() < 0.35F) {
-                    level.setBlockAndUpdate(groundPos.above(), Blocks.FIRE.defaultBlockState());
+            if (TensuraSkillHelper.canDestroyTerrain(level, caster)) {
+                BlockPos groundPos = BlockPos.containing(cur).below();
+                if (level.getBlockState(groundPos).isSolid() && level.getBlockState(groundPos.above()).isAir()) {
+                    if (level.random.nextFloat() < 0.35F) {
+                        level.setBlockAndUpdate(groundPos.above(), Blocks.FIRE.defaultBlockState());
+                    }
                 }
-            }
 
-            // Phá vỡ thực vật cản đường chùm tia
-            BlockPos centerPos = BlockPos.containing(cur);
-            for (int ox = -1; ox <= 1; ox++) {
-                for (int oy = -1; oy <= 1; oy++) {
-                    for (int oz = -1; oz <= 1; oz++) {
-                        BlockPos checkPos = centerPos.offset(ox, oy, oz);
-                        net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(checkPos);
-                        if (bs.is(Blocks.COBWEB) || bs.is(Blocks.SHORT_GRASS) || bs.is(Blocks.TALL_GRASS)
-                                || bs.is(Blocks.SEAGRASS) || bs.is(Blocks.KELP) || bs.is(Blocks.SNOW)
-                                || bs.is(Blocks.ICE) || bs.is(Blocks.VINE)) {
-                            level.destroyBlock(checkPos, false);
+                // Phá vỡ thực vật cản đường chùm tia
+                BlockPos centerPos = BlockPos.containing(cur);
+                for (int ox = -1; ox <= 1; ox++) {
+                    for (int oy = -1; oy <= 1; oy++) {
+                        for (int oz = -1; oz <= 1; oz++) {
+                            BlockPos checkPos = centerPos.offset(ox, oy, oz);
+                            net.minecraft.world.level.block.state.BlockState bs = level.getBlockState(checkPos);
+                            if (bs.is(Blocks.COBWEB) || bs.is(Blocks.SHORT_GRASS) || bs.is(Blocks.TALL_GRASS)
+                                    || bs.is(Blocks.SEAGRASS) || bs.is(Blocks.KELP) || bs.is(Blocks.SNOW)
+                                    || bs.is(Blocks.ICE) || bs.is(Blocks.VINE)) {
+                                level.destroyBlock(checkPos, false);
+                            }
                         }
                     }
                 }

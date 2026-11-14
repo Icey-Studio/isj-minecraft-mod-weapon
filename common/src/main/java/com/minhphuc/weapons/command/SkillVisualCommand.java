@@ -29,7 +29,8 @@ public class SkillVisualCommand {
         SKILL_MAP.put("dragon_nova", SkillVisualConfig.SKILL_DRAGON_NOVA);
         SKILL_MAP.put("extinction_stars", SkillVisualConfig.SKILL_EXTINCTION_STARS);
         SKILL_MAP.put("seer_flesh", SkillVisualConfig.SKILL_SEER_FLESH);
-        SKILL_MAP.put("alkaid", SkillVisualConfig.SKILL_ALKAID);
+        SKILL_MAP.put("spatial_mark", SkillVisualConfig.SKILL_SPATIAL_MARK);
+        SKILL_MAP.put("spatial_teleport", SkillVisualConfig.SKILL_SPATIAL_TELEPORT);
         SKILL_MAP.put("granite_blast", SkillVisualConfig.SKILL_GRANITE_BLAST);
         SKILL_MAP.put("reverse_time_slash", SkillVisualConfig.SKILL_REVERSE_TIME_SLASH);
         SKILL_MAP.put("reverse_velocity_iai", SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI);

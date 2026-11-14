@@ -61,6 +61,10 @@ public final class ClientCinematicSkillRenderer {
         public float getAge(float partialTicks) {
             Minecraft mc = Minecraft.getInstance();
             if (mc.level == null) return -1;
+            if (skillId == SkillVisualConfig.SKILL_SPATIAL_TELEPORT && direction != null && (int) Math.round(direction.x) == 3
+                    && ClientCinematicSkillHandler.isWaitingForTerrain()) {
+                return 0.0f;
+            }
             return (float) (mc.level.getGameTime() - startTick) + partialTicks;
         }
 
@@ -75,6 +79,9 @@ public final class ClientCinematicSkillRenderer {
             if (skillId == SkillVisualConfig.SKILL_MULTILAYER_BARRIER || skillId == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON) {
                 return new SkillInstanceKey(skillId, null, (int) Math.round(pos.x), (int) Math.round(pos.y), (int) Math.round(pos.z));
             }
+            if (skillId == SkillVisualConfig.SKILL_SPATIAL_MARK || skillId == SkillVisualConfig.SKILL_SPATIAL_TELEPORT) {
+                return new SkillInstanceKey(skillId, caster, 0, 0, 0);
+            }
             return new SkillInstanceKey(skillId, caster, (int) Math.round(pos.x), (int) Math.round(pos.y), (int) Math.round(pos.z));
         }
     }
@@ -87,8 +94,63 @@ public final class ClientCinematicSkillRenderer {
         if (mc.level == null) return;
 
         SkillInstanceKey key = SkillInstanceKey.of(skillId, caster, center);
+        long startT = mc.level.getGameTime();
+        Vec3 storedDir = dir;
+        float storedPower = power;
+        if (skillId == SkillVisualConfig.SKILL_SPATIAL_MARK) {
+            int markSlot = (dir != null) ? Math.max(0, (int) Math.round(dir.y)) : 0;
+            key = new SkillInstanceKey(skillId, caster, 0, markSlot, 0);
+            if (dir != null && dir.z >= 0.5) {
+                // Đồng bộ ngầm: giữ nguyên startTick nếu vòng trận này đã tồn tại và dọn slot cũ nếu bị dồn chỉ số
+                SkillInstanceKey finalKey = key;
+                java.util.Iterator<Map.Entry<SkillInstanceKey, ActiveSkillInstance>> it = activeSkills.entrySet().iterator();
+                while (it.hasNext()) {
+                    Map.Entry<SkillInstanceKey, ActiveSkillInstance> entry = it.next();
+                    SkillInstanceKey k = entry.getKey();
+                    if (k.skillId() == SkillVisualConfig.SKILL_SPATIAL_MARK
+                            && k.casterUuid().equals(caster)
+                            && entry.getValue().center().distanceToSqr(center) <= 0.5) {
+                        startT = entry.getValue().startTick();
+                        if (!k.equals(finalKey)) {
+                            it.remove();
+                        }
+                    }
+                }
+            }
+        } else if (skillId == SkillVisualConfig.SKILL_SPATIAL_TELEPORT && dir != null) {
+            int mode = (int) Math.round(dir.x);
+            if (mode == 2) {
+                ActiveSkillInstance old = activeSkills.get(key);
+                if (old != null && old.direction() != null && (int) Math.round(old.direction().x) == 2 && old.center().distanceToSqr(center) < 1.0) {
+                    startT = old.startTick();
+                }
+            } else if (mode == 3) {
+                boolean consumeMark = dir.y >= 0.5;
+                if (consumeMark) {
+                    // Nếu trên mặt đất đã có sẵn Ma Pháp Trận Đánh Dấu Chiến Thuật -> gộp thành 1 trận duy nhất, tránh vẽ đè
+                    SkillInstanceKey markKey = new SkillInstanceKey(SkillVisualConfig.SKILL_SPATIAL_MARK, caster, 0, 0, 0);
+                    ActiveSkillInstance existingMark = activeSkills.get(markKey);
+                    if (existingMark != null && existingMark.center().distanceToSqr(center) <= 9.0) {
+                        activeSkills.remove(markKey);
+                        storedDir = new Vec3(dir.x, dir.y, 1.0); // Cờ alreadyDeployedFromMark = true
+                        storedPower = existingMark.powerMultiplier();
+                    }
+                } else {
+                    // Nếu đang dịch chuyển tới Ấn Ký Vĩnh Viễn (slot 1..5) -> giữ nguyên Ấn Ký trên mặt đất, chỉ vẽ tia sáng đến
+                    for (int slot = 1; slot <= 5; slot++) {
+                        SkillInstanceKey anchorKey = new SkillInstanceKey(SkillVisualConfig.SKILL_SPATIAL_MARK, caster, 0, slot, 0);
+                        ActiveSkillInstance existingAnchor = activeSkills.get(anchorKey);
+                        if (existingAnchor != null && existingAnchor.center().distanceToSqr(center) <= 9.0) {
+                            storedDir = new Vec3(dir.x, dir.y, 2.0); // skipGroundCircle = true
+                            storedPower = existingAnchor.powerMultiplier();
+                            break;
+                        }
+                    }
+                }
+            }
+        }
         activeSkills.put(key, new ActiveSkillInstance(
-                skillId, caster, center, dir, durationTicks, mc.level.getGameTime(), power
+                skillId, caster, center, storedDir, durationTicks, startT, storedPower
         ));
     }
 
@@ -141,6 +203,60 @@ public final class ClientCinematicSkillRenderer {
             }
         }
         return false;
+    }
+
+    public static boolean isInsidePrison(Vec3 pos) {
+        if (activeSkills.isEmpty() || pos == null) return false;
+        for (ActiveSkillInstance instance : activeSkills.values()) {
+            if (instance.skillId() == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON && !instance.isExpired(0f)) {
+                Vec3 c = instance.center();
+                float r = instance.powerMultiplier() > 0.1f ? instance.powerMultiplier() : 12.0f;
+                Vec3 params = instance.direction();
+                float h = (params != null && params.x >= r) ? (float) params.x : r;
+                float skirt = (params != null && params.y >= 1.0) ? (float) params.y : 4.0f;
+
+                double dx = pos.x - c.x;
+                double dz = pos.z - c.z;
+                double horizDist = Math.hypot(dx, dz);
+                double dy = pos.y - c.y;
+
+                double normDist;
+                if (dy >= 0.0D) {
+                    normDist = Math.hypot(horizDist / r, dy / h);
+                } else if (dy >= -skirt) {
+                    normDist = horizDist / r;
+                } else {
+                    normDist = 2.0D;
+                }
+                if (normDist <= 1.05D) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static int getPrisonRoofY(int x, int z) {
+        if (activeSkills.isEmpty()) return Integer.MIN_VALUE;
+        int maxRoof = Integer.MIN_VALUE;
+        for (ActiveSkillInstance instance : activeSkills.values()) {
+            if (instance.skillId() == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON && !instance.isExpired(0f)) {
+                Vec3 c = instance.center();
+                float r = instance.powerMultiplier() > 0.1f ? instance.powerMultiplier() : 12.0f;
+                Vec3 params = instance.direction();
+                float h = (params != null && params.x >= r) ? (float) params.x : r;
+
+                double dx = (x + 0.5) - c.x;
+                double dz = (z + 0.5) - c.z;
+                double distSq = dx * dx + dz * dz;
+                if (distSq <= r * r) {
+                    double normR = Math.sqrt(distSq) / r;
+                    double roof = c.y + h * Math.sqrt(Math.max(0.0, 1.0 - normR * normR));
+                    maxRoof = Math.max(maxRoof, (int) Math.ceil(roof));
+                }
+            }
+        }
+        return maxRoof;
     }
 
     public static void render(PoseStack matrices, Camera camera, float tickDelta) {
@@ -210,7 +326,7 @@ public final class ClientCinematicSkillRenderer {
                 case SkillVisualConfig.SKILL_DRAGON_NOVA -> renderDragonNova(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_EXTINCTION_STARS -> renderMegiddo(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_SEER_FLESH -> renderSeerFlesh(mesh, mat, skill, age);
-                case SkillVisualConfig.SKILL_ALKAID -> renderAlkaid(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_SPATIAL_MARK, SkillVisualConfig.SKILL_SPATIAL_TELEPORT -> renderSpatialMagicCircle(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_GRANITE_BLAST -> renderGraniteBlast(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_REVERSE_TIME_SLASH -> renderReverseTimeSlash(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI -> renderReverseVelocityIai(mesh, mat, skill, age);
@@ -713,39 +829,227 @@ public final class ClientCinematicSkillRenderer {
     }
 
     // =========================================================================
-    // 9. DIỆT THẾ TÀ TINH (ALKAID - COLOSSAL COSMIC ASTEROID DRILL & 120M STELLAR TAIL)
+    // 9. MA PHÁP TRẬN ĐÁNH DẤU & DỊCH CHUYỂN 3D (CHUẨN ANIME SLIME DATTA KEN - LAPLACE)
     // =========================================================================
-    private static void renderAlkaid(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
-        float totalT = skill.totalTicks();
-        float progress = Math.min(1.0f, age / (totalT - 15.0f));
-        float meteorY = 95.0f * (1.0f - progress * progress); // Rơi gia tốc trọng lực cực nhanh
-        float meteorR = 18.0f * skill.powerMultiplier();
+    private static void renderSpatialMagicCircle(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        Vec3 params = skill.direction();
+        int mode = (skill.skillId() == SkillVisualConfig.SKILL_SPATIAL_MARK)
+                ? 0
+                : (params != null ? (int) Math.round(params.x) : 1);
+        int countdownDigit = (params != null) ? (int) Math.round(params.y) : 0;
+        boolean silentMarkSync = (skill.skillId() == SkillVisualConfig.SKILL_SPATIAL_MARK) && params != null && params.z >= 0.5;
+        boolean alreadyDeployedFromMark = ((mode == 3) && params != null && params.z >= 0.5) || silentMarkSync;
+        boolean skipGroundCircle = (mode == 3) && params != null && params.z >= 1.5;
+        boolean isAnchorMark = (skill.skillId() == SkillVisualConfig.SKILL_SPATIAL_MARK) && params != null && params.y >= 0.5;
 
-        Vec3 meteorCenter = new Vec3(0, meteorY + 4.0, 0);
+        float baseR = skill.powerMultiplier() > 0.2f ? skill.powerMultiplier() : 2.6f;
 
-        // 1. Khối thiên thạch hắc ám dung nham rực cháy
-        billboardDisc(v, m, meteorCenter, meteorR, 0x4A148C, 0.98f);
-        billboardDisc(v, m, meteorCenter, meteorR * 0.70f, 0xAD1457, 0.95f);
-        billboardDisc(v, m, meteorCenter, meteorR * 0.40f, 0xFFD600, 1.0f);
+        // Hiệu ứng bung nở lúc khởi phát (0 -> 10 ticks); nếu đã có trận Đánh Dấu sẵn thì giữ nguyên kích thước 100%
+        float deployScale;
+        if (alreadyDeployedFromMark) {
+            deployScale = 1.0f;
+        } else {
+            deployScale = Math.min(1.0f, age / 10.0f);
+            deployScale = deployScale * (2.0f - deployScale); // Ease out
+        }
+        float r = baseR * (0.25f + 0.75f * deployScale);
 
-        // 2. Tam trùng vành đai quỹ đạo 3D xoay trên 3 trục X, Y, Z (Tri-Axial Orbital Rings)
-        renderHexagonRing(v, m, (float) meteorCenter.y, meteorR * 1.35f, 0.45f, 0xEA80FC, 0.85f, age * 0.08f);
-        renderHexagonRing(v, m, (float) meteorCenter.y, meteorR * 1.65f, 0.35f, 0xFF1744, 0.75f, -age * 0.06f);
+        float fade = 1.0f;
+        if (mode == 3) {
+            // Mode 3 (Arrival): tan biến mượt về cuối tổng thời gian (mặc định 100 ticks -> fade từ 72; hoặc 50 ticks -> fade từ 24)
+            float fadeStart = Math.max(16.0f, skill.totalTicks() - 26.0f);
+            if (age > fadeStart) {
+                fade = Math.max(0.0f, 1.0f - (age - fadeStart) / 26.0f);
+            }
+        } else if (skill.totalTicks() < 1000 && age > skill.totalTicks() - 10.0f) {
+            fade = Math.max(0.0f, (skill.totalTicks() - age) / 10.0f);
+        }
+        if (fade <= 0.005f) return;
 
-        // 3. Mũi khoan plasma xoắn ốc xé toạc không khí ở đầu thiên thạch
-        Vec3 drillTip = meteorCenter.add(0, -meteorR * 1.2, 0);
-        stroke(v, m, meteorCenter, drillTip, meteorR * 0.6f, 0.95f, 0xFFEA00);
+        // Hệ màu Ma Pháp Trận Không Gian Tensura chuẩn ảnh mẫu (Ấn Ký Vĩnh Viễn có viền Vàng-Cyan nổi bật)
+        int deepBlue = isAnchorMark ? 0xD97706 : 0x0066FF;
+        int neonCyan = isAnchorMark ? 0x38BDF8 : 0x00E5FF;
+        int brightCyan = isAnchorMark ? 0xFDE047 : 0x00FFFF;
+        int coreWhiteCyan = 0xE0FFFF;
 
-        // 4. Đuôi sao băng plasma vũ trụ dài 120m rực sáng kéo lên trời
-        Vec3 tailTop = meteorCenter.add(0, 120.0, 0);
-        stroke(v, m, meteorCenter, tailTop, meteorR * 0.85f, 0.80f, 0xD500F9);
-        stroke(v, m, meteorCenter, tailTop.add(3, 0, 3), meteorR * 0.45f, 0.70f, 0xFF1744);
+        float yBase = 0.06f;
+        float slowRot = (skill.startTick() + age) * 0.015f;
 
-        // 5. Sóng xung kích trọng lực lan tỏa bên dưới mặt đất khi thiên thạch lao xuống
-        float groundWaveR = (1.0f - meteorY / 95.0f) * 32.0f;
-        if (groundWaveR > 2.0f) {
-            ring(v, m, 0.15f, groundWaveR, 0.55f, 0x7B1FA2, 0.85f * progress);
-            ring(v, m, 0.25f, groundWaveR * 0.75f, 0.40f, 0xFF1744, 0.90f * progress);
+        if (!skipGroundCircle) {
+        // 1. VÀNH ĐAI NGOẠI VI KÉP & 36 TIA MẠCH BÁNH RĂNG MA ĐẠO (OUTER CIRCUIT RIM & SPOKE NODES)
+        ring(v, m, yBase, r * 1.02f, 0.08f, deepBlue, fade * 0.75f);
+        ring(v, m, yBase + 0.005f, r * 0.98f, 0.045f, neonCyan, fade * 0.92f);
+        ring(v, m, yBase + 0.008f, r * 0.98f, 0.018f, coreWhiteCyan, fade * 0.98f);
+
+        int spokes = 36;
+        for (int i = 0; i < spokes; i++) {
+            double a = (i * Math.PI * 2.0 / spokes) + slowRot * 0.35;
+            double cos = Math.cos(a);
+            double sin = Math.sin(a);
+            float innerSpoke = r * 1.00f;
+            float outerSpoke = r * ((i % 2 == 0) ? 1.15f : 1.10f);
+
+            Vec3 pIn = new Vec3(cos * innerSpoke, yBase, sin * innerSpoke);
+            Vec3 pOut = new Vec3(cos * outerSpoke, yBase, sin * outerSpoke);
+            stroke(v, m, pIn, pOut, 0.032f, fade * 0.85f, neonCyan);
+            stroke(v, m, pIn, pOut, 0.014f, fade * 0.95f, coreWhiteCyan);
+
+            // Chấm tròn nút mạch ma thuật ở đầu mỗi tia ngoại vi (y hệt ảnh Laplace)
+            float ns = 0.045f;
+            float ox = (float) pOut.x;
+            float oz = (float) pOut.z;
+            float oy = yBase + 0.006f;
+            int nodeOp = Math.clamp(Math.round(fade * 240.0f), 0, 255);
+            quad(v, m, ox - ns, oy, oz - ns, ox + ns, oy, oz - ns, ox + ns, oy, oz + ns, ox - ns, oy, oz + ns, brightCyan, nodeOp);
+            billboardDisc(v, m, pOut.add(0, 0.02, 0), 0.065f, deepBlue, fade * 0.80f);
+            billboardDisc(v, m, pOut.add(0, 0.02, 0), 0.035f, coreWhiteCyan, fade * 0.98f);
+        }
+
+        // 2. KHUNG ĐA GIÁC BÁT GIÁC & HÌNH VUÔNG LỒNG NHAU (INSCRIBED OCTAGRAM & HEXAGONAL FRAME)
+        for (int sq = 0; sq < 2; sq++) {
+            double sqOffset = sq * (Math.PI * 0.25) + slowRot * 0.5;
+            // Viền ngoài của khung hình vuông
+            drawPolygonOnGround(v, m, yBase + 0.01f, r * 0.95f, 4, sqOffset, 0.075f, deepBlue, fade * 0.70f);
+            drawPolygonOnGround(v, m, yBase + 0.014f, r * 0.95f, 4, sqOffset, 0.038f, brightCyan, fade * 0.95f);
+            drawPolygonOnGround(v, m, yBase + 0.018f, r * 0.95f, 4, sqOffset, 0.016f, coreWhiteCyan, fade * 1.0f);
+
+            // Viền trong song song tạo rãnh khắc cổ ngữ
+            drawPolygonOnGround(v, m, yBase + 0.012f, r * 0.78f, 4, sqOffset, 0.045f, neonCyan, fade * 0.88f);
+            drawPolygonOnGround(v, m, yBase + 0.016f, r * 0.78f, 4, sqOffset, 0.018f, coreWhiteCyan, fade * 0.96f);
+        }
+
+        // 3. DẢI CỔ NGỮ TENSURA CHẠY DỌC TRONG VIỀN KHUNG ĐA GIÁC (RUNIC INSCRIPTION BAND)
+        for (int sq = 0; sq < 2; sq++) {
+            double sqOffset = sq * (Math.PI * 0.25) + slowRot * 0.5;
+            for (int side = 0; side < 4; side++) {
+                double a1 = side * (Math.PI * 0.5) + sqOffset;
+                double a2 = (side + 1) * (Math.PI * 0.5) + sqOffset;
+                Vec3 v1 = new Vec3(Math.cos(a1) * (r * 0.865f), yBase + 0.015f, Math.sin(a1) * (r * 0.865f));
+                Vec3 v2 = new Vec3(Math.cos(a2) * (r * 0.865f), yBase + 0.015f, Math.sin(a2) * (r * 0.865f));
+                Vec3 edgeDir = v2.subtract(v1);
+                Vec3 perp = new Vec3(-edgeDir.z, 0, edgeDir.x).normalize();
+
+                int glyphs = 7;
+                for (int g = 1; g < glyphs; g++) {
+                    double t = (double) g / glyphs;
+                    Vec3 gCenter = v1.add(edgeDir.scale(t));
+                    float gSize = r * 0.042f;
+                    // Nét ngang & dọc tạo ký tự cổ ngữ Tensura
+                    stroke(v, m, gCenter.subtract(perp.scale(gSize)), gCenter.add(perp.scale(gSize)), 0.018f, fade * 0.90f, brightCyan);
+                    if (g % 2 == 0) {
+                        Vec3 along = edgeDir.normalize().scale(gSize * 0.75);
+                        stroke(v, m, gCenter.subtract(along).add(perp.scale(gSize * 0.6)), gCenter.add(along).add(perp.scale(gSize * 0.6)), 0.015f, fade * 0.85f, coreWhiteCyan);
+                    } else {
+                        Vec3 along = edgeDir.normalize().scale(gSize * 0.65);
+                        stroke(v, m, gCenter.subtract(along), gCenter.add(perp.scale(gSize * 0.8)), 0.015f, fade * 0.85f, coreWhiteCyan);
+                    }
+                }
+            }
+        }
+
+        // 4. MẠCH VUÔNG LỒNG NHAU Ở TÂM TRẬN (INNER INTERLOCKING SQUARE CIRCUITS - CHUẨN ẢNH MẪU)
+        double innerRot = slowRot * 0.5;
+        drawPolygonOnGround(v, m, yBase + 0.016f, r * 0.56f, 4, innerRot, 0.036f, neonCyan, fade * 0.90f);
+        drawPolygonOnGround(v, m, yBase + 0.020f, r * 0.56f, 4, innerRot, 0.015f, coreWhiteCyan, fade * 0.98f);
+
+        drawPolygonOnGround(v, m, yBase + 0.018f, r * 0.38f, 4, innerRot + Math.PI * 0.25, 0.032f, brightCyan, fade * 0.92f);
+        drawPolygonOnGround(v, m, yBase + 0.020f, r * 0.22f, 4, innerRot, 0.028f, coreWhiteCyan, fade * 0.98f);
+
+        // Các đường mạch vuông góc nối từ tâm ra khung đa giác
+        for (int k = 0; k < 8; k++) {
+            double a = k * (Math.PI * 0.25) + innerRot;
+            double cos = Math.cos(a);
+            double sin = Math.sin(a);
+            Vec3 cIn = new Vec3(cos * (r * 0.22f), yBase + 0.018f, sin * (r * 0.22f));
+            Vec3 cOut = new Vec3(cos * (r * 0.78f), yBase + 0.018f, sin * (r * 0.78f));
+            stroke(v, m, cIn, cOut, 0.022f, fade * 0.85f, neonCyan);
+        }
+        } // end if (!skipGroundCircle)
+
+        // 5. HIỆU ỨNG CÁC TIA SÁNG XANH BAY LÊN NHƯ ẢNH MẪU (RISING VERTICAL CYAN LIGHT RAYS)
+        // Khi đang thi triển Đánh Dấu (age < 50), hoặc Dịch Chuyển (mode 1, 2, 3), mật độ và chiều cao tia sáng tăng mạnh!
+        boolean highIntensityBeams = (mode == 1)
+                || (mode == 2 && countdownDigit > 0)
+                || (mode == 3 && age >= 12.0f && age <= 75.0f)
+                || (mode == 0 && age < 50.0f);
+
+        int numRays = (mode == 2) ? 28 : 20;
+        float maxRayHeight = highIntensityBeams ? (mode == 2 ? 6.5f : 4.8f) : 2.8f;
+        float raySpeed = highIntensityBeams ? 0.22f : 0.09f;
+
+        for (int i = 0; i < numRays; i++) {
+            // Phân bố các tia sáng tại các đỉnh đa giác và mạch vuông bên trong
+            double seedAngle = (i * 2.399963229728653) + slowRot * 0.3; // Golden angle + slow drift
+            float distFactor = (i % 3 == 0) ? 0.92f : ((i % 3 == 1) ? 0.64f : 0.35f);
+            double rx = Math.cos(seedAngle) * (r * distFactor);
+            double rz = Math.sin(seedAngle) * (r * distFactor);
+
+            float cycle = (age * raySpeed + i * 0.65f) % maxRayHeight;
+            float rayBaseY = yBase + cycle * 0.35f;
+            float rayLen = (0.9f + (i % 4) * 0.45f) * (highIntensityBeams ? 1.45f : 1.0f);
+            float rayTopY = Math.min(maxRayHeight * 1.25f, rayBaseY + rayLen);
+
+            float lifeAlpha = (float) Math.sin((cycle / maxRayHeight) * Math.PI);
+            float alpha = fade * lifeAlpha * (highIntensityBeams ? 0.95f : 0.70f);
+            if (alpha > 0.02f) {
+                Vec3 bot = new Vec3(rx, yBase, rz);
+                Vec3 top = new Vec3(rx, rayTopY, rz);
+                stroke(v, m, bot, top, 0.045f, alpha * 0.65f, deepBlue);
+                stroke(v, m, bot, top, 0.022f, alpha * 0.92f, brightCyan);
+                stroke(v, m, bot, top, 0.009f, alpha, coreWhiteCyan);
+            }
+        }
+
+        // Màn sương quang trụ mỏng bay lên từ viền đa giác khi kích hoạt dịch chuyển
+        if (highIntensityBeams) {
+            float veilH = (mode == 3 && age >= 28.0f && age <= 56.0f) ? 5.2f : 2.6f;
+            cylinder(v, m, r * 0.92f, veilH, fade * 0.16f, deepBlue, age, 8);
+            cylinder(v, m, r * 0.56f, veilH * 0.85f, fade * 0.12f, neonCyan, -age, 8);
+        }
+
+        // Chớp sáng cột quang trụ hội tụ tại Góc 3 (tick 28 -> 48) khi người chơi hiện hình dịch chuyển tới!
+        if (mode == 3 && age >= 26.0f && age <= 52.0f) {
+            float flashP = 1.0f - Math.abs(age - 35.0f) / 17.0f;
+            flashP = Math.clamp(flashP, 0.0f, 1.0f);
+            cylinder(v, m, r * 0.65f, 8.0f, fade * flashP * 0.45f, brightCyan, age, 24);
+            cylinder(v, m, r * 0.28f, 9.0f, fade * flashP * 0.85f, coreWhiteCyan, age, 24);
+        }
+
+        // 6. RIÊNG CHẾ ĐỘ B (MA PHÁP TRẬN CỐ ĐỊNH CẤP CAO & ĐẾM NGƯỢC 4 - 3 - 2 - 1):
+        // Tạo ra Ma Pháp Trận cao hơn (đa tầng lơ lửng ở Y+0.48m và Y+0.95m) + Hiển thị số đếm ngược 3D
+        if (mode == 2) {
+            float yTier2 = 0.48f + (float) Math.sin(age * 0.08f) * 0.05f;
+            float yTier3 = 0.95f + (float) Math.cos(age * 0.08f) * 0.05f;
+
+            renderHexagonRing(v, m, yTier2, r * 0.82f, 0.055f, neonCyan, fade * 0.80f, -slowRot * 1.4f);
+            drawPolygonOnGround(v, m, yTier2, r * 0.82f, 4, -slowRot * 1.2f, 0.030f, coreWhiteCyan, fade * 0.90f);
+
+            renderHexagonRing(v, m, yTier3, r * 0.62f, 0.045f, brightCyan, fade * 0.75f, slowRot * 1.8f);
+            ring(v, m, yTier3, r * 0.62f, 0.025f, coreWhiteCyan, fade * 0.88f);
+
+            // Nếu người chơi đang đứng trong vòng trận đếm ngược (4 - 3 - 2 - 1), vẽ chữ số 3D lơ lửng giữa trận
+            if (countdownDigit >= 1 && countdownDigit <= 4) {
+                Minecraft mc = Minecraft.getInstance();
+                Vec3 look = (mc.player != null) ? mc.player.getLookAngle() : new Vec3(0, 0, 1);
+                Vec3 normal = new Vec3(-look.x, 0, -look.z);
+                if (normal.lengthSqr() < 1e-4) normal = new Vec3(0, 0, 1);
+                normal = normal.normalize();
+                Vec3 dRight = new Vec3(-normal.z, 0, normal.x).normalize();
+                Vec3 dUp = new Vec3(0, 1, 0);
+
+                int digitCol = (countdownDigit == 1) ? 0xFFEA00 : brightCyan;
+                renderPortalDigit3D(v, m, new Vec3(0, 1.65, 0), dRight, dUp, normal, countdownDigit, 0.48f, 0.72f, fade, digitCol);
+            }
+        }
+    }
+
+    private static void drawPolygonOnGround(VertexConsumer v, Matrix4f m, float y, float radius, int sides, double rotRad, float width, int color, float alpha) {
+        for (int i = 0; i < sides; i++) {
+            double a1 = (i * Math.PI * 2.0 / sides) + rotRad;
+            double a2 = ((i + 1) * Math.PI * 2.0 / sides) + rotRad;
+            Vec3 p1 = new Vec3(Math.cos(a1) * radius, y, Math.sin(a1) * radius);
+            Vec3 p2 = new Vec3(Math.cos(a2) * radius, y, Math.sin(a2) * radius);
+            stroke(v, m, p1, p2, width, alpha, color);
         }
     }
 
