@@ -10,6 +10,7 @@ public class ModKeyBindings {
     public static final String KEY_SELECT_BULLET = "key.weapons.select_bullet";
     public static final String KEY_BEELZEBUTH = "key.weapons.cast_beelzebuth";
     public static final String KEY_TENGAI_SLASH = "key.weapons.tengai_slash";
+    public static final String KEY_SKILL_WHEEL = "key.weapons.skill_wheel";
 
     public static final KeyMapping SELECT_BULLET_KEY = new KeyMapping(
             KEY_SELECT_BULLET,
@@ -32,9 +33,17 @@ public class ModKeyBindings {
             KEY_CATEGORY_WEAPONS
     );
 
+    public static final KeyMapping SKILL_WHEEL_KEY = new KeyMapping(
+            KEY_SKILL_WHEEL,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_G,
+            KEY_CATEGORY_WEAPONS
+    );
+
     public static void register() {
         KeyMappingRegistry.register(SELECT_BULLET_KEY);
         KeyMappingRegistry.register(BEELZEBUTH_KEY);
         KeyMappingRegistry.register(TENGAI_SLASH_KEY);
+        KeyMappingRegistry.register(SKILL_WHEEL_KEY);
     }
 }

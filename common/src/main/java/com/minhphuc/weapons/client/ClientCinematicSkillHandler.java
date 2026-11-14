@@ -25,13 +25,20 @@ public final class ClientCinematicSkillHandler {
     private static UUID casterUuid = null;
     private static Vec3 centerPos = Vec3.ZERO;
     private static Vec3 aimDir = new Vec3(0, 0, 1);
+    private static Vec3 rawDir = Vec3.ZERO;
     private static int totalTicks = 80;
     private static long startWorldTick = 0;
     private static float powerMultiplier = 1.0f;
     private static boolean skipped = false;
+    private static boolean waitingForTerrain = false;
+    private static int waitingTicks = 0;
 
     public static boolean isActive() {
         return active && !skipped;
+    }
+
+    public static boolean isWaitingForTerrain() {
+        return isActive() && waitingForTerrain;
     }
 
     public static boolean isCasterActive(UUID uuid) {
@@ -44,6 +51,7 @@ public final class ClientCinematicSkillHandler {
 
     public static float getAge() {
         if (!isActive()) return -1;
+        if (waitingForTerrain) return 0.0f;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return -1;
         return (float) (mc.level.getGameTime() - startWorldTick);
@@ -51,6 +59,7 @@ public final class ClientCinematicSkillHandler {
 
     public static float getAge(float partialTicks) {
         if (!isActive()) return -1;
+        if (waitingForTerrain) return 0.0f;
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return -1;
         return (float) (mc.level.getGameTime() - startWorldTick) + partialTicks;
@@ -64,6 +73,26 @@ public final class ClientCinematicSkillHandler {
             }
 
             if (!active || skipped) return;
+
+            // Khóa chốt đợi nạp map & vị trí người chơi trước khi bắt đầu chuỗi diễn hoạt điểm đến
+            if (waitingForTerrain) {
+                waitingTicks++;
+                boolean screenOpen = mc.screen != null;
+                boolean chunkReady = mc.level.hasChunk((int) Math.floor(centerPos.x) >> 4, (int) Math.floor(centerPos.z) >> 4);
+                boolean playerNearby = mc.player.position().distanceToSqr(centerPos) <= 49.0D;
+                if (!screenOpen && chunkReady && playerNearby) {
+                    waitingForTerrain = false;
+                    waitingTicks = 0;
+                    startWorldTick = mc.level.getGameTime();
+                } else if (waitingTicks > 80) {
+                    // Quá thời gian chờ 4 giây -> tự động mở khóa camera để tránh kẹt màn hình
+                    stopCinematic();
+                    return;
+                } else {
+                    startWorldTick = mc.level.getGameTime();
+                    return;
+                }
+            }
 
             long elapsed = mc.level.getGameTime() - startWorldTick;
             if (elapsed >= totalTicks) {
@@ -84,6 +113,8 @@ public final class ClientCinematicSkillHandler {
 
     public static void startCinematic(int skillId, UUID caster, Vec3 center, Vec3 dir, int durationTicks, float power) {
         if (!SkillVisualConfig.isCinematicEnabled(skillId)) return;
+        // Mode 4 = Combat Blink (dịch chuyển chiến đấu tức thì, không khóa góc quay camera)
+        if (skillId == SkillVisualConfig.SKILL_SPATIAL_TELEPORT && dir != null && Math.round(dir.x) == 4) return;
 
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
@@ -94,11 +125,20 @@ public final class ClientCinematicSkillHandler {
         activeSkillId = skillId;
         casterUuid = caster;
         centerPos = center;
+        rawDir = (dir != null) ? dir : Vec3.ZERO;
         aimDir = (dir != null && dir.lengthSqr() > 0.001) ? dir.normalize() : new Vec3(0, 0, 1);
         totalTicks = durationTicks;
         powerMultiplier = power;
         skipped = false;
         active = true;
+
+        if (skillId == SkillVisualConfig.SKILL_SPATIAL_TELEPORT && (int) Math.round(rawDir.x) == 3) {
+            waitingForTerrain = true;
+            waitingTicks = 0;
+        } else {
+            waitingForTerrain = false;
+            waitingTicks = 0;
+        }
 
         if (mc.level != null) {
             startWorldTick = mc.level.getGameTime();
@@ -114,12 +154,36 @@ public final class ClientCinematicSkillHandler {
     public static void stopCinematic() {
         active = false;
         skipped = false;
+        waitingForTerrain = false;
         activeSkillId = 0;
     }
 
     public static void skip() {
         skipped = true;
         stopCinematic();
+    }
+
+    /**
+     * Ẩn model người chơi & sinh vật đi kèm:
+     * 1. Tại điểm đi: biến mất khỏi ma pháp trận sau 24 ticks (24 -> 44 ticks).
+     * 2. Tại điểm đến: ẩn trong lúc tải map và trong 32 ticks đầu (0 -> 32 ticks) để thấy ma pháp trận và tia sáng trước, sau đó mới hiện hình!
+     */
+    public static boolean isEntityHiddenForTeleportArrival(net.minecraft.world.entity.LivingEntity entity) {
+        if (!isActive() || entity == null) return false;
+        if (activeSkillId != SkillVisualConfig.SKILL_SPATIAL_TELEPORT) return false;
+        int mode = (int) Math.round(rawDir.x);
+        if (mode == 3) { // Điểm đến (Arrival)
+            if (waitingForTerrain) return entity.position().distanceToSqr(centerPos) <= 49.0D;
+            float age = getAge(0.0f);
+            if (age < 0.0f || age >= 32.0f) return false;
+            return entity.position().distanceToSqr(centerPos) <= 49.0D;
+        } else if (mode == 1 || mode == 0) { // Điểm đi (Departure)
+            float age = getAge(0.0f);
+            if (age >= 24.0f && age <= (float) totalTicks) {
+                return entity.position().distanceToSqr(centerPos) <= 49.0D;
+            }
+        }
+        return false;
     }
 
     /**
@@ -144,7 +208,7 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DRAGON_NOVA -> getDragonNovaPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_EXTINCTION_STARS -> getMegiddoPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_SEER_FLESH -> getSeerFleshPose(age, vanillaPos, vanillaYaw, vanillaPitch);
-            case SkillVisualConfig.SKILL_ALKAID -> getAlkaidPose(age, vanillaPos, vanillaYaw, vanillaPitch);
+            case SkillVisualConfig.SKILL_SPATIAL_MARK, SkillVisualConfig.SKILL_SPATIAL_TELEPORT -> getSpatialTeleportPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_GRANITE_BLAST -> getGraniteBlastPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_REVERSE_TIME_SLASH -> getReverseTimePose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI -> getReverseVelocityPose(age, vanillaPos, vanillaYaw, vanillaPitch);
@@ -435,25 +499,109 @@ public final class ClientCinematicSkillHandler {
     }
 
     // =========================================================================
-    // 9. DIỆT THẾ TÀ TINH (ALKAID - WORM-EYE VIEW OF COLOSSAL METEOROID)
+    // 9. ĐÁNH DẤU & DỊCH CHUYỂN KHÔNG GIAN (TENSURA SPATIAL MAGIC - 6 CAMERA ANGLES)
     // =========================================================================
-    private static Pose getAlkaidPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
-        Vec3 camPos;
-        Vec3 lookTarget;
+    private static Pose getSpatialTeleportPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
+        int mode = (activeSkillId == SkillVisualConfig.SKILL_SPATIAL_MARK) ? 0 : (int) Math.round(rawDir.x);
+        double baseYawRad = Math.toRadians(vanillaYaw);
 
-        if (age < 60.0f) {
-            // Hạ thấp góc nhìn ngước nhìn thiên thạch từ đỉnh trời
-            camPos = centerPos.add(28.0, 2.5, 28.0);
-            lookTarget = centerPos.add(0, 45.0 - (age / 60.0f) * 20.0, 0);
-        } else {
-            float blend = Math.clamp((age - 60.0f) / 25.0f, 0.0f, 1.0f);
-            float ease = blend * blend * (3.0f - 2.0f * blend);
-            Vec3 endPos = centerPos.add(28.0, 2.5, 28.0);
-            camPos = endPos.lerp(vanillaPos, ease);
-            lookTarget = centerPos.add(0, 25.0, 0).lerp(vanillaPos.add(aimDir.scale(10.0)), ease);
+        // ---------------------------------------------------------------------
+        // KỊCH BẢN A: KHI DỊCH CHUYỂN TỚI ĐÍCH (MODE 3 - 6 GÓC MÁY ĐIỆN ẢNH CHUẨN ANIME)
+        // Góc máy thấy Ma Pháp Trận 3D trước -> Tia sáng bay lên -> Thấy người chơi dịch chuyển tới -> Quay lại thành người chơi
+        // ---------------------------------------------------------------------
+        if (mode == 3) {
+            Vec3 camPos;
+            Vec3 lookTarget;
+
+            // GÓC 1 (0 -> 16t): Góc thấp nghiêng (Low-Angle Shot) tại điểm Đánh Dấu — Chỉ thấy Ma Pháp Trận 3D phát sáng trên mặt đất trước
+            if (age < 16.0f) {
+                float p = age / 16.0f;
+                double angle = baseYawRad + 0.55 + p * 0.25;
+                double dist = 4.2 - p * 0.4;
+                camPos = centerPos.add(Math.cos(angle) * dist, 1.15 + p * 0.25, Math.sin(angle) * dist);
+                lookTarget = centerPos.add(0, 0.25, 0);
+            }
+            // GÓC 2 (16 -> 32t): Góc nhìn từ trên cao xuống (Top-Down Overhead Shot) — Thấy toàn cảnh Ma Pháp Trận 3D xoay & tia sáng xanh bắt đầu phóng lên
+            else if (age < 32.0f) {
+                float p = (age - 16.0f) / 16.0f;
+                double angle = baseYawRad - 0.8 + p * 0.6;
+                double dist = 1.8 + p * 0.8;
+                camPos = centerPos.add(Math.cos(angle) * dist, 6.6 - p * 1.2, Math.sin(angle) * dist);
+                lookTarget = centerPos.add(0, 0.4, 0);
+            }
+            // GÓC 3 (32 -> 50t): Góc trung cảnh chéo chuẩn ảnh mẫu Slime Datta Ken — Tia sáng xanh bùng lên và thấy người chơi hiện hình dịch chuyển tới!
+            else if (age < 50.0f) {
+                float p = (age - 32.0f) / 18.0f;
+                double angle = baseYawRad + Math.PI * 0.35 + p * 0.30;
+                double dist = 3.5 + p * 0.6;
+                camPos = centerPos.add(Math.cos(angle) * dist, 1.35 + p * 0.20, Math.sin(angle) * dist);
+                lookTarget = centerPos.add(0, 1.05, 0);
+            }
+            // GÓC 4 (50 -> 68t): Góc xoay vòng cung điện ảnh (Dynamic Orbit Shot) quanh người chơi và sinh vật đi kèm giữa làn tia sáng xanh
+            else if (age < 68.0f) {
+                float p = (age - 50.0f) / 18.0f;
+                double angle = baseYawRad + Math.PI * 0.65 + p * Math.PI * 0.85;
+                double dist = 4.3 - p * 0.5;
+                camPos = centerPos.add(Math.cos(angle) * dist, 1.85 - p * 0.30, Math.sin(angle) * dist);
+                lookTarget = centerPos.add(0, 1.15, 0);
+            }
+            // GÓC 5 (68 -> 84t): Góc cận cảnh Hero Shot phía trước người chơi khi Ma Pháp Trận Đánh Dấu dưới chân tan biến
+            else if (age < 84.0f) {
+                float p = (age - 68.0f) / 16.0f;
+                double angle = baseYawRad + Math.PI * 0.15 - p * 0.35;
+                double dist = 2.7 + p * 0.5;
+                camPos = centerPos.add(Math.cos(angle) * dist, 1.10 + p * 0.35, Math.sin(angle) * dist);
+                lookTarget = centerPos.add(0, 1.25, 0);
+            }
+            // GÓC 6 (84 -> 100t): Smoothstep hoàn trả góc máy mượt mà về lại thành góc nhìn người chơi
+            else {
+                float blend = Math.clamp((age - 84.0f) / Math.max(1.0f, totalTicks - 84.0f), 0.0f, 1.0f);
+                float ease = blend * blend * (3.0f - 2.0f * blend);
+                double lastAngle = baseYawRad - 0.20;
+                Vec3 endPos = centerPos.add(Math.cos(lastAngle) * 3.2, 1.45, Math.sin(lastAngle) * 3.2);
+                camPos = endPos.lerp(vanillaPos, ease);
+                Vec3 forwardLook = new Vec3(-Math.sin(baseYawRad), 0, Math.cos(baseYawRad));
+                lookTarget = centerPos.add(0, 1.25, 0).lerp(vanillaPos.add(forwardLook.scale(10.0)), ease);
+            }
+
+            return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 84.0f, (float) totalTicks);
         }
 
-        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 60.0f, 85.0f);
+        // ---------------------------------------------------------------------
+        // KỊCH BẢN B: KHI ĐÁNH DẤU (MODE 0) HOẶC KHỞI PHÁT DỊCH CHUYỂN (MODE 1 & MODE 2)
+        // Đổi góc quay thấy tạo ra Ma Pháp Trận 3D giống ảnh Slime Datta Ken & tia sáng bay lên
+        // ---------------------------------------------------------------------
+        Vec3 camPos;
+        Vec3 lookTarget;
+        float cut1End = totalTicks * 0.42f;
+        float cut2End = totalTicks * 0.76f;
+
+        if (age < cut1End) {
+            // Góc 1: Góc nghiêng chuẩn ảnh mẫu nhìn Ma Pháp Trận 3D bung mở trên mặt đất
+            float p = age / Math.max(1.0f, cut1End);
+            double angle = baseYawRad + Math.PI * 0.32 + p * 0.35;
+            double dist = 3.8 + p * 0.5;
+            camPos = centerPos.add(Math.cos(angle) * dist, 1.35 + p * 0.30, Math.sin(angle) * dist);
+            lookTarget = centerPos.add(0, 0.55, 0);
+        } else if (age < cut2End) {
+            // Góc 2: Góc xoay nâng cao thấy rõ các tia sáng xanh bay vút lên từ Ma Pháp Trận
+            float p = (age - cut1End) / Math.max(1.0f, cut2End - cut1End);
+            double angle = baseYawRad + Math.PI * 0.67 + p * 0.65;
+            double dist = 4.4 - p * 0.4;
+            camPos = centerPos.add(Math.cos(angle) * dist, 2.10 + p * 0.60, Math.sin(angle) * dist);
+            lookTarget = centerPos.add(0, 0.90, 0);
+        } else {
+            // Góc 3: Trả góc nhìn mượt mà về người chơi
+            float blend = Math.clamp((age - cut2End) / Math.max(1.0f, totalTicks - cut2End), 0.0f, 1.0f);
+            float ease = blend * blend * (3.0f - 2.0f * blend);
+            double lastAngle = baseYawRad + Math.PI * 0.67 + 0.65;
+            Vec3 endPos = centerPos.add(Math.cos(lastAngle) * 4.0, 2.70, Math.sin(lastAngle) * 4.0);
+            camPos = endPos.lerp(vanillaPos, ease);
+            Vec3 forwardLook = new Vec3(-Math.sin(baseYawRad), 0, Math.cos(baseYawRad));
+            lookTarget = centerPos.add(0, 0.90, 0).lerp(vanillaPos.add(forwardLook.scale(10.0)), ease);
+        }
+
+        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, cut2End, (float) totalTicks);
     }
 
     // =========================================================================
@@ -842,7 +990,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DRAGON_NOVA -> "PHẪN NỘ VƯƠNG: LONG TINH BỘC VIÊM BÁ";
             case SkillVisualConfig.SKILL_EXTINCTION_STARS -> "THẦN NỘ: TUYỆT DIỆT TINH TÚ (MEGIDDO)";
             case SkillVisualConfig.SKILL_SEER_FLESH -> "THỊ THỰC: MA NHÃN THẤU THỊ VẠN GIỚI";
-            case SkillVisualConfig.SKILL_ALKAID -> "DIỆT THẾ TÀ TINH: ĐẠI THIÊN THẠCH ALKAID";
+            case SkillVisualConfig.SKILL_SPATIAL_MARK -> "KHÔNG GIAN ẤN KÝ: ĐÁNH DẤU MA PHÁP TRẬN";
+            case SkillVisualConfig.SKILL_SPATIAL_TELEPORT -> "THAO TÚNG KHÔNG GIAN: DỊCH CHUYỂN TỨC THỜI";
             case SkillVisualConfig.SKILL_GRANITE_BLAST -> "CÚ BẮN GRANIT: PHÁO NÓN GIA TỐC HẠT";
             case SkillVisualConfig.SKILL_REVERSE_TIME_SLASH -> "NGHỊCH THỜI NHẤT TRẢM: THỜI GIAN NGƯNG ĐỌNG";
             case SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI -> "BẠT ĐAO THUẬT VẬN TỐC NGƯỢC: DƯ ẢNH TỐC BIẾN";
@@ -870,7 +1019,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DRAGON_NOVA -> "憤怒之王 - DRAGON NOVA";
             case SkillVisualConfig.SKILL_EXTINCTION_STARS -> "神之怒 - MEGIDDO";
             case SkillVisualConfig.SKILL_SEER_FLESH -> "視肉 - SEER FLESH";
-            case SkillVisualConfig.SKILL_ALKAID -> "破軍星 - ALKAID";
+            case SkillVisualConfig.SKILL_SPATIAL_MARK -> "空間刻印 - SPATIAL MARK";
+            case SkillVisualConfig.SKILL_SPATIAL_TELEPORT -> "空間転移 - SPATIAL TELEPORTATION";
             case SkillVisualConfig.SKILL_GRANITE_BLAST -> "グラニットブラスト - GRANITE BLAST";
             case SkillVisualConfig.SKILL_REVERSE_TIME_SLASH -> "逆時一斬 - REVERSE TIME SLASH";
             case SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI -> "逆速居合術 - REVERSE VELOCITY IAI";
@@ -898,7 +1048,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DRAGON_NOVA -> 0xFF1744;     // Đỏ Starlight
             case SkillVisualConfig.SKILL_EXTINCTION_STARS -> 0xFFD600; // Vàng mặt trời
             case SkillVisualConfig.SKILL_SEER_FLESH -> 0xD50000;      // Đỏ thẫm ma nhãn
-            case SkillVisualConfig.SKILL_ALKAID -> 0xC51162;          // Đỏ tím thiên thạch
+            case SkillVisualConfig.SKILL_SPATIAL_MARK -> 0x00E5FF;    // Xanh lam ma pháp trận Tensura
+            case SkillVisualConfig.SKILL_SPATIAL_TELEPORT -> 0x00FFFF; // Cyan dịch chuyển không gian
             case SkillVisualConfig.SKILL_GRANITE_BLAST -> 0xFF6D00;   // Cam hạt nhân
             case SkillVisualConfig.SKILL_REVERSE_TIME_SLASH -> 0xE0E0E0; // Trắng bạc
             case SkillVisualConfig.SKILL_REVERSE_VELOCITY_IAI -> 0xFF5252; // Đỏ máu

@@ -17,10 +17,20 @@ import net.minecraft.world.item.ItemStack;
 public class ClientInputEvents {
     private static long lastTaisuiFireTime = 0;
     private static long lastRightClickCastTime = 0;
+    private static net.minecraft.client.multiplayer.ClientLevel lastSyncedLevel = null;
 
     public static void register() {
         ClientTickEvent.CLIENT_POST.register(mc -> {
-            if (mc.player == null) return;
+            if (mc.player == null || mc.level == null) {
+                lastSyncedLevel = null;
+                return;
+            }
+
+            if (lastSyncedLevel != mc.level) {
+                lastSyncedLevel = mc.level;
+                ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSkillActionPacket(
+                        com.minhphuc.weapons.network.ServerboundSkillActionPacket.ACTION_REQUEST_SYNC, 0));
+            }
 
             if (ModKeyBindings.SELECT_BULLET_KEY.consumeClick()) {
                 if (mc.screen == null) {
@@ -44,8 +54,23 @@ public class ClientInputEvents {
             }
 
             if (ModKeyBindings.BEELZEBUTH_KEY.consumeClick()) {
-                // Nhấn phím Z: Chuyển đổi skill cho Nguyệt Quang Thần Tế Kiếm, Chân Ma Vương và Thần Linh Vũ Trang
-                ModMessages.sendToServer(new ServerboundCycleSkillPacket());
+                // Nhấn Z (hoặc Shift+Z để lùi): Chuyển đổi skill cho Nguyệt Quang Thần Tế Kiếm, Chân Ma Vương, Thần Linh & Nhập Xác
+                ModMessages.sendToServer(new ServerboundCycleSkillPacket(mc.player.isShiftKeyDown()));
+            }
+
+            if (ModKeyBindings.SKILL_WHEEL_KEY.consumeClick()) {
+                if (mc.screen == null) {
+                    boolean canOpen = ClientPossessionHandler.isLocalPlayerPossessing()
+                            || ClientSkillStateHandler.isTrueDemonLord()
+                            || ClientSkillStateHandler.isPrimordial()
+                            || com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(mc.player)
+                            || mc.player.isCreative();
+                    if (canOpen) {
+                        mc.setScreen(new com.minhphuc.weapons.client.gui.SkillWheelScreen());
+                    } else {
+                        mc.player.displayClientMessage(Component.literal("§c⚠️ Bạn cần thức tỉnh Chân Ma Vương, Thủy Tổ, mặc Giáp Thần Linh hoặc Nhập Xác Ác Ma để mở Bánh Xe Kỹ Năng!"), true);
+                    }
+                }
             }
 
             if (ModKeyBindings.TENGAI_SLASH_KEY.consumeClick()) {

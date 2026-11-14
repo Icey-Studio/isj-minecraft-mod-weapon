@@ -29,6 +29,10 @@ public abstract class PlayerRendererMixin {
     @Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), cancellable = true)
     private void weapons$renderPossessedDemonF5(AbstractClientPlayer player, float entityYaw, float partialTicks,
                                                PoseStack poseStack, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        if (com.minhphuc.weapons.client.ClientCinematicSkillHandler.isEntityHiddenForTeleportArrival(player)) {
+            ci.cancel();
+            return;
+        }
         if (ClientPossessionHandler.isPossessing(player)) {
             ClientPossessionRenderer.renderPossessedDemon((PlayerRenderer) (Object) this, player, entityYaw, partialTicks, poseStack, buffer, packedLight);
             ci.cancel();

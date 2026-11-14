@@ -6,6 +6,8 @@ import com.minhphuc.weapons.client.ClientHellflareCinematicHandler;
 import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
 import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
 import com.minhphuc.weapons.client.ClientPossessionHandler;
+import com.minhphuc.weapons.client.ClientSkillStateHandler;
+import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
@@ -18,6 +20,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+import java.util.List;
 
 /**
  * 1. Ẩn hồng tâm (Crosshair) khi camera đang ở chế độ điện ảnh (Cinematic Camera)
@@ -134,5 +138,58 @@ public class GuiMixin {
         guiGraphics.pose().scale(scale, scale, 1.0F);
         guiGraphics.drawString(font, hpText, 0, 0, 0xFFFFFFFF, true);
         guiGraphics.pose().popPose();
+    }
+
+    @Inject(method = "render", at = @At("TAIL"))
+    private void weapons$renderSkillMiniHud(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
+        Minecraft mc = Minecraft.getInstance();
+        if (mc.player == null || mc.options.hideGui || mc.screen != null) return;
+        if (ClientCinematicSkillHandler.isActive()
+                || ClientHellflareCinematicHandler.isActive()
+                || ClientAzathothCinematicHandler.isActive()
+                || ClientNihilityCinematicHandler.isActive()
+                || ClientOrbitalCinematicHandler.isActive()) {
+            return;
+        }
+
+        boolean possessing = ClientPossessionHandler.isLocalPlayerPossessing();
+        boolean activeLord = ClientSkillStateHandler.isTrueDemonLord()
+                || ClientSkillStateHandler.isPrimordial()
+                || DivineArmorItem.isWearingAnyPiece(mc.player);
+        if (!possessing && !activeLord) return;
+
+        String skillName = ClientSkillStateHandler.getCurrentSkillName();
+        if (skillName == null || skillName.isEmpty()) return;
+
+        var font = mc.font;
+        String cdKey = possessing
+                ? "possess_" + (ClientPossessionHandler.getLocalData() != null ? ClientPossessionHandler.getLocalData().selectedSkillIndex() : 0)
+                : "lord_" + ClientSkillStateHandler.getLordSelectedIndex();
+        int cdTicks = ClientSkillStateHandler.getRemainingCooldownTicks(cdKey);
+
+        String line1 = (possessing ? "§5§l[NHẬP XÁC] §f" : "§6§l[KỸ NĂNG] §f") + skillName;
+        if (cdTicks > 0) {
+            line1 += String.format(" §c(⏳ %.1fs)", cdTicks / 20.0D);
+        }
+
+        StringBuilder line2 = new StringBuilder();
+        line2.append(ClientSkillStateHandler.isSafeMode() ? "§a🛡 Safe:BẬT " : "§7💥 Safe:TẮT ");
+        if (ClientSkillStateHandler.hasTacticalMark()) line2.append("§b📍ChiếnThuật ");
+        List<String> anchors = ClientSkillStateHandler.getAnchorLabels();
+        if (!anchors.isEmpty()) {
+            int activeIdx = Math.clamp(ClientSkillStateHandler.getSelectedAnchorIndex(), 0, anchors.size() - 1);
+            line2.append("§6🏠Neo ").append(anchors.size()).append("/5 [#").append(activeIdx + 1).append("] ");
+        } else if (ClientSkillStateHandler.hasAnchorMark()) {
+            line2.append("§6🏠VĩnhViễn ");
+        }
+        line2.append("§8| §e[Z]Đổi [G]BánhXe");
+
+        int w = Math.max(font.width(line1), font.width(line2.toString())) + 12;
+        int x = 8;
+        int y = 8;
+        guiGraphics.fill(x, y, x + w, y + 25, 0xAA0E0A16);
+        guiGraphics.fill(x, y, x + 2, y + 25, possessing ? 0xFFA855F7 : 0xFFD4AF37);
+        guiGraphics.drawString(font, line1, x + 6, y + 4, 0xFFFFFFFF, true);
+        guiGraphics.drawString(font, line2.toString(), x + 6, y + 14, 0xFFE2E8F0, false);
     }
 }

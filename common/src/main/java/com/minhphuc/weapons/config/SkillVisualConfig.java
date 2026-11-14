@@ -17,7 +17,7 @@ public final class SkillVisualConfig {
     public static final int SKILL_DRAGON_NOVA = 6;
     public static final int SKILL_EXTINCTION_STARS = 7;
     public static final int SKILL_SEER_FLESH = 8;
-    public static final int SKILL_ALKAID = 9;
+    public static final int SKILL_SPATIAL_MARK = 9;
     public static final int SKILL_GRANITE_BLAST = 10;
     public static final int SKILL_REVERSE_TIME_SLASH = 11;
     public static final int SKILL_REVERSE_VELOCITY_IAI = 12;
@@ -33,6 +33,7 @@ public final class SkillVisualConfig {
     public static final int SKILL_DIMENSIONAL_SANCTUARY = 22;
     public static final int SKILL_SPIRITRON_OUTBURST = 23;
     public static final int SKILL_CHROMATIC_PILLAR = 24;
+    public static final int SKILL_SPATIAL_TELEPORT = 25;
 
     private static boolean globalCinematicEnabled = true;
     private static final BitSet disabledSkills = new BitSet(64);
