@@ -15,6 +15,8 @@ import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.AgeableMob;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.PathfinderMob;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.AABB;
@@ -184,6 +186,19 @@ public class TensuraNamingAbility {
             var atkAttr = target.getAttribute(Attributes.ATTACK_DAMAGE);
             if (atkAttr != null) {
                 atkAttr.setBaseValue(Math.max(atkAttr.getBaseValue(), 4.0D) * 30.0D);
+            }
+
+            // Cung cấp khả năng tự vệ và chiến đấu cho các mob được ban tên (kể cả Dân Làng)
+            if (target instanceof Mob mob) {
+                com.minhphuc.weapons.mixin.MobAccessor mobAcc = (com.minhphuc.weapons.mixin.MobAccessor) mob;
+                if (mob instanceof net.minecraft.world.entity.PathfinderMob pMob) {
+                    mobAcc.weapons$getGoalSelector().addGoal(1, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(pMob, 1.35D, true));
+                    mobAcc.weapons$getTargetSelector().addGoal(1, new net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal(pMob));
+                }
+                if (mob instanceof net.minecraft.world.entity.npc.Villager) {
+                    mob.addTag("DemonLordVillager");
+                    mobAcc.weapons$getTargetSelector().addGoal(2, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(mob, net.minecraft.world.entity.monster.Zombie.class, true));
+                }
             }
         }
 
