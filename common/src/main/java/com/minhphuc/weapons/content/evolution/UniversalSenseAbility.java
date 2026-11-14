@@ -2,6 +2,7 @@ package com.minhphuc.weapons.content.evolution;
 
 import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
+import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ModMessages;
@@ -84,6 +85,9 @@ public class UniversalSenseAbility {
             return Double.compare(a.distanceToSqr(player), b.distanceToSqr(player));
         });
 
+        long now = level.getGameTime();
+        com.minhphuc.weapons.content.tensura.TensuraSkillHelper.activateUniversalSenseWindow(player.getUUID(), now, 400);
+
         int detectedCount = 0;
         int hostileCount = 0;
 
@@ -107,6 +111,7 @@ public class UniversalSenseAbility {
             boolean hostile = isHostileThreat(e, player);
             if (hostile) {
                 hostileCount++;
+                com.minhphuc.weapons.content.tensura.TensuraSkillHelper.markSensedTarget(player.getUUID(), e.getUUID(), now + 400);
             }
 
             // Phát sáng 20 giây (400 ticks) cho sinh vật thù địch, 15 giây (300 ticks) cho sinh vật thường
@@ -129,5 +134,62 @@ public class UniversalSenseAbility {
                 Component.literal("§b§l[CẢM NHẬN VẠN NĂNG] §e(Mức " + tier + " - " + (int) radius + "m) §fPhát hiện §c§l" + hostileCount + " Kẻ Địch Thù Địch §f/ Tổng §a" + detectedCount + " §fsinh vật!"),
                 true
         );
+    }
+
+    public static void castFromDemon(ServerLevel level, PrimordialDemonEntity demon, ServerPlayer owner) {
+        if (level == null || demon == null) return;
+        double radius = SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE) ? 384.0 : 200.0;
+
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.5F, 1.4F);
+        level.playSound(null, demon.getX(), demon.getY(), demon.getZ(),
+                SoundEvents.WARDEN_SONIC_CHARGE, SoundSource.PLAYERS, 1.5F, 1.8F);
+        level.sendParticles(ParticleTypes.GLOW, demon.getX(), demon.getY() + 1.0, demon.getZ(),
+                80, Math.min(24.0, radius * 0.15), 1.0, Math.min(24.0, radius * 0.15), 0.05);
+
+        AABB box = demon.getBoundingBox().inflate(radius);
+        List<LivingEntity> list = level.getEntitiesOfClass(LivingEntity.class, box,
+                e -> e.isAlive() && e != demon && e != owner);
+
+        long now = level.getGameTime();
+        if (owner != null) {
+            com.minhphuc.weapons.content.tensura.TensuraSkillHelper.activateUniversalSenseWindow(owner.getUUID(), now, 400);
+        }
+
+        int detectedCount = 0;
+        int hostileCount = 0;
+        for (LivingEntity e : list) {
+            if (e.distanceToSqr(demon) > radius * radius) continue;
+            if (owner != null && PrimordialDemonEntity.isContractedAllyOfPlayer(owner.getUUID(), e)) continue;
+
+            boolean hostile = owner != null
+                    ? isHostileThreat(e, owner)
+                    : (e instanceof net.minecraft.world.entity.monster.Enemy || e instanceof net.minecraft.world.entity.monster.Monster);
+            if (hostile) {
+                hostileCount++;
+                if (owner != null) {
+                    com.minhphuc.weapons.content.tensura.TensuraSkillHelper.markSensedTarget(owner.getUUID(), e.getUUID(), now + 400);
+                }
+            }
+
+            e.addEffect(new MobEffectInstance(MobEffects.GLOWING, hostile ? 400 : 300, 0, false, false));
+            level.sendParticles(hostile ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.END_ROD,
+                    e.getX(), e.getY() + e.getBbHeight() + 0.5, e.getZ(), 10, 0.2, 0.2, 0.2, 0.02);
+            detectedCount++;
+        }
+
+        if (owner != null) {
+            int cutsceneTicks = (detectedCount == 0) ? 35 : ((detectedCount == 1) ? 45 : Math.min(120, 25 + detectedCount * 24));
+            if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_UNIVERSAL_SENSE)) {
+                ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                        SkillVisualConfig.SKILL_UNIVERSAL_SENSE, owner.getUUID(), demon.position(), demon.getLookAngle(),
+                        cutsceneTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+                ));
+            }
+            owner.displayClientMessage(
+                    Component.literal("§b§l[" + demon.getEffectiveDemonName().toUpperCase() + " - CẢM NHẬN VẠN NĂNG] §e(" + (int) radius + "m) §fPhát hiện §c§l" + hostileCount + " Kẻ Địch Thù Địch §f/ Tổng §a" + detectedCount + " §fsinh vật!"),
+                    true
+            );
+        }
     }
 }

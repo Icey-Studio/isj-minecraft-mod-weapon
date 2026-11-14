@@ -1,9 +1,11 @@
 package com.minhphuc.weapons.mixin;
 
 import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
+import com.minhphuc.weapons.content.tensura.WeatherBarrierTracker;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.renderer.LevelRenderer;
+import net.minecraft.client.renderer.LightTexture;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
@@ -32,6 +34,13 @@ public abstract class LevelRendererMixin {
                 // Hủy các đám mây phẳng vanilla Minecraft khi nhìn từ vũ trụ xuống
                 ci.cancel();
             }
+        }
+    }
+
+    @Inject(method = "tickRain", at = @At("HEAD"), cancellable = true)
+    private void weapons$onTickRain(Camera camera, CallbackInfo ci) {
+        if (WeatherBarrierTracker.isClientCameraProtected()) {
+            ci.cancel();
         }
     }
 }

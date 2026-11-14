@@ -72,6 +72,73 @@ public class InfiniteDragonPrisonAbility {
 
     private static final List<ActivePrison> ACTIVE_PRISONS = Collections.synchronizedList(new ArrayList<>());
 
+    public static boolean isInPrison(net.minecraft.world.level.Level level, Vec3 pos) {
+        if (ACTIVE_PRISONS.isEmpty() || level == null || pos == null) return false;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison prison : ACTIVE_PRISONS) {
+                if (prison.level == level) {
+                    double dx = pos.x - prison.center.x;
+                    double dz = pos.z - prison.center.z;
+                    double horizDist = Math.hypot(dx, dz);
+                    double dy = pos.y - prison.center.y;
+                    double normDist;
+                    if (dy >= 0.0D) {
+                        normDist = Math.hypot(horizDist / prison.radius, dy / prison.domeHeight);
+                    } else if (dy >= -prison.skirtDepth) {
+                        normDist = horizDist / prison.radius;
+                    } else {
+                        normDist = 2.0D;
+                    }
+                    if (normDist <= 1.05D) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
+    public static boolean isInPrison(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (pos == null) return false;
+        return isInPrison(level, new Vec3(pos.getX() + 0.5, pos.getY() + 0.5, pos.getZ() + 0.5));
+    }
+
+    public static int getPrisonRoofY(net.minecraft.world.level.Level level, int x, int z) {
+        if (ACTIVE_PRISONS.isEmpty() || level == null) return Integer.MIN_VALUE;
+        int maxRoof = Integer.MIN_VALUE;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison prison : ACTIVE_PRISONS) {
+                if (prison.level == level) {
+                    double dx = (x + 0.5) - prison.center.x;
+                    double dz = (z + 0.5) - prison.center.z;
+                    double distSq = dx * dx + dz * dz;
+                    double R = prison.radius;
+                    if (distSq <= R * R) {
+                        double normR = Math.sqrt(distSq) / R;
+                        double roof = prison.center.y + prison.domeHeight * Math.sqrt(Math.max(0.0, 1.0 - normR * normR));
+                        maxRoof = Math.max(maxRoof, (int) Math.ceil(roof));
+                    }
+                }
+            }
+        }
+        return maxRoof;
+    }
+
+    public static void syncPrisonsToPlayer(ServerPlayer player) {
+        if (player == null || player.serverLevel() == null) return;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == player.serverLevel()) {
+                    Vec3 domeParams = new Vec3(p.domeHeight, p.skirtDepth, 1.0D);
+                    int remainingTicks = p.maxDurationTicks > 0 ? Math.max(1, p.maxDurationTicks - p.ticksAlive) : 72000;
+                    ModMessages.sendToPlayer(new ClientboundCinematicSkillPacket(
+                            SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, p.casterUuid, p.center, domeParams, remainingTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) p.radius
+                    ), player);
+                }
+            }
+        }
+    }
+
     /**
      * Dò tìm mặt đất thật sự bên dưới tọa độ (x, startY, z), xuyên qua toàn bộ tán lá cây, thân gỗ, cỏ, hoa, dây leo
      * để đảm bảo Lồng Giam Vô Hạn luôn chạm khít mặt đất mà không bị treo lơ lửng trên ngọn cây.
