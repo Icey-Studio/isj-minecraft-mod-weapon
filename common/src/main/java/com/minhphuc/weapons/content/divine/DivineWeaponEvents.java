@@ -37,7 +37,6 @@ public class DivineWeaponEvents {
             com.minhphuc.weapons.content.tensura.DragonNovaAbility.tickDragonNovas(level);
             com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility.tickTaisuiStates(level);
             com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.tickFleshes(level);
-            com.minhphuc.weapons.content.darkgathering.AlkaidAbility.tickAlkaids(level);
             com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.tickAbilities(level);
             com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility.tickAbilities(level);
             com.minhphuc.weapons.content.darkgathering.SeveredHeartCurseManager.tick(level);
@@ -151,8 +150,12 @@ public class DivineWeaponEvents {
             // 4. Chuột phải vào sinh vật (KHÔNG giữ Shift khi click Dân Làng) khi tay không: Thi triển Kỹ Năng Chân Ma Vương / Thần Linh Vũ Trang / Nhập Xác
             if (player.getItemInHand(hand).isEmpty()) {
                 if (player instanceof ServerPlayer serverPlayer) {
+                    if (target instanceof LivingEntity targetLiving) {
+                        com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.recordClickedEntity(serverPlayer, targetLiving);
+                    }
                     if (com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.isPossessing(serverPlayer)) {
                         com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.castSkill(serverPlayer);
+                        com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(serverPlayer);
                         return EventResult.interruptTrue();
                     }
 
@@ -172,6 +175,7 @@ public class DivineWeaponEvents {
                             int primordialSkillIdx = selectedSkill - lordSkills;
                             com.minhphuc.weapons.content.tensura.PrimordialSkillDispatcher.castSkill(sl, serverPlayer, primordialSkillIdx);
                         }
+                        com.minhphuc.weapons.content.tensura.TensuraSkillHelper.syncSkillStateToClient(serverPlayer);
                         return EventResult.interruptTrue();
                     }
                 } else if (target instanceof net.minecraft.world.entity.npc.AbstractVillager) {
@@ -218,7 +222,10 @@ public class DivineWeaponEvents {
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
                         || player.getTags().contains("KuboPenetrationDamage");
                 boolean isDisintegration = player.getTags().contains("DisintegrationDamage");
-                boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage");
+                boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage")
+                        || player.getTags().contains("VelzardPenetrationDamage")
+                        || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                        || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity;
 
                 if (isKuboPenetration || isDisintegration || isVoid || isVelgryndPenetration) {
                     player.displayClientMessage(

@@ -35,12 +35,6 @@ public class ExtinctionStarItem extends Item {
         ItemStack stack = player.getItemInHand(hand);
 
         if (!level.isClientSide() && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-            if (player.isShiftKeyDown()) {
-                // Kích hoạt Tuyệt Kỹ: Diệt Thế Tà Tinh - Alkaid
-                AlkaidAbility.cast((ServerLevel) level, serverPlayer);
-                return InteractionResultHolder.sidedSuccess(stack, false);
-            }
-
             // Phóng Tinh Tú Tuyệt Diệt
             TaisuiExtinctionStarsAbility.fireStar((ServerLevel) level, serverPlayer);
             return InteractionResultHolder.sidedSuccess(stack, false);
@@ -82,7 +76,6 @@ public class ExtinctionStarItem extends Item {
         tooltip.add(Component.literal(""));
         tooltip.add(Component.literal("§6⚡ Thao Tác Hủy Diệt:"));
         tooltip.add(Component.literal("§7- §c👉 Chuột Trái / Chuột Phải: §fPhóng ngôi sao ra xa, tất sát 1-hit quái vật và phá hủy block trúng phải."));
-        tooltip.add(Component.literal("§7- §4§l👉 Shift + Chuột Phải: §eThi triển Tuyệt Kỹ: Diệt Thế Tà Tinh (ALKAID) - Tụ 8s tạo cầu phân rã khổng lồ khoan xuyên địa hình!"));
         tooltip.add(Component.literal("§7- §e👉 Tỏa sáng chói lọi: §fChiếu rọi không gian xung quanh người cầm."));
     }
 }
