@@ -263,9 +263,10 @@ public class SpatialTeleportAbility {
     }
 
     public static RandomDestResult resolveRandomDestination(ServerLevel level, ServerPlayer player) {
-        int roll = level.random.nextInt(6);
+        int roll = level.random.nextInt(7);
         ServerLevel overworld = (level.dimension() == Level.OVERWORLD) ? level : (level.getServer() != null ? level.getServer().overworld() : level);
         ServerLevel nether = (level.getServer() != null) ? level.getServer().getLevel(Level.NETHER) : null;
+        ServerLevel endLevel = (level.getServer() != null) ? level.getServer().getLevel(Level.END) : null;
         BlockPos originPos = player.blockPosition();
 
         if (roll == 0) { // 1. Ngôi Làng (Village)
@@ -305,9 +306,23 @@ public class SpatialTeleportAbility {
                 BlockPos safe = AbyssalGovernanceManager.findSafeTeleportPos(overworld, trial, false, true);
                 return new RandomDestResult(overworld, safe, "Mật Viện Thử Thách (Trial Chambers)", 4);
             }
+        } else if (roll == 5 && endLevel != null) { // 6. Vùng Ngoại Vi The End (End City / Quần Đảo Hư Không)
+            BlockPos endSearchOrigin = (level.dimension() == Level.END && originPos.distSqr(BlockPos.ZERO) > 1000 * 1000)
+                    ? originPos
+                    : new BlockPos(1600, 64, 1600);
+            BlockPos endCity = locateStructure(endLevel, BuiltinStructures.END_CITY, endSearchOrigin, 150);
+            String name = "Thành Phố Hư Không (End City)";
+            if (endCity == null) {
+                double endAngle = level.random.nextDouble() * Math.PI * 2.0;
+                double endDist = 1400.0 + level.random.nextDouble() * 800.0;
+                endCity = new BlockPos((int) (Math.cos(endAngle) * endDist), 64, (int) (Math.sin(endAngle) * endDist));
+                name = "Quần Đảo Ngoại Vi (The End)";
+            }
+            BlockPos safe = AbyssalGovernanceManager.findSafeTeleportPos(endLevel, endCity, false, false);
+            return new RandomDestResult(endLevel, safe, name, 5);
         }
 
-        // 6. Fallback: Vùng Đất Mới Hoang Dã trên Overworld (cách 800m -> 3200m)
+        // 7. Fallback: Vùng Đất Mới Hoang Dã trên Overworld (cách 800m -> 3200m)
         double angle = level.random.nextDouble() * Math.PI * 2.0;
         double dist = 800.0 + level.random.nextDouble() * 2400.0;
         int targetX = (int) (originPos.getX() + Math.cos(angle) * dist);
@@ -330,6 +345,9 @@ public class SpatialTeleportAbility {
             entity.addEffect(new MobEffectInstance(MobEffects.CONDUIT_POWER, 6000, 0, false, false));
             entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 6000, 0, false, false));
         } else if (envType == 4) { // Trial Chambers
+            entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 6000, 0, false, false));
+        } else if (envType == 5) { // The End
+            entity.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 200, 0, false, false));
             entity.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 6000, 0, false, false));
         }
     }
@@ -439,8 +457,8 @@ public class SpatialTeleportAbility {
     }
 
     /**
-     * slot: -1 = Tự động (Chiến Thuật -> Vĩnh Viễn đang chọn -> Ngẫu Nhiên),
-     *       0 = Chiến Thuật, 1 = Vĩnh Viễn (slot đang chọn), 2 = Combat Blink, 3 = Ngẫu Nhiên,
+     * slot: -1 = Kỹ năng Dịch Chuyển (CHỈ đi tới Ấn Ký Chiến Thuật nếu có; nếu không có thì dịch chuyển tới nơi/không gian ngẫu nhiên — KHÔNG tự nhảy vào Ấn Ký Vĩnh Viễn),
+     *       0 = Ấn Ký Chiến Thuật, 1 = Ấn Ký Vĩnh Viễn (slot đang chọn), 2 = Combat Blink, 3 = Ngẫu Nhiên,
      *       10..14 = Ấn Ký Vĩnh Viễn #1..#5
      */
     public static void castTeleportToSlot(ServerLevel level, ServerPlayer player, int slot) {
@@ -458,21 +476,28 @@ public class SpatialTeleportAbility {
             return;
         }
 
-        // 1. Xác định Ấn Ký đích theo slot (ưu tiên Ấn Ký Chiến Thuật -> Ấn Ký Vĩnh Viễn -> Ngẫu nhiên)
+        // 1. Xác định đích theo slot:
+        //    - slot == -1 (Kỹ năng Dịch Chuyển mặc định): CHỈ ưu tiên Ấn Ký Chiến Thuật -> Ngẫu Nhiên (tuyệt đối không tự nhảy vào Ấn Ký Vĩnh Viễn)
+        //    - slot == 1 hoặc 10..14 (chỉ định từ Menu G): dùng Ấn Ký Vĩnh Viễn tương ứng
         SpatialMark tactical = (slot == -1 || slot == 0) ? getMark(player, false) : null;
         int specificAnchorIdx = (slot >= 10 && slot < 10 + MAX_ANCHOR_MARKS) ? (slot - 10) : -1;
+        boolean anchorRequested = (slot == 1 || specificAnchorIdx >= 0);
         SpatialMark anchor = null;
         int usedAnchorSlot = -1;
-        if (tactical == null) {
+        if (tactical == null && anchorRequested) {
             if (specificAnchorIdx >= 0) {
                 anchor = getAnchorMark(player, specificAnchorIdx);
                 usedAnchorSlot = specificAnchorIdx;
                 if (anchor != null) {
                     setSelectedAnchorIndex(player, specificAnchorIdx);
                 }
-            } else if (slot == -1 || slot == 1) {
+            } else {
                 anchor = getActiveAnchorMark(player);
                 usedAnchorSlot = getSelectedAnchorIndex(player);
+            }
+            if (anchor == null) {
+                player.displayClientMessage(Component.literal("§c⚠️ Ấn Ký Vĩnh Viễn này chưa được khắc! Hãy giữ Shift + Đánh Dấu để khắc trước."), true);
+                return;
             }
         }
         SpatialMark mark = (tactical != null) ? tactical : anchor;
@@ -909,7 +934,7 @@ public class SpatialTeleportAbility {
         }
 
         SpatialMark tactical = getMark(owner, false);
-        SpatialMark mark = (tactical != null) ? tactical : getActiveAnchorMark(owner);
+        SpatialMark mark = tactical;
         ServerLevel targetLevel;
         BlockPos safeDestPos;
         Vec3 exactDest;
@@ -924,8 +949,8 @@ public class SpatialTeleportAbility {
             exactDest = mark.pos();
             safeDestPos = BlockPos.containing(exactDest);
             targetYaw = mark.yaw();
-            consumeMark = (tactical != null);
-            destTitle = consumeMark ? "Ấn Ký Chiến Thuật" : "Ấn Ký Vĩnh Viễn #" + (getSelectedAnchorIndex(owner) + 1);
+            consumeMark = true;
+            destTitle = "Ấn Ký Chiến Thuật";
             envType = 0;
         } else {
             RandomDestResult randomDest = resolveRandomDestination(level, owner);
@@ -1094,8 +1119,8 @@ public class SpatialTeleportAbility {
                     continue;
                 }
 
-                // Kiểm tra điểm Đánh Dấu (Chiến thuật hoặc Vĩnh Viễn) hoặc điểm ngẫu nhiên
-                SpatialMark mark = getPreferredMark(caster);
+                // Chỉ kiểm tra Ấn Ký Chiến Thuật (nếu không có thì dùng nơi/không gian ngẫu nhiên; KHÔNG tự nhảy vào Ấn Ký Vĩnh Viễn)
+                SpatialMark mark = getMark(caster, false);
                 if (mark == null && circle.randomDest == null) {
                     circle.randomDest = resolveRandomDestination(level, caster);
                     if (circle.randomDest != null) {
