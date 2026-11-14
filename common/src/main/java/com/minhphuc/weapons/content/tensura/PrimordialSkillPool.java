@@ -1,6 +1,9 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
+import com.minhphuc.weapons.network.ModMessages;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
@@ -51,7 +54,7 @@ public class PrimordialSkillPool {
         ALL_SKILLS.add(new SkillEntry(SKILL_SOUL_DRAIN, "soul_drain", "Hấp Huyết Linh Hồn (Soul Drain)", "Soul Drain", "Rút cạn linh hồn kẻ địch để cường hóa sinh lực", "Đá Vô Cực", "§6", 0xFF8C00));
         ALL_SKILLS.add(new SkillEntry(SKILL_MIND_BLAST, "mind_blast", "Sóng Xung Kích Tâm Trí (Mind Blast)", "Mind Blast", "Tấn công sóng âm gây mù và choáng váng diện rộng", "Đá Vô Cực", "§e", 0xFFD700));
         ALL_SKILLS.add(new SkillEntry(SKILL_TAISUI_STARS, "taisui_stars", "Tuyệt Diệt Tinh Tú (Extinction Stars)", "Extinction Stars", "Phóng chùm sao Thái Tuế bắn phá hủy diệt", "Thái Tuế", "§b", 0x00FFFF));
-        ALL_SKILLS.add(new SkillEntry(SKILL_ALKAID_CHAOS, "alkaid", "Diệt Thế Tà Tinh: Alkaid", "Alkaid Annihilation", "Cầu tà tinh xoáy ốc khoan thủng mọi phòng ngự", "Thái Tuế", "§4", 0x8B0000));
+        ALL_SKILLS.add(new SkillEntry(SKILL_ALKAID_CHAOS, "spatial_teleport", "Dịch Chuyển Không Gian: Pháp Trận Vượt Chiều", "Spatial Teleportation", "Mở pháp trận không gian 3D dịch chuyển tức thời đến ấn ký đã đánh dấu", "Không Gian", "§b", 0x00E5FF));
         ALL_SKILLS.add(new SkillEntry(SKILL_JACOB_LADDER, "jacob_ladder", "Nấc Thang Jacob (Tà Khứ Vũ Thê Tử)", "Jacob's Ladder", "Quang trụ 60m bộc phá năng lượng thần thánh", "Nguyệt Quang", "§b", 0x00E5FF));
         ALL_SKILLS.add(new SkillEntry(SKILL_DISINTEGRATION, "disintegration", "Linh Tử Băng Hoại (Disintegration)", "Disintegration", "Tam tầng pháp trận diệt nguyên tử tuyệt đối", "Thánh Ma", "§e", 0xFFEA00));
         ALL_SKILLS.add(new SkillEntry(SKILL_HEAVENLY_JUDGMENT, "heavenly_judgment", "Bát Môn Thiên Phạt Trận", "Heavenly Judgment", "7 Cột trụ giam hãm và phán quyết kẻ địch", "Thánh Điển", "§6", 0xFFA500));
@@ -194,8 +197,30 @@ public class PrimordialSkillPool {
                 }
             }
             case SKILL_ALKAID_CHAOS -> {
-                level.playSound(null, tPos.x, tPos.y, tPos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 3.0F, 0.5F);
-                level.sendParticles(ParticleTypes.EXPLOSION_EMITTER, tPos.x, tPos.y + 1.0D, tPos.z, 3, 0.5, 0.5, 0.5, 0);
+                Vec3 origin = demon.position();
+                SpatialTeleportAbility.spawnMagicCircleParticles(level, origin, 2.2D, 32);
+                level.playSound(null, origin.x, origin.y, origin.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.2F);
+
+                Vec3 dest = tPos;
+                if (target != null) {
+                    Vec3 targetLook = Vec3.directionFromRotation(0.0F, target.getYRot()).normalize();
+                    dest = target.position().subtract(targetLook.scale(2.5D));
+                }
+                demon.teleportTo(dest.x, dest.y, dest.z);
+                demon.fallDistance = 0.0F;
+
+                SpatialTeleportAbility.spawnMagicCircleParticles(level, dest, 2.2D, 40);
+                ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                        SkillVisualConfig.SKILL_SPATIAL_TELEPORT,
+                        demon.getUUID(),
+                        dest,
+                        new Vec3(SpatialTeleportAbility.MODE_DEPART_PERSONAL, 0.0D, 0.0D),
+                        24,
+                        ClientboundCinematicSkillPacket.ACTION_START,
+                        2.2F
+                ));
+                level.playSound(null, dest.x, dest.y, dest.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.2F, 1.35F);
+                level.playSound(null, dest.x, dest.y, dest.z, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 0.9F);
                 if (target != null) {
                     demon.dealDemonicDamage(target, (float) (demon.getAttackDamage() * 2.5));
                 }

@@ -9,6 +9,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.damagesource.DamageSource;
+import net.minecraft.world.damagesource.DamageTypes;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
@@ -75,6 +76,12 @@ public class TensuraEvents {
                 if (com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.checkEmptyHandPunch(sp)) {
                     return EventResult.interruptTrue();
                 }
+                if (com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.dispelByPunch(sp, pos)) {
+                    return EventResult.interruptTrue();
+                }
+                if (com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.checkEmptyHandPunch(sp)) {
+                    return EventResult.interruptTrue();
+                }
             }
             return EventResult.pass();
         });
@@ -103,6 +110,7 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.AzathothAbility.tick(level);
             com.minhphuc.weapons.content.space.OrbitalStrikeManager.tickStrikes(level);
             com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.tick(level);
+            com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.tick(level);
             com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.tickDomains(level);
             com.minhphuc.weapons.content.tensura.ApocalypseAbility.tickApocalypses(level);
         });
@@ -204,6 +212,11 @@ public class TensuraEvents {
             player.getAbilities().setFlyingSpeed(0.08F);
             player.onUpdateAbilities();
         }
+
+        // Đồng bộ kết giới, lồng giam bảo hộ thời tiết và các Ấn Ký Không Gian
+        AntiMagicBarrierManager.syncBarriersToPlayer(player);
+        com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(player);
+        SpatialTeleportAbility.syncVisualMarksToPlayer(player);
     }
 
     public static boolean hasSeedItemInInventory(ServerPlayer player) {
@@ -501,6 +514,111 @@ public class TensuraEvents {
             return EventResult.interruptFalse();
         }
 
+        boolean isVictimNamed = victim.getTags().contains("TensuraNamedMob") || (victim instanceof PrimordialDemonEntity pde && pde.isNamed());
+        boolean isVictimDemonLord = victim.getTags().contains("TensuraDemonLordMob");
+
+        // =========================================================================
+        // A. KHÁNG TÍNH KHI ĐƯỢC BAN TÊN HOẶC TIẾN HÓA MA VƯƠNG (BẤT KỲ TRẠNG THÁI NÀO)
+        // =========================================================================
+        if (isVictimNamed || isVictimDemonLord) {
+            // 1. Không chết ngạt/đuối nước (dưới nước lên cạn không ngạt, trên cạn xuống nước không đuối)
+            if (source.is(DamageTypes.DROWN) || source.is(DamageTypes.DRY_OUT)) {
+                return EventResult.interruptFalse();
+            }
+
+            // 2. Creeper khi nổ không chết (miễn nhiễm sát thương vụ nổ)
+            if (victim instanceof net.minecraft.world.entity.monster.Creeper) {
+                if (source.is(DamageTypes.EXPLOSION) || source.is(DamageTypes.PLAYER_EXPLOSION)) {
+                    return EventResult.interruptFalse();
+                }
+            }
+        }
+
+        // =========================================================================
+        // B. KHÁNG TÍNH TỐI THƯỢNG KHI ĐƯỢC CẢ BAN TÊN VÀ TIẾN HÓA MA VƯƠNG
+        // =========================================================================
+        if (isVictimNamed && isVictimDemonLord) {
+            // 1. Vô hiệu hóa cháy, dung nham, nổ, rơi, ngạt tường, va chạm, đói, gai...
+            if (source.is(DamageTypes.IN_FIRE) || source.is(DamageTypes.ON_FIRE) || source.is(DamageTypes.LAVA)
+                    || source.is(DamageTypes.HOT_FLOOR) || source.is(DamageTypes.CAMPFIRE)
+                    || source.is(DamageTypes.EXPLOSION) || source.is(DamageTypes.PLAYER_EXPLOSION)
+                    || source.is(DamageTypes.FALL) || source.is(DamageTypes.FLY_INTO_WALL)
+                    || source.is(DamageTypes.IN_WALL) || source.is(DamageTypes.FALLING_BLOCK)
+                    || source.is(DamageTypes.STALAGMITE) || source.is(DamageTypes.STARVE)
+                    || source.is(DamageTypes.CACTUS) || source.is(DamageTypes.SWEET_BERRY_BUSH)
+                    || source.is(DamageTypes.THORNS)) {
+                victim.clearFire();
+                return EventResult.interruptFalse();
+            }
+
+            // 2. Sát thương xuyên thấu không gian / Tuyệt đối tử vong (Void / Generic Kill)
+            if (source.is(DamageTypes.FELL_OUT_OF_WORLD) || source.is(DamageTypes.GENERIC_KILL)) {
+                return EventResult.pass();
+            }
+
+            // 3. Kiểm tra xem kẻ tấn công có phải là Boss thật mạnh lớn hay không
+            Entity attacker = source.getEntity() != null ? source.getEntity() : source.getDirectEntity();
+            boolean isAttackerBoss = false;
+            if (attacker instanceof LivingEntity livingAttacker) {
+                if (com.minhphuc.weapons.content.divine.DivineSalvationHelper.isBoss(livingAttacker)
+                        || livingAttacker.getTags().contains("TensuraDemonLordMob")
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.MilimEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity
+                        || livingAttacker instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon
+                        || livingAttacker instanceof net.minecraft.world.entity.boss.wither.WitherBoss
+                        || livingAttacker instanceof net.minecraft.world.entity.monster.warden.Warden) {
+                    isAttackerBoss = true;
+                }
+            }
+
+            if (isAttackerBoss) {
+                return EventResult.pass(); // Cho phép sát thương từ Đại Boss!
+            }
+
+            // 4. Kiểm tra xem đòn đánh có phải là Skill / Ma pháp hay không
+            boolean isSkillOrMagic = source.is(DamageTypes.MAGIC)
+                    || source.is(DamageTypes.INDIRECT_MAGIC)
+                    || source.is(DamageTypes.SONIC_BOOM)
+                    || source.is(DamageTypes.DRAGON_BREATH)
+                    || source.is(DamageTypes.LIGHTNING_BOLT)
+                    || victim.getTags().contains("DisintegrationDamage")
+                    || victim.getTags().contains("KuboPenetrationDamage")
+                    || victim.getTags().contains("VelgryndPenetrationDamage")
+                    || victim.getTags().contains("AzathothErased");
+
+            if (!isSkillOrMagic && attacker instanceof ServerPlayer sp) {
+                // Người chơi dùng vũ khí kỹ năng hoặc trạng thái Ma Vương Chân Thức Tỉnh
+                boolean isPlayerTrueLord = EntityDataHelper.getCustomData(sp).getBoolean("TensuraTrueDemonLord");
+                ItemStack held = sp.getMainHandItem();
+                if (isPlayerTrueLord || held.getItem() instanceof com.minhphuc.weapons.content.divine.MoonlightSwordItem
+                        || held.getItem() instanceof com.minhphuc.weapons.content.divine.ThienMaSwordItem
+                        || held.getItem() instanceof com.minhphuc.weapons.content.tensura.PrimordialPactItem
+                        || com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility.canUseTengaiTechniques(sp)) {
+                    isSkillOrMagic = true;
+                }
+            }
+
+            if (isSkillOrMagic) {
+                return EventResult.pass(); // Cho phép sát thương từ Skill của Ác Ma / Người dùng skill!
+            }
+
+            // 5. Nếu KHÔNG PHẢI Boss và KHÔNG PHẢI Skill -> VÔ HIỆU HÓA HOÀN TOÀN MỌI ĐÒN ĐÁNH VẬT LÝ!
+            if (victim.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.ENCHANTED_HIT, victim.getX(), victim.getY() + victim.getBbHeight() / 2.0, victim.getZ(), 12, 0.3, 0.3, 0.3, 0.1);
+                sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.2F, 1.5F);
+            }
+            if (attacker instanceof Player p) {
+                p.displayClientMessage(
+                        Component.literal("§c§l[MA TỐ BẤT HOẠI] §7Sinh vật này sở hữu thể xác Chân Ma Vương Danh Xưng, miễn nhiễm hoàn toàn mọi đòn đánh vật lý thường!"),
+                        true
+                );
+            }
+            return EventResult.interruptFalse();
+        }
+
         // 1. Phù thủy, Kẻ cướp (Raider) hy sinh triệu hồi ác ma khi máu còn dưới 20% (trừ khi đã thành Ma Vương, Dân làng tuyệt đối không triệu hồi)
         if (!victim.getTags().contains("TensuraDemonLordMob") && !(victim instanceof net.minecraft.world.entity.npc.Villager) &&
             (victim instanceof net.minecraft.world.entity.monster.Witch ||
@@ -548,20 +666,20 @@ public class TensuraEvents {
                         attacker = le;
                     }
 
-                    // Loại bỏ Ác Ma trùng với loại mà người chơi trên server đang chuyển sinh thành
+                    // Loại bỏ Ác Ma trùng với loại mà người chơi đang chuyển sinh HOẶC đang giữ Khế Ước trong người
                     java.util.List<DemonType> availableDemons = new java.util.ArrayList<>(java.util.List.of(DemonType.values()));
+                    availableDemons.removeIf(dType -> PrimordialPactItem.isDemonContractedInAnyPlayerInventory(serverLevel, dType));
                     for (ServerPlayer sp : serverLevel.players()) {
                         DemonType playerType = PrimordialPlayerDataHelper.getPrimordialType(sp);
                         if (playerType != null) {
                             availableDemons.remove(playerType);
                         }
                     }
-                    DemonType randomDemon;
-                    if (!availableDemons.isEmpty()) {
-                        randomDemon = availableDemons.get(serverLevel.random.nextInt(availableDemons.size()));
-                    } else {
-                        randomDemon = DemonType.values()[serverLevel.random.nextInt(DemonType.values().length)];
+                    if (availableDemons.isEmpty()) {
+                        // Toàn bộ Ác Ma đều đang có Khế Ước trong người chơi -> Sinh vật không thể triệu hồi chúng được nữa!
+                        return EventResult.pass();
                     }
+                    DemonType randomDemon = availableDemons.get(serverLevel.random.nextInt(availableDemons.size()));
 
                     PrimordialSummonRitual.startImmediate(serverLevel, victim.position(), randomDemon, attacker);
 
@@ -594,13 +712,16 @@ public class TensuraEvents {
             boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(player);
             boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(player);
 
-            // GIAI ĐOẠN 3: Đã là Ma Vương + có thể xác -> BẤT TỬ TUYỆT ĐỐI, CHỈ chịu sát thương từ Chước Nhiệt Long Velgrynd & Không Vong (Kūbō)
+            // GIAI ĐOẠN 3: Đã là Ma Vương + có thể xác -> BẤT TỬ TUYỆT ĐỐI, CHỈ chịu sát thương từ Chước Nhiệt Long Velgrynd, Bạch Băng Long Velzard & Không Vong (Kūbō)
             if (isDemonLord && hasBody) {
-                boolean isFromVelgrynd = (source.getEntity() instanceof VelgryndEntity) || (source.getDirectEntity() instanceof VelgryndEntity);
+                boolean isFromVelgrynd = (source.getEntity() instanceof VelgryndEntity) || (source.getDirectEntity() instanceof VelgryndEntity)
+                        || player.getTags().contains("VelgryndPenetrationDamage");
+                boolean isFromVelzard = (source.getEntity() instanceof VelzardEntity) || (source.getDirectEntity() instanceof VelzardEntity)
+                        || player.getTags().contains("VelzardPenetrationDamage");
                 boolean isFromKubo = (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
-                if (!isFromVelgrynd && !isFromKubo) {
+                if (!isFromVelgrynd && !isFromVelzard && !isFromKubo) {
                     return EventResult.interruptFalse();
                 }
             } else if (!hasBody) {
@@ -993,6 +1114,9 @@ public class TensuraEvents {
         // 3. Đối với MỌI SINH VẬT KHÁC (Mob, Dân Làng, Động Vật):
         // 90% Mất Kiểm Soát (Cuồng Nộ - Berserk) vs 10% Kiểm Soát Được (Calm)
         target.addTag("TensuraDemonLordMob");
+        if (target instanceof net.minecraft.world.entity.npc.Villager) {
+            target.addTag("DemonLordVillager");
+        }
         String oldName = target.getName().getString();
 
         // Máu tăng x20 lần
@@ -1020,7 +1144,7 @@ public class TensuraEvents {
             if (target instanceof net.minecraft.world.entity.Mob mob) {
                 com.minhphuc.weapons.mixin.MobAccessor mobAcc = (com.minhphuc.weapons.mixin.MobAccessor) mob;
                 if (mob instanceof net.minecraft.world.entity.PathfinderMob pMob) {
-                    mobAcc.weapons$getGoalSelector().addGoal(0, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(pMob, 1.45D, true));
+                    mobAcc.weapons$getGoalSelector().addGoal(0, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(pMob, 1.55D, true));
                 }
                 mobAcc.weapons$getTargetSelector().addGoal(0, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(
                         mob, LivingEntity.class, 0, false, false,
@@ -1045,6 +1169,17 @@ public class TensuraEvents {
             target.addTag("TensuraDemonLordCalm");
             target.setCustomName(Component.literal("§5§l[Chân Ma Vương] §e" + oldName));
             target.setCustomNameVisible(true);
+
+            if (target instanceof net.minecraft.world.entity.Mob mob) {
+                com.minhphuc.weapons.mixin.MobAccessor mobAcc = (com.minhphuc.weapons.mixin.MobAccessor) mob;
+                if (mob instanceof net.minecraft.world.entity.PathfinderMob pMob) {
+                    mobAcc.weapons$getGoalSelector().addGoal(1, new net.minecraft.world.entity.ai.goal.MeleeAttackGoal(pMob, 1.35D, true));
+                    mobAcc.weapons$getTargetSelector().addGoal(1, new net.minecraft.world.entity.ai.goal.target.HurtByTargetGoal(pMob));
+                }
+                if (mob instanceof net.minecraft.world.entity.npc.Villager) {
+                    mobAcc.weapons$getTargetSelector().addGoal(2, new net.minecraft.world.entity.ai.goal.target.NearestAttackableTargetGoal<>(mob, net.minecraft.world.entity.monster.Zombie.class, true));
+                }
+            }
 
             sl.playSound(null, target.getX(), target.getY(), target.getZ(),
                     SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 2.5F, 0.9F);

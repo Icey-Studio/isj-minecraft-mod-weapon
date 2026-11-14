@@ -1023,9 +1023,16 @@ public class SanctuaryDisintegrationAbility {
         int destroyedCount = 0;
         DamageSource dmgSource = (caster != null) ? level.damageSources().playerAttack(caster) : level.damageSources().genericKill();
 
+        boolean twinResonance = caster != null && com.minhphuc.weapons.content.tensura.TensuraSkillHelper.consumeDemonResonance(caster, "disintegration", level.getGameTime());
+        int prisonSynergyHits = 0;
+
         for (LivingEntity target : targets) {
             double distSq = target.position().distanceToSqr(center);
             if (distSq <= radius * radius) {
+                boolean insidePrison = com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.isInPrison(level, target.position());
+                float synergyMult = (insidePrison ? 1.35F : 1.0F) * (twinResonance ? 1.25F : 1.0F);
+                if (insidePrison) prisonSynergyHits++;
+
                 victimNames.add("cá thể " + target.getDisplayName().getString());
                 if (caster != null) {
                     com.minhphuc.weapons.content.tensura.TensuraEvents.handleMobDeathDrop(caster, target);
@@ -1035,23 +1042,29 @@ public class SanctuaryDisintegrationAbility {
                 target.addTag("DisintegrationDamage");
                 if (roll != null && roll.isOverdrive()) {
                     // BẠO KÍCH CỰC HẠN (20%): Phân rã 100% linh tử, tất sát cả Boss
-                    target.hurt(dmgSource, 100000.0F);
+                    target.hurt(dmgSource, 100000.0F * synergyMult);
                     if (target.isAlive()) {
                         target.discard();
                     }
                 } else if (roll != null && roll.isNormal()) {
                     // XUẤT LỰC CHUẨN (50%): 1,200 sát thương * multiplier, quái thường bốc hơi, Boss rút máu nặng
-                    float damage = 1200.0F * roll.multiplier;
+                    float damage = 1200.0F * roll.multiplier * synergyMult;
                     target.hurt(dmgSource, damage);
                 } else {
                     // ĐẦU RA THẤP (30%): 350 sát thương * multiplier, làm choáng và thiêu đốt
-                    float damage = 350.0F * (roll != null ? roll.multiplier : 0.35F);
+                    float damage = 350.0F * (roll != null ? roll.multiplier : 0.35F) * synergyMult;
                     target.hurt(dmgSource, damage);
                     target.setRemainingFireTicks(120);
                 }
                 target.removeTag("DisintegrationDamage");
                 destroyedCount++;
             }
+        }
+        if (caster != null && (prisonSynergyHits > 0 || twinResonance)) {
+            caster.displayClientMessage(Component.literal(
+                    "§e§l✦ [CỘNG HƯỞNG LINH TỬ] "
+                            + (prisonSynergyHits > 0 ? "§6Lồng Giam Vô Hạn (+35%) " : "")
+                            + (twinResonance ? "§dCộng Hưởng Chủ-Tớ (+25%)" : "")), true);
         }
 
         // Tiêu biến các item rớt đất trong vùng phân rã linh tử

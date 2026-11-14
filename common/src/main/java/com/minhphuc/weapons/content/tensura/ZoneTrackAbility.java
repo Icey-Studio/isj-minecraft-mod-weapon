@@ -97,8 +97,9 @@ public class ZoneTrackAbility {
                             brokenBlocks.add(bp);
                             BlockState state = level.getBlockState(bp);
 
-                            // Không phá bedrock hoặc khối kết giới đặc biệt
-                            if (state.getDestroySpeed(level, bp) >= 0 &&
+                            // Không phá bedrock hoặc khối kết giới đặc biệt (và tôn trọng Bảo Vệ Địa Hình)
+                            if (TensuraSkillHelper.canDestroyTerrain(level, player) &&
+                                state.getDestroySpeed(level, bp) >= 0 &&
                                 !state.is(ModBlocks.DRAGON_PRISON_BARRIER.get()) &&
                                 !state.is(ModBlocks.ANTI_MAGIC_BARRIER.get()) &&
                                 !state.is(ModBlocks.MULTILAYER_BARRIER.get()) &&

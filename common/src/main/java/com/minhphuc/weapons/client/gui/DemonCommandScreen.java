@@ -114,7 +114,7 @@ public class DemonCommandScreen extends Screen {
             }
         }
 
-        // 2. KỸ NĂNG NGƯỜI CHƠI TRAO QUYỀN (CONTRACT SKILLS 100 -> 112) - MỞ KHÓA TOÀN BỘ KHÔNG RÀNG BUỘC
+        // 2. KỸ NĂNG NGƯỜI CHƠI TRAO QUYỀN (CONTRACT SKILLS 100 -> 116) - MỞ KHÓA TOÀN BỘ KHÔNG RÀNG BUỘC
         contractSkills.add(new SkillEntry(100, "Kháng Ma Kết Giới", "Phong ấn ma tố & cản phá quái (R:60m)", 0x22C55E));
         contractSkills.add(new SkillEntry(101, "Cú Bắn Granit", "Pháo nón hạt nhân 56m bộc phá siêu thanh", 0xFF6D00));
         contractSkills.add(new SkillEntry(102, "Zone Track (Granit Trắng)", "Đại pháo quang học bạch kim xuyên phá 50m", 0xF0F8FF));
@@ -128,6 +128,10 @@ public class DemonCommandScreen extends Screen {
         contractSkills.add(new SkillEntry(110, "Siêu Tân Tinh (Supernova)", "Cột Plasma vũ trụ hủy diệt (tạm thời)", 0xFFD700));
         contractSkills.add(new SkillEntry(111, "Dị Giới Thần Môn", "Cánh cửa không gian kết nối thẳng về nhà", 0x10B981));
         contractSkills.add(new SkillEntry(112, "Long Tinh Bộc Viêm Bá", "Đại pháo rồng hủy diệt Drago-Nova", 0xEC4899));
+        contractSkills.add(new SkillEntry(113, "Đánh Dấu (Spatial Mark)", "Khắc ấn ký không gian 3D tại vị trí hiện tại", 0x06B6D4));
+        contractSkills.add(new SkillEntry(114, "Dịch Chuyển (Spatial Teleport)", "Dịch chuyển tức thời xuyên không gian đến ấn ký", 0x22D3EE));
+        contractSkills.add(new SkillEntry(115, "Cảm Nhận Vạn Năng", "Cảm nhận & đánh dấu toàn bộ thực thể trong 120m", 0xFACC15));
+        contractSkills.add(new SkillEntry(116, "Ngày Tận Thế (Apocalypse)", "Giáng đại pháp trận thu hoạch linh hồn trên diện rộng", 0xE11D48));
     }
 
     private PrimordialDemonEntity findClientDemon() {
@@ -199,26 +203,22 @@ public class DemonCommandScreen extends Screen {
 
         int barX = left + 14;
         int barY = top + 21;
-        int barW = demonType == DemonType.BLANC ? 148 : 200;
+        int barW = 148;
         int barH = 12;
         guiGraphics.fill(barX - 1, barY - 1, barX + barW + 1, barY + barH + 1, 0xFF330000);
         guiGraphics.fill(barX, barY, barX + barW, barY + barH, 0xFF1A0505);
         int fillW = (int) (barW * hpRatio);
         int hpColor = hpRatio > 0.5F ? 0xFF22C55E : (hpRatio > 0.25F ? 0xFFEAB308 : 0xFFEF4444);
         guiGraphics.fill(barX, barY, barX + fillW, barY + barH, hpColor);
-        String hpText = demonType == DemonType.BLANC
-                ? String.format("❤ %.0f/%.0f", currentHp, maxHp)
-                : String.format("❤ HP: %.0f / %.0f (%.0f%%)", currentHp, maxHp, hpRatio * 100);
+        String hpText = String.format("❤ %.0f/%.0f", currentHp, maxHp);
         guiGraphics.drawCenteredString(this.font, "§f§l" + hpText, barX + barW / 2, barY + 2, 0xFFFFFF);
 
-        // Nút lệnh Thế trận (Stance) bên phải thanh máu
+        // Nút lệnh Thế trận (Stance) bên phải thanh máu (Hỗ trợ nút Tàn Sát cho TOÀN BỘ 7 Khế Ước Ác Ma)
         int btnStanceX = left + 218;
         int btnW = 58;
         int btnH = 16;
-        if (demonType == DemonType.BLANC) {
-            boolean massacreActive = demon != null && demon.isMassacreMode();
-            renderButton(guiGraphics, left + 166, barY - 2, 50, btnH, massacreActive ? "§4☠ Dừng Sát" : "§c☠ Tàn Sát", mouseX, mouseY);
-        }
+        boolean massacreActive = demon != null && demon.isMassacreMode();
+        renderButton(guiGraphics, left + 166, barY - 2, 50, btnH, massacreActive ? "§4☠ Dừng Sát" : "§c☠ Tàn Sát", mouseX, mouseY);
         renderButton(guiGraphics, btnStanceX, barY - 2, btnW, btnH, "§aĐi Theo", mouseX, mouseY);
         renderButton(guiGraphics, btnStanceX + 62, barY - 2, btnW, btnH, "§eCanh Giữ", mouseX, mouseY);
         renderButton(guiGraphics, btnStanceX + 124, barY - 2, btnW, btnH, "§cThu Hồi", mouseX, mouseY);
@@ -573,13 +573,14 @@ public class DemonCommandScreen extends Screen {
             int btnW = 58;
             int btnH = 16;
 
-            // Nút 0 (Blanc): Chế độ Tàn Sát Thôn Làng
-            if (demonType == DemonType.BLANC && mouseX >= left + 166 && mouseX <= left + 166 + 50 && mouseY >= barY - 2 && mouseY <= barY - 2 + btnH) {
+            // Nút 0 (Toàn bộ 7 Ác Ma): Chế độ Tàn Sát toàn bộ sinh vật trong tầm ảnh hưởng
+            if (mouseX >= left + 166 && mouseX <= left + 166 + 50 && mouseY >= barY - 2 && mouseY <= barY - 2 + btnH) {
                 playClick();
                 ModMessages.sendToServer(new ServerboundDemonCommandPacket(ServerboundDemonCommandPacket.ACTION_TOGGLE_MASSACRE, 0));
                 PrimordialDemonEntity demon = findClientDemon();
                 boolean massacreNow = demon == null || !demon.isMassacreMode();
-                showFeedback(massacreNow ? "§4☠ Đã phát lệnh: BLANC TÀN SÁT TOÀN BỘ DÂN LÀNG & IRON GOLEM!" : "§a✔ Đã dừng chế độ Tàn Sát của Blanc!");
+                String dName = demon != null ? demon.getEffectiveDemonName().toUpperCase() : demonType.getColorName().toUpperCase();
+                showFeedback(massacreNow ? "§4☠ Đã phát lệnh: " + dName + " TÀN SÁT TOÀN BỘ SINH VẬT TRONG 100M!" : "§a✔ Đã dừng chế độ Tàn Sát của " + dName + "!");
                 return true;
             }
 
@@ -726,7 +727,7 @@ public class DemonCommandScreen extends Screen {
                         } else {
                             ModMessages.sendToServer(new ServerboundDemonCommandPacket(ServerboundDemonCommandPacket.ACTION_CAST_SKILL, s.index));
                             showFeedback("§a⚡ Đã ra lệnh cho Ác Ma thi triển: §e" + s.title);
-                            if (s.index == 109) {
+                            if (s.index == 109 || s.index >= 113) {
                                 this.onClose();
                             }
                         }
