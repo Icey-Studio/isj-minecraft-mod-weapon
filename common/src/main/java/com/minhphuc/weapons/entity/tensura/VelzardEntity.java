@@ -2,6 +2,7 @@ package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
+import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.init.ModItems;
@@ -111,6 +112,7 @@ public class VelzardEntity extends Monster {
     private int iceCannonCooldown = 85;
     private int skillSealCooldown = 360;
     private int dragonFormCooldown = 260;
+    private int playerSkillCooldown = 90;
 
     // Active casting timers
     private int activeSkillTicks = 0;
@@ -792,6 +794,11 @@ public class VelzardEntity extends Monster {
         if (iceCannonCooldown > 0) iceCannonCooldown--;
         if (skillSealCooldown > 0) skillSealCooldown--;
         if (dragonFormCooldown > 0) dragonFormCooldown--;
+        if (playerSkillCooldown > 0) playerSkillCooldown--;
+
+        if (isDragonForm()) {
+            DragonFlightGoal.breakBlockingTerrain(sl, this);
+        }
 
         // 6. Mặt Đất Băng Vĩnh Cửu (Permafrost Field Aura - Bán kính 20m)
         if (this.tickCount % 20 == 0) {
@@ -1156,6 +1163,20 @@ public class VelzardEntity extends Monster {
         if (skillSealCooldown <= 0 && distSq <= 30.0D * 30.0D) {
             SkillNullificationAbility.castBossSkillSeal(sl, this, 32.0F, 180);
             skillSealCooldown = 360;
+            return;
+        }
+
+        // 0.25 Tuyệt kỹ người chơi cường hóa uy lực Long Chủng (tương tự Thủy Tổ nhưng mạnh hơn)
+        if (playerSkillCooldown <= 0 && distSq <= 34.0D * 34.0D) {
+            PrimordialSkillPool.castRandomTrueDragonSkill(
+                    sl,
+                    this,
+                    target,
+                    280.0D,
+                    isDragonForm() ? 2.60F : 2.00F,
+                    this::applyDamageToTarget
+            );
+            playerSkillCooldown = 95 / rate;
             return;
         }
 

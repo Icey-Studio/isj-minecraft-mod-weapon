@@ -1,5 +1,6 @@
 package com.minhphuc.weapons.entity.tensura;
 
+import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.content.tensura.TensuraNamingAbility;
 import com.minhphuc.weapons.content.tensura.TensuraSkillHelper;
@@ -133,12 +134,8 @@ public class VeldoraEntity extends TamableAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.45D, true));
-        this.goalSelector.addGoal(2, new DragonFlightGoal(this, 1.35D, () -> !isHumanForm() && !isSealed(), this::getOwner));
+        this.goalSelector.addGoal(2, new DragonFlightGoal(this, 1.35D, () -> !isSealed(), this::getOwner));
         this.goalSelector.addGoal(3, new FollowOwnerGoal(this, 1.3D, 10.0F, 4.0F) {
-            @Override public boolean canUse() { return isHumanForm() && !isSealed() && super.canUse(); }
-            @Override public boolean canContinueToUse() { return isHumanForm() && !isSealed() && super.canContinueToUse(); }
-        });
-        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.9D) {
             @Override public boolean canUse() { return isHumanForm() && !isSealed() && super.canUse(); }
             @Override public boolean canContinueToUse() { return isHumanForm() && !isSealed() && super.canContinueToUse(); }
         });
@@ -236,7 +233,8 @@ public class VeldoraEntity extends TamableAnimal {
 
     private void syncNavigationMode() {
         if (this.level().isClientSide()) return;
-        boolean shouldFly = !isHumanForm() && !isSealed();
+        // Cả Dạng Rồng lẫn Dạng Người của Veldora đều có thể tự do bay lượn khi không bị phong ấn
+        boolean shouldFly = !isSealed();
         this.setNoGravity(shouldFly);
         if (shouldFly != usingFlyingNav) {
             usingFlyingNav = shouldFly;
@@ -276,7 +274,11 @@ public class VeldoraEntity extends TamableAnimal {
 
         syncNavigationMode();
         this.bossEvent.setProgress(Mth.clamp(this.getHealth() / Math.max(1.0F, this.getMaxHealth()), 0.0F, 1.0F));
-        this.entityData.set(DATA_FLYING_NOW, !isHumanForm() && (!this.onGround() || this.getDeltaMovement().lengthSqr() > 0.001));
+        this.entityData.set(DATA_FLYING_NOW, !isSealed() && (!this.onGround() || this.getDeltaMovement().lengthSqr() > 0.001D));
+
+        if (!isHumanForm() && this.level() instanceof ServerLevel sl) {
+            DragonFlightGoal.breakBlockingTerrain(sl, this);
+        }
 
         // Siêu hồi phục Long Chủng (+60 HP/s Dragon, +20 HP/s Human)
         if (this.tickCount % 20 == 0 && this.getHealth() < this.getMaxHealth()) {
@@ -374,6 +376,26 @@ public class VeldoraEntity extends TamableAnimal {
         if (!(this.level() instanceof ServerLevel sl)) return;
         double dist = this.distanceTo(target);
         boolean againstPrimordial = target instanceof PrimordialDemonEntity;
+
+        if (this.random.nextFloat() < 0.35F) {
+            setCastingState(1);
+            castingTicks = 16;
+            skillCooldown = isHumanForm() ? 38 : 44;
+            PrimordialSkillPool.castRandomTrueDragonSkill(
+                    sl,
+                    this,
+                    target,
+                    isHumanForm() ? 180.0D : 260.0D,
+                    isHumanForm() ? 1.55F : 2.35F,
+                    (victim, dmg) -> {
+                        victim.hurt(this.damageSources().mobAttack(this), dmg);
+                        if (victim instanceof PrimordialDemonEntity) {
+                            victim.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 1));
+                        }
+                    }
+            );
+            return;
+        }
 
         if (!isHumanForm()) {
             // DẠNG RỒNG: Mạnh gấp 5 lần Ác Ma Thủy Tổ & ngang ngửa Velgrynd!

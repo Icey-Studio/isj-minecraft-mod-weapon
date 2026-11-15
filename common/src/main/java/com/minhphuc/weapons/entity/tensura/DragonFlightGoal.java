@@ -1,10 +1,18 @@
 package com.minhphuc.weapons.entity.tensura;
 
+import com.minhphuc.weapons.content.tensura.TensuraSkillHelper;
+import com.minhphuc.weapons.init.ModBlocks;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.tags.BlockTags;
+import net.minecraft.util.Mth;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.ai.goal.Goal;
+import net.minecraft.world.level.GameRules;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.levelgen.Heightmap;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
@@ -123,5 +131,56 @@ public class DragonFlightGoal extends Goal {
         }
         waypoint = new Vec3(wx + 0.5D, wy, wz + 0.5D);
         retargetTicks = 65 + mob.getRandom().nextInt(55);
+    }
+
+    /**
+     * Phá vỡ các khối địa hình cản đường khi Long Chủng ở Dạng Rồng bay/lao tới mục tiêu (tương tự Ender Dragon).
+     * Tôn trọng GameRule mobGriefing, chế độ Bảo Vệ Địa Hình (Safe Mode), khối miễn nhiễm rồng và kết giới mod.
+     */
+    public static void breakBlockingTerrain(ServerLevel sl, Mob dragon) {
+        if (sl == null || dragon == null || !dragon.isAlive() || dragon.tickCount % 2 != 0) return;
+        if (!sl.getGameRules().getBoolean(GameRules.RULE_MOBGRIEFING) || !TensuraSkillHelper.canDestroyTerrain(sl, dragon)) {
+            return;
+        }
+        Vec3 vel = dragon.getDeltaMovement();
+        if (dragon.onGround() && vel.horizontalDistanceSqr() < 0.0015D && dragon.getTarget() == null) {
+            return;
+        }
+
+        AABB box = dragon.getBoundingBox().inflate(0.55D, 0.20D, 0.55D);
+        if (vel.lengthSqr() > 0.002D) {
+            Vec3 ahead = vel.normalize().scale(1.15D);
+            box = box.expandTowards(ahead.x, ahead.y, ahead.z);
+        }
+
+        int minX = Mth.floor(box.minX);
+        int minY = Math.max(sl.getMinBuildHeight() + 1, Mth.floor(box.minY));
+        if (dragon.onGround()) {
+            minY = Math.max(minY, dragon.getBlockY());
+        }
+        int minZ = Mth.floor(box.minZ);
+        int maxX = Mth.floor(box.maxX);
+        int maxY = Math.min(sl.getMaxBuildHeight() - 1, Mth.floor(box.maxY));
+        int maxZ = Mth.floor(box.maxZ);
+
+        BlockPos.MutableBlockPos pos = new BlockPos.MutableBlockPos();
+        int broken = 0;
+        for (int x = minX; x <= maxX && broken < 64; x++) {
+            for (int y = minY; y <= maxY && broken < 64; y++) {
+                for (int z = minZ; z <= maxZ && broken < 64; z++) {
+                    pos.set(x, y, z);
+                    BlockState state = sl.getBlockState(pos);
+                    if (state.isAir() || !state.getFluidState().isEmpty()) continue;
+                    if (state.getDestroySpeed(sl, pos) < 0.0F) continue;
+                    if (state.is(BlockTags.DRAGON_IMMUNE)) continue;
+                    if (state.is(ModBlocks.DRAGON_PRISON_BARRIER.get()) || state.is(ModBlocks.DOMAIN_BARRIER_NOIR.get())) {
+                        continue;
+                    }
+                    if (sl.destroyBlock(pos, false, dragon)) {
+                        broken++;
+                    }
+                }
+            }
+        }
     }
 }

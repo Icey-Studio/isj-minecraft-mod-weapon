@@ -98,8 +98,24 @@ public class ClientInputEvents {
             }
 
             if (ModKeyBindings.TENGAI_SLASH_KEY.consumeClick()) {
-                // Nhấn phím X: Thi triển Nghịch Thời Nhất Trảm
+                // Nhấn phím K: Thi triển Nghịch Thời Nhất Trảm
                 ModMessages.sendToServer(new ServerboundTengaiSwordSkillPacket(ServerboundTengaiSwordSkillPacket.ACTION_REVERSE_SLASH));
+            }
+
+            if (ModKeyBindings.OPEN_STOMACH_KEY.consumeClick()) {
+                if (mc.screen == null) {
+                    // Nhấn phím B: Mở thẳng giao diện Dạ Dày Vô Hạn Azathoth
+                    ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundAzathothActionPacket(
+                            com.minhphuc.weapons.network.ServerboundAzathothActionPacket.ACTION_OPEN_GUI, 0));
+                }
+            }
+
+            if (ModKeyBindings.RAPHAEL_AUTO_KEY.consumeClick()) {
+                if (mc.screen == null) {
+                    // Nhấn phím X: Bật / Tắt Chế độ Tự Động Chiến Đấu Trí Tuệ Vương Raphael
+                    ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                            com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE));
+                }
             }
 
             if (ModKeyBindings.SAGE_ACTION_KEY.consumeClick()) {

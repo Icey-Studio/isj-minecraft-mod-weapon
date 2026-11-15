@@ -1,6 +1,7 @@
 package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
+import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.entity.ModEntities;
 import net.minecraft.core.BlockPos;
@@ -450,7 +451,10 @@ public class VelgryndEntity extends Monster {
             }
         }
 
-        // Quản lý trạng thái bay lượn trên không trung
+        // Quản lý trạng thái bay lượn trên không trung & phá địa hình cản đường khi ở Dạng Rồng
+        if (isDragonForm()) {
+            DragonFlightGoal.breakBlockingTerrain(sLevel, this);
+        }
         LivingEntity curCombatTarget = this.getTarget();
         if ((curCombatTarget != null && curCombatTarget.isAlive()) || isDragonForm()) {
             setFlyingAnim(!this.onGround() || isDragonForm() || (curCombatTarget != null));
@@ -534,20 +538,6 @@ public class VelgryndEntity extends Monster {
             LivingEntity currentEnemy = this.getTarget();
             if (currentEnemy != null && currentEnemy.isAlive()) {
                 this.alliedSafeTicks = 0;
-                // Luân phiên thi triển kỹ năng tối thượng của người chơi
-                if (this.alliedPlayerSkillCooldown > 0) {
-                    this.alliedPlayerSkillCooldown--;
-                } else if (this.getActiveSkillTicks() <= 0) {
-                    this.alliedPlayerSkillCooldown = 75;
-                    int roll = this.random.nextInt(3);
-                    if (roll == 0) {
-                        castAlliedDragonNova(currentEnemy);
-                    } else if (roll == 1) {
-                        castAlliedBeelzebuth(currentEnemy);
-                    } else {
-                        castAlliedExtinctionStars(currentEnemy);
-                    }
-                }
             } else {
                 // Không có bất kỳ mối nguy hại nào quanh chủ nhân
                 this.alliedSafeTicks++;
@@ -591,6 +581,7 @@ public class VelgryndEntity extends Monster {
         if (fireVolleyCooldown > 0) fireVolleyCooldown--;
         if (skillSealCooldown > 0) skillSealCooldown--;
         if (dragonFormCooldown > 0) dragonFormCooldown--;
+        if (alliedPlayerSkillCooldown > 0) alliedPlayerSkillCooldown--;
 
         if (SkillNullificationAbility.isEntitySkillSealed(this)) {
             this.activeSkillTicks = 0;
@@ -599,6 +590,18 @@ public class VelgryndEntity extends Monster {
                 sLevel.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 6, 0.5, 0.7, 0.5, 0.02);
             }
             return;
+        }
+
+        if (curCombatTarget != null && curCombatTarget.isAlive() && alliedPlayerSkillCooldown <= 0 && activeSkillTicks <= 0) {
+            alliedPlayerSkillCooldown = isEnraged() ? 70 : 95;
+            PrimordialSkillPool.castRandomTrueDragonSkill(
+                    sLevel,
+                    this,
+                    curCombatTarget,
+                    240.0D,
+                    isDragonForm() ? 2.30F : 1.70F,
+                    this::applyDamageToTarget
+            );
         }
 
         if (curCombatTarget != null && curCombatTarget.isAlive() && dragonFormCooldown <= 0) {

@@ -2,6 +2,7 @@ package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,8 +47,9 @@ public class TensuraSkillHelper {
         if (entity instanceof Player p) {
             return EntityDataHelper.getCustomData(p).getBoolean(NBT_SAFE_MODE);
         }
-        if (entity instanceof PrimordialDemonEntity demon) {
-            LivingEntity owner = demon.getOwner();
+        UUID ownerUuid = resolveOwnerUuid(entity);
+        if (ownerUuid != null && entity != null && entity.level() != null) {
+            Player owner = entity.level().getPlayerByUUID(ownerUuid);
             if (owner != null) {
                 return EntityDataHelper.getCustomData(owner).getBoolean(NBT_SAFE_MODE);
             }
@@ -105,6 +107,7 @@ public class TensuraSkillHelper {
     private static UUID resolveOwnerUuid(Entity entity) {
         if (entity instanceof Player p) return p.getUUID();
         if (entity instanceof OwnableEntity ownable) return ownable.getOwnerUUID();
+        if (entity instanceof VelgryndEntity vg && vg.isAllied()) return vg.getParsedOwnerUUID();
         return null;
     }
 
