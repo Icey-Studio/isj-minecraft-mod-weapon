@@ -173,6 +173,16 @@ public class ModMessages {
                 ServerboundAzathothActionPacket::encode,
                 ServerboundAzathothActionPacket::new,
                 ServerboundAzathothActionPacket::handle);
+
+        CHANNEL.register(ClientboundOpenRaphaelPacket.class,
+                ClientboundOpenRaphaelPacket::encode,
+                ClientboundOpenRaphaelPacket::new,
+                ClientboundOpenRaphaelPacket::handle);
+
+        CHANNEL.register(ServerboundRaphaelSkillPacket.class,
+                ServerboundRaphaelSkillPacket::encode,
+                ServerboundRaphaelSkillPacket::new,
+                ServerboundRaphaelSkillPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

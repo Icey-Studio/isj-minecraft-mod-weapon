@@ -1006,15 +1006,15 @@ public class GuideBookScreen extends Screen {
     }
 
     private void renderPageVeldoraSageAzathoth(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {
-        drawHeaderTitle(g, left, top, bookW, "§b§l✦ BẠO PHONG LONG VELDORA, RAPHAEL & AZATHOTH", 0xFF38BDF8);
+        drawHeaderTitle(g, left, top, bookW, "§b§l✦ BẠO PHONG LONG, RAPHAEL & AZATHOTH", 0xFF38BDF8);
         int y = top + 34;
-        y = drawWrapped(g, " §b1. Bạo Phong Long Veldora & Hang Động Phong Ấn Duy Nhất:", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §eĐại Hiền Giả / Raphael §fbắt tín hiệu Dao Động Long Chủng và đề nghị nhấn §a[V]§f để dịch chuyển tức thời tới Hang Động Phong Ấn §6Lồng Giam Vô Hạn§f.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §32 Hình Thái: §fDạng Rồng mạnh & thủ gấp §c30 lần§f Dạng Người; Dạng Người cực kỳ linh hoạt và có thể §aBan Danh Xưng cho mob khác§f! Ngang tài §cVelgrynd§f và mạnh x5 Thủy Tổ (chỉ §e8%§f cơ hội thắng).", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §b1. Tam Đại Long Chủng (Veldora / Velgrynd / Velzard):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §eVeldora §fmở phong ấn bằng §dAzathoth§f trong §6Hang Động Lồng Giam§f; cả 3 Long Chủng đều có §cChân Thân Rồng Khổng Lồ§f, ma pháp bão/lửa/băng & §5Phong Sát Kỹ Năng§f!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Người chơi tung §5Phong Sát§f sẽ vô hiệu §ctoàn bộ kỹ năng của bất kỳ ai§f (Long Chủng, Milim, Thủy Tổ, Ác Ma, Người chơi).", left + 16, y, fullW, maxY);
         y += 3;
-        y = drawWrapped(g, " §d2. Dạ Dày Vô Hạn Azathoth & Triệu Hồi Veldora (Chiêu #31):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• Nhấn §e[Shift + Thi Triển]§f mở Kho Không Gian Hư Ảo: Nuốt mục tiêu, Giải Phong Ấn Veldora, Chuyển Hóa Ma Tố hồi phục, hoặc Luyện Táo Vàng/Netherite.", left + 16, y, fullW, maxY);
-        drawWrapped(g, "   §f• Triệu Hồi Veldora qua Kỹ năng #31: §a70%§f đáp lời cùng bão tố giáng lâm; §c30%§f Veldora đang bận đọc truyện từ chối!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §b2. Trí Tuệ Vương Raphael (Phím [G]):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Mở bảng §e50 Kỹ Năng Chủ Động§f & hệ thống §b50 Thông Báo Thời Gian Thực§f hỗ trợ chiến đấu, phân tích, sinh tồn, luyện kim & không gian.", left + 16, y, fullW, maxY);
+        drawWrapped(g, " §d3. Azathoth & Triệu Hồi Veldora: §fDạ Dày Hư Ảo giam cầm/giải phong ấn & triệu hồi Veldora (70% ứng chiến / 30% đang bận).", left + 16, y, fullW, maxY);
     }
 
     private void renderPageTempestAndLabyrinth(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {

@@ -7,6 +7,8 @@ import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.init.ModKeyBindings;
 import com.minhphuc.weapons.network.ModMessages;
+import com.minhphuc.weapons.network.ServerboundAzathothActionPacket;
+import com.minhphuc.weapons.network.ServerboundRaphaelSkillPacket;
 import com.minhphuc.weapons.network.ServerboundSkillActionPacket;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -166,6 +168,9 @@ public class SkillWheelScreen extends Screen {
         list.add(new SkillItem(26 + off, "Thần Hư Không Azathoth", Category.ULTIMATE, "lord_" + (26 + off), 0x7E22CE));
         list.add(new SkillItem(27 + off, "Ban Danh Xưng", Category.SPATIAL, "lord_" + (27 + off), 0xFBBF24));
         list.add(new SkillItem(28 + off, "Dị Giới Thần Môn", Category.SPATIAL, "lord_" + (28 + off), 0x10B981));
+        list.add(new SkillItem(29 + off, "Triệu Hồi Veldora", Category.SPATIAL, "lord_" + (29 + off), 0x38BDF8));
+        list.add(new SkillItem(30 + off, "Trí Tuệ Vương Raphael (50)", Category.SPATIAL, "lord_" + (30 + off), 0x00E5FF));
+        list.add(new SkillItem(31 + off, "Dạ Dày Vô Hạn Azathoth", Category.ULTIMATE, "lord_" + (31 + off), 0xA855F7));
     }
 
     private List<SkillItem> getFilteredSkills(List<SkillItem> all) {
@@ -200,9 +205,12 @@ public class SkillWheelScreen extends Screen {
 
         // Header
         String title = possessing
-                ? "§5§l✦ BÁNH XE KỸ NĂNG - NHẬP XÁC ÁC MA"
+                ? "§5§l✦ NHẬP XÁC ÁC MA"
                 : "§6§l✦ BÁNH XE KỸ NĂNG TENSURA";
         g.drawString(font, title, left + 10, top + 8, 0xFFFFFFFF, false);
+
+        // Nút mở nhanh Trí Tuệ Vương Raphael (50 Kỹ Năng)
+        drawActionButton(g, mouseX, mouseY, left + PANEL_W - 224, top + 5, 86, 16, "§b✦ Raphael (50)", 0xFF0B243B, 0xFF00E5FF);
 
         // Nút Safe Mode (Góc phải trên)
         int safeX = left + PANEL_W - 134;
@@ -372,6 +380,13 @@ public class SkillWheelScreen extends Screen {
         int left = (this.width - PANEL_W) / 2;
         int top = (this.height - PANEL_H) / 2;
 
+        // Mở nhanh Trí Tuệ Vương Raphael (50 Kỹ Năng)
+        if (isInRect(mouseX, mouseY, left + PANEL_W - 224, top + 5, 86, 16)) {
+            ModMessages.sendToServer(new ServerboundRaphaelSkillPacket(ServerboundRaphaelSkillPacket.ACTION_OPEN));
+            playClick();
+            return true;
+        }
+
         // Safe Mode
         if (isInRect(mouseX, mouseY, left + PANEL_W - 134, top + 5, 124, 16)) {
             ModMessages.sendToServer(new ServerboundSkillActionPacket(ServerboundSkillActionPacket.ACTION_TOGGLE_SAFE_MODE, 0));
@@ -483,6 +498,16 @@ public class SkillWheelScreen extends Screen {
                 // Click vào ngôi sao ★ hoặc chuột phải -> Gán/Bỏ Yêu Thích
                 if (button == 1 || isInRect(mouseX, mouseY, cx + cardW - 22, cy, 22, cardH)) {
                     ModMessages.sendToServer(new ServerboundSkillActionPacket(ServerboundSkillActionPacket.ACTION_TOGGLE_FAVORITE, item.id()));
+                    playClick();
+                    return true;
+                }
+                if (item.name().contains("Trí Tuệ Vương Raphael")) {
+                    ModMessages.sendToServer(new ServerboundRaphaelSkillPacket(ServerboundRaphaelSkillPacket.ACTION_OPEN));
+                    playClick();
+                    return true;
+                }
+                if (item.name().contains("Dạ Dày Vô Hạn Azathoth")) {
+                    ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_OPEN_GUI, 0));
                     playClick();
                     return true;
                 }
