@@ -139,8 +139,13 @@ public final class SageManager {
         if (sl.dimension() == Level.OVERWORLD && now % 40L == 0L) {
             VeldoraWorldData caveData = VeldoraWorldData.get(sl);
             BlockPos cavePos = caveData.getOrRollCavePos(sl);
-            if (!caveData.isCaveGenerated() && sp.distanceToSqr(cavePos.getX(), sp.getY(), cavePos.getZ()) <= 112.0D * 112.0D) {
+            if (!caveData.isVeldoraUnsealed() && sp.distanceToSqr(cavePos.getX(), sp.getY(), cavePos.getZ()) <= 140.0D * 140.0D) {
+                boolean hadPrison = com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.hasVeldoraCavePrison(
+                        sl, net.minecraft.world.phys.Vec3.atBottomCenterOf(cavePos.below()));
                 caveData.ensureCaveGenerated(sl);
+                if (!hadPrison || now % 200L == 0L) {
+                    com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(sp);
+                }
             }
             if (!caveData.isVeldoraUnsealed()) {
                 long lastSignal = data.getLong(TAG_SIGNAL_WARNED);
@@ -382,12 +387,13 @@ public final class SageManager {
                 VeldoraWorldData caveData = VeldoraWorldData.get(ow);
                 caveData.ensureCaveGenerated(ow);
                 BlockPos cavePos = caveData.getOrRollCavePos(ow);
-                BlockPos standPos = cavePos.offset(0, 1, 9);
+                BlockPos standPos = cavePos.offset(0, -1, 10);
                 if (sl != ow) {
-                    sp.teleportTo(ow, standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, sp.getYRot(), sp.getXRot());
+                    sp.teleportTo(ow, standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 180.0F, -10.0F);
                 } else {
                     SpatialTeleportAbility.executeCinematicDemonTeleport(ow, sp, standPos, "Hang Động Phong Ấn Bạo Phong Long Veldora");
                 }
+                com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(sp);
                 sendCornerAlert(sp, "Đã khởi chạy Không Gian Chuyển Vị tới Hang Động Phong Ấn Bạo Phong Long Veldora!", 0xFF38BDF8, 5000, false);
             }
             case ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE -> {

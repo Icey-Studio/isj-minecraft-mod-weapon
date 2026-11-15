@@ -218,6 +218,12 @@ public class TensuraEvents {
             player.onUpdateAbilities();
         }
 
+        // Đảm bảo Lồng Giam Vô Hạn 3D của Hang Động Veldora luôn được khôi phục & đồng bộ khi vào lại thế giới
+        if (player.getServer() != null) {
+            ServerLevel ow = player.getServer().overworld();
+            com.minhphuc.weapons.world.VeldoraWorldData.get(ow).ensurePrisonRegisteredIfSealed(ow);
+        }
+
         // Đồng bộ kết giới, lồng giam bảo hộ thời tiết và các Ấn Ký Không Gian
         AntiMagicBarrierManager.syncBarriersToPlayer(player);
         com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(player);
