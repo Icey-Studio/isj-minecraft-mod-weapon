@@ -107,6 +107,13 @@ public class ClientboundCinematicSkillPacket {
                                 this.skillId, this.casterUuid, pos, dir, this.totalTicks, this.powerMultiplier
                         );
                     }
+                } else if (this.skillId == com.minhphuc.weapons.config.SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON) {
+                    // dirZ >= 1.5 là đồng bộ/gia hạn ngầm lồng giam 3D định kỳ (hoặc hang Veldora) -> KHÔNG đổi góc máy camera
+                    if (this.dirZ < 1.5) {
+                        com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
+                                this.skillId, this.casterUuid, pos, dir, Math.min(this.totalTicks, 55), this.powerMultiplier
+                        );
+                    }
                 } else if (this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_MULTILAYER_BARRIER
                         && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY) {
                     com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(

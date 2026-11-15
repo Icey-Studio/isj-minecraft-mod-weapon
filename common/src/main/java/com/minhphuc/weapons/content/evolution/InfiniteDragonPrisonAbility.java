@@ -130,7 +130,8 @@ public class InfiniteDragonPrisonAbility {
         synchronized (ACTIVE_PRISONS) {
             for (ActivePrison p : ACTIVE_PRISONS) {
                 if (p.level == player.serverLevel()) {
-                    Vec3 domeParams = new Vec3(p.domeHeight, p.skirtDepth, 1.0D);
+                    // dirZ = 2.0D -> đồng bộ ngầm lại vòm 3D cho client mà không giật camera của người thi triển
+                    Vec3 domeParams = new Vec3(p.domeHeight, p.skirtDepth, 2.0D);
                     int remainingTicks = p.maxDurationTicks > 0 ? Math.max(1, p.maxDurationTicks - p.ticksAlive) : 72000;
                     ModMessages.sendToPlayer(new ClientboundCinematicSkillPacket(
                             SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, p.casterUuid, p.center, domeParams, remainingTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) p.radius
@@ -298,7 +299,7 @@ public class InfiniteDragonPrisonAbility {
         ACTIVE_PRISONS.add(prison);
 
         if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
-            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 2.0D);
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                     SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
             ));
@@ -411,11 +412,11 @@ public class InfiniteDragonPrisonAbility {
                     cleanPrison(prison);
                     continue;
                 }
-                // Gia hạn gói tin 3D Lồng Giam Vô Hạn định kỳ (mỗi 30s) cho lồng vĩnh cửu & hang Veldora
+                // Gia hạn gói tin 3D Lồng Giam Vô Hạn định kỳ (mỗi 30s) cho lồng vĩnh cửu & hang Veldora (dirZ = 2.0D -> đồng bộ ngầm, không giật camera)
                 if (prison.maxDurationTicks < 0 && prison.ticksAlive % 600 == 0
                         && SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)
                         && level.hasNearbyAlivePlayer(prison.center.x, prison.center.y, prison.center.z, 260.0D)) {
-                    Vec3 domeParams = new Vec3(prison.domeHeight, prison.skirtDepth, 1.0D);
+                    Vec3 domeParams = new Vec3(prison.domeHeight, prison.skirtDepth, 2.0D);
                     ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                             SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, prison.center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) prison.radius
                     ));
