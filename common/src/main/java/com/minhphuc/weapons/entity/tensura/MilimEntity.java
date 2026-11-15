@@ -67,11 +67,14 @@ public class MilimEntity extends Monster {
             SynchedEntityData.defineId(MilimEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_ENRAGED =
             SynchedEntityData.defineId(MilimEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_SATANEL_STAMPEDE =
+            SynchedEntityData.defineId(MilimEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final ServerBossEvent bossEvent;
 
     // Bộ đếm kỹ năng
     private int dragonNovaCooldown = 400; // 20s cooldown
+    private int satanelReactorCharge = 0; // Tích tụ Phẫn Nộ Chi Vương (ĐỘC QUYỀN MILIM)
     private int horizontalBeamCooldown = 120; // 6s cooldown
     private int phantomDashCooldown = 160; // 8s cooldown (Cuồng Long Thần Tốc)
     private int wrathStompCooldown = 220;  // 11s cooldown (Địa Chấn Ma Vương)
@@ -177,6 +180,7 @@ public class MilimEntity extends Monster {
         builder.define(DATA_CHANNELING_TICKS, 0);
         builder.define(DATA_IS_FLYING, false);
         builder.define(DATA_IS_ENRAGED, false);
+        builder.define(DATA_SATANEL_STAMPEDE, false);
     }
 
     @Override
@@ -221,6 +225,14 @@ public class MilimEntity extends Monster {
 
     public void setEnraged(boolean enraged) {
         this.entityData.set(DATA_IS_ENRAGED, enraged);
+    }
+
+    public boolean isSatanelStampede() {
+        return this.entityData.get(DATA_SATANEL_STAMPEDE);
+    }
+
+    public void setSatanelStampede(boolean stampede) {
+        this.entityData.set(DATA_SATANEL_STAMPEDE, stampede);
     }
 
     public boolean isChannelingDragonNova() {
@@ -270,10 +282,11 @@ public class MilimEntity extends Monster {
         // (c) Chước Nhiệt Long (Velgrynd)
         boolean isVelgrynd = (attacker instanceof VelgryndEntity) || (direct instanceof VelgryndEntity);
 
-        // (d) Bạch Băng Long (Velzard)
+        // (d) Bạch Băng Long (Velzard) & Bạo Phong Long (Veldora)
         boolean isVelzard = (attacker instanceof VelzardEntity) || (direct instanceof VelzardEntity);
+        boolean isVeldora = (attacker instanceof VeldoraEntity) || (direct instanceof VeldoraEntity);
 
-        if (!isPlayerDemonLord && !isRouge && !isVelgrynd && !isVelzard) {
+        if (!isPlayerDemonLord && !isRouge && !isVelgrynd && !isVelzard && !isVeldora) {
             // Hoàn toàn không thể gây sát thương cho Milim!
             ServerLevel sl = (ServerLevel) this.level();
             sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.HOSTILE, 2.0F, 0.8F);
@@ -344,7 +357,7 @@ public class MilimEntity extends Monster {
                     3, 0.3D, 0.3D, 0.3D, 0.02D);
         }
 
-        // Cập nhật trạng thái Cuồng Nộ (máu <= 50%)
+        // Cập nhật trạng thái Cuồng Nộ (máu <= 50%) & Kích hoạt SATANEL (Độc quyền Milim Nava)
         boolean enraged = this.getHealth() <= (this.getMaxHealth() * 0.5F);
         if (enraged != isEnraged()) {
             setEnraged(enraged);
@@ -352,6 +365,38 @@ public class MilimEntity extends Monster {
                 TensuraDialogueManager.sayMilim(this, "dialogue.weapons.milim.enraged");
                 this.bossEvent.setColor(BossEvent.BossBarColor.RED);
             }
+        }
+        if (this.getTarget() != null && this.getTarget().isAlive()) {
+            if (this.tickCount % 5 == 0) {
+                satanelReactorCharge = Math.min(100, satanelReactorCharge + (enraged ? 4 : 1));
+            }
+            if (!isSatanelStampede() && (satanelReactorCharge >= 100 || this.getHealth() <= this.getMaxHealth() * 0.42F)) {
+                setSatanelStampede(true);
+                this.bossEvent.setName(Component.literal("§4§l[SATANEL - PHẪN NỘ CHI VƯƠNG] §d§lMILIM NAVA §7- §c[Lò Ma Tố Bất Tận]"));
+                this.bossEvent.setColor(BossEvent.BossBarColor.RED);
+                sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.HOSTILE, 3.0F, 0.7F);
+                for (ServerPlayer sp : sl.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(64.0D))) {
+                    sp.displayClientMessage(Component.literal("§4§l[CẢNH BÁO TỐI CAO] §dMilim Nava §cvừa giải phóng §4Ultimate Skill: Phẫn Nộ Chi Vương (Satanael)§c — Ma tố sinh sản vô hạn!"), false);
+                }
+            }
+            if (isSatanelStampede()) {
+                if (this.tickCount % 20 == 0 && this.getHealth() < this.getMaxHealth()) {
+                    this.heal(25.0F);
+                }
+                if (this.tickCount % 4 == 0) {
+                    sl.sendParticles(SPIRITRON_PURPLE, this.getX(), this.getY() + 1.1, this.getZ(), 6, 0.7, 0.9, 0.7, 0.08);
+                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, this.getX(), this.getY() + 1.0, this.getZ(), 4, 0.6, 0.7, 0.6, 0.04);
+                }
+                // Lò phản ứng tăng tốc hồi chiêu cực đại
+                if (dragonNovaCooldown > 1) dragonNovaCooldown--;
+                if (horizontalBeamCooldown > 1) horizontalBeamCooldown--;
+                if (phantomDashCooldown > 1) phantomDashCooldown--;
+            }
+        } else if (isSatanelStampede() && this.tickCount % 100 == 0) {
+            setSatanelStampede(false);
+            satanelReactorCharge = 0;
+            this.bossEvent.setName(Component.literal("§d§l[MA VƯƠNG CỔ ĐẠI] §c§lMILIM NAVA §7- §e[Bạo Chúa Hủy Diệt]"));
+            this.bossEvent.setColor(BossEvent.BossBarColor.PINK);
         }
 
         // 3. Quản lý trạng thái bay
@@ -537,7 +582,7 @@ public class MilimEntity extends Monster {
                 v.removeEffect(MobEffects.REGENERATION);
                 v.removeEffect(MobEffects.DAMAGE_RESISTANCE);
                 v.removeEffect(MobEffects.FIRE_RESISTANCE);
-                v.hurt(this.damageSources().magic(), 1800.0F);
+                v.hurt(this.damageSources().magic(), isSatanelStampede() ? 2600.0F : 1800.0F);
                 v.setRemainingFireTicks(400); // Thiêu đốt 20s
                 Vec3 knockback = dir.scale(2.5D).add(0, 0.4D, 0);
                 v.setDeltaMovement(knockback);

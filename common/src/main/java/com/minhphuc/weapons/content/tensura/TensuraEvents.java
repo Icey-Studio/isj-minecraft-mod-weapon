@@ -15,12 +15,13 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 
-import com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleManager;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.MilimEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.entity.tensura.VelzardEntity;
+import net.minecraft.world.entity.Mob;
 import dev.architectury.event.events.common.InteractionEvent;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -94,7 +95,6 @@ public class TensuraEvents {
             CarreraBulletLogic.tickVortices();
             PrimordialSummonRitual.tickRituals(level);
             VelgryndSummonRitual.tickRituals(level);
-            IncubationCapsuleManager.tickCapsules(level);
             ResidualMagicCircleManager.tickResidualCircles(level);
             DeathStreakAbility.tickStreaks(level);
             PentagramCelestialPillarAbility.tickPillars(level);
@@ -113,6 +113,8 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.tick(level);
             com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.tickDomains(level);
             com.minhphuc.weapons.content.tensura.ApocalypseAbility.tickApocalypses(level);
+            tickEvokerWitchDemonSummons(level);
+            tickAutonomousSpiritAndTempest(level);
         });
     }
 
@@ -183,6 +185,9 @@ public class TensuraEvents {
                 }
             }
         }
+
+        // 3. Đại Hiền Giả / Raphael: Quét Hang Động Phong Ấn, vũ khí phẩm cấp & Auto-Battle
+        SageManager.tickPlayer(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -423,6 +428,11 @@ public class TensuraEvents {
 
         if (player != null) {
             handleMobDeathDrop(player, victim);
+            ItemStack mainWeapon = player.getMainHandItem();
+            WeaponGradeHelper.WeaponGrade upgraded = WeaponGradeHelper.recordWeaponKill(mainWeapon, victim);
+            if (upgraded != null) {
+                SageManager.sendCornerAlert(player, "Vũ khí [" + mainWeapon.getHoverName().getString() + "] vừa đột phá phẩm cấp " + upgraded.colorPrefix + upgraded.title + "§f!", 0xFFFACC15, 5500, false);
+            }
 
             // Ghi nhận hiến tế Dân Làng (Villager Sacrifice) cho Ác Ma Thủy Tổ
             if (victim instanceof net.minecraft.world.entity.npc.Villager) {
@@ -443,7 +453,149 @@ public class TensuraEvents {
                 }
             }
         }
+        // Xác chết / Mob hiến thân cho Ác Ma Ma Giới chưa có thể xác trong phạm vi 10 block
+        if (!(victim instanceof UnderworldDemonEntity) && !(victim instanceof PrimordialDemonEntity)
+                && victim.level() instanceof ServerLevel slVictim
+                && !com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(slVictim, victim.position())) {
+            List<UnderworldDemonEntity> nearDemons = slVictim.getEntitiesOfClass(
+                    UnderworldDemonEntity.class,
+                    victim.getBoundingBox().inflate(10.0D),
+                    d -> d.isAlive() && !d.hasPhysicalBody()
+            );
+            if (!nearDemons.isEmpty()) {
+                UnderworldDemonEntity receiver = nearDemons.get(0);
+                receiver.grantPhysicalBody("Xác Hiến Tế (" + victim.getName().getString() + ")", player);
+            }
+        }
+
+        // Orc Disaster Geld: Kỹ Năng Đói Khát (Starved) tự nuốt chửng lính Orc & sinh vật gục ngã gần đó!
+        if (!(victim instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity) && victim.level() instanceof ServerLevel slOrc) {
+            List<com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity> gelds = slOrc.getEntitiesOfClass(
+                    com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity.class,
+                    victim.getBoundingBox().inflate(18.0D),
+                    LivingEntity::isAlive
+            );
+            for (var geld : gelds) {
+                float healAmt = victim.getTags().contains("OrcHorde") ? 60.0F : 30.0F;
+                geld.absorbPrey(slOrc, healAmt);
+            }
+        }
+
         return EventResult.pass();
+    }
+
+    private static void tickEvokerWitchDemonSummons(ServerLevel level) {
+        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) return;
+        long now = level.getGameTime();
+        if (now % 100L != 0L) return;
+
+        for (ServerPlayer sp : level.players()) {
+            AABB scanBox = sp.getBoundingBox().inflate(24.0D);
+            List<Mob> casters = level.getEntitiesOfClass(Mob.class, scanBox,
+                    m -> m.isAlive() && m.getTarget() != null
+                            && (m instanceof net.minecraft.world.entity.monster.Evoker
+                            || m instanceof net.minecraft.world.entity.monster.Witch));
+            if (casters.isEmpty()) continue;
+
+            int nearbyDemons = level.getEntitiesOfClass(UnderworldDemonEntity.class, scanBox).size();
+            if (nearbyDemons >= 2) continue;
+
+            for (Mob caster : casters) {
+                CompoundTag tag = EntityDataHelper.getCustomData(caster);
+                long lastSummon = tag.getLong("UnderworldSummonTick");
+                if (now - lastSummon < 1200L) continue;
+                if (level.random.nextFloat() < 0.14F) {
+                    UnderworldDemonEntity summoned = com.minhphuc.weapons.entity.ModEntities.UNDERWORLD_DEMON.get().create(level);
+                    if (summoned != null) {
+                        double ox = caster.getX() + (level.random.nextDouble() - 0.5D) * 4.0D;
+                        double oz = caster.getZ() + (level.random.nextDouble() - 0.5D) * 4.0D;
+                        summoned.moveTo(ox, caster.getY() + 0.5D, oz, caster.getYRot(), 0.0F);
+                        summoned.finalizeSpawn(level, level.getCurrentDifficultyAt(caster.blockPosition()),
+                                net.minecraft.world.entity.MobSpawnType.MOB_SUMMONED, null);
+                        summoned.setRank(UnderworldDemonEntity.DemonRank.LESSER);
+                        summoned.setTarget(caster.getTarget());
+                        level.addFreshEntity(summoned);
+                        level.sendParticles(ParticleTypes.WITCH, summoned.getX(), summoned.getY() + 1.0D, summoned.getZ(), 24, 0.5, 0.7, 0.5, 0.05);
+                        level.playSound(null, summoned.getX(), summoned.getY(), summoned.getZ(),
+                                SoundEvents.EVOKER_CAST_SPELL, SoundSource.HOSTILE, 1.3F, 0.75F);
+                        tag.putLong("UnderworldSummonTick", now);
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Hệ thống Tinh Linh & Liên Bang Tempest tự vận hành (Chống Lag: mỗi 120 ticks quét quanh player):
+     * - Dân làng gần Tế Đàn Tinh Linh tự đến cầu nguyện & nhận Chúc Phúc Tinh Linh -> trở thành Vệ Binh Tempest.
+     * - Mob hoang dã gần vùng giàu Ma tố thỉnh thoảng dung hợp Tinh Linh -> thành Tinh Linh Quỷ Hóa (Elemental Elite).
+     */
+    private static void tickAutonomousSpiritAndTempest(ServerLevel level) {
+        if (level.dimension() != net.minecraft.world.level.Level.OVERWORLD) return;
+        long now = level.getGameTime();
+        if (now % 120L != 0L) return;
+
+        for (ServerPlayer sp : level.players()) {
+            AABB area = sp.getBoundingBox().inflate(24.0D);
+            List<net.minecraft.world.entity.npc.Villager> villagers = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.npc.Villager.class, area,
+                    v -> v.isAlive() && !v.getTags().contains("SpiritBlessedVillager")
+            );
+            if (!villagers.isEmpty()) {
+                // Kiểm tra nhanh có SpiritShrineBlock gần đó không (quét mỗi 4 block nhẹ nhàng quanh villager đầu tiên)
+                net.minecraft.world.entity.npc.Villager chosen = villagers.get(0);
+                BlockPos center = chosen.blockPosition();
+                BlockPos foundShrine = null;
+                for (BlockPos p : BlockPos.betweenClosed(center.offset(-8, -3, -8), center.offset(8, 3, 8))) {
+                    if (level.getBlockState(p).is(com.minhphuc.weapons.init.ModBlocks.SPIRIT_SHRINE.get())) {
+                        foundShrine = p.immutable();
+                        break;
+                    }
+                }
+                if (foundShrine != null) {
+                    chosen.addTag("SpiritBlessedVillager");
+                    chosen.addTag("TempestCitizen");
+                    com.minhphuc.weapons.entity.tensura.ElementalType blessing =
+                            com.minhphuc.weapons.entity.tensura.ElementalType.fromId(level.random.nextInt(6));
+                    chosen.setCustomName(Component.literal(blessing.colorCode + "[Công Dân Tempest] §fCầu Nguyện " + blessing.displayName));
+                    chosen.setCustomNameVisible(true);
+                    chosen.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_RESISTANCE, 24000, 1));
+                    chosen.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.REGENERATION, 24000, 0));
+                    level.sendParticles(ParticleTypes.HAPPY_VILLAGER, chosen.getX(), chosen.getY() + 1.2, chosen.getZ(), 16, 0.5, 0.6, 0.5, 0.05);
+                    level.sendParticles(ParticleTypes.END_ROD, foundShrine.getX() + 0.5, foundShrine.getY() + 1.2, foundShrine.getZ() + 0.5, 14, 0.4, 0.5, 0.4, 0.05);
+                    SageManager.pushAlert(sp, "TEMPEST_VILLAGER_BLESS",
+                            "Dân làng đã tự hành lễ tại Tế Đàn Tinh Linh và gia nhập Liên Bang Tempest!", "", 200);
+                }
+            }
+
+            // Quái hoang dã ngẫu nhiên giao cảm Tinh Linh (hiếm ~6%, tối đa 2 con quanh player)
+            if (level.random.nextFloat() < 0.06F) {
+                int already = level.getEntitiesOfClass(Mob.class, area, m -> m.getTags().contains("SpiritPossessedElite")).size();
+                if (already < 2) {
+                    List<net.minecraft.world.entity.monster.Monster> monsters = level.getEntitiesOfClass(
+                            net.minecraft.world.entity.monster.Monster.class, area,
+                            m -> m.isAlive() && !m.getTags().contains("SpiritPossessedElite")
+                                    && m.getMaxHealth() < 120.0F
+                    );
+                    if (!monsters.isEmpty()) {
+                        Mob wild = monsters.get(level.random.nextInt(monsters.size()));
+                        wild.addTag("SpiritPossessedElite");
+                        com.minhphuc.weapons.entity.tensura.ElementalType eType =
+                                com.minhphuc.weapons.entity.tensura.ElementalType.fromId(level.random.nextInt(6));
+                        wild.setCustomName(Component.literal(eType.colorCode + "[Tinh Linh Nhập Thể] §f" + wild.getName().getString()));
+                        wild.setCustomNameVisible(true);
+                        var hp = wild.getAttribute(net.minecraft.world.entity.ai.attributes.Attributes.MAX_HEALTH);
+                        if (hp != null) {
+                            hp.setBaseValue(hp.getBaseValue() * 1.8D);
+                            wild.setHealth((float) hp.getValue());
+                        }
+                        wild.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.DAMAGE_BOOST, 24000, 1));
+                        level.sendParticles(ParticleTypes.WITCH, wild.getX(), wild.getY() + 1.0, wild.getZ(), 18, 0.4, 0.6, 0.4, 0.05);
+                    }
+                }
+            }
+        }
     }
 
     public static void onPlayerWakeUp(Player rawPlayer) {
@@ -716,12 +868,15 @@ public class TensuraEvents {
             if (isDemonLord && hasBody) {
                 boolean isFromVelgrynd = (source.getEntity() instanceof VelgryndEntity) || (source.getDirectEntity() instanceof VelgryndEntity)
                         || player.getTags().contains("VelgryndPenetrationDamage");
+                boolean isFromVeldora = (source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity)
+                        || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity)
+                        || player.getTags().contains("VeldoraPenetrationDamage");
                 boolean isFromVelzard = (source.getEntity() instanceof VelzardEntity) || (source.getDirectEntity() instanceof VelzardEntity)
                         || player.getTags().contains("VelzardPenetrationDamage");
                 boolean isFromKubo = (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
-                if (!isFromVelgrynd && !isFromVelzard && !isFromKubo) {
+                if (!isFromVelgrynd && !isFromVelzard && !isFromVeldora && !isFromKubo) {
                     return EventResult.interruptFalse();
                 }
             } else if (!hasBody) {
@@ -898,6 +1053,21 @@ public class TensuraEvents {
             }
         }
 
+        // =========================================================================
+        // 5. CỘNG DỒN SÁT THƯƠNG PHẨM CẤP VŨ KHÍ (WEAPON GRADE EVOLUTION)
+        // =========================================================================
+        if (!HANDLING_PRIMORDIAL_HURT.get() && rawAttacker instanceof LivingEntity weaponUser && !victim.getTags().contains("WeaponGradeBonusHit")) {
+            ItemStack mainHand = weaponUser.getMainHandItem();
+            float gradeBonus = com.minhphuc.weapons.content.tensura.WeaponGradeHelper.getBonusDamage(mainHand, amount) - amount;
+            if (gradeBonus >= 3.0F && !source.is(DamageTypes.MAGIC)) {
+                victim.addTag("WeaponGradeBonusHit");
+                try {
+                    victim.hurt(weaponUser.damageSources().magic(), gradeBonus);
+                } finally {
+                    victim.removeTag("WeaponGradeBonusHit");
+                }
+            }
+        }
         return EventResult.pass();
     }
 
@@ -915,22 +1085,6 @@ public class TensuraEvents {
             // 1. Luôn ưu tiên hiến tế pháp trận triệu hồi ác ma trước
             if (PrimordialSummonRitual.offerSacrifice(sp, hand, Vec3.atCenterOf(pos))) {
                 return EventResult.interruptFalse();
-            }
-            // 2. Tương tác Bồn Chứa Thể Xác Nhân Tạo (hỗ trợ cả nửa trên và nửa dưới)
-            BlockPos targetPos = pos;
-            if (player.level().getBlockState(targetPos).is(ModBlocks.INCUBATION_CAPSULE.get())) {
-                var state = player.level().getBlockState(targetPos);
-                if (state.hasProperty(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) &&
-                        state.getValue(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER) {
-                    targetPos = targetPos.below();
-                }
-                if (IncubationCapsuleManager.onInteract(sp, hand, targetPos)) {
-                    return EventResult.interruptFalse();
-                }
-            } else if (player.level().getBlockState(pos.below()).is(ModBlocks.INCUBATION_CAPSULE.get())) {
-                if (IncubationCapsuleManager.onInteract(sp, hand, pos.below())) {
-                    return EventResult.interruptFalse();
-                }
             }
         }
         return EventResult.pass();
@@ -954,10 +1108,15 @@ public class TensuraEvents {
             if (hand == InteractionHand.MAIN_HAND && entity instanceof LivingEntity target && target.isAlive() && !(target instanceof Player)) {
                 ItemStack held = sp.getItemInHand(hand);
 
-                // Cầm Khung Xương Ma Thiết click vào sinh vật KHÔNG PHẢI Ác Ma Thủy Tổ
-                if (held.is(ModItems.ARTIFICIAL_SKELETON.get()) && !(target instanceof PrimordialDemonEntity)) {
-                    sp.displayClientMessage(Component.literal("§c§l✦ Sinh vật này không phải Ác Ma Thủy Tổ! Khung Xương Ma Thiết chỉ dùng để ban thể xác vật lý cho Ác Ma đã khế ước!"), true);
-                    return EventResult.interruptFalse();
+                // Cầm Xương hoặc Khung Xương Ma Thiết click vào sinh vật KHÔNG PHẢI Ác Ma
+                if ((held.is(net.minecraft.world.item.Items.BONE) || held.is(ModItems.ARTIFICIAL_SKELETON.get()))
+                        && !(target instanceof PrimordialDemonEntity)
+                        && !(target instanceof UnderworldDemonEntity)) {
+                    if (held.is(ModItems.ARTIFICIAL_SKELETON.get())) {
+                        sp.displayClientMessage(Component.literal("§c§l✦ Sinh vật này không phải Ác Ma! Xương / Khung Xương Ma Thiết chỉ dùng để ban thể xác vật lý cho Ác Ma!"), true);
+                        return EventResult.interruptFalse();
+                    }
+                    // Với Xương thường (Items.BONE) dùng cho chó sói bình thường thì pass
                 }
 
                 boolean isHoldingSoul = held.is(ModItems.MOB_SOUL.get()) || held.is(ModItems.DEMON_LORD_SOUL.get());
@@ -970,7 +1129,10 @@ public class TensuraEvents {
 
                 if (isHoldingSoul || sp.isShiftKeyDown()) {
                     if (totalSouls >= 64) {
-                        if (target instanceof MilimEntity || target instanceof VelgryndEntity || target instanceof VelzardEntity) {
+                        if (target instanceof MilimEntity
+                                || target instanceof VelgryndEntity
+                                || target instanceof VelzardEntity
+                                || target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity) {
                             VoiceOfTheWorld.announce(sp, "Báo cáo: Cá thể thuộc dòng dõi Tối Cổ / Long Chủng, ma tố đã vượt qua cảnh giới Ma Vương, không thể cưỡng ép thức tỉnh!");
                             sp.level().playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
                             return EventResult.interruptTrue();
@@ -987,24 +1149,6 @@ public class TensuraEvents {
                         }
                     } else if (isHoldingSoul) {
                         sp.displayClientMessage(Component.literal("§c⚠️ Cần đủ 64 Linh Hồn để tiến hóa Ma Vương! (Hiện có: " + totalSouls + "/64)"), true);
-                    }
-                }
-            }
-
-            // Click trúng dummy bên trong bồn chứa (Skeleton dummy hoặc Demon dummy)
-            if (entity.getTags().contains("CapsuleSkeletonDummy") || entity.getTags().contains("CapsuleDemonDummy")) {
-                BlockPos capsulePos = entity.blockPosition();
-                if (!sp.level().getBlockState(capsulePos).is(ModBlocks.INCUBATION_CAPSULE.get())) {
-                    capsulePos = capsulePos.below();
-                }
-                if (sp.level().getBlockState(capsulePos).is(ModBlocks.INCUBATION_CAPSULE.get())) {
-                    var state = sp.level().getBlockState(capsulePos);
-                    if (state.hasProperty(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) &&
-                            state.getValue(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER) {
-                        capsulePos = capsulePos.below();
-                    }
-                    if (IncubationCapsuleManager.onInteract(sp, hand, capsulePos)) {
-                        return EventResult.interruptFalse();
                     }
                 }
             }
@@ -1108,6 +1252,12 @@ public class TensuraEvents {
                     Component.literal("§5§l[THỨC TỈNH MA VƯƠNG] §eÁc Ma " + oldName + " §fđã thức tỉnh thành §4§lChân Ma Vương§f! (100% Kiểm soát, Máu & Công kích x20)"),
                     false
             );
+            return;
+        }
+
+        // 2b. Nếu là Ác Ma Ma Giới (Underworld Demon): 30% kiểm soát được, 70% phản chủ
+        if (target instanceof UnderworldDemonEntity uDemon) {
+            uDemon.evolveToDemonLord(player);
             return;
         }
 

@@ -3,6 +3,7 @@ package com.minhphuc.weapons.content.tensura;
 import com.minhphuc.weapons.client.gui.ClientPhoneOpener;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
 import net.minecraft.core.BlockPos;
@@ -238,6 +239,46 @@ public class AllOfCreationAbility {
                 player.displayClientMessage(Component.literal("§c  Đặc Tính Đòn Đánh: §4XUYÊN GIÁP THẦN THOẠI §7(Chỉ bị chặn bởi Trận Đồ Cưỡng Chế)"), false);
                 player.displayClientMessage(Component.literal("§a  Khắc Chế Chiến Thuật: §fĐại Thánh Tẩy hoặc tiêu diệt trước khi nó kịp ăn thêm linh hồn"), false);
             }
+        } else if (target instanceof UnderworldDemonEntity uDemon) {
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§d§l║   ✦ HỒ SƠ ÁC MA MA GIỚI (UNDERWORLD) ✦   §d§l║"), false);
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§f  Cấp Bậc / Hình Thái: §e" + uDemon.getRank().title + " §7[" + uDemon.getMorph().label + " - " + uDemon.getDemonType().getColorName() + "]"), false);
+            player.displayClientMessage(Component.literal("§b  EP Ước Lượng: §f" + String.format("%,d", uDemon.getCalculatedEP())), false);
+            player.displayClientMessage(Component.literal("§a  Nguồn Gốc Thể Xác: §f" + (uDemon.hasPhysicalBody() ? uDemon.getBodyOrigin() : "§7Chưa có (Click Xương hoặc cho hấp thụ Dân Làng/Xác chết)")), false);
+            player.displayClientMessage(Component.literal("§6  Năng Lực: §f" + (uDemon.isWinged() ? "Có Cánh Bay" : "Bộ Hành") + (uDemon.getRank().canCastMagic ? " | Phóng Ma Pháp Nguyên Tố" : " | Cận Chiến Thuần")), false);
+            if (uDemon.isDemonLord()) {
+                player.displayClientMessage(Component.literal("§5  Trạng Thái Ma Vương: " + (uDemon.isBerserkDemonLord() ? "§4Cuồng Nộ Phản Chủ (70%)" : "§aKiểm Soát Hoàn Toàn (30%)")), false);
+            }
+            if (uDemon.isTame()) {
+                player.displayClientMessage(Component.literal("§e  Mệnh Lệnh Hiện Tại: " + uDemon.getCommandModeLabel()), false);
+            }
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
+            player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§3§l║   ✦ BẠO PHONG LONG VELDORA TEMPEST (TRUE DRAGON) ✦   §3§l║"), false);
+            player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§f  Hình Thái Hiện Tại: §e" + (v.isHumanForm() ? "Dạng Người (Võ Thuật & Linh Hoạt)" : "Dạng Rồng Khổng Lồ (Phòng Thủ & Sức Mạnh x30)")), false);
+            player.displayClientMessage(Component.literal("§b  EP Chân Long: §f" + String.format("%,d", com.minhphuc.weapons.entity.tensura.VeldoraEntity.VELDORA_EP)), false);
+            player.displayClientMessage(Component.literal("§6  Tương Quan Sức Mạnh: §fNgang Velgrynd | Mạnh x5 Ác Ma Thủy Tổ (Ác ma tối đa chỉ có 8% thắng)"), false);
+            player.displayClientMessage(Component.literal("§a  Đặc Quyền Dạng Người: §fCó thể Ban Danh Xưng nâng cấp cho sinh vật khác"), false);
+            player.displayClientMessage(Component.literal("§c  Quy Luật Bất Biến: §fKhông thể bị Ban Tên hay Tiến Hóa Ma Vương"), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity c) {
+            player.displayClientMessage(Component.literal("§3§l  [THẢM HỌA] THỦY QUÁI BAY CHARYBDIS"), false);
+            player.displayClientMessage(Component.literal("§b  Vảy Nhiễu Loạn Ma Pháp: " + (c.isScaleShieldBroken() ? "§aĐã Vỡ (Chịu 100% Phép)" : "§cCòn " + Math.round(c.getScaleShield()) + " HP (Giảm 80% Phép)")), false);
+            player.displayClientMessage(Component.literal("§e  Nhược Điểm: §fĐánh vào Vây Lưng từ trên cao hoặc dùng Veldora/Milim phá giáp"), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity geld) {
+            player.displayClientMessage(Component.literal("§6§l  [TAI ƯƠNG] CHÚA TỂ ORC ĐÓI KHÁT GELD"), false);
+            player.displayClientMessage(Component.literal("§c  Tích Tụ Đói Khát (Starved): §f" + geld.getStarvedStacks() + " tầng (+HP & Sát thương)"), false);
+            player.displayClientMessage(Component.literal("§5  Hỗn Độn Thực Giả: " + (geld.isChaosEaterActive() ? "§dĐÃ THỨC TỈNH" : "§7Chưa kích hoạt (>50% HP)")), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity sp) {
+            player.displayClientMessage(Component.literal(sp.getElementalType().colorCode + "  [TINH LINH] " + sp.getElementalType().displayName), false);
+            player.displayClientMessage(Component.literal("§7  Trạng Thái: §f" + (sp.getCommandMode() == 0 ? "Hộ Vệ Chủ Nhân" : "Canh Gác Tế Đàn Tinh Linh")), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) {
+            player.displayClientMessage(Component.literal("§5§l  [DŨNG GIẢ THỜI KHÔNG] CHLOE / CHRONOA"), false);
+            player.displayClientMessage(Component.literal("§e  Trạng Thái: " + (ch.isCorrupted() ? "§cHắc Hóa (~65% Giáp Thần & Thánh Kiếm)" : (ch.isPurified() ? "§bĐã Thanh Tẩy" : "§aBình Thường"))), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) {
+            player.displayClientMessage(Component.literal("§4§l  [DI TÍCH TÂM LINH CẤP S] TÀ THẦN TƯỢNG"), false);
+            player.displayClientMessage(Component.literal("§c  Cơ Chế: §fTích lũy Lời Nguyền Đếm Ngược 0->100% — Mang Bịt Tai/Hình Nhân để kháng!"), false);
         }
         player.displayClientMessage(Component.literal("§b§l╚════════════════════════════════════════════════╝"), false);
 

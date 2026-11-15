@@ -312,6 +312,10 @@ public class ModItems {
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DOMAIN_BARRIER_VERT.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> DRAGON_PRISON_BARRIER = ITEMS.register("dragon_prison_barrier",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.DRAGON_PRISON_BARRIER.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> SPIRIT_SHRINE = ITEMS.register("spirit_shrine",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.SPIRIT_SHRINE.get(), new Item.Properties()));
+    public static final RegistrySupplier<Item> LABYRINTH_GATEWAY = ITEMS.register("labyrinth_gateway",
+            () -> new net.minecraft.world.item.BlockItem(ModBlocks.LABYRINTH_GATEWAY.get(), new Item.Properties()));
     public static final RegistrySupplier<Item> BLACK_FIRE = ITEMS.register("black_fire",
             () -> new net.minecraft.world.item.BlockItem(ModBlocks.BLACK_FIRE.get(), new Item.Properties()));
 
@@ -361,16 +365,10 @@ public class ModItems {
             () -> new com.minhphuc.weapons.content.space.StellarRemoteItem(new Item.Properties().stacksTo(1).rarity(Rarity.EPIC)));
 
     // ==========================================
-    // MODULE: BỒN CHỨA & KHUNG XƯƠNG THỂ XÁC NHÂN TẠO
+    // MODULE: KHUNG XƯƠNG THỂ XÁC NHÂN TẠO
     // ==========================================
     public static final RegistrySupplier<Item> ARTIFICIAL_SKELETON = ITEMS.register("artificial_skeleton",
             () -> new Item(new Item.Properties().rarity(Rarity.RARE)));
-
-    public static final RegistrySupplier<Item> INCUBATION_CAPSULE = ITEMS.register("incubation_capsule",
-            () -> new net.minecraft.world.item.BlockItem(ModBlocks.INCUBATION_CAPSULE.get(), new Item.Properties().rarity(Rarity.EPIC)));
-
-    public static final RegistrySupplier<Item> INCUBATION_CAPSULE_SKELETON = ITEMS.register("incubation_capsule_skeleton",
-            () -> new net.minecraft.world.item.BlockItem(ModBlocks.INCUBATION_CAPSULE.get(), new Item.Properties().rarity(Rarity.EPIC)));
 
     // 21 VẬT PHẨM KHẾ ƯỚC TIẾN HÓA ĐỘC BẢN CHO 7 ÁC MA THỦY TỔ (7 Ác Ma x 3 Trạng Thái: Body, Named, Awakened)
     // 1. DẠNG THỂ XÁC (BODY) - 7 ÁC MA
@@ -483,10 +481,8 @@ public class ModItems {
                         output.accept(CARRERA_BULLET_GRAVITY.get());
                         output.accept(CARRERA_BULLET_RAPID.get());
 
-                        // Bồn Chứa & Khung Xương Thể Xác Nhân Tạo & 21 Khế Ước Tiến Hóa Độc Bản
+                        // Khung Xương Thể Xác & 21 Khế Ước Tiến Hóa Độc Bản
                         output.accept(ARTIFICIAL_SKELETON.get());
-                        output.accept(INCUBATION_CAPSULE.get());
-                        output.accept(INCUBATION_CAPSULE_SKELETON.get());
 
                         // 7 Khế Ước Thể Xác (Body)
                         output.accept(PRIMORDIAL_PACT_ROUGE_BODY.get());
@@ -527,6 +523,8 @@ public class ModItems {
                         output.accept(MAGISTEEL_PHONE.get());
                         output.accept(STELLAR_REMOTE.get());
                         output.accept(MILIM_DRAGON_CONTRACT.get());
+                        output.accept(SPIRIT_SHRINE.get());
+                        output.accept(LABYRINTH_GATEWAY.get());
 
                         // Bạch Băng Long Velzard
                         output.accept(FROST_DRAGON_CORE.get());
