@@ -44,16 +44,6 @@ public class ModMessages {
                 ServerboundDemonCommandPacket::new,
                 ServerboundDemonCommandPacket::handle);
 
-        CHANNEL.register(ClientboundOpenCapsuleScreenPacket.class,
-                ClientboundOpenCapsuleScreenPacket::encode,
-                ClientboundOpenCapsuleScreenPacket::new,
-                ClientboundOpenCapsuleScreenPacket::handle);
-
-        CHANNEL.register(ServerboundCapsuleEvolvePacket.class,
-                ServerboundCapsuleEvolvePacket::encode,
-                ServerboundCapsuleEvolvePacket::new,
-                ServerboundCapsuleEvolvePacket::handle);
-
         CHANNEL.register(ClientboundOpenMaterialCreationPacket.class,
                 ClientboundOpenMaterialCreationPacket::encode,
                 ClientboundOpenMaterialCreationPacket::new,
@@ -163,6 +153,26 @@ public class ModMessages {
                 ServerboundSkillActionPacket::encode,
                 ServerboundSkillActionPacket::new,
                 ServerboundSkillActionPacket::handle);
+
+        CHANNEL.register(ClientboundSageAlertPacket.class,
+                ClientboundSageAlertPacket::encode,
+                ClientboundSageAlertPacket::new,
+                ClientboundSageAlertPacket::handle);
+
+        CHANNEL.register(ServerboundSageActionPacket.class,
+                ServerboundSageActionPacket::encode,
+                ServerboundSageActionPacket::new,
+                ServerboundSageActionPacket::handle);
+
+        CHANNEL.register(ClientboundOpenAzathothPacket.class,
+                ClientboundOpenAzathothPacket::encode,
+                ClientboundOpenAzathothPacket::new,
+                ClientboundOpenAzathothPacket::handle);
+
+        CHANNEL.register(ServerboundAzathothActionPacket.class,
+                ServerboundAzathothActionPacket::encode,
+                ServerboundAzathothActionPacket::new,
+                ServerboundAzathothActionPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

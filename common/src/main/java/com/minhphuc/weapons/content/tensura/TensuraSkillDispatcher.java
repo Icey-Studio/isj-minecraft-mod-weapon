@@ -22,7 +22,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 30 : 29;
+        return hasCreation ? 31 : 30;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -60,6 +60,7 @@ public class TensuraSkillDispatcher {
                 case 27 -> "§5§l28. Thần Hư Không Azathoth (Void God Azathoth)";
                 case 28 -> "§6§l29. Ban Danh Xưng (Naming Ability)";
                 case 29 -> "§b§l30. Dị Giới Thần Môn (Dimensional Sanctuary)";
+                case 30 -> "§3§l31. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -93,6 +94,7 @@ public class TensuraSkillDispatcher {
                 case 26 -> "§5§l27. Thần Hư Không Azathoth (Void God Azathoth)";
                 case 27 -> "§6§l28. Ban Danh Xưng (Naming Ability)";
                 case 28 -> "§b§l29. Dị Giới Thần Môn (Dimensional Sanctuary)";
+                case 29 -> "§3§l30. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -226,9 +228,16 @@ public class TensuraSkillDispatcher {
                 case 24 -> NihilityCollapseAbility.cast(level, player);
                 case 25 -> SupernovaAbility.cast(level, player);
                 case 26 -> SkillNullificationAbility.cast(level, player);
-                case 27 -> AzathothAbility.cast(level, player);
+                case 27 -> {
+                    if (player.isShiftKeyDown()) {
+                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                    } else {
+                        AzathothAbility.cast(level, player);
+                    }
+                }
                 case 28 -> TensuraNamingAbility.cast(level, player);
                 case 29 -> DimensionalSanctuaryAbility.cast(level, player);
+                case 30 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
             }
         } else {
             switch (index) {
@@ -258,9 +267,16 @@ public class TensuraSkillDispatcher {
                 case 23 -> NihilityCollapseAbility.cast(level, player);
                 case 24 -> SupernovaAbility.cast(level, player);
                 case 25 -> SkillNullificationAbility.cast(level, player);
-                case 26 -> AzathothAbility.cast(level, player);
+                case 26 -> {
+                    if (player.isShiftKeyDown()) {
+                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                    } else {
+                        AzathothAbility.cast(level, player);
+                    }
+                }
                 case 27 -> TensuraNamingAbility.cast(level, player);
                 case 28 -> DimensionalSanctuaryAbility.cast(level, player);
+                case 29 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
             }
         }
     }

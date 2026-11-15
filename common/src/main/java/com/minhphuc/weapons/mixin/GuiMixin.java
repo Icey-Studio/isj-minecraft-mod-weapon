@@ -144,6 +144,7 @@ public class GuiMixin {
     private void weapons$renderSkillMiniHud(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui || mc.screen != null) return;
+        com.minhphuc.weapons.client.SageHudManager.render(guiGraphics);
         if (ClientCinematicSkillHandler.isActive()
                 || ClientHellflareCinematicHandler.isActive()
                 || ClientAzathothCinematicHandler.isActive()

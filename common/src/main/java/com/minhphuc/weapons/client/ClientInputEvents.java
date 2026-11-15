@@ -77,6 +77,22 @@ public class ClientInputEvents {
                 // Nhấn phím X: Thi triển Nghịch Thời Nhất Trảm
                 ModMessages.sendToServer(new ServerboundTengaiSwordSkillPacket(ServerboundTengaiSwordSkillPacket.ACTION_REVERSE_SLASH));
             }
+
+            if (ModKeyBindings.SAGE_ACTION_KEY.consumeClick()) {
+                if (mc.screen == null) {
+                    if (mc.player.isShiftKeyDown()) {
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundAzathothActionPacket(
+                                com.minhphuc.weapons.network.ServerboundAzathothActionPacket.ACTION_OPEN_GUI, 0));
+                    } else if (SageHudManager.hasPendingVeldoraWarp()) {
+                        SageHudManager.clearVeldoraWarp();
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_WARP_VELDORA));
+                    } else {
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE));
+                    }
+                }
+            }
         });
 
         // Chuột phải vào không khí: Thi triển kỹ năng đang chọn (tay không hoặc khi mặc Giáp Thần Linh)

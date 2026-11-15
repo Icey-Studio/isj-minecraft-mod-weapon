@@ -265,6 +265,26 @@ public class InfiniteDragonPrisonAbility {
         return prison;
     }
 
+    public static void castForVeldoraCave(ServerLevel level, Vec3 center) {
+        double radius = 11.0D;
+        double domeHeight = 10.0D;
+        double skirtDepth = 3.0D;
+        ActivePrison prison = new ActivePrison(level, null, center, radius, domeHeight, skirtDepth, 3);
+        prison.maxDurationTicks = -1;
+        ACTIVE_PRISONS.add(prison);
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
+            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
+        }
+    }
+
+    public static void removeVeldoraCavePrison(ServerLevel level, Vec3 center) {
+        removePrisonsInArea(level, center, 16.0D);
+    }
+
     /**
      * Cho phép quái/thực thể bên ngoài tự do bước vào lồng giam, nhưng từ trong không thể đi ra.
      * Khi có nhiều lồng giam, chỉ áp dụng cho lồng chứa khối kết giới pos này.

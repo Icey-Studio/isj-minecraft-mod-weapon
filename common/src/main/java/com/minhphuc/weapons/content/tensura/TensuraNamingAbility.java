@@ -4,6 +4,7 @@ import com.minhphuc.weapons.content.divine.DivineSalvationHelper;
 import com.minhphuc.weapons.data.ItemStackDataHelper;
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -83,8 +84,23 @@ public class TensuraNamingAbility {
             return false;
         }
 
+        if (target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            player.displayClientMessage(
+                    Component.literal("§c[BAN DANH XƯNG] Chân Long / Tối Cổ đã có chân danh tuyệt đối, không thể bị ban tên hay cưỡng ép tiến hóa!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
+            return false;
+        }
+
         // 1. Kiểm tra nếu sinh vật đã từng được ban tên
-        if (target.getTags().contains("TensuraNamedMob") || (target instanceof PrimordialDemonEntity pde && pde.isNamed())) {
+        if (target.getTags().contains("TensuraNamedMob")
+                || (target instanceof PrimordialDemonEntity pde && pde.isNamed())
+                || (target instanceof UnderworldDemonEntity ude && ude.isNamed())) {
             player.displayClientMessage(
                     Component.literal("§c[BAN DANH XƯNG] Sinh vật này đã được ban danh xưng từ trước, không thể ban tên lần thứ hai!"),
                     true
@@ -95,7 +111,9 @@ public class TensuraNamingAbility {
         }
 
         boolean isDemonLord = target.getTags().contains("TensuraDemonLordMob");
-        boolean isBoss = DivineSalvationHelper.isBoss(target) || (target instanceof PrimordialDemonEntity);
+        boolean isBoss = DivineSalvationHelper.isBoss(target)
+                || (target instanceof PrimordialDemonEntity)
+                || (target instanceof UnderworldDemonEntity);
 
         // 2. Tính toán tiêu hao tài nguyên & Kiểm tra điều kiện người dùng
         if (isDemonLord) {
@@ -172,6 +190,8 @@ public class TensuraNamingAbility {
             demon.setHealth(demon.getMaxHealth());
             demon.updateDemonNametag();
             demon.syncToPactInOwnerInventory();
+        } else if (target instanceof UnderworldDemonEntity demon) {
+            demon.applyNameEvolution(chosenName, player);
         } else {
             target.setCustomName(Component.literal("§6§l✦ " + chosenName + " ✦ §e[" + oldName + "]"));
             target.setCustomNameVisible(true);
