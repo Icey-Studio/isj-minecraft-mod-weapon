@@ -81,13 +81,13 @@ public class OrcDisasterGeldEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 3600.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.34D)
-                .add(Attributes.ATTACK_DAMAGE, 38.0D)
-                .add(Attributes.ARMOR, 22.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 12.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.9D)
-                .add(Attributes.FOLLOW_RANGE, 48.0D);
+                .add(Attributes.MAX_HEALTH, 5500.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.36D)
+                .add(Attributes.ATTACK_DAMAGE, 120.0D)
+                .add(Attributes.ARMOR, 28.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 18.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
+                .add(Attributes.FOLLOW_RANGE, 52.0D);
     }
 
     @Override

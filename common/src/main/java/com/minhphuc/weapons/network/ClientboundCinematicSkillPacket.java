@@ -115,7 +115,11 @@ public class ClientboundCinematicSkillPacket {
                         );
                     }
                 } else if (this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_MULTILAYER_BARRIER
-                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY) {
+                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY
+                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_CQC_TECHNIQUE
+                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DEAD_END_RAINBOW
+                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_HINATA_THOUGHT_ACCEL
+                        && this.skillId != com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DEMON_LORD_HAKI) {
                     com.minhphuc.weapons.client.ClientCinematicSkillHandler.startCinematic(
                             this.skillId, this.casterUuid, pos, dir, this.totalTicks, this.powerMultiplier
                      );

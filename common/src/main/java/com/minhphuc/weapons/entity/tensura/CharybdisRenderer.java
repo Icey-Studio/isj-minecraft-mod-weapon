@@ -11,12 +11,12 @@ public class CharybdisRenderer extends MobRenderer<CharybdisEntity, CharybdisMod
             ResourceLocation.fromNamespaceAndPath(WeaponsMod.MOD_ID, "textures/entity/tensura/charybdis.png");
 
     public CharybdisRenderer(EntityRendererProvider.Context context) {
-        super(context, new CharybdisModel<>(context.bakeLayer(CharybdisModel.LAYER_LOCATION)), 1.8F);
+        super(context, new CharybdisModel<>(context.bakeLayer(CharybdisModel.LAYER_LOCATION)), 4.5F);
     }
 
     @Override
     protected void scale(CharybdisEntity entity, PoseStack poseStack, float partialTickTime) {
-        poseStack.scale(2.8F, 2.8F, 2.8F);
+        poseStack.scale(11.2F, 11.2F, 11.2F);
     }
 
     @Override

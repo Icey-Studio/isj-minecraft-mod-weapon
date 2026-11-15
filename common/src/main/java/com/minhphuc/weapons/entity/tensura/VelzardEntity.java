@@ -155,10 +155,10 @@ public class VelzardEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 15000.0D)       // Gấp 3 lần Velgrynd (5,000 -> 15,000 HP)
+                .add(Attributes.MAX_HEALTH, 16500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.44D)
                 .add(Attributes.FLYING_SPEED, 0.62D)
-                .add(Attributes.ATTACK_DAMAGE, 165.0D)      // Gấp 3 lần Velgrynd (55 -> 165 ATK)
+                .add(Attributes.ATTACK_DAMAGE, 215.0D)
                 .add(Attributes.ARMOR, 45.0D)
                 .add(Attributes.ARMOR_TOUGHNESS, 35.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)

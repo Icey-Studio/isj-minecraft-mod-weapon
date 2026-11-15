@@ -407,5 +407,11 @@
   "item.weapons.fake_soul": "Fake Soul",
   "skill.weapons.apocalypse": "Apocalypse (Judgment Day)",
   "dimension.weapons.jura_tempest": "Jura Tempest Citadel",
-  "biome.weapons.jura_tempest_sanctuary": "Jura Tempest Sanctuary"
+  "biome.weapons.jura_tempest_sanctuary": "Jura Tempest Sanctuary",
+  "entity.weapons.hinata": "Hinata Sakaguchi",
+  "item.weapons.hinata_helmet": "Hinata's Crusader Circlet",
+  "item.weapons.hinata_chestplate": "Hinata's Holy Knight Cloak & Armor",
+  "item.weapons.hinata_leggings": "Hinata's Holy Waistcloth Greaves",
+  "item.weapons.hinata_boots": "Hinata's Silver Crusader Boots",
+  "item.weapons.hinata_sword": "Moonlight Rapier (Dead End Rainbow)"
 }

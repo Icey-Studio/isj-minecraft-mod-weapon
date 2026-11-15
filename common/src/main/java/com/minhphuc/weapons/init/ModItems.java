@@ -80,6 +80,42 @@ public class ModItems {
     public static final RegistrySupplier<Item> MOONLIGHT_SWORD = ITEMS.register("moonlight_sword",
             () -> new com.minhphuc.weapons.content.divine.MoonlightSwordItem(new Item.Properties()));
 
+    // ==========================================
+    // MODULE: HINATA SAKAGUCHI LEGENDARY SET
+    // ==========================================
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> HINATA_ARMOR_MATERIAL = ARMOR_MATERIALS.register("hinata", () -> {
+        java.util.Map<net.minecraft.world.item.ArmorItem.Type, Integer> defense = java.util.Map.of(
+                net.minecraft.world.item.ArmorItem.Type.BOOTS, 6,
+                net.minecraft.world.item.ArmorItem.Type.LEGGINGS, 9,
+                net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, 12,
+                net.minecraft.world.item.ArmorItem.Type.HELMET, 6
+        );
+        return new net.minecraft.world.item.ArmorMaterial(
+                defense,
+                25,
+                net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_NETHERITE,
+                () -> net.minecraft.world.item.crafting.Ingredient.EMPTY,
+                java.util.List.of(new net.minecraft.world.item.ArmorMaterial.Layer(net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(WeaponsMod.MOD_ID, "hinata"))),
+                5.0F,
+                0.25F
+        );
+    });
+
+    public static final RegistrySupplier<Item> HINATA_HELMET = ITEMS.register("hinata_helmet",
+            () -> new com.minhphuc.weapons.content.divine.HinataArmorItem(HINATA_ARMOR_MATERIAL, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> HINATA_CHESTPLATE = ITEMS.register("hinata_chestplate",
+            () -> new com.minhphuc.weapons.content.divine.HinataArmorItem(HINATA_ARMOR_MATERIAL, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> HINATA_LEGGINGS = ITEMS.register("hinata_leggings",
+            () -> new com.minhphuc.weapons.content.divine.HinataArmorItem(HINATA_ARMOR_MATERIAL, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> HINATA_BOOTS = ITEMS.register("hinata_boots",
+            () -> new com.minhphuc.weapons.content.divine.HinataArmorItem(HINATA_ARMOR_MATERIAL, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    public static final RegistrySupplier<Item> HINATA_SWORD = ITEMS.register("hinata_sword",
+            () -> new com.minhphuc.weapons.content.divine.HinataSwordItem(new Item.Properties()));
+
     public static final RegistrySupplier<Item> DISINTEGRATION_MAGIC_CIRCLE = ITEMS.register("disintegration_magic_circle",
             () -> new Item(new Item.Properties()));
 
@@ -464,6 +500,11 @@ public class ModItems {
                         output.accept(DIVINE_CHESTPLATE.get());
                         output.accept(DIVINE_LEGGINGS.get());
                         output.accept(DIVINE_BOOTS.get());
+                        output.accept(HINATA_HELMET.get());
+                        output.accept(HINATA_CHESTPLATE.get());
+                        output.accept(HINATA_LEGGINGS.get());
+                        output.accept(HINATA_BOOTS.get());
+                        output.accept(HINATA_SWORD.get());
                         output.accept(GUIDE_BOOK.get());
                         output.accept(MOONLIGHT_SWORD.get());
                         output.accept(THIEN_MA_KATANA.get());

@@ -76,6 +76,9 @@ public final class ClientCinematicSkillRenderer {
 
     public record SkillInstanceKey(int skillId, UUID casterUuid, int blockX, int blockY, int blockZ) {
         public static SkillInstanceKey of(int skillId, UUID caster, Vec3 pos) {
+            if (skillId >= SkillVisualConfig.SKILL_CQC_TECHNIQUE) {
+                return new SkillInstanceKey(skillId, caster, (int) Math.round(pos.x), (int) (System.nanoTime() & 0x7FFFFFFFL), (int) Math.round(pos.z));
+            }
             if (skillId == SkillVisualConfig.SKILL_MULTILAYER_BARRIER || skillId == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON) {
                 return new SkillInstanceKey(skillId, null, (int) Math.round(pos.x), (int) Math.round(pos.y), (int) Math.round(pos.z));
             }
@@ -348,6 +351,10 @@ public final class ClientCinematicSkillRenderer {
                 case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> renderDimensionalGate(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> renderSpiritronOutburst(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> renderChromaticPillar(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_CQC_TECHNIQUE -> renderCqcTechnique(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_DEAD_END_RAINBOW -> renderDeadEndRainbow(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_HINATA_THOUGHT_ACCEL -> renderHinataThoughtAccel(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_DEMON_LORD_HAKI -> renderDemonLordHaki(mesh, mat, skill, age);
             }
 
             var built = mesh.build();
@@ -2288,5 +2295,268 @@ public final class ClientCinematicSkillRenderer {
 
     private static void energyVertex(VertexConsumer v, Matrix4f m, Vec3 p, int color, int opacity, float u, float texV) {
         energyVertex(v, m, (float) p.x, (float) p.y, (float) p.z, color, opacity, u, texV);
+    }
+
+    // =========================================================================
+    // HỆ THỐNG RENDER 3D CHO TẤT CẢ KỸ NĂNG ĐÁNH TAY (CQC) & HINATA & BÁ KHÍ
+    // Packing powerMultiplier = styleId * 100.0f + colorIndex * 10.0f + scale(1..9.5f)
+    // =========================================================================
+    private static final int[] CQC_PALETTE = {
+            0xFFE0F7FA, // 0: White-Cyan (Hinata / Rapier)
+            0xFFFFD54F, // 1: Gold (Veldora / Holy Guard / Milim)
+            0xFF38BDF8, // 2: Storm/Charybdis Cyan-Blue
+            0xFFA5F3FC, // 3: Velzard Ice Diamond
+            0xFFFF5722, // 4: Velgrynd Crimson Acceleration
+            0xFFE879F9, // 5: Chronoa Violet-Time
+            0xFFDC2626, // 6: Primordial/Kubo Blood Crimson
+            0xFF22C55E, // 7: Marbas/Spirit Emerald
+            0xFFF97316, // 8: Geld Heavy Earth Amber
+            0xFFC084FC  // 9: Void / Azathoth Purple
+    };
+
+    private static void renderCqcTechnique(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float packed = skill.powerMultiplier();
+        int styleId = Math.clamp((int) (packed / 100.0f), 0, 11);
+        int colorIdx = Math.clamp(((int) (packed / 10.0f)) % 10, 0, CQC_PALETTE.length - 1);
+        float scale = Math.max(0.9f, packed % 10.0f);
+        int mainColor = CQC_PALETTE[colorIdx];
+        int subColor = 0xFFFFFFFF;
+
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        Vec3 dir = skill.direction();
+        if (dir == null || dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        dir = dir.normalize();
+        Vec3 right = dir.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
+        right = right.normalize();
+        Vec3 up = right.cross(dir).normalize();
+
+        switch (styleId) {
+            case 0 -> { // 3D Sword Crescent Arc + Slash Ribbon
+                float r = (1.6f + 1.1f * t) * scale;
+                drawOrientedArc(v, m, new Vec3(0, 1.1, 0), dir, right, up, r, 0.35f * scale, -1.25f, 1.25f, 0.25f, mainColor, alpha);
+                drawOrientedArc(v, m, new Vec3(0, 1.1, 0), dir, right, up, r * 0.85f, 0.14f * scale, -1.0f, 1.0f, -0.15f, subColor, alpha * 0.9f);
+            }
+            case 1 -> { // 3D Multi-Thrust Pierce Cones (3-6 Razor Spear Beams)
+                int count = 3 + (colorIdx % 3);
+                for (int i = 0; i < count; i++) {
+                    float spread = (i - (count - 1) * 0.5f) * 0.38f * scale;
+                    float yOff = 1.0f + ((i % 2 == 0) ? 0.22f : -0.18f) * scale;
+                    Vec3 start = right.scale(spread).add(0, yOff, 0);
+                    float reach = (2.8f + t * 2.8f) * scale;
+                    Vec3 end = start.add(dir.scale(reach));
+                    stroke(v, m, start, end, 0.11f * scale, alpha * 0.85f, mainColor);
+                    stroke(v, m, start.add(0, 0.05, 0), end, 0.05f * scale, alpha, subColor);
+                    ringAt(v, m, start.add(dir.scale(reach * 0.45f)), dir, right, up, 0.38f * (1.1f - t * 0.5f) * scale, 0.06f, mainColor, alpha * 0.7f);
+                }
+            }
+            case 2 -> { // 3D Expanding Shockwave Rings + 12 Ground Cracks
+                float r1 = (1.2f + t * 4.2f) * scale;
+                float r2 = (0.6f + t * 2.9f) * scale;
+                ring(v, m, 0.12f, r1, 0.28f * (1.0f - t * 0.5f) * scale, mainColor, alpha);
+                ring(v, m, 0.35f + t * 0.6f, r2, 0.18f * scale, subColor, alpha * 0.85f);
+                for (int i = 0; i < 12; i++) {
+                    double a = i * Math.PI * 2.0 / 12.0;
+                    Vec3 p0 = new Vec3(Math.cos(a) * 0.5, 0.12, Math.sin(a) * 0.5);
+                    Vec3 p1 = new Vec3(Math.cos(a) * r1 * 1.1, 0.25 + t * 0.4, Math.sin(a) * r1 * 1.1);
+                    stroke(v, m, p0, p1, 0.09f * scale, alpha * 0.75f, mainColor);
+                }
+            }
+            case 3 -> { // 3D Crossed Claw / X-Rend
+                Vec3 center = dir.scale(1.2 * scale).add(0, 1.15, 0);
+                float r = (1.4f + 0.9f * t) * scale;
+                drawOrientedArc(v, m, center, dir, right, up, r, 0.24f * scale, -1.1f, 1.1f, 0.72f, mainColor, alpha);
+                drawOrientedArc(v, m, center, dir, right, up, r, 0.24f * scale, -1.1f, 1.1f, -0.72f, mainColor, alpha);
+                drawOrientedArc(v, m, center, dir, right, up, r * 0.82f, 0.10f * scale, -0.9f, 0.9f, 0.0f, subColor, alpha * 0.85f);
+            }
+            case 4 -> { // 3D Spiral Sonic Dash / Tackle Tunnel
+                float len = 4.5f * scale;
+                for (int rIdx = 0; rIdx < 5; rIdx++) {
+                    float along = ((rIdx / 5.0f) + t * 0.6f) % 1.0f * len;
+                    Vec3 c = dir.scale(along).add(0, 1.0, 0);
+                    float rad = (0.55f + rIdx * 0.22f) * scale;
+                    ringAt(v, m, c, dir, right, up, rad, 0.10f * scale, (rIdx % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+                stroke(v, m, new Vec3(0, 1.0, 0), dir.scale(len).add(0, 1.0, 0), 0.22f * scale, alpha * 0.75f, mainColor);
+            }
+            case 5 -> { // 3D 360 Spinning Sweep / Tail Whip Halo
+                float r = (2.2f + 1.4f * t) * scale;
+                float spin = age * 0.35f;
+                ring(v, m, 0.95f, r, 0.32f * scale, mainColor, alpha * 0.9f);
+                ring(v, m, 1.15f, r * 0.78f, 0.16f * scale, subColor, alpha * 0.8f);
+                for (int i = 0; i < 4; i++) {
+                    double a = spin + i * Math.PI * 0.5;
+                    Vec3 p = new Vec3(Math.cos(a) * r, 1.05, Math.sin(a) * r);
+                    stroke(v, m, new Vec3(0, 1.05, 0), p, 0.14f * scale, alpha * 0.65f, mainColor);
+                }
+            }
+            case 6 -> { // 3D Golden Guard Dome & Counter Burst
+                float domeR = (1.6f + t * 1.4f) * scale;
+                for (int yIdx = 0; yIdx < 4; yIdx++) {
+                    float y = 0.25f + yIdx * 0.55f * scale;
+                    float sliceR = domeR * (float) Math.sqrt(Math.max(0.15f, 1.0f - (yIdx * 0.22f)));
+                    ring(v, m, y, sliceR, 0.10f * scale, (yIdx % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+                for (int s = 0; s < 8; s++) {
+                    double a = s * Math.PI * 0.25 + age * 0.15;
+                    Vec3 tip = new Vec3(Math.cos(a) * domeR * 1.5, 1.1 + Math.sin(a * 2.0) * 0.4, Math.sin(a) * domeR * 1.5);
+                    stroke(v, m, new Vec3(0, 1.0, 0), tip, 0.09f * scale, alpha * 0.75f, subColor);
+                }
+            }
+            case 7 -> { // 3D Uppercut / Rising Sky Vortex
+                float h = (3.0f + t * 3.5f) * scale;
+                for (int i = 0; i < 16; i++) {
+                    float p0 = i / 16.0f;
+                    float p1 = (i + 1) / 16.0f;
+                    double a0 = p0 * Math.PI * 4.0 + age * 0.45;
+                    double a1 = p1 * Math.PI * 4.0 + age * 0.45;
+                    float rad0 = (0.4f + p0 * 1.1f) * scale;
+                    float rad1 = (0.4f + p1 * 1.1f) * scale;
+                    stroke(v, m, new Vec3(Math.cos(a0) * rad0, p0 * h, Math.sin(a0) * rad0),
+                            new Vec3(Math.cos(a1) * rad1, p1 * h, Math.sin(a1) * rad1), 0.15f * scale, alpha, mainColor);
+                }
+                stroke(v, m, Vec3.ZERO, new Vec3(0, h, 0), 0.24f * scale, alpha * 0.8f, subColor);
+            }
+            case 8 -> { // 3D Aerial Dive / Meteor Crash Funnel
+                float topY = (4.0f - t * 2.2f) * scale;
+                ring(v, m, 0.15f, (1.0f + t * 3.2f) * scale, 0.28f * scale, mainColor, alpha);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI * 0.25 + age * 0.2;
+                    Vec3 topPt = new Vec3(Math.cos(a) * 0.4f * scale, topY, Math.sin(a) * 0.4f * scale);
+                    Vec3 botPt = new Vec3(Math.cos(a) * (1.8f + t * 1.6f) * scale, 0.15, Math.sin(a) * (1.8f + t * 1.6f) * scale);
+                    stroke(v, m, topPt, botPt, 0.12f * scale, alpha * 0.8f, (i % 2 == 0) ? mainColor : subColor);
+                }
+            }
+            case 9 -> { // 3D Afterimage Silhouette Streak
+                for (int step = 0; step < 4; step++) {
+                    Vec3 c = dir.scale(-step * 0.9 * scale).add(0, 1.0, 0);
+                    float stepAlpha = alpha * (1.0f - step * 0.22f);
+                    billboardDisc(v, m, c, 0.65f * scale, mainColor, stepAlpha * 0.5f);
+                    ringAt(v, m, c, dir, right, up, 0.75f * scale, 0.08f, subColor, stepAlpha * 0.75f);
+                }
+            }
+            default -> { // 3D Colossal Cyclone / Charybdis Vortex (style 10-11)
+                float funnelH = 4.5f * scale;
+                for (int l = 0; l < 6; l++) {
+                    float y = 0.2f + (l / 6.0f) * funnelH;
+                    float rad = (1.2f + l * 0.55f + t * 1.1f) * scale;
+                    ring(v, m, y, rad, 0.22f * scale, (l % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+            }
+        }
+    }
+
+    private static void renderDeadEndRainbow(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float scale = Math.max(1.0f, skill.powerMultiplier());
+        Vec3 dir = skill.direction();
+        if (dir == null || dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        dir = dir.normalize();
+        Vec3 right = dir.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
+        right = right.normalize();
+        Vec3 up = right.cross(dir).normalize();
+
+        int[] rainbow = {0xFFFF1744, 0xFFFF9100, 0xFFFFEA00, 0xFF00E676, 0xFF00E5FF, 0xFF2979FF, 0xFFD500F9};
+        Vec3 impactCenter = dir.scale(1.6 * scale).add(0, 1.15, 0);
+
+        // 7 Rotating Rainbow Spiritron Orbs + Starburst Rays
+        float orbitR = (1.1f + t * 2.6f) * scale;
+        for (int i = 0; i < 7; i++) {
+            double ang = (Math.PI * 2.0 * i / 7.0) + age * 0.28;
+            Vec3 orb = impactCenter.add(right.scale(Math.cos(ang) * orbitR)).add(up.scale(Math.sin(ang) * orbitR));
+            billboardDisc(v, m, orb, 0.42f * scale, rainbow[i], alpha);
+            stroke(v, m, new Vec3(0, 1.1, 0), orb, 0.11f * scale, alpha * 0.9f, rainbow[i]);
+            Vec3 rayOut = impactCenter.add(right.scale(Math.cos(ang) * orbitR * 2.2)).add(up.scale(Math.sin(ang) * orbitR * 2.2)).add(dir.scale(1.8 * scale));
+            stroke(v, m, orb, rayOut, 0.09f * scale, alpha * 0.85f, rainbow[i]);
+        }
+
+        // Central White-Gold Lance Beam + Expanding Horizon Rings
+        stroke(v, m, new Vec3(0, 1.1, 0), impactCenter.add(dir.scale(4.5 * scale)), 0.24f * scale, alpha, 0xFFFFFFFF);
+        ring(v, m, 0.15f, (1.4f + t * 4.5f) * scale, 0.26f * scale, 0xFFFFEA00, alpha * 0.85f);
+        ringAt(v, m, impactCenter, dir, right, up, (0.9f + t * 2.1f) * scale, 0.16f * scale, 0xFF00E5FF, alpha * 0.9f);
+    }
+
+    private static void renderHinataThoughtAccel(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float scale = Math.max(1.0f, skill.powerMultiplier());
+        ring(v, m, 0.2f + t * 1.4f, (1.2f + t * 1.6f) * scale, 0.14f, 0xFFFFE082, alpha);
+        ring(v, m, 1.1f, 0.95f * scale, 0.10f, 0xFFE0F7FA, alpha * 0.9f);
+        for (int i = 0; i < 6; i++) {
+            double a = i * Math.PI / 3.0 + age * 0.35;
+            Vec3 p0 = new Vec3(Math.cos(a) * 0.8 * scale, 0.3, Math.sin(a) * 0.8 * scale);
+            Vec3 p1 = new Vec3(Math.cos(a) * 1.4 * scale, 2.2, Math.sin(a) * 1.4 * scale);
+            stroke(v, m, p0, p1, 0.07f, alpha * 0.8f, 0xFFFFFFFF);
+        }
+    }
+
+    private static void renderDemonLordHaki(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float maxR = 26.0f * Math.max(0.5f, skill.powerMultiplier());
+        for (int w = 0; w < 3; w++) {
+            float waveT = Math.max(0.0f, t - w * 0.14f);
+            if (waveT <= 0.0f) continue;
+            float r = 1.5f + waveT * maxR;
+            int col = (w % 2 == 0) ? 0xFFFACC15 : 0xFFDC2626;
+            ring(v, m, 0.25f + w * 0.45f, r, 0.48f * (1.0f - waveT * 0.5f), col, alpha * (1.0f - waveT * 0.4f));
+        }
+        for (int i = 0; i < 16; i++) {
+            double a = i * Math.PI / 8.0 + age * 0.12;
+            float r = 2.0f + t * maxR * 0.85f;
+            stroke(v, m, new Vec3(0, 0.9, 0), new Vec3(Math.cos(a) * r, 0.4 + Math.sin(a * 3.0) * 0.6, Math.sin(a) * r),
+                    0.16f, alpha * 0.7f, (i % 2 == 0) ? 0xFFFDE047 : 0xFFA855F7);
+        }
+    }
+
+    private static void drawOrientedArc(VertexConsumer v, Matrix4f m, Vec3 origin, Vec3 dir, Vec3 right, Vec3 up,
+                                        float radius, float halfWidth, float startAng, float endAng, float rollRad, int color, float alpha) {
+        int segs = 14;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float cosRoll = (float) Math.cos(rollRad);
+        float sinRoll = (float) Math.sin(rollRad);
+        Vec3 axisX = right.scale(cosRoll).add(up.scale(sinRoll)).normalize();
+        float rIn = Math.max(0.1f, radius - halfWidth);
+        float rOut = radius + halfWidth;
+
+        for (int i = 0; i < segs; i++) {
+            float a1 = Mth.lerp(i / (float) segs, startAng, endAng);
+            float a2 = Mth.lerp((i + 1) / (float) segs, startAng, endAng);
+            Vec3 d1 = dir.scale(Math.cos(a1)).add(axisX.scale(Math.sin(a1)));
+            Vec3 d2 = dir.scale(Math.cos(a2)).add(axisX.scale(Math.sin(a2)));
+            energyVertex(v, m, origin.add(d1.scale(rIn)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d1.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d2.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d2.scale(rIn)), color, opacity, 0.875f, 0.5f);
+        }
+    }
+
+    private static void ringAt(VertexConsumer v, Matrix4f m, Vec3 center, Vec3 normal, Vec3 right, Vec3 up,
+                               float radius, float halfWidth, int color, float alpha) {
+        int segs = 18;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float rIn = Math.max(0.05f, radius - halfWidth);
+        float rOut = radius + halfWidth;
+        for (int i = 0; i < segs; i++) {
+            double a1 = i * Math.PI * 2.0 / segs;
+            double a2 = (i + 1) * Math.PI * 2.0 / segs;
+            Vec3 dir1 = right.scale(Math.cos(a1)).add(up.scale(Math.sin(a1)));
+            Vec3 dir2 = right.scale(Math.cos(a2)).add(up.scale(Math.sin(a2)));
+            energyVertex(v, m, center.add(dir1.scale(rIn)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir1.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir2.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir2.scale(rIn)), color, opacity, 0.875f, 0.5f);
+        }
     }
 }

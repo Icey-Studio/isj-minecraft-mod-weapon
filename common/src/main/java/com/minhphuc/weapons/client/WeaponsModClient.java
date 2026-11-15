@@ -199,6 +199,23 @@ public class WeaponsModClient {
         );
 
         dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.INNER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createInnerArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.OUTER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createOuterArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.HINATA,
+                com.minhphuc.weapons.entity.tensura.HinataRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolModel.LAYER_LOCATION,
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolModel::createBodyLayer
         );

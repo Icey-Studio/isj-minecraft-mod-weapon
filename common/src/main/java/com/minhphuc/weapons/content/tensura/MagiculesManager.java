@@ -378,6 +378,13 @@ public final class MagiculesManager {
 
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.2F, 0.65F);
         level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.4F, 1.35F);
+        if (com.minhphuc.weapons.config.SkillVisualConfig.isCinematicEnabled(com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DEMON_LORD_HAKI)) {
+            com.minhphuc.weapons.network.ModMessages.sendToPlayers(level.players(),
+                    new com.minhphuc.weapons.network.ClientboundCinematicSkillPacket(
+                            com.minhphuc.weapons.config.SkillVisualConfig.SKILL_DEMON_LORD_HAKI,
+                            player.getUUID(), player.position(), player.getLookAngle(), 28,
+                            com.minhphuc.weapons.network.ClientboundCinematicSkillPacket.ACTION_START, 1.0F));
+        }
 
         double radius = 28.0D;
         for (int r = 2; r <= 26; r += 4) {

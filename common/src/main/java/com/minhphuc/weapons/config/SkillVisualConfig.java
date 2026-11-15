@@ -34,6 +34,10 @@ public final class SkillVisualConfig {
     public static final int SKILL_SPIRITRON_OUTBURST = 23;
     public static final int SKILL_CHROMATIC_PILLAR = 24;
     public static final int SKILL_SPATIAL_TELEPORT = 25;
+    public static final int SKILL_CQC_TECHNIQUE = 26;
+    public static final int SKILL_DEAD_END_RAINBOW = 27;
+    public static final int SKILL_HINATA_THOUGHT_ACCEL = 28;
+    public static final int SKILL_DEMON_LORD_HAKI = 29;
 
     private static boolean globalCinematicEnabled = true;
     private static final BitSet disabledSkills = new BitSet(64);

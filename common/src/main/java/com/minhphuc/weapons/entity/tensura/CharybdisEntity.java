@@ -86,14 +86,14 @@ public class CharybdisEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 4800.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.42D)
-                .add(Attributes.FLYING_SPEED, 0.62D)
-                .add(Attributes.ATTACK_DAMAGE, 48.0D)
-                .add(Attributes.ARMOR, 24.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 14.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.9D)
-                .add(Attributes.FOLLOW_RANGE, 64.0D);
+                .add(Attributes.MAX_HEALTH, 6200.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.44D)
+                .add(Attributes.FLYING_SPEED, 0.64D)
+                .add(Attributes.ATTACK_DAMAGE, 145.0D)
+                .add(Attributes.ARMOR, 30.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
+                .add(Attributes.FOLLOW_RANGE, 84.0D);
     }
 
     @Override
@@ -187,11 +187,11 @@ public class CharybdisEntity extends Monster {
 
         LivingEntity target = this.getTarget();
         if (target != null && target.isAlive()) {
-            // Duy trì độ cao bay lượn trên không 5-9 blocks so với mục tiêu
-            double desiredY = target.getY() + 6.5D;
+            // Duy trì độ cao bay lượn trên không tương xứng thân hình khổng lồ gấp 4 lần
+            double desiredY = target.getY() + 12.0D;
             if (this.getY() < desiredY) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0, 0.08D, 0));
-            } else if (this.getY() > desiredY + 4.0D) {
+            } else if (this.getY() > desiredY + 6.0D) {
                 this.setDeltaMovement(this.getDeltaMovement().add(0, -0.04D, 0));
             }
 
@@ -205,15 +205,15 @@ public class CharybdisEntity extends Monster {
 
             if (escortSpawnCooldown <= 0) {
                 spawnMegalodonEscorts(sl);
-                escortSpawnCooldown = 260;
+                escortSpawnCooldown = 280;
             }
-            if (scaleVolleyCooldown <= 0 && this.distanceToSqr(target) <= 44.0D * 44.0D) {
+            if (scaleVolleyCooldown <= 0 && this.distanceToSqr(target) <= 56.0D * 56.0D) {
                 fireScaleVolley(sl, target);
-                scaleVolleyCooldown = 55;
+                scaleVolleyCooldown = 95;
             }
-            if (suctionCooldown <= 0 && this.distanceToSqr(target) <= 32.0D * 32.0D) {
+            if (suctionCooldown <= 0 && this.distanceToSqr(target) <= 40.0D * 40.0D) {
                 castTyphoonVortex(sl, target);
-                suctionCooldown = 150;
+                suctionCooldown = 220;
             }
         }
     }

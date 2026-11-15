@@ -87,13 +87,13 @@ public class TaKinhDaiTangEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 1200.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.25D)
-                .add(Attributes.ATTACK_DAMAGE, 30.0D)
-                .add(Attributes.ARMOR, 20.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 10.0D)
+                .add(Attributes.MAX_HEALTH, 2000.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.28D)
+                .add(Attributes.ATTACK_DAMAGE, 72.0D)
+                .add(Attributes.ARMOR, 24.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 12.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.FOLLOW_RANGE, 36.0D);
+                .add(Attributes.FOLLOW_RANGE, 44.0D);
     }
 
     @Override

@@ -64,13 +64,13 @@ public class MarbasEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 1500.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.30D)
-                .add(Attributes.ATTACK_DAMAGE, 40.0D)
-                .add(Attributes.ARMOR, 22.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 12.0D)
+                .add(Attributes.MAX_HEALTH, 2200.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.34D)
+                .add(Attributes.ATTACK_DAMAGE, 80.0D)
+                .add(Attributes.ARMOR, 24.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 14.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.FOLLOW_RANGE, 48.0D);
+                .add(Attributes.FOLLOW_RANGE, 52.0D);
     }
 
     @Override

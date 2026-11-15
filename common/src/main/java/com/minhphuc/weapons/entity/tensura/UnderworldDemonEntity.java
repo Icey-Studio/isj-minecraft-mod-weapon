@@ -145,13 +145,13 @@ public class UnderworldDemonEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 120.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.34D)
-                .add(Attributes.FLYING_SPEED, 0.50D)
-                .add(Attributes.ATTACK_DAMAGE, 12.0D)
-                .add(Attributes.ARMOR, 6.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.45D)
-                .add(Attributes.FOLLOW_RANGE, 40.0D);
+                .add(Attributes.MAX_HEALTH, 450.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.36D)
+                .add(Attributes.FLYING_SPEED, 0.52D)
+                .add(Attributes.ATTACK_DAMAGE, 28.0D)
+                .add(Attributes.ARMOR, 12.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.55D)
+                .add(Attributes.FOLLOW_RANGE, 44.0D);
     }
 
     @Override

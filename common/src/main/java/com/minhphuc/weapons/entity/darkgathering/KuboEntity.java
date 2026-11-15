@@ -128,13 +128,13 @@ public class KuboEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 450.0D) // Sức bền tà thần cấp thảm họa
+                .add(Attributes.MAX_HEALTH, 1400.0D) // Cân bằng Tà Thần Hộ Pháp Bậc 1+
                 .add(Attributes.FLYING_SPEED, 0.65D)
                 .add(Attributes.MOVEMENT_SPEED, 0.45D)
                 .add(Attributes.ATTACK_DAMAGE, 95.0D) // Sát thương hư vô cực cao
-                .add(Attributes.ARMOR, 18.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 10.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.85D)
+                .add(Attributes.ARMOR, 22.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 14.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.9D)
                 .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 

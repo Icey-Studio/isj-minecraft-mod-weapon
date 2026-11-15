@@ -64,11 +64,11 @@ public class CursedIdolEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 850.0D)
+                .add(Attributes.MAX_HEALTH, 1500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.ARMOR, 14.0D)
-                .add(Attributes.FOLLOW_RANGE, 24.0D);
+                .add(Attributes.ARMOR, 18.0D)
+                .add(Attributes.FOLLOW_RANGE, 28.0D);
     }
 
     @Override

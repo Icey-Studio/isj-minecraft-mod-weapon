@@ -200,14 +200,14 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 3600.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.38D)
-                .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.ATTACK_DAMAGE, 160.0D)
-                .add(Attributes.ARMOR, 24.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 16.0D)
+                .add(Attributes.MAX_HEALTH, 8500.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.42D)
+                .add(Attributes.FLYING_SPEED, 0.58D)
+                .add(Attributes.ATTACK_DAMAGE, 185.0D)
+                .add(Attributes.ARMOR, 34.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 22.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
-                .add(Attributes.FOLLOW_RANGE, 56.0D);
+                .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
     @Override

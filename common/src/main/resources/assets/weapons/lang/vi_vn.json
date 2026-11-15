@@ -407,5 +407,11 @@
   "item.weapons.fake_soul": "Linh Hồn Giả (Fake Soul)",
   "skill.weapons.apocalypse": "Ngày Tận Thế (Apocalypse)",
   "dimension.weapons.jura_tempest": "Thành Trì Jura Tempest",
-  "biome.weapons.jura_tempest_sanctuary": "Thánh Địa Jura Tempest"
+  "biome.weapons.jura_tempest_sanctuary": "Thánh Địa Jura Tempest",
+  "entity.weapons.hinata": "Hinata Sakaguchi",
+  "item.weapons.hinata_helmet": "Vương Miện Thánh Kỵ Sĩ Hinata",
+  "item.weapons.hinata_chestplate": "Thánh Giáp Áo Choàng Hinata",
+  "item.weapons.hinata_leggings": "Chiến Khố Vạt Tím Hinata",
+  "item.weapons.hinata_boots": "Ủng Giáp Bạc Hinata",
+  "item.weapons.hinata_sword": "Kiếm Thất Thải — Moonlight Rapier (Dead End Rainbow)"
 }

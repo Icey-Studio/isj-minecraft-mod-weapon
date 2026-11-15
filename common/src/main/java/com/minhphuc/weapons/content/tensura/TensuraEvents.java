@@ -118,6 +118,7 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.ApocalypseAbility.tickApocalypses(level);
             tickEvokerWitchDemonSummons(level);
             tickAutonomousSpiritAndTempest(level);
+            MobMeleeSkillSystem.tickWorldMobs(level);
         });
     }
 
@@ -142,6 +143,7 @@ public class TensuraEvents {
                 sp.heal(10.0F);
             }
         }
+        com.minhphuc.weapons.content.divine.HinataArmorItem.cleanupDetachedModifiers(sp);
 
         // 1. CƠ CHẾ BAY (FLIGHT) CHO NGƯỜI CHƠI LÀ ÁC MA HOẶC MA VƯƠNG
         boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(sp) || PrimordialPlayerDataHelper.isDemonLord(sp);
@@ -684,6 +686,63 @@ public class TensuraEvents {
             return EventResult.interruptFalse();
         }
 
+        // Phản xạ đánh tay (Sidestep / Counter) khi Mob/Boss bị tấn công
+        if (victim instanceof net.minecraft.world.entity.Mob defenderMob
+                && source.getEntity() instanceof LivingEntity attackerLiving
+                && !attackerLiving.getTags().contains(MobMeleeSkillSystem.TAG_CQC_ACTIVE)) {
+            MobMeleeSkillSystem.onMobAttackedBy(defenderMob, attackerLiving);
+        }
+
+        // Phản Kiếm Thánh Quang & Bộ Thánh Giáp Hinata (Huyền Thoại)
+        if (victim instanceof ServerPlayer hinataSp
+                && !hinataSp.getTags().contains("HinataArmorMitigated")
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && amount > 0.0F) {
+            long parryUntil = EntityDataHelper.getCustomData(hinataSp).getLong(com.minhphuc.weapons.content.divine.HinataSwordItem.KEY_PARRY_UNTIL);
+            if (hinataSp.serverLevel().getGameTime() <= parryUntil
+                    && hinataSp.getMainHandItem().getItem() instanceof com.minhphuc.weapons.content.divine.HinataSwordItem) {
+                EntityDataHelper.getCustomData(hinataSp).putLong(com.minhphuc.weapons.content.divine.HinataSwordItem.KEY_PARRY_UNTIL, 0L);
+                MobMeleeSkillSystem.sendCqc3d(hinataSp.serverLevel(), hinataSp, hinataSp.position(), hinataSp.getLookAngle(), 6, 1, 1.8F, 18);
+                hinataSp.serverLevel().playSound(null, hinataSp.getX(), hinataSp.getY(), hinataSp.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.6F, 1.4F);
+                if (source.getEntity() instanceof LivingEntity parryTarget && parryTarget != hinataSp) {
+                    Vec3 pDir = parryTarget.position().subtract(hinataSp.position()).normalize();
+                    MobMeleeSkillSystem.sendCqc3d(hinataSp.serverLevel(), hinataSp, parryTarget.position(), pDir, 0, 1, 1.8F, 16);
+                    parryTarget.invulnerableTime = 0;
+                    parryTarget.addTag("DisintegrationDamage");
+                    try {
+                        parryTarget.hurt(hinataSp.damageSources().indirectMagic(hinataSp, hinataSp), 120.0F);
+                    } finally {
+                        parryTarget.removeTag("DisintegrationDamage");
+                    }
+                }
+                hinataSp.displayClientMessage(Component.literal("§6§l[PHẢN KIẾM THÁNH QUANG] §fVô hiệu hóa đòn & phản chém §c120 DMG§f!"), true);
+                return EventResult.interruptFalse();
+            }
+
+            float mult = 1.0F;
+            boolean isMelee = source.getDirectEntity() instanceof LivingEntity;
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.hasHelmet(hinataSp) && isMelee) {
+                mult *= 0.75F; // #1 Mắt Dự Đoán: -25% cận chiến
+            }
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.hasChestplate(hinataSp)) {
+                mult *= 0.45F; // #2 Thánh Y Bất Hoại: -55% sát thương
+            }
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.isWearingFullSet(hinataSp)
+                    && hinataSp.isBlocking()
+                    && hinataSp.getMainHandItem().getItem() instanceof com.minhphuc.weapons.content.divine.HinataSwordItem) {
+                mult *= 0.25F; // #5 Đủ bộ 4 món đỡ kiếm: -75%
+            }
+            if (mult < 0.99F) {
+                hinataSp.addTag("HinataArmorMitigated");
+                try {
+                    hinataSp.hurt(source, amount * mult);
+                } finally {
+                    hinataSp.removeTag("HinataArmorMitigated");
+                }
+                return EventResult.interruptFalse();
+            }
+        }
+
         // Ma Tố Quá Tải: +50% sát thương phép xuyên giáp cho người chơi
         if (source.getEntity() instanceof ServerPlayer overdriveSp
                 && overdriveSp != victim
@@ -801,6 +860,7 @@ public class TensuraEvents {
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.HinataEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity
                         || livingAttacker instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon
                         || livingAttacker instanceof net.minecraft.world.entity.boss.wither.WitherBoss

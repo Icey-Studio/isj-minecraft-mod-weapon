@@ -110,12 +110,12 @@ public class VeldoraEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 20000.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.36D)
+                .add(Attributes.MAX_HEALTH, 21000.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.38D)
                 .add(Attributes.FLYING_SPEED, 0.65D)
-                .add(Attributes.ATTACK_DAMAGE, 180.0D)
+                .add(Attributes.ATTACK_DAMAGE, 245.0D)
                 .add(Attributes.ARMOR, 48.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 28.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 32.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 72.0D);
     }

@@ -146,8 +146,8 @@ public class ModEntities {
     public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.CharybdisEntity>> CHARYBDIS =
             ENTITY_TYPES.register("charybdis", () ->
                     EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.CharybdisEntity::new, MobCategory.MONSTER)
-                            .sized(3.2F, 2.8F)
-                            .clientTrackingRange(20)
+                            .sized(12.8F, 11.2F)
+                            .clientTrackingRange(32)
                             .fireImmune()
                             .build("charybdis")
             );
@@ -177,6 +177,15 @@ public class ModEntities {
                             .clientTrackingRange(14)
                             .fireImmune()
                             .build("chronoa")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.HinataEntity>> HINATA =
+            ENTITY_TYPES.register("hinata", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.HinataEntity::new, MobCategory.MONSTER)
+                            .sized(0.65F, 1.95F)
+                            .clientTrackingRange(14)
+                            .fireImmune()
+                            .build("hinata")
             );
 
     public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity>> CURSED_IDOL =
@@ -220,10 +229,13 @@ public class ModEntities {
         EntityAttributeRegistry.register(ORC_DISASTER_GELD, com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity::createAttributes);
         EntityAttributeRegistry.register(ELEMENTAL_SPIRIT, com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity::createAttributes);
         EntityAttributeRegistry.register(CHRONOA, com.minhphuc.weapons.entity.tensura.ChronoaEntity::createAttributes);
+        EntityAttributeRegistry.register(HINATA, com.minhphuc.weapons.entity.tensura.HinataEntity::createAttributes);
         EntityAttributeRegistry.register(CURSED_IDOL, com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity::createAttributes);
 
         // Đăng ký quy tắc Spawn Placement cho các thực thể thù địch xuất hiện tự nhiên (Kèm bộ lọc chống trùng cụm)
         SpawnPlacementsRegistry.register(CHRONOA, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+        SpawnPlacementsRegistry.register(HINATA, SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
 
         SpawnPlacementsRegistry.register(CURSED_IDOL, SpawnPlacementTypes.ON_GROUND,
@@ -276,6 +288,7 @@ public class ModEntities {
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CHARYBDIS.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(ORC_DISASTER_GELD.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CHRONOA.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(HINATA.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CURSED_IDOL.get(), 1, 1, 1));
             }
             if (context.hasTag(BiomeTags.IS_NETHER)) {

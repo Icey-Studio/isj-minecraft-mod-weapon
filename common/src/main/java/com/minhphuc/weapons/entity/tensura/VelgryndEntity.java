@@ -121,14 +121,14 @@ public class VelgryndEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 5000.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.42D)
-                .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.ATTACK_DAMAGE, 55.0D)
-                .add(Attributes.ARMOR, 30.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.MAX_HEALTH, 15500.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.45D)
+                .add(Attributes.FLYING_SPEED, 0.62D)
+                .add(Attributes.ATTACK_DAMAGE, 205.0D)
+                .add(Attributes.ARMOR, 42.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 30.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.FOLLOW_RANGE, 64.0D);
+                .add(Attributes.FOLLOW_RANGE, 72.0D);
     }
 
     @Override
