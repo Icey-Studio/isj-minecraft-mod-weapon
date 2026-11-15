@@ -82,25 +82,25 @@ public final class SummonVeldoraAbility {
             return;
         }
 
-        // 2) VELDORA ĐÃ TỬ TRẬN -> HỒI SINH VỚI GIÁ 70% HP & MA TỐ!
+        // 2) VELDORA ĐÃ TỬ TRẬN -> HỒI SINH BẰNG 70% MA TỐ (MAGICULES)!
         if (vd.isVeldoraDead()) {
+            boolean exhaustedDeath = false;
             if (!player.isCreative()) {
-                float hpCost = player.getMaxHealth() * 0.70F;
-                if (player.getHealth() <= 2.0F) {
-                    SageManager.sendCornerAlert(player, "Sinh lực quá yếu để Giải Phóng & Hồi Sinh Bạo Phong Long (cần tối thiểu > 2 HP để chịu 70% tiêu hao)!", 0xFFEF4444, 6000, true);
+                if (MagiculesManager.getCurrentMagicules(player) <= 0L) {
+                    SageManager.sendCornerAlert(player, "Ma Tố đã cạn kiệt (0 MP), hãy chờ Ma Tố hồi phục trước khi Hồi Sinh Bạo Phong Long!", 0xFFEF4444, 6000, true);
                     return;
                 }
-                float remaining = Math.max(1.0F, player.getHealth() - hpCost);
-                player.setHealth(remaining);
-                int food = player.getFoodData().getFoodLevel();
-                player.getFoodData().setFoodLevel(Math.max(1, food - 12));
-                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+                long mpCost = Math.max(50_000L, Math.round(MagiculesManager.getMaxMagicules(player) * 0.70D));
+                exhaustedDeath = MagiculesManager.consumeMagiculesWithExhaustion(player, mpCost, false, "Hồi Sinh Bạo Phong Long Veldora");
             }
             vd.setVeldoraDead(false, humanForm);
             VeldoraEntity revived = spawnCanonicalVeldora(level, player, humanForm, vd);
             if (revived != null) {
-                SageManager.sendCornerAlert(player, "Giải Phóng Bạo Phong Long Thành Công! Đã tiêu hao 70% HP & Ma Tố để HỒI SINH Veldora Tempest!", 0xFFF59E0B, 7000, false);
+                SageManager.sendCornerAlert(player, "Giải Phóng Bạo Phong Long Thành Công! Đã tiêu hao 70% Ma Tố để HỒI SINH Veldora Tempest!", 0xFFF59E0B, 7000, false);
                 player.displayClientMessage(Component.literal("§b§l[VELDORA] §f\"KUAHAHA!! Đa tạ bạn hiền đã rót Ma Tố hồi sinh ta từ Hư Không!\""), false);
+            }
+            if (exhaustedDeath) {
+                MagiculesManager.triggerMagiculeExhaustionDeath(player, "Hồi Sinh Veldora");
             }
             return;
         }

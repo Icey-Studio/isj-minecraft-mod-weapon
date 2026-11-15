@@ -6,6 +6,7 @@ import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity;
 import com.minhphuc.weapons.entity.tensura.ElementalType;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.network.ClientboundOpenTempestCitadelPacket;
@@ -114,12 +115,17 @@ public final class JuraTempestManager {
             }
         }
 
-        // 2. Hội Đồng Ác Ma Thủy Tổ (Noir/Diablo, Blanc/Testarossa, Jaune/Carrera, Violet/Ultima) quanh Bàn Tròn
-        List<PrimordialDemonEntity> existingDemons = level.getEntitiesOfClass(PrimordialDemonEntity.class, citadelBox,
+        // 2. Đội Cận Vệ Ác Ma Hội Đồng (thuộc dòng dõi Noir/Blanc/Jaune/Violet - KHÔNG sinh trùng Thủy Tổ gốc!)
+        // Dọn sạch bản sao Thủy Tổ cũ nếu từng được spawn làm cư dân Thành Trì
+        for (PrimordialDemonEntity oldClone : level.getEntitiesOfClass(PrimordialDemonEntity.class, citadelBox,
+                d -> d.isAlive() && d.getTags().contains(TAG_CITADEL_RESIDENT))) {
+            oldClone.discard();
+        }
+        List<UnderworldDemonEntity> existingDemons = level.getEntitiesOfClass(UnderworldDemonEntity.class, citadelBox,
                 d -> d.isAlive() && d.getTags().contains(TAG_CITADEL_RESIDENT));
         if (existingDemons.isEmpty()) {
-            DemonType[] councilTypes = {DemonType.NOIR, DemonType.BLANC, DemonType.JAUNE, DemonType.VIOLET};
-            String[] councilNames = {"Diablo (Hắc Nguyên Sơ)", "Testarossa (Bạch Nguyên Sơ)", "Carrera (Hoàng Nguyên Sơ)", "Ultima (Tử Nguyên Sơ)"};
+            DemonType[] councilLineages = {DemonType.NOIR, DemonType.BLANC, DemonType.JAUNE, DemonType.VIOLET};
+            String[] councilNames = {"Beretta (Dòng Dõi Hắc)", "Moss (Dòng Dõi Bạch)", "Esprit (Dòng Dõi Hoàng)", "Veyron (Dòng Dõi Tử)"};
             BlockPos[] seats = {
                     center.offset(-4, 1, 0),
                     center.offset(4, 1, 0),
@@ -127,18 +133,24 @@ public final class JuraTempestManager {
                     center.offset(0, 1, 4)
             };
             BlockPos palaceGuard = center.offset(0, 1, 0);
-            for (int i = 0; i < councilTypes.length; i++) {
-                PrimordialDemonEntity demon = ModEntities.PRIMORDIAL_DEMON.get().create(level);
+            for (int i = 0; i < councilLineages.length; i++) {
+                UnderworldDemonEntity demon = ModEntities.UNDERWORLD_DEMON.get().create(level);
                 if (demon != null) {
                     demon.setPos(seats[i].getX() + 0.5, seats[i].getY() + 0.1, seats[i].getZ() + 0.5);
                     demon.tame(owner);
                     demon.setOwnerUUID(owner.getUUID());
-                    demon.setDemonType(councilTypes[i]);
+                    demon.setDemonType(councilLineages[i]);
+                    demon.setRank(UnderworldDemonEntity.DemonRank.ARCHDEMON);
                     demon.setPhysicalBody(true);
+                    demon.setBodyOrigin("Thánh Thể Ma Cương Jura Tempest");
+                    demon.setNamed(true);
                     demon.setCustomDemonName(councilNames[i]);
-                    demon.setEvolutionTier(1);
-                    demon.setGuardMode(true, palaceGuard);
+                    demon.setWinged(true);
+                    demon.applyCalculatedStats(true);
+                    demon.refreshDisplayTitle();
+                    demon.setGuardAnchor(palaceGuard);
                     demon.setPersistenceRequired();
+                    demon.addTag("TensuraNamedMob");
                     demon.addTag(TAG_CITADEL_RESIDENT);
                     demon.addTag(ownerTag);
                     level.addFreshEntity(demon);

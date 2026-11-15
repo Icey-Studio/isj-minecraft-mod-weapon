@@ -88,6 +88,9 @@ public class TensuraEvents {
         });
         InteractionEvent.INTERACT_ENTITY.register(TensuraEvents::onInteractEntity);
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(TensuraEvents::onPlayerJoin);
+        dev.architectury.event.events.common.PlayerEvent.PLAYER_CLONE.register((oldPlayer, newPlayer, wonGame) -> {
+            MagiculesManager.onPlayerRespawn(oldPlayer, newPlayer);
+        });
         dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(player -> DEMON_GREETING_TIMESTAMPS.remove(player.getUUID()));
         dev.architectury.event.events.common.TickEvent.PLAYER_POST.register(TensuraEvents::onPlayerTick);
         dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
@@ -1375,6 +1378,10 @@ public class TensuraEvents {
     }
 
     public static void spawnGuyCrimsonOnVillagerDeath(ServerLevel sl, LivingEntity victim) {
+        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.ROUGE)
+                || PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.ROUGE, null) != null) {
+            return;
+        }
         PrimordialDemonEntity guy = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
         guy.setDemonType(DemonType.ROUGE);
         guy.setCustomDemonName("Guy Crimson");

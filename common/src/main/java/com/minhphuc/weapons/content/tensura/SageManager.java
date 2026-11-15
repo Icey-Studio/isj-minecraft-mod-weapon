@@ -460,7 +460,42 @@ public final class SageManager {
                 for (LivingEntity le : scanned) {
                     le.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, false, false));
                 }
-                sendCornerAlert(sp, "Quét Vạn Vật tầm gần: Đã đánh dấu §e" + scanned.size() + " §fsinh thể trong bán kính 24m!", 0xFFA855F7, 4500, false);
+
+                // Tìm sinh vật người chơi đang nhắm nhìn (32m) hoặc gần nhất (16m) để Raphael phân tích chi tiết
+                Vec3 eye = sp.getEyePosition();
+                Vec3 look = sp.getLookAngle();
+                Vec3 reach = eye.add(look.scale(32.0D));
+                LivingEntity focus = null;
+                double bestDist = 32.0D;
+                for (LivingEntity cand : sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().expandTowards(look.scale(32.0D)).inflate(2.5D), e -> e != sp && e.isAlive())) {
+                    var hit = cand.getBoundingBox().inflate(0.4D).clip(eye, reach);
+                    if (hit.isPresent()) {
+                        double d = eye.distanceTo(hit.get());
+                        if (d < bestDist) {
+                            bestDist = d;
+                            focus = cand;
+                        }
+                    }
+                }
+                if (focus == null && !scanned.isEmpty()) {
+                    scanned.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(sp)));
+                    if (scanned.get(0).distanceToSqr(sp) <= 16.0D * 16.0D) {
+                        focus = scanned.get(0);
+                    }
+                }
+
+                if (focus != null) {
+                    AllOfCreationAbility.appraiseLivingEntity(sp, focus);
+                    long focusEp = AllOfCreationAbility.estimateEP(focus);
+                    String lineageNote = (focus instanceof com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity uDemon)
+                            ? " §7| §dDòng dõi: §e" + uDemon.getDemonType().getTitleVi()
+                            : "";
+                    sendCornerAlert(sp, "Phân Tích: §e" + focus.getDisplayName().getString()
+                            + " §7| §bEP: " + MagiculesManager.formatCompact(focusEp)
+                            + lineageNote + " §7(+" + scanned.size() + " mục tiêu 24m)", 0xFFA855F7, 5500, false);
+                } else {
+                    sendCornerAlert(sp, "Quét Vạn Vật tầm gần: Đã đánh dấu §e" + scanned.size() + " §fsinh thể trong bán kính 24m!", 0xFFA855F7, 4500, false);
+                }
             }
             case ServerboundSageActionPacket.ACTION_DECODE_CURSE -> {
                 sp.removeEffect(MobEffects.WITHER);

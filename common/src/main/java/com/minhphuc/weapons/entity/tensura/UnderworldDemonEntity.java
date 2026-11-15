@@ -767,6 +767,12 @@ public class UnderworldDemonEntity extends TamableAnimal {
         this.entityData.set(DATA_CMD_MODE, Mth.clamp(mode, 0, 3));
     }
 
+    public void setGuardAnchor(BlockPos anchor) {
+        this.setCommandMode(CMD_GUARD);
+        this.guardAnchorPos = anchor;
+        this.setOrderedToSit(false);
+    }
+
     @Override
     public void addAdditionalSaveData(CompoundTag tag) {
         super.addAdditionalSaveData(tag);

@@ -217,10 +217,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
-                // Kiểm tra xem còn bất kỳ Ác Ma nào CHƯA bị giữ Khế Ước trong người chơi hay không
+                // Kiểm tra xem còn bất kỳ Ác Ma nào CHƯA bị giữ Khế Ước và CHƯA tồn tại ngoài thế giới hay không
                 boolean anyUncontracted = false;
                 for (DemonType dt : DemonType.values()) {
-                    if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                    if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)
+                            && PrimordialPactItem.findActivePrimordial(sl.getServer(), dt, this) == null) {
                         anyUncontracted = true;
                         break;
                     }
@@ -305,10 +306,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 || spawnType == net.minecraft.world.entity.MobSpawnType.EVENT
                 || spawnType == net.minecraft.world.entity.MobSpawnType.PATROL) {
             ServerLevel sl = level.getLevel();
-            // Lọc bỏ các Ác Ma đang nằm trong Khế Ước của người chơi
+            // Lọc bỏ các Ác Ma đang nằm trong Khế Ước của người chơi hoặc đã có cá thể tồn tại
             List<DemonType> uncontracted = new ArrayList<>();
             for (DemonType dt : DemonType.values()) {
-                if (sl == null || !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                if (sl == null || (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)
+                        && PrimordialPactItem.findActivePrimordial(sl.getServer(), dt, this) == null)) {
                     uncontracted.add(dt);
                 }
             }
@@ -1862,8 +1864,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
     private void summonSupportMinions() {
         if (!(this.level() instanceof ServerLevel sl)) return;
 
-        boolean canSummonBleu = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.BLEU);
-        boolean canSummonVert = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.VERT);
+        boolean canSummonBleu = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.BLEU)
+                && PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.BLEU, null) == null;
+        boolean canSummonVert = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.VERT)
+                && PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.VERT, null) == null;
         if (!canSummonBleu && !canSummonVert) {
             return; // Cả Bleu và Vert đều đang nằm trong Khế Ước của người chơi -> Rouge không thể triệu hồi!
         }

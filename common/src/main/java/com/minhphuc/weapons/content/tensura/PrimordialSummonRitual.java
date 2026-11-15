@@ -163,6 +163,16 @@ public class PrimordialSummonRitual {
      * Khởi tạo Pháp Trận Chờ Vật Tế (Gọi từ Pháp Điển Sách)
      */
     public static void startWaitingRitual(ServerLevel level, ServerPlayer caster, Vec3 groundPos, DemonType demonType, boolean isWinged) {
+        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, demonType)
+                || PrimordialPactItem.findActivePrimordial(level.getServer(), demonType, null) != null) {
+            if (caster != null) {
+                caster.displayClientMessage(
+                        Component.literal("§c⚠️ Không thể triệu hồi! Thủy Tổ " + demonType.getColorName() + " đã có Khế Ước trong tay người chơi hoặc đang hiện diện (chỉ 1 cá thể duy nhất)!"),
+                        false
+                );
+            }
+            return;
+        }
         if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(level, groundPos)) {
             if (caster != null) {
                 caster.displayClientMessage(
@@ -242,17 +252,19 @@ public class PrimordialSummonRitual {
             return; // Kháng Ma Kết Giới triệt tiêu hoàn toàn nghi thức huyết tế triệu hồi Ác Ma
         }
 
-        // Nếu Ác Ma này đang có Khế Ước trong người của bất kỳ người chơi nào -> Các sinh vật khác KHÔNG THỂ triệu hồi!
-        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, demonType)) {
+        // Nếu Ác Ma này đang có Khế Ước hoặc đã có cá thể sống trong thế giới -> Không cho triệu hồi bản sao!
+        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, demonType)
+                || PrimordialPactItem.findActivePrimordial(level.getServer(), demonType, null) != null) {
             DemonType replacement = null;
             for (DemonType candidate : DemonType.values()) {
-                if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, candidate)) {
+                if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, candidate)
+                        && PrimordialPactItem.findActivePrimordial(level.getServer(), candidate, null) == null) {
                     replacement = candidate;
                     break;
                 }
             }
             if (replacement == null) {
-                return; // Toàn bộ 7 Ác Ma đều đang nằm trong Khế Ước của người chơi -> Hủy triệu hồi!
+                return; // Toàn bộ 7 Ác Ma đều đang có Khế Ước hoặc đã tồn tại -> Hủy triệu hồi!
             }
             demonType = replacement;
         }
