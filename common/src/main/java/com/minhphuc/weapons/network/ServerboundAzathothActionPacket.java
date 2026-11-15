@@ -19,6 +19,7 @@ public class ServerboundAzathothActionPacket {
     public static final int ACTION_AUTO_CRAFT = 5;
     public static final int ACTION_SUMMON_VELDORA_DRAGON = 6;
     public static final int ACTION_SUMMON_VELDORA_HUMAN = 7;
+    public static final int ACTION_RECALL_OR_REVIVE_VELDORA = 8;
 
     private final int action;
     private final int index;
@@ -71,6 +72,7 @@ public class ServerboundAzathothActionPacket {
                 }
                 case ACTION_SUMMON_VELDORA_DRAGON -> SummonVeldoraAbility.summon(level, sp, false);
                 case ACTION_SUMMON_VELDORA_HUMAN -> SummonVeldoraAbility.summon(level, sp, true);
+                case ACTION_RECALL_OR_REVIVE_VELDORA -> SummonVeldoraAbility.recallOrRevive(level, sp);
             }
         });
     }

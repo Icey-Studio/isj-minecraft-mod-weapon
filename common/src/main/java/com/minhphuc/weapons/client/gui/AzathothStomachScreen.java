@@ -57,16 +57,22 @@ public class AzathothStomachScreen extends Screen {
                 b -> ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_AUTO_CRAFT, 1)))
                 .bounds(bx, top + 143, 145, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("§3Triệu Hồi Veldora (Rồng)"),
+        addRenderableWidget(Button.builder(Component.literal("§3Gọi (Rồng)"),
                 b -> {
                     onClose();
                     ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_SUMMON_VELDORA_DRAGON, 0));
-                }).bounds(bx, top + 168, 145, 20).build());
+                }).bounds(bx, top + 168, 70, 20).build());
 
-        addRenderableWidget(Button.builder(Component.literal("§bTriệu Hồi Veldora (Người)"),
+        addRenderableWidget(Button.builder(Component.literal("§bGọi (Người)"),
                 b -> {
                     onClose();
                     ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_SUMMON_VELDORA_HUMAN, 0));
+                }).bounds(bx + 74, top + 168, 71, 20).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§cThu Hồi / Hồi Sinh Veldora"),
+                b -> {
+                    onClose();
+                    ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_RECALL_OR_REVIVE_VELDORA, 0));
                 }).bounds(bx, top + 191, 145, 20).build());
 
         // Hàng dưới bên trái: Hành động Đại Hiền Giả / Raphael
@@ -96,8 +102,14 @@ public class AzathothStomachScreen extends Screen {
     }
 
     @Override
+    public void renderBackground(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
+        // Override vanilla 1.21.1 blur pass so stomach list & text stay razor-sharp
+        g.fill(0, 0, this.width, this.height, 0x99060913);
+    }
+
+    @Override
     public void render(GuiGraphics g, int mouseX, int mouseY, float partialTick) {
-        renderBackground(g, mouseX, mouseY, partialTick);
+        this.renderBackground(g, mouseX, mouseY, partialTick);
         int left = (this.width - 380) / 2;
         int top = (this.height - 230) / 2;
 
