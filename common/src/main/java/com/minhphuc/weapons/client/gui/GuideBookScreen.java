@@ -24,7 +24,7 @@ import java.util.List;
 public class GuideBookScreen extends Screen {
 
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 27;
+    private static final int TOTAL_PAGES = 30;
     private static final int PAGE_TOC = 1;
     private static final int PAGE_ARMOR = 4;
     private static final int PAGE_AUTHOR = TOTAL_PAGES - 1;
@@ -190,8 +190,8 @@ public class GuideBookScreen extends Screen {
         addTocButton(left, top, bookW, 9, "11 · Dị Giới Thần Môn 2.0 (Howl)", 10);
         addTocButton(left, top, bookW, 10, "12 · Thái Tuế Tinh Quân & Thị Nhục", 11);
         addTocButton(left, top, bookW, 11, "15 · Súng Hoàng Kim Carrera", 14);
-        addTocButton(left, top, bookW, 12, "16 · Thất Thủy Tổ, Bồn Ấp & Nhập Xác", 15);
-        addTocButton(left, top, bookW, 13, "20 · Song Long, Không Vong & Boss", 19);
+        addTocButton(left, top, bookW, 12, "16 · Thất Thủy Tổ, Thể Xác & Nhập Xác", 15);
+        addTocButton(left, top, bookW, 13, "27 · Ma Giới, Veldora, Mê Cung & Boss", 26);
 
         // Nút Tác Giả & GitHub
         int authorBtnY = top + bookH - 52;
@@ -308,7 +308,10 @@ public class GuideBookScreen extends Screen {
             case 23 -> renderPageCuuTheCombat(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
             case 24 -> renderPageCuuTheSealingAndCurse(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
             case 25 -> renderPageTaKinhAndMarbas(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
-            case 26 -> renderPageAuthor(guiGraphics, left, top, bookW, maxY, fullW);
+            case 26 -> renderPageUnderworldAndDemons(guiGraphics, left, top, bookW, maxY, fullW);
+            case 27 -> renderPageVeldoraSageAzathoth(guiGraphics, left, top, bookW, maxY, fullW);
+            case 28 -> renderPageTempestAndLabyrinth(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
+            case 29 -> renderPageAuthor(guiGraphics, left, top, bookW, maxY, fullW);
         }
 
         if (hoveredTooltipStack != null && !hoveredTooltipStack.isEmpty()) {
@@ -782,20 +785,20 @@ public class GuideBookScreen extends Screen {
     }
 
     private void renderPageCapsuleAndClaws(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {
-        drawHeaderTitle(g, left, top, bookW, "§5§l✦ BỒN ẤP THỂ XÁC & MÓNG VUỐT HUYỀN THOẠI", 0xFFFF77FF);
+        drawHeaderTitle(g, left, top, bookW, "§5§l✦ BAN THỂ XÁC & MÓNG VUỐT HUYỀN THOẠI", 0xFFFF77FF);
 
         int iconY = top + 32;
         drawIconRow(g, left + 16, iconY, mouseX, mouseY,
-                new ItemStack(ModItems.INCUBATION_CAPSULE.get()),
+                new ItemStack(net.minecraft.world.item.Items.BONE),
                 new ItemStack(ModItems.ARTIFICIAL_SKELETON.get()),
                 new ItemStack(ModItems.PRIMORDIAL_PACT_NOIR_AWAKENED.get()),
                 new ItemStack(ModItems.ABYSSAL_CLAW_DESPAIR.get()),
                 new ItemStack(ModItems.VOID_CLAW_CALAMITY.get()));
-        drawWrapped(g, "§e[Bồn Chứa · Khung Xương · 21 Khế Ước Tiến Hóa · 2 Vũ Khí Vuốt]", left + 124, iconY + 5, bookW - 138, maxY);
+        drawWrapped(g, "§e[Xương · Khung Xương · Khế Ước Tiến Hóa · 2 Vũ Khí Vuốt]", left + 124, iconY + 5, bookW - 138, maxY);
 
         int y = top + 56;
-        y = drawWrapped(g, " §b1. Bồn Chứa Thể Xác Nhân Tạo (Incubation Capsule):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §fĐặt Bồn Chứa cao 2 khối -> nạp §7Khung Xương Ma Thiết§f -> cho Khế Ước Thủy Tổ vào để cấy ghép §eThể Xác Vật Lý (Body)§f, rồi Ban Danh Xưng (§aNamed§f: Diablo, Guy, Testarossa, Carrera, Ultima, Rein, Misery) và Thức Tỉnh Ma Thần (§dAwakened§f) với chỉ số vượt trội!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §b1. Ban Thể Xác Vật Lý Trực Tiếp (Không cần Bồn Ấp):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §fCầm §eXương§f (hoặc §7Khung Xương Ma Thiết§f) §e[Chuột Phải] §fvào Ác Ma đã thuần phục để ban ngay §eThể Xác Vật Lý§f! Ác ma hoang dã cũng có thể hấp thụ Dân Làng hoặc xác mob chết.", left + 16, y, fullW, maxY);
         y += 3;
         y = drawWrapped(g, " §52. Móng Vuốt Huyền Thoại (Thủy Tổ Noir / Sáng Tạo Vật Chất):", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §dVuốt Hắc Ám Tuyệt Vọng §f& §5Vuốt Hư Vô Tai Ương§f sở hữu 3 chiêu tối thượng (§e[Shift + Chuột Phải]§f hoặc §e[Z]§f để đổi):", left + 16, y, fullW, maxY);
@@ -988,6 +991,46 @@ public class GuideBookScreen extends Screen {
         y = drawWrapped(g, " §f2. Đại Ác Ma Marbas (1500 HP · 22 Giáp - Chúa Tể Giải Phẫu Học):", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §f• §bLãnh Địa Bàn Mổ (30m): §7Nếu sprint/nhảy liên tục sẽ dính §cÉp Tim Tử Tuyệt§7; Sóng Dao Mổ đảo lộn giác quan & tự hấp thụ sinh mạng mob tử trận để hồi máu!", left + 16, y, fullW, maxY);
         drawWrapped(g, "   §f• §eChiến Lợi Phẩm: §fHạ gục rơi trọn bộ nội tạng thần linh (Tim, Não, Cánh Tay, Con Mắt Thị Nhục).", left + 16, y, fullW, maxY);
+    }
+
+    private void renderPageUnderworldAndDemons(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {
+        drawHeaderTitle(g, left, top, bookW, "§c§l✦ MA GIỚI (UNDERWORLD) & ÁC MA MA GIỚI", 0xFFFF5577);
+        int y = top + 34;
+        y = drawWrapped(g, " §41. Địa Ngục -> Ma Giới (Underworld):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §fBước qua Cổng Nether để đặt chân tới §dMa Giới bầu trời tím đỏ rộng mở§f với 4 quần xã (Hẻm Huyết Nham, Đảo Bay Cột Trắng, Băng Vực U Minh, Thành Trì Thủy Tổ) nhưng vẫn giữ nguyên Fortress & Bastion.", left + 16, y, fullW, maxY);
+        y += 3;
+        y = drawWrapped(g, " §52. Chủng Tộc Ác Ma Ma Giới (Hạ Vị -> Trung Vị -> Thượng Vị):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Đa dạng hình hài (Nhân Dạng, Ác Thú, Quái Dị) cùng 7 dòng huyết thống; biết bay & niệm phép (từ Trung Vị trở lên). Phù Thủy / Evoker đôi khi triệu hồi Hạ Vị Ác Ma.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §eThể Xác: §fCầm Xương click Ác Ma hoặc để chúng hấp thụ xác mob/Dân Làng. Có thể Ban Tên (Demon Peer) và tiến hóa Ma Vương (§a30% kiểm soát§f / §c70% phản chủ§f, luôn yếu hơn Thủy Tổ).", left + 16, y, fullW, maxY);
+        drawWrapped(g, "   §f• Nhấn Chuột Phải vào Ác Ma đã thuần phục để đổi lệnh (§aTheo Hộ Vệ§f / §eTự Săn§f / §7Canh Gác§f).", left + 16, y, fullW, maxY);
+    }
+
+    private void renderPageVeldoraSageAzathoth(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {
+        drawHeaderTitle(g, left, top, bookW, "§b§l✦ BẠO PHONG LONG, RAPHAEL & AZATHOTH", 0xFF38BDF8);
+        int y = top + 34;
+        y = drawWrapped(g, " §b1. Tam Đại Long Chủng (Veldora / Velgrynd / Velzard):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §eVeldora §fmở phong ấn bằng §dAzathoth§f trong §6Hang Động Lồng Giam§f; cả 3 Long Chủng đều có §cChân Thân Rồng Khổng Lồ§f, ma pháp bão/lửa/băng & §5Phong Sát Kỹ Năng§f!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Người chơi tung §5Phong Sát§f sẽ vô hiệu §ctoàn bộ kỹ năng của bất kỳ ai§f (Long Chủng, Milim, Thủy Tổ, Ác Ma, Người chơi).", left + 16, y, fullW, maxY);
+        y += 3;
+        y = drawWrapped(g, " §b2. Trí Tuệ Vương Raphael (Phím [G]):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Mở bảng §e50 Kỹ Năng Chủ Động§f & hệ thống §b50 Thông Báo Thời Gian Thực§f hỗ trợ chiến đấu, phân tích, sinh tồn, luyện kim & không gian.", left + 16, y, fullW, maxY);
+        drawWrapped(g, " §d3. Azathoth & Triệu Hồi Veldora: §fDạ Dày Hư Ảo giam cầm/giải phong ấn & triệu hồi Veldora (70% ứng chiến / 30% đang bận).", left + 16, y, fullW, maxY);
+    }
+
+    private void renderPageTempestAndLabyrinth(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {
+        drawHeaderTitle(g, left, top, bookW, "§6§l✦ ĐẠI THẢM HỌA, TINH LINH & MÊ CUNG 100 TẦNG", 0xFFFFD54F);
+        int iconY = top + 32;
+        drawIconRow(g, left + 16, iconY, mouseX, mouseY,
+                new ItemStack(ModItems.SPIRIT_SHRINE.get()),
+                new ItemStack(ModItems.LABYRINTH_GATEWAY.get()));
+        drawWrapped(g, "§e[Tế Đàn Tinh Linh (Hỏa/Phong/Thổ/Thủy/Quang/Ám) · Cổng Mê Cung 100 Tầng]", left + 70, iconY + 5, bookW - 84, maxY);
+
+        int y = top + 56;
+        y = drawWrapped(g, " §3• Charybdis & Orc Disaster Geld: §fCharybdis bay cùng đàn Megalodon & vảy giảm 80% phép (đánh Vây Lưng trên cao để vỡ). Geld tích §cĐói Khát§f từ xác lính Orc & dùng Chaos Eater ở <50% HP.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §c• Phẫn Nộ Chi Vương Satanel: §fQuyền năng ĐỘC QUYỀN của §dMilim Nava§f khi lâm chiến — ma tố tăng vô tận.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §a• Tinh Linh & Dân Làng Tempest: §fĐặt Tế Đàn Tinh Linh + xúc tác nguyên tố để triệu hồi 6 Tinh Linh; Dân làng tự cầu nguyện nhận Chúc Phúc thành Công Dân Tempest!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §5• Mê Cung 100 Tầng Ramiris & Chronoa: §fKhám phá Cổng Mê Cung Cổ Đại leo 100 tầng săn Boss; Dũng Giả §dChronoa§f hắc hóa trang bị Giáp Thần ~65% sức mạnh (thanh tẩy bằng Táo Vàng khi <30% HP).", left + 16, y, fullW, maxY);
+        drawWrapped(g, " §4• Di Tích Tâm Linh Cấp S: §fĐập vỡ Tà Thần Tượng trước khi Lời Nguyền Đếm Ngược đạt 100%!", left + 16, y, fullW, maxY);
     }
 
     private void renderPageAuthor(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {

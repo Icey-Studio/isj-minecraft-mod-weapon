@@ -149,6 +149,12 @@ public final class ClientCinematicSkillRenderer {
                 }
             }
         }
+        if (skillId == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON) {
+            ActiveSkillInstance existing = activeSkills.get(key);
+            if (existing != null && !existing.isExpired(0f) && existing.center().distanceToSqr(center) <= 2.0D) {
+                startT = mc.level.getGameTime() - 20L; // Giữ vòm 3D ổn định không nhấp nháy animation bung lại
+            }
+        }
         activeSkills.put(key, new ActiveSkillInstance(
                 skillId, caster, center, storedDir, durationTicks, startT, storedPower
         ));

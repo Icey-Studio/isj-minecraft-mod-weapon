@@ -144,6 +144,7 @@ public class GuiMixin {
     private void weapons$renderSkillMiniHud(GuiGraphics guiGraphics, DeltaTracker deltaTracker, CallbackInfo ci) {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null || mc.options.hideGui || mc.screen != null) return;
+        com.minhphuc.weapons.client.SageHudManager.render(guiGraphics);
         if (ClientCinematicSkillHandler.isActive()
                 || ClientHellflareCinematicHandler.isActive()
                 || ClientAzathothCinematicHandler.isActive()
@@ -191,5 +192,37 @@ public class GuiMixin {
         guiGraphics.fill(x, y, x + 2, y + 25, possessing ? 0xFFA855F7 : 0xFFD4AF37);
         guiGraphics.drawString(font, line1, x + 6, y + 4, 0xFFFFFFFF, true);
         guiGraphics.drawString(font, line2.toString(), x + 6, y + 14, 0xFFE2E8F0, false);
+
+        // Hiệu ứng HUD & Đổi Quyền Điều Khiển khi Trí Tuệ Vương Raphael tiếp quản cơ thể
+        boolean raphaelAuto = ClientSkillStateHandler.isRaphaelAutoBattle();
+        float flash = ClientSkillStateHandler.getRaphaelTakeoverFlashProgress();
+        int sw = mc.getWindow().getGuiScaledWidth();
+        int sh = mc.getWindow().getGuiScaledHeight();
+
+        if (flash > 0.01F) {
+            int flashAlpha = (int) (flash * 95.0F) << 24;
+            int flashColor = (raphaelAuto ? 0x00E5FF : 0x22C55E) | flashAlpha;
+            guiGraphics.fill(0, 0, sw, 6, flashColor);
+            guiGraphics.fill(0, sh - 6, sw, sh, flashColor);
+            guiGraphics.fill(0, 0, 6, sh, flashColor);
+            guiGraphics.fill(sw - 6, 0, sw, sh, flashColor);
+        }
+
+        if (raphaelAuto) {
+            int pulse = (int) (145 + 95 * Math.sin(System.currentTimeMillis() / 180.0D));
+            int borderColor = (pulse << 24) | 0x00E5FF;
+            guiGraphics.fill(0, 0, sw, 2, borderColor);
+            guiGraphics.fill(0, sh - 2, sw, sh, borderColor);
+            guiGraphics.fill(0, 0, 2, sh, borderColor);
+            guiGraphics.fill(sw - 2, 0, sw, sh, borderColor);
+
+            String banner = "§b§l≪ TRÍ TUỆ VƯƠNG RAPHAEL ĐANG TIẾP QUẢN CƠ THỂ — NHẤN [SHIFT] ĐỂ TRẢ QUYỀN ≫";
+            int bw = font.width(banner) + 18;
+            int bx = (sw - bw) / 2;
+            int by = 6;
+            guiGraphics.fill(bx, by, bx + bw, by + 16, 0xCC04101D);
+            guiGraphics.renderOutline(bx, by, bw, 16, borderColor);
+            guiGraphics.drawCenteredString(font, banner, sw / 2, by + 4, 0xFFFFFFFF);
+        }
     }
 }

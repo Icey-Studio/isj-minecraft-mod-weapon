@@ -1,0 +1,60 @@
+{
+  "type": "minecraft:the_nether",
+  "generator": {
+    "type": "minecraft:noise",
+    "settings": "minecraft:nether",
+    "biome_source": {
+      "type": "minecraft:multi_noise",
+      "biomes": [
+        {
+          "biome": "weapons:underworld_blood_gorge",
+          "parameters": {
+            "continentalness": 0.0,
+            "depth": 0.0,
+            "erosion": 0.0,
+            "humidity": -0.2,
+            "offset": 0.0,
+            "temperature": 0.3,
+            "weirdness": 0.0
+          }
+        },
+        {
+          "biome": "weapons:underworld_shattered_spires",
+          "parameters": {
+            "continentalness": 0.0,
+            "depth": 0.0,
+            "erosion": 0.0,
+            "humidity": -0.45,
+            "offset": 0.0,
+            "temperature": -0.1,
+            "weirdness": 0.2
+          }
+        },
+        {
+          "biome": "weapons:underworld_abyssal_frost",
+          "parameters": {
+            "continentalness": 0.0,
+            "depth": 0.0,
+            "erosion": 0.0,
+            "humidity": 0.35,
+            "offset": 0.0,
+            "temperature": -0.45,
+            "weirdness": -0.2
+          }
+        },
+        {
+          "biome": "weapons:underworld_primordial_citadel",
+          "parameters": {
+            "continentalness": 0.0,
+            "depth": 0.0,
+            "erosion": 0.0,
+            "humidity": 0.2,
+            "offset": 0.15,
+            "temperature": 0.2,
+            "weirdness": 0.35
+          }
+        }
+      ]
+    }
+  }
+}

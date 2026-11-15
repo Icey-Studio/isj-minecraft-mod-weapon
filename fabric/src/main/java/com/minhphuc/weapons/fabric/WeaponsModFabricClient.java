@@ -41,7 +41,6 @@ public class WeaponsModFabricClient implements ClientModInitializer {
         ClientCinematicSkillHandler.init();
 
         // 1. Khai báo RenderType bán trong suốt cho các khối kết giới
-        BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.INCUBATION_CAPSULE.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DRAGON_PRISON_BARRIER.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_NOIR.get(), RenderType.translucent());
         BlockRenderLayerMap.INSTANCE.putBlock(ModBlocks.DOMAIN_BARRIER_ROUGE.get(), RenderType.translucent());

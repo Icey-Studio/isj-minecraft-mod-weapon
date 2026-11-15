@@ -125,6 +125,69 @@ public class ModEntities {
                             .build("marbas")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity>> UNDERWORLD_DEMON =
+            ENTITY_TYPES.register("underworld_demon", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity::new, MobCategory.MONSTER)
+                            .sized(0.85F, 2.05F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("underworld_demon")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.VeldoraEntity>> VELDORA =
+            ENTITY_TYPES.register("veldora", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.VeldoraEntity::new, MobCategory.MONSTER)
+                            .sized(2.6F, 2.8F)
+                            .clientTrackingRange(20)
+                            .fireImmune()
+                            .build("veldora")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.CharybdisEntity>> CHARYBDIS =
+            ENTITY_TYPES.register("charybdis", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.CharybdisEntity::new, MobCategory.MONSTER)
+                            .sized(3.2F, 2.8F)
+                            .clientTrackingRange(20)
+                            .fireImmune()
+                            .build("charybdis")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity>> ORC_DISASTER_GELD =
+            ENTITY_TYPES.register("orc_disaster_geld", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity::new, MobCategory.MONSTER)
+                            .sized(1.3F, 2.8F)
+                            .clientTrackingRange(14)
+                            .fireImmune()
+                            .build("orc_disaster_geld")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity>> ELEMENTAL_SPIRIT =
+            ENTITY_TYPES.register("elemental_spirit", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity::new, MobCategory.CREATURE)
+                            .sized(0.75F, 1.3F)
+                            .clientTrackingRange(12)
+                            .fireImmune()
+                            .build("elemental_spirit")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.ChronoaEntity>> CHRONOA =
+            ENTITY_TYPES.register("chronoa", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.ChronoaEntity::new, MobCategory.MONSTER)
+                            .sized(0.65F, 1.95F)
+                            .clientTrackingRange(14)
+                            .fireImmune()
+                            .build("chronoa")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity>> CURSED_IDOL =
+            ENTITY_TYPES.register("cursed_idol", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity::new, MobCategory.MONSTER)
+                            .sized(1.1F, 2.2F)
+                            .clientTrackingRange(12)
+                            .fireImmune()
+                            .build("cursed_idol")
+            );
+
     public static boolean checkBossSpawnRules(EntityType<? extends Mob> type, LevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
         if (level.getDifficulty() == Difficulty.PEACEFUL) return false;
         if (!Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) return false;
@@ -151,8 +214,28 @@ public class ModEntities {
         EntityAttributeRegistry.register(CUU_THE_SOUL, com.minhphuc.weapons.entity.darkgathering.CuuTheSoulEntity::createAttributes);
         EntityAttributeRegistry.register(TA_KINH_DAI_TANG, com.minhphuc.weapons.entity.darkgathering.TaKinhDaiTangEntity::createAttributes);
         EntityAttributeRegistry.register(MARBAS, com.minhphuc.weapons.entity.darkgathering.MarbasEntity::createAttributes);
+        EntityAttributeRegistry.register(UNDERWORLD_DEMON, com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity::createAttributes);
+        EntityAttributeRegistry.register(VELDORA, com.minhphuc.weapons.entity.tensura.VeldoraEntity::createAttributes);
+        EntityAttributeRegistry.register(CHARYBDIS, com.minhphuc.weapons.entity.tensura.CharybdisEntity::createAttributes);
+        EntityAttributeRegistry.register(ORC_DISASTER_GELD, com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity::createAttributes);
+        EntityAttributeRegistry.register(ELEMENTAL_SPIRIT, com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity::createAttributes);
+        EntityAttributeRegistry.register(CHRONOA, com.minhphuc.weapons.entity.tensura.ChronoaEntity::createAttributes);
+        EntityAttributeRegistry.register(CURSED_IDOL, com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity::createAttributes);
 
         // Đăng ký quy tắc Spawn Placement cho các thực thể thù địch xuất hiện tự nhiên (Kèm bộ lọc chống trùng cụm)
+        SpawnPlacementsRegistry.register(CHRONOA, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+
+        SpawnPlacementsRegistry.register(CURSED_IDOL, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+        SpawnPlacementsRegistry.register(CHARYBDIS, SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+
+        SpawnPlacementsRegistry.register(ORC_DISASTER_GELD, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+        SpawnPlacementsRegistry.register(UNDERWORLD_DEMON, SpawnPlacementTypes.NO_RESTRICTIONS,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity::checkUnderworldSpawnRules);
+
         SpawnPlacementsRegistry.register(PRIMORDIAL_DEMON, SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
 
@@ -189,6 +272,17 @@ public class ModEntities {
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(MILIM.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELGRYND.get(), 1, 1, 1));
                 spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(VELZARD.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(UNDERWORLD_DEMON.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CHARYBDIS.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(ORC_DISASTER_GELD.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CHRONOA.get(), 1, 1, 1));
+                spawns.addSpawn(MobCategory.MONSTER, new MobSpawnSettings.SpawnerData(CURSED_IDOL.get(), 1, 1, 1));
+            }
+            if (context.hasTag(BiomeTags.IS_NETHER)) {
+                mutable.getSpawnProperties().addSpawn(
+                        MobCategory.MONSTER,
+                        new MobSpawnSettings.SpawnerData(UNDERWORLD_DEMON.get(), 16, 1, 3)
+                );
             }
         });
     }

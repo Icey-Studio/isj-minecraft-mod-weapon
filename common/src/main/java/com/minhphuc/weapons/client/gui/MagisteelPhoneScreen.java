@@ -2,6 +2,7 @@ package com.minhphuc.weapons.client.gui;
 
 import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
 import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
@@ -199,7 +200,9 @@ public class MagisteelPhoneScreen extends Screen {
 
         // Tốc độ hồi phục
         String regenInfo = "§7Bình thường (0.1 HP/s)";
-        if (target instanceof VelgryndEntity) {
+        if (target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity veldora) {
+            regenInfo = veldora.isHumanForm() ? "§bLong Chủng (Dạng Người: +20 HP/s)" : "§3Long Chủng Siêu Tốc (Dạng Rồng: +60 HP/s)";
+        } else if (target instanceof VelgryndEntity) {
             regenInfo = "§6Long Chủng Siêu Tốc (+50 ~ 100 HP/s)";
         } else if (target instanceof PrimordialDemonEntity demon) {
             if (demon.hasPhysicalBody() && demon.isNamed()) {
@@ -219,6 +222,17 @@ public class MagisteelPhoneScreen extends Screen {
             String bodyInfo = demon.hasPhysicalBody() ? "§a✔ Đã Có Thể Xác (DMG x30, HP x4, EP x3)" : "§7✖ Chưa Có (Linh Thể)";
             guiGraphics.drawString(font, "§b✦ Thể Xác: " + bodyInfo, x, y, 0xFFFFFFFF, false);
             y += 14;
+        } else if (target instanceof UnderworldDemonEntity uDemon) {
+            guiGraphics.drawString(font, "§4✦ Cấp/Dạng: §c" + uDemon.getRank().title + " §7[" + uDemon.getMorph().label + "]", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            String bodyInfo = uDemon.hasPhysicalBody() ? "§a✔ Đã Nhập Xác (" + uDemon.getBodyOrigin() + ")" : "§7✖ Chưa Có (Dùng Xương / Hấp thụ)";
+            guiGraphics.drawString(font, "§b✦ Thể Xác: " + bodyInfo, x, y, 0xFFFFFFFF, false);
+            y += 12;
+            if (uDemon.isDemonLord()) {
+                String lordState = uDemon.isBerserkDemonLord() ? "§4Cuồng Nộ Phản Chủ (70%)" : "§aKiểm Soát Hoàn Toàn (30%)";
+                guiGraphics.drawString(font, "§5✦ Ma Vương: " + lordState, x, y, 0xFFFFFFFF, false);
+                y += 12;
+            }
         } else {
             y += 2;
         }
@@ -300,6 +314,24 @@ public class MagisteelPhoneScreen extends Screen {
         if (entity instanceof VelgryndEntity velgrynd) {
             return velgrynd.isAllied() ? "§6§lCHƯỚC NHIỆT LONG VELGRYND (ĐỒNG MINH)" : "§c§lCHƯỚC NHIỆT LONG VELGRYND (BOSS)";
         }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
+            return v.isAllied() ? "§b§lBẠO PHONG LONG VELDORA (ĐỒNG MINH)" : "§3§lBẠO PHONG LONG VELDORA TEMPEST";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity) {
+            return "§3§lTHỦY QUÁI BAY CHARYBDIS [CATASTROPHE]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity) {
+            return "§6§lCHÚA TỂ ORC ĐÓI KHÁT GELD [DISASTER]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity sp) {
+            return sp.getElementalType().colorCode + "§l" + sp.getElementalType().displayName.toUpperCase();
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) {
+            return ch.isCorrupted() ? "§5§lCHRONOA [HẮC HÓA THỜI KHÔNG]" : "§b§lCHLOE AUBERT [DŨNG GIẢ]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) {
+            return "§4§lTÀ THẦN TƯỢNG [DI TÍCH CẤP S]";
+        }
         if (entity instanceof PrimordialDemonEntity demon) {
             return "§d§l" + demon.getEffectiveDemonName().toUpperCase();
         }
@@ -313,11 +345,35 @@ public class MagisteelPhoneScreen extends Screen {
         if (entity instanceof VelgryndEntity) {
             return "§eLong Chủng Tối Thượng (True Dragon - Đệ Tam Long)";
         }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
+            return v.isHumanForm()
+                    ? "§bBạo Phong Long (Dạng Người - Linh Hoạt | Có Thể Ban Tên)"
+                    : "§3Bạo Phong Long (Dạng Rồng - Sức Mạnh & Phòng Thủ x30)";
+        }
         if (entity instanceof PrimordialDemonEntity demon) {
             String rank = demon.getDemonRankTitle();
             String bodyStr = demon.hasPhysicalBody() ? "Đã Có Thể Xác" : "Linh Thể";
             String nameStr = demon.isNamed() ? "Đã Ban Tên" : "Thủy Tổ";
             return "§5" + rank + " §7- " + demon.getDemonType().getColorName() + " (" + bodyStr + " | " + nameStr + ")";
+        }
+        if (entity instanceof UnderworldDemonEntity uDemon) {
+            String bodyStr = uDemon.hasPhysicalBody() ? "Thể Xác: " + uDemon.getBodyOrigin() : "Linh Thể";
+            return "§c" + uDemon.getRank().title + " §7(" + uDemon.getMorph().label + " - " + uDemon.getDemonType().getColorName() + " | " + bodyStr + ")";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity) {
+            return "§3Thảm Họa Ma Tố (Leviathan Bay Kháng Phép)";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity g) {
+            return "§6Chúa Tể Orc Đói Khát §7(Đói Khát x" + g.getStarvedStacks() + ")";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity sp) {
+            return sp.getElementalType().colorCode + "Tinh Linh Thượng Vị (" + sp.getElementalType().displayName + ")";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) {
+            return ch.isCorrupted() ? "§5Anh Hùng Sa Ngã (Giáp Thần & Thánh Kiếm ~65%)" : "§bThiếu Nữ Thời Không";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) {
+            return "§4Lõi Ác Linh Di Tích Cấp S (Dark Gathering)";
         }
         if (entity instanceof Player) {
             return "§3Sinh Mệnh Thứ Nguyên / Người Kế Thừa Thần Khí";
@@ -329,12 +385,23 @@ public class MagisteelPhoneScreen extends Screen {
     }
 
     private long calculateEP(LivingEntity entity) {
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity) {
+            return com.minhphuc.weapons.entity.tensura.VeldoraEntity.VELDORA_EP;
+        }
         if (entity instanceof VelgryndEntity) {
             return 74350000L;
         }
         if (entity instanceof PrimordialDemonEntity demon) {
             return demon.getCalculatedEP();
         }
+        if (entity instanceof UnderworldDemonEntity uDemon) {
+            return uDemon.getCalculatedEP();
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity) return 22500000L;
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity g) return 14500000L + (long) g.getStarvedStacks() * 500000L;
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity) return 1800000L;
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) return ch.isCorrupted() ? 18500000L : 85000L;
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) return 6500000L;
         if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) {
             return 12500000L;
         }
@@ -374,6 +441,42 @@ public class MagisteelPhoneScreen extends Screen {
             }
             return list;
         }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
+            list.add("§bTrạng Thái: §f" + (v.isHumanForm() ? "Dạng Người (Linh Hoạt)" : "Dạng Rồng (Mạnh & Thủ x30 lần)"));
+            list.add("§3Sức Mạnh Chân Long: §fNgang Velgrynd | Mạnh x5 Ác Ma Thủy Tổ (8% thắng)");
+            list.add("§eDạng Người Độc Bản: §aCó thể Ban Danh Xưng cho mob khác!");
+            list.add("§cHạn Chế: §fKhông thể bị Ban Tên hay Tiến Hóa Ma Vương");
+            list.add("§5Tuyệt Kỹ: §fHắc Lôi, Bạo Phong Long Hống, Tử Thần Cuồng Phong");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity c) {
+            list.add("§bVảy Kháng Ma Pháp: §fGiảm 80% phép cho tới khi Vây Lưng vỡ (" + Math.round(c.getScaleShield()) + ")");
+            list.add("§3Hộ Tống Megalodon: §fTriệu hồi đàn quái bay hỗ trợ");
+            list.add("§9Tuyệt Kỹ: §fMưa Vảy Bão Tố & Lốc Xoáy Hút Không Trung");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity g) {
+            list.add("§6Unique Skill - Đói Khát: §cĐang tích " + g.getStarvedStacks() + " tầng nuốt chửng");
+            list.add("§5Hỗn Độn Thực Giả (Chaos Eater): " + (g.isChaosEaterActive() ? "§dĐANG BẬT" : "§7<50% HP"));
+            list.add("§cBinh Đoàn Đói Khát: §fChỉ huy đội quân Chiến Binh Orc");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity sp) {
+            list.add(sp.getElementalType().colorCode + "Nguyên Tố: §f" + sp.getElementalType().displayName);
+            list.add("§aAura Hộ Mệnh: §fBan kháng tính nguyên tố & hồi máu dân làng Tempest");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) {
+            list.add("§5Trạng Thái: " + (ch.isCorrupted() ? "§cHắc Hóa — Trang bị Giáp Thần & Thánh Kiếm (~65%)" : "§aBình Thường"));
+            list.add("§dTuyệt Kỹ: §fNgưng Đọng Thời Gian & Đoạn Không Trảm");
+            list.add("§eThanh Tẩy: §fDùng Táo Vàng khi HP < 30%");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) {
+            list.add("§4Lời Nguyền Đếm Ngược: §cTích 0->100% quanh 18m gây Ám Sát & gọi Boss");
+            list.add("§aKhắc Chế: §fDùng Nút Bịt Tai Trấn Ám / Hình Nhân Bồ Đề");
+            return list;
+        }
         if (entity instanceof VelgryndEntity) {
             list.add("§cThao Túng Thời Không: §eĐóng băng 3s & chém thứ nguyên");
             list.add("§6Gia Tốc Cardinal: §eMach 5 Hỏa Long đục thủng địa hình");
@@ -389,6 +492,14 @@ public class MagisteelPhoneScreen extends Screen {
             list.add("§6Chiêu Độc Bản 2: §fTốc Biến Áp Sát & Trảm Kích");
             list.add("§eChiêu Độc Bản 3: §f" + (type == DemonType.JAUNE ? "Hoàng Kim Súng Đạn Hạch" : "Cột Sáng Hủy Diệt 60m"));
             list.add("§4Linh Tử Băng Hoại: §cPhá hủy cấu trúc linh hồn đối thủ");
+            return list;
+        }
+        if (entity instanceof UnderworldDemonEntity uDemon) {
+            list.add("§dHình Thái Ma Giới: §f" + uDemon.getMorph().label + " (" + uDemon.getDemonType().getColorName() + ")");
+            list.add("§bKhả Năng Bay & Ma Pháp: §f" + (uDemon.isWinged() ? "Có cánh bay tự do" : "Chưa mọc cánh") + (uDemon.getRank().canCastMagic ? " | Phóng Ma Pháp Nguyên Tố" : " | Cận chiến"));
+            list.add("§aThể Xác Vật Lý: §f" + (uDemon.hasPhysicalBody() ? uDemon.getBodyOrigin() : "Chưa có (Click Xương / Hấp thụ Dân Làng)"));
+            list.add("§6Mệnh Lệnh Thuộc Hạ: §f" + (uDemon.isTame() ? uDemon.getCommandModeLabel() : "Chưa ký khế ước"));
+            list.add("§5Giới Hạn Tiến Hóa: §fYếu hơn Ác Ma Thủy Tổ; Tiến hóa Ma Vương 30% kiểm soát");
             return list;
         }
         if (entity instanceof Player) {

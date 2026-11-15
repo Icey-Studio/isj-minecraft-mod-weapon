@@ -120,6 +120,93 @@ public class WeaponsModClient {
                 com.minhphuc.weapons.client.model.OrbitalKineticProjectileModel::createBodyLayer
         );
 
+        // Ác Ma Ma Giới (Underworld Demons - 3 morphs)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.UnderworldDemonModel.HUMANOID_LAYER,
+                com.minhphuc.weapons.client.model.UnderworldDemonModel::createHumanoidLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.UnderworldDemonModel.BEAST_LAYER,
+                com.minhphuc.weapons.client.model.UnderworldDemonModel::createBeastLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.UnderworldDemonModel.FIEND_LAYER,
+                com.minhphuc.weapons.client.model.UnderworldDemonModel::createFiendLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.UNDERWORLD_DEMON,
+                com.minhphuc.weapons.client.renderer.UnderworldDemonRenderer::new
+        );
+
+        // Bạo Phong Long Veldora Tempest (Dạng Rồng & Dạng Người)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.VeldoraDragonModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.VeldoraDragonModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.VeldoraHumanModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.VeldoraHumanModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.VELDORA,
+                com.minhphuc.weapons.client.renderer.VeldoraRenderer::new
+        );
+
+        // Phase 3: Charybdis, Orc Disaster Geld & Elemental Spirits
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.CharybdisModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.CharybdisModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CHARYBDIS,
+                com.minhphuc.weapons.entity.tensura.CharybdisRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.OrcDisasterGeldModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.OrcDisasterGeldModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.ORC_DISASTER_GELD,
+                com.minhphuc.weapons.entity.tensura.OrcDisasterGeldRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.ElementalSpiritModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.ElementalSpiritModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.ELEMENTAL_SPIRIT,
+                com.minhphuc.weapons.entity.tensura.ElementalSpiritRenderer::new
+        );
+
+        // Phase 4: Chronoa & Di Tích Tâm Linh Cấp S
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.ChronoaModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.ChronoaModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.ChronoaModel.INNER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.ChronoaModel::createInnerArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.ChronoaModel.OUTER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.ChronoaModel::createOuterArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CHRONOA,
+                com.minhphuc.weapons.entity.tensura.ChronoaRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.darkgathering.CursedIdolModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.darkgathering.CursedIdolModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CURSED_IDOL,
+                com.minhphuc.weapons.entity.darkgathering.CursedIdolRenderer::new
+        );
+
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");
     }
 }

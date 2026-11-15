@@ -32,6 +32,30 @@ public class ClientInputEvents {
                         com.minhphuc.weapons.network.ServerboundSkillActionPacket.ACTION_REQUEST_SYNC, 0));
             }
 
+            // Khi Trí Tuệ Vương Raphael tiếp quản Auto-Battle: xoay mượt góc nhìn bám theo mục tiêu thù địch gần nhất
+            if (ClientSkillStateHandler.isRaphaelAutoBattle() && mc.screen == null && !mc.player.isShiftKeyDown()) {
+                net.minecraft.world.entity.LivingEntity bestTarget = null;
+                double bestD2 = 36.0D * 36.0D;
+                for (net.minecraft.world.entity.Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(36.0D))) {
+                    if (e instanceof net.minecraft.world.entity.monster.Enemy && e instanceof net.minecraft.world.entity.LivingEntity le && le.isAlive()) {
+                        double d2 = mc.player.distanceToSqr(le);
+                        if (d2 < bestD2) {
+                            bestD2 = d2;
+                            bestTarget = le;
+                        }
+                    }
+                }
+                if (bestTarget != null) {
+                    net.minecraft.world.phys.Vec3 eye = mc.player.getEyePosition();
+                    net.minecraft.world.phys.Vec3 aim = bestTarget.getEyePosition().subtract(eye);
+                    double horiz = Math.hypot(aim.x, aim.z);
+                    float targetYaw = (float) (Math.atan2(-aim.x, aim.z) * (180.0D / Math.PI));
+                    float targetPitch = (float) (-Math.atan2(aim.y, Math.max(0.01D, horiz)) * (180.0D / Math.PI));
+                    mc.player.setYRot(net.minecraft.util.Mth.rotLerp(0.18F, mc.player.getYRot(), targetYaw));
+                    mc.player.setXRot(net.minecraft.util.Mth.lerp(0.18F, mc.player.getXRot(), net.minecraft.util.Mth.clamp(targetPitch, -65.0F, 65.0F)));
+                }
+            }
+
             if (ModKeyBindings.SELECT_BULLET_KEY.consumeClick()) {
                 if (mc.screen == null) {
                     ItemStack mainItem = mc.player.getMainHandItem();
@@ -76,6 +100,22 @@ public class ClientInputEvents {
             if (ModKeyBindings.TENGAI_SLASH_KEY.consumeClick()) {
                 // Nhấn phím X: Thi triển Nghịch Thời Nhất Trảm
                 ModMessages.sendToServer(new ServerboundTengaiSwordSkillPacket(ServerboundTengaiSwordSkillPacket.ACTION_REVERSE_SLASH));
+            }
+
+            if (ModKeyBindings.SAGE_ACTION_KEY.consumeClick()) {
+                if (mc.screen == null) {
+                    if (mc.player.isShiftKeyDown()) {
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundAzathothActionPacket(
+                                com.minhphuc.weapons.network.ServerboundAzathothActionPacket.ACTION_OPEN_GUI, 0));
+                    } else if (SageHudManager.hasPendingVeldoraWarp()) {
+                        SageHudManager.clearVeldoraWarp();
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_WARP_VELDORA));
+                    } else {
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE));
+                    }
+                }
             }
         });
 

@@ -56,6 +56,7 @@ public class InfiniteDragonPrisonAbility {
         public final long createTick;
         public int ticksAlive = 0;
         public int maxDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma)
+        public boolean isVeldoraCavePrison = false;
         public final Map<BlockPos, BlockState> replacedBlocks = new ConcurrentHashMap<>();
 
         public ActivePrison(ServerLevel level, ServerPlayer caster, Vec3 center, double radius, double domeHeight, double skirtDepth, int tier) {
@@ -265,6 +266,49 @@ public class InfiniteDragonPrisonAbility {
         return prison;
     }
 
+    public static boolean hasVeldoraCavePrison(ServerLevel level, Vec3 center) {
+        if (level == null || center == null) return false;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == level && (p.isVeldoraCavePrison || p.center.distanceTo(center) <= 4.0D)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public static void castForVeldoraCave(ServerLevel level, Vec3 center) {
+        if (level == null || center == null) return;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == level && (p.isVeldoraCavePrison || p.center.distanceTo(center) <= 4.0D)) {
+                    if (p.radius >= 14.5D) return;
+                    ACTIVE_PRISONS.remove(p);
+                    break;
+                }
+            }
+        }
+        double radius = 15.0D;
+        double domeHeight = 16.0D;
+        double skirtDepth = 3.0D;
+        ActivePrison prison = new ActivePrison(level, null, center, radius, domeHeight, skirtDepth, 3);
+        prison.maxDurationTicks = -1;
+        prison.isVeldoraCavePrison = true;
+        ACTIVE_PRISONS.add(prison);
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
+            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
+        }
+    }
+
+    public static void removeVeldoraCavePrison(ServerLevel level, Vec3 center) {
+        removePrisonsInArea(level, center, 24.0D);
+    }
+
     /**
      * Cho phép quái/thực thể bên ngoài tự do bước vào lồng giam, nhưng từ trong không thể đi ra.
      * Khi có nhiều lồng giam, chỉ áp dụng cho lồng chứa khối kết giới pos này.
@@ -367,6 +411,15 @@ public class InfiniteDragonPrisonAbility {
                     cleanPrison(prison);
                     continue;
                 }
+                // Gia hạn gói tin 3D Lồng Giam Vô Hạn định kỳ (mỗi 30s) cho lồng vĩnh cửu & hang Veldora
+                if (prison.maxDurationTicks < 0 && prison.ticksAlive % 600 == 0
+                        && SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)
+                        && level.hasNearbyAlivePlayer(prison.center.x, prison.center.y, prison.center.z, 260.0D)) {
+                    Vec3 domeParams = new Vec3(prison.domeHeight, prison.skirtDepth, 1.0D);
+                    ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                            SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, prison.center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) prison.radius
+                    ));
+                }
                 Vec3 center = prison.center;
                 double r = prison.radius;
                 double h = prison.domeHeight;
@@ -433,6 +486,9 @@ public class InfiniteDragonPrisonAbility {
 
                     // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting mỗi 20 ticks)
                     if (prison.ticksAlive % 20 == 0 && normDist <= 1.0D && e instanceof Mob mob) {
+                        if (mob instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v && v.isSealed()) {
+                            continue;
+                        }
                         mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 60, 1));
                         for (LivingEntity other : entities) {
                             if (other != mob && other.isAlive()) {
@@ -578,6 +634,13 @@ public class InfiniteDragonPrisonAbility {
             }
 
             if (found != null) {
+                if (found.isVeldoraCavePrison) {
+                    player.displayClientMessage(
+                            Component.literal("§b§l[RAPHAEL] §7Không thể phá Lồng Giam Vô Hạn của Veldora bằng tay! Hãy dùng §dHư Không Thần Azathoth§7 để hấp thụ & giải phong ấn!"),
+                            true
+                    );
+                    return false;
+                }
                 ACTIVE_PRISONS.remove(found);
                 cleanPrison(found);
             }
@@ -622,6 +685,13 @@ public class InfiniteDragonPrisonAbility {
                 }
             }
             if (found != null) {
+                if (found.isVeldoraCavePrison) {
+                    player.displayClientMessage(
+                            Component.literal("§b§l[RAPHAEL] §7Không thể phá Lồng Giam Vô Hạn của Veldora bằng tay! Hãy dùng §dHư Không Thần Azathoth§7 để hấp thụ & giải phong ấn!"),
+                            true
+                    );
+                    return false;
+                }
                 ACTIVE_PRISONS.remove(found);
                 cleanPrison(found);
             }

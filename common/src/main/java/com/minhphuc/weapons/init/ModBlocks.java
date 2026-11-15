@@ -78,16 +78,6 @@ public class ModBlocks {
                             .noOcclusion()
             ));
 
-    public static final RegistrySupplier<Block> INCUBATION_CAPSULE = BLOCKS.register("incubation_capsule",
-            () -> new com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock(
-                    BlockBehaviour.Properties.of()
-                            .mapColor(MapColor.METAL)
-                            .strength(3.5F, 15.0F)
-                            .sound(SoundType.GLASS)
-                            .noOcclusion()
-                            .lightLevel(state -> 8)
-            ));
-
     public static final RegistrySupplier<Block> BLACK_FIRE = BLOCKS.register("black_fire",
             () -> new com.minhphuc.weapons.content.tensura.BlackFireBlock(
                     BlockBehaviour.Properties.of()
@@ -97,6 +87,25 @@ public class ModBlocks {
                             .sound(SoundType.WOOL)
                             .noLootTable()
                             .noOcclusion()
+            ));
+
+    public static final RegistrySupplier<Block> SPIRIT_SHRINE = BLOCKS.register("spirit_shrine",
+            () -> new com.minhphuc.weapons.content.tensura.SpiritShrineBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.GOLD)
+                            .strength(4.0F, 1200.0F)
+                            .lightLevel(state -> 12)
+                            .sound(SoundType.AMETHYST)
+            ));
+
+    public static final RegistrySupplier<Block> LABYRINTH_GATEWAY = BLOCKS.register("labyrinth_gateway",
+            () -> new com.minhphuc.weapons.content.tensura.LabyrinthGatewayBlock(
+                    BlockBehaviour.Properties.of()
+                            .mapColor(MapColor.COLOR_PURPLE)
+                            .strength(-1.0F, 3600000.0F)
+                            .noLootTable()
+                            .lightLevel(state -> 14)
+                            .sound(SoundType.AMETHYST)
             ));
 
     public static void register() {

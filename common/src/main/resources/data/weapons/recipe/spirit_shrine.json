@@ -1,0 +1,19 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "GNG",
+    "ADA",
+    "OOO"
+  ],
+  "key": {
+    "G": { "item": "minecraft:gold_ingot" },
+    "N": { "item": "minecraft:nether_star" },
+    "A": { "item": "minecraft:amethyst_shard" },
+    "D": { "item": "minecraft:diamond_block" },
+    "O": { "item": "minecraft:obsidian" }
+  },
+  "result": {
+    "id": "weapons:spirit_shrine",
+    "count": 1
+  }
+}

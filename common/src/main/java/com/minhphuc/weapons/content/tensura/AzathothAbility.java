@@ -1,10 +1,13 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.entity.tensura.VeldoraEntity;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
 import com.minhphuc.weapons.network.ClientboundAzathothPacket;
 import com.minhphuc.weapons.network.ModMessages;
+import com.minhphuc.weapons.world.VeldoraWorldData;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -209,6 +212,21 @@ public class AzathothAbility {
                 Vec3 closestPoint = startPos.add(dir.scale(projection));
                 double distSq = closestPoint.distanceToSqr(entityPos);
                 if (distSq <= radius * radius) {
+                    if (entity instanceof VeldoraEntity veldora) {
+                        if (veldora.isSealed()) {
+                            AzathothStomachData.unsealVeldoraViaAzathothBeam(level, caster, veldora);
+                            continue;
+                        }
+                        if (veldora.isAllied()) {
+                            continue;
+                        }
+                    }
+
+                    // Hấp thụ bản sao phân tích vào Dạ Dày Vô Hạn (nếu còn chỗ) rồi xóa sổ thực thể thù địch
+                    if (entity instanceof LivingEntity le && !(entity instanceof VeldoraEntity)) {
+                        AzathothStomachData.recordVoidAbsorb(caster, le);
+                    }
+
                     // Gắn cờ AzathothErased để không bao giờ kích hoạt triệu hồi hay rơi đồ
                     entity.addTag("AzathothErased");
                     if (entity instanceof LivingEntity le) {
@@ -219,6 +237,19 @@ public class AzathothAbility {
 
                     // Xóa thẳng khỏi thế giới (Discard)
                     entity.discard();
+                }
+            }
+        }
+
+        // Trường hợp hang phong ấn đã bị phá từ trước mà Veldora chưa được mark unsealed -> tự hồi sinh Veldora đồng minh
+        ServerLevel ow = level.getServer().overworld();
+        if (level == ow) {
+            VeldoraWorldData caveData = VeldoraWorldData.get(ow);
+            if (!caveData.isVeldoraUnsealed()) {
+                BlockPos cavePos = caveData.getOrRollCavePos(ow);
+                if (Vec3.atCenterOf(cavePos).distanceToSqr(startPos.add(dir.scale(Math.min(range * 0.5D, startPos.distanceTo(Vec3.atCenterOf(cavePos)))))) <= 22.0D * 22.0D
+                        && caster.position().distanceToSqr(Vec3.atCenterOf(cavePos)) <= 45.0D * 45.0D) {
+                    AzathothStomachData.analyzeOrUnsealVeldora(level, caster);
                 }
             }
         }

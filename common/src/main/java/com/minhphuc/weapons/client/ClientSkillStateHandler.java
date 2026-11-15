@@ -22,6 +22,8 @@ public class ClientSkillStateHandler {
     private static final List<String> anchorLabels = new ArrayList<>();
     private static final List<Integer> favoriteSkillIds = new ArrayList<>();
     private static final Map<String, Long> cooldownEndsMs = new HashMap<>();
+    private static boolean raphaelAutoBattle = false;
+    private static long raphaelTakeoverFlashMs = 0L;
 
     public static void handleSync(
             boolean safeModeIn,
@@ -36,8 +38,21 @@ public class ClientSkillStateHandler {
             int selectedAnchorIndexIn,
             List<String> anchorLabelsIn,
             List<Integer> favoritesIn,
-            Map<String, Integer> activeCooldownTicksIn
+            Map<String, Integer> activeCooldownTicksIn,
+            boolean raphaelAutoBattleIn
     ) {
+        if (raphaelAutoBattle != raphaelAutoBattleIn) {
+            raphaelTakeoverFlashMs = System.currentTimeMillis();
+            net.minecraft.client.Minecraft mc = net.minecraft.client.Minecraft.getInstance();
+            if (mc != null && mc.options != null) {
+                if (raphaelAutoBattleIn && mc.options.getCameraType() == net.minecraft.client.CameraType.FIRST_PERSON) {
+                    mc.options.setCameraType(net.minecraft.client.CameraType.THIRD_PERSON_BACK);
+                } else if (!raphaelAutoBattleIn && mc.options.getCameraType() == net.minecraft.client.CameraType.THIRD_PERSON_BACK) {
+                    mc.options.setCameraType(net.minecraft.client.CameraType.FIRST_PERSON);
+                }
+            }
+        }
+        raphaelAutoBattle = raphaelAutoBattleIn;
         safeMode = safeModeIn;
         hasTacticalMark = hasTacticalIn;
         hasAnchorMark = hasAnchorIn;
@@ -126,5 +141,15 @@ public class ClientSkillStateHandler {
             return 0;
         }
         return (int) Math.ceil(remMs / 50.0D);
+    }
+
+    public static boolean isRaphaelAutoBattle() {
+        return raphaelAutoBattle;
+    }
+
+    public static float getRaphaelTakeoverFlashProgress() {
+        long dt = System.currentTimeMillis() - raphaelTakeoverFlashMs;
+        if (raphaelTakeoverFlashMs <= 0L || dt < 0L || dt > 1600L) return 0.0F;
+        return 1.0F - (dt / 1600.0F);
     }
 }

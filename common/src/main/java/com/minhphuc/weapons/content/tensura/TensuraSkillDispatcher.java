@@ -13,7 +13,9 @@ import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
 import com.minhphuc.weapons.content.evolution.UniversalSenseAbility;
 import com.minhphuc.weapons.network.ClientboundOpenMaterialCreationPacket;
+import com.minhphuc.weapons.network.ClientboundOpenRaphaelPacket;
 import com.minhphuc.weapons.network.ModMessages;
+import com.minhphuc.weapons.network.ServerboundAzathothActionPacket;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
@@ -22,7 +24,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 30 : 29;
+        return hasCreation ? 34 : 33;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -60,6 +62,10 @@ public class TensuraSkillDispatcher {
                 case 27 -> "§5§l28. Thần Hư Không Azathoth (Void God Azathoth)";
                 case 28 -> "§6§l29. Ban Danh Xưng (Naming Ability)";
                 case 29 -> "§b§l30. Dị Giới Thần Môn (Dimensional Sanctuary)";
+                case 30 -> "§3§l31. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
+                case 31 -> "§b§l32. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 32 -> "§5§l33. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
+                case 33 -> "§b§l34. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -93,6 +99,10 @@ public class TensuraSkillDispatcher {
                 case 26 -> "§5§l27. Thần Hư Không Azathoth (Void God Azathoth)";
                 case 27 -> "§6§l28. Ban Danh Xưng (Naming Ability)";
                 case 28 -> "§b§l29. Dị Giới Thần Môn (Dimensional Sanctuary)";
+                case 29 -> "§3§l30. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
+                case 30 -> "§b§l31. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 31 -> "§5§l32. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
+                case 32 -> "§b§l33. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -121,11 +131,13 @@ public class TensuraSkillDispatcher {
             if (index == 21) return true; // Tiên Tri: Rykuzin Sinka
             if (index == 26) return true; // Phong Sát Kỹ Năng
             if (index == 29) return true; // Dị Giới Thần Môn
+            if (index == 31) return true; // Trí Tuệ Vương Raphael
         } else {
             if (index == 17) return true; // Cảm Nhận Vạn Năng
             if (index == 20) return true; // Tiên Tri: Rykuzin Sinka
             if (index == 25) return true; // Phong Sát Kỹ Năng
             if (index == 28) return true; // Dị Giới Thần Môn
+            if (index == 30) return true; // Trí Tuệ Vương Raphael
         }
         return false;
     }
@@ -133,7 +145,7 @@ public class TensuraSkillDispatcher {
     public static int getCooldownTicksForSkill(int index, boolean hasCreation) {
         int adj = (!hasCreation && index >= 14) ? index + 1 : index;
         return switch (adj) {
-            case 9, 14, 20, 21, 28, 29 -> 0; // Đánh dấu, Sáng tạo, Toggle Uriel/Tiên tri, Ban danh, Cổng
+            case 9, 14, 20, 21, 28, 29, 31, 32 -> 0; // Đánh dấu, Sáng tạo, Toggle Uriel/Tiên tri, Ban danh, Cổng, Raphael, Dạ Dày
             case 10, 18 -> 40; // Dịch chuyển, Cảm nhận vạn năng
             case 4, 6, 24, 25, 27 -> 120; // Tận thế, Dragon Nova, Death Blessing, Supernova, Azathoth
             case 0, 5, 19, 22, 26 -> 80; // Disintegration, Beelzebuth, Infinite Prison, Hellflare, Phong sát
@@ -157,18 +169,16 @@ public class TensuraSkillDispatcher {
             }
         }
 
-        // Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Skill Nullification Seal)
-        if (SkillNullificationAbility.isPlayerSealed(player)) {
-            // Khi bị Phong Sát, chỉ còn có thể dùng Kiếm Thuật Thuần Vật Lý
-            if (index != 12 && index != 13) {
-                player.displayClientMessage(
-                        Component.literal("§c⚠️ Bạn đang bị Phong Sát Kỹ Năng! Toàn bộ ma pháp bị phong ấn, chỉ có thể sử dụng Kiếm Thuật Vật Lý!"),
-                        true
-                );
-                level.playSound(null, player.getX(), player.getY(), player.getZ(),
-                        net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
-                return;
-            }
+        // Kiểm tra trạng thái bị Phong Sát Kỹ Năng (Vô hiệu TOÀN BỘ skill dù của ai)
+        if (SkillNullificationAbility.isEntitySkillSealed(player)) {
+            long secs = SkillNullificationAbility.getRemainingSealSeconds(player);
+            player.displayClientMessage(
+                    Component.literal("§c⚠️ Bạn đang bị [PHONG SÁT KỸ NĂNG]! Toàn bộ kỹ năng bị vô hiệu hóa hoàn toàn (còn " + secs + "s)!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(),
+                    net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH, net.minecraft.sounds.SoundSource.PLAYERS, 1.0F, 0.8F);
+            return;
         }
 
         int rykuzinIndex = hasCreation ? 21 : 20;
@@ -226,9 +236,22 @@ public class TensuraSkillDispatcher {
                 case 24 -> NihilityCollapseAbility.cast(level, player);
                 case 25 -> SupernovaAbility.cast(level, player);
                 case 26 -> SkillNullificationAbility.cast(level, player);
-                case 27 -> AzathothAbility.cast(level, player);
+                case 27 -> {
+                    if (player.isShiftKeyDown()) {
+                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                    } else {
+                        AzathothAbility.cast(level, player);
+                    }
+                }
                 case 28 -> TensuraNamingAbility.cast(level, player);
                 case 29 -> DimensionalSanctuaryAbility.cast(level, player);
+                case 30 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
+                case 31 -> {
+                    boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
+                    ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
+                }
+                case 32 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                case 33 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
             }
         } else {
             switch (index) {
@@ -258,9 +281,22 @@ public class TensuraSkillDispatcher {
                 case 23 -> NihilityCollapseAbility.cast(level, player);
                 case 24 -> SupernovaAbility.cast(level, player);
                 case 25 -> SkillNullificationAbility.cast(level, player);
-                case 26 -> AzathothAbility.cast(level, player);
+                case 26 -> {
+                    if (player.isShiftKeyDown()) {
+                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                    } else {
+                        AzathothAbility.cast(level, player);
+                    }
+                }
                 case 27 -> TensuraNamingAbility.cast(level, player);
                 case 28 -> DimensionalSanctuaryAbility.cast(level, player);
+                case 29 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
+                case 30 -> {
+                    boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
+                    ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
+                }
+                case 31 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                case 32 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
             }
         }
     }
