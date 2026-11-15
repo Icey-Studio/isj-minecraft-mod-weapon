@@ -5,6 +5,7 @@ import com.minhphuc.weapons.content.tensura.MagiculesManager;
 import com.minhphuc.weapons.network.ModMessages;
 import com.minhphuc.weapons.network.ServerboundAzathothActionPacket;
 import com.minhphuc.weapons.network.ServerboundSageActionPacket;
+import com.minhphuc.weapons.network.ServerboundTempestCitadelActionPacket;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.screens.Screen;
@@ -127,6 +128,10 @@ public class AzathothStomachScreen extends Screen {
                     onClose();
                     ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_RECALL_OR_REVIVE_VELDORA, 0));
                 }).bounds(bx, top + 168, bw, 18).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§6♛ Thành Trì"),
+                b -> ModMessages.sendToServer(new ServerboundTempestCitadelActionPacket(ServerboundTempestCitadelActionPacket.ACTION_OPEN_GUI, 0)))
+                .bounds(left + PANEL_W - 96, top + 5, 86, 16).build());
     }
 
     @Override

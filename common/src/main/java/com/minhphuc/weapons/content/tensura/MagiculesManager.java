@@ -38,6 +38,7 @@ public final class MagiculesManager {
         if (isHoldingMoonlightSword(player)) maxMp += 500_000L;
 
         maxMp += Math.max(0L, data.getLong(KEY_BONUS_MAX_MP));
+        maxMp += JuraTempestManager.getBonusMaxMp(player);
         return Math.max(100_000L, maxMp);
     }
 
@@ -67,6 +68,7 @@ public final class MagiculesManager {
         ep += countDivineArmorPieces(player) * 2_500_000L;
         if (isHoldingMoonlightSword(player)) ep += 3_000_000L;
         ep += Math.max(0L, data.getLong(KEY_BONUS_EP));
+        ep += JuraTempestManager.getBonusEp(player);
         return Math.max(100_000L, ep);
     }
 
@@ -93,6 +95,16 @@ public final class MagiculesManager {
         long restore = Math.max(20_000L, sourceEp / 3L);
         long next = Math.min(maxMp, getCurrentMagicules(player) + restore);
         data.putLong(KEY_MP, next);
+    }
+
+    public static void restoreMagicules(ServerPlayer player, long amount) {
+        if (player == null || amount <= 0L) return;
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        long maxMp = getMaxMagicules(player);
+        long cur = getCurrentMagicules(player);
+        if (cur < maxMp) {
+            data.putLong(KEY_MP, Math.min(maxMp, cur + amount));
+        }
     }
 
     public static void tickPlayer(ServerPlayer player) {

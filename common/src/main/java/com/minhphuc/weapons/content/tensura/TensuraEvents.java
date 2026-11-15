@@ -190,6 +190,7 @@ public class TensuraEvents {
         SageManager.tickPlayer(sp);
         MagiculesManager.tickPlayer(sp);
         AzathothStomachData.tickAutoLoot(sp);
+        JuraTempestManager.tickBackgroundProduction(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -657,6 +658,11 @@ public class TensuraEvents {
         if (victim == null || victim.level().isClientSide()) return EventResult.pass();
 
         // Chặn nếu bị Thần Hư Không Azathoth xóa sổ
+        if (victim.getTags().contains(JuraTempestManager.TAG_TRAINING_DUMMY)) {
+            JuraTempestManager.handleTrainingDummyHurt(victim, amount, source.getEntity());
+            return EventResult.interruptFalse();
+        }
+
         if (victim.getTags().contains("AzathothErased")) {
             return EventResult.interruptFalse();
         }
@@ -1085,7 +1091,16 @@ public class TensuraEvents {
             // Kiểm tra rương tự nhiên để chèn Sách Cổ Khởi Nguyên Thủy Tổ
             TomeLootManager.onOpenContainer(sp, pos);
 
-            // 0. Tương tác La Bàn Thần Môn (Chuột phải đổi số cổng / Shift+Chuột phải mở GUI 0-9) khi đứng ngay cạnh Cổng 3D
+            // 0. Tương tác Bệ Quản Trị Thành Trì Jura Tempest (Ngai Vàng hoặc Đấu Trường)
+            if (hand == InteractionHand.MAIN_HAND
+                    && JuraTempestCitadelBuilder.isInsideCitadelOrDimension(sp.level(), sp.position())
+                    && JuraTempestCitadelBuilder.isPodiumBlock(
+                            JuraTempestCitadelBuilder.getCitadelCenter(sp.serverLevel(), sp.getUUID()), pos)) {
+                JuraTempestManager.openCitadelGui(sp);
+                return EventResult.interruptFalse();
+            }
+
+            // 0.1. Tương tác La Bàn Thần Môn (Chuột phải đổi số cổng / Shift+Chuột phải mở GUI 0-9) khi đứng ngay cạnh Cổng 3D
             if (hand == InteractionHand.MAIN_HAND
                     && DimensionalSanctuaryAbility.tryInteractWithGateBlockClick(sp, pos, sp.isShiftKeyDown())) {
                 return EventResult.interruptFalse();

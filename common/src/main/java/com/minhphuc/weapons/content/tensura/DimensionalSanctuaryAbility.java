@@ -456,7 +456,7 @@ public class DimensionalSanctuaryAbility {
 
         Vec3 hitCenter = Vec3.atCenterOf(clickedPos);
         if (isInsideSanctuary(player.level(), player.position())) {
-            Vec3 courtyardGatePos = getSanctuaryGatePos(getSanctuaryCenter(player.getUUID()));
+            Vec3 courtyardGatePos = getSanctuaryGatePos(JuraTempestCitadelBuilder.getCitadelCenter(player.serverLevel(), player.getUUID()));
             if (Math.hypot(hitCenter.x - courtyardGatePos.x, hitCenter.z - courtyardGatePos.z) <= 3.5
                     && Math.abs(hitCenter.y - courtyardGatePos.y) <= 5.5) {
                 return tryInteractWithGate(player, shiftDown);
@@ -483,7 +483,7 @@ public class DimensionalSanctuaryAbility {
 
         boolean inside = isInsideSanctuary(player.level(), player.position());
         if (inside) {
-            BlockPos center = getSanctuaryCenter(player.getUUID());
+            BlockPos center = JuraTempestCitadelBuilder.getCitadelCenter(player.serverLevel(), player.getUUID());
             Vec3 courtyardGatePos = getSanctuaryGatePos(center);
             if (!isLookingNearGate(player, courtyardGatePos, 9.0)) {
                 return false;
@@ -564,7 +564,7 @@ public class DimensionalSanctuaryAbility {
         if (isInsideSanctuary(level, player.position())) {
             SANCTUARY_GATE_CHANNELS.put(player.getUUID(), ch);
             syncSanctuaryCourtyardGate(level, player, true);
-            Vec3 gPos = getSanctuaryGatePos(getSanctuaryCenter(player.getUUID()));
+            Vec3 gPos = getSanctuaryGatePos(JuraTempestCitadelBuilder.getCitadelCenter(level, player.getUUID()));
             playDialSwitchEffects(level, gPos);
             player.displayClientMessage(Component.literal(formatChannelStatusBanner(player, ch, true)), true);
             return;
@@ -597,7 +597,7 @@ public class DimensionalSanctuaryAbility {
             if (insideSanctuary) {
                 return "§b§l✦ [CỔNG SỐ 0 • LAM NGỌC] §f↩ Quay Lại Thế Giới Thực (Chỗ Vừa Vào)";
             }
-            return "§b§l✦ [CỔNG SỐ 0 • LAM NGỌC] §e🏡 Đảo Nổi Biệt Thự Gỗ Sân Vườn";
+            return "§b§l✦ [CỔNG SỐ 0 • LAM NGỌC] §e♛ Thành Trì Jura Tempest (Không Gian Riêng)";
         }
         GateWaypoint wp = getWaypoint(player, channel);
         if (wp == null) {
@@ -706,28 +706,26 @@ public class DimensionalSanctuaryAbility {
     // DỊCH CHUYỂN XUYÊN KHÔNG GIAN & VÀO/RA ĐẢO NỔI BIỆT THỰ GỖ
     // =========================================================================
     public static BlockPos getSanctuaryCenter(UUID playerUuid) {
-        int slot = Math.abs(playerUuid.hashCode() % 10000);
-        int baseX = 200000 + slot * 64;
-        int baseY = 240;
-        int baseZ = 200000 + (slot / 100) * 64;
-        return new BlockPos(baseX, baseY, baseZ);
+        return JuraTempestCitadelBuilder.getLegacyOverworldCenter(playerUuid);
+    }
+
+    public static BlockPos getSanctuaryCenter(ServerLevel level, UUID playerUuid) {
+        return JuraTempestCitadelBuilder.getCitadelCenter(level, playerUuid);
     }
 
     public static Vec3 getSanctuaryGatePos(BlockPos center) {
-        return new Vec3(center.getX() + 0.5, center.getY() + 1.0, center.getZ() - 12.0);
+        return JuraTempestCitadelBuilder.getPlazaGatePos(center);
     }
 
     public static boolean isInsideSanctuary(Level level, Vec3 pos) {
-        if (level == null || pos == null || level.getServer() == null || level != level.getServer().overworld()) return false;
-        if (pos.y < 228 || pos.y > 275) return false;
-        return pos.x >= 195000 && pos.z >= 195000;
+        return JuraTempestCitadelBuilder.isInsideCitadelOrDimension(level, pos);
     }
 
-    private static void syncSanctuaryCourtyardGate(ServerLevel overworld, ServerPlayer player, boolean switchOnly) {
-        BlockPos center = getSanctuaryCenter(player.getUUID());
-        Vec3 gPos = getSanctuaryGatePos(center);
+    private static void syncSanctuaryCourtyardGate(ServerLevel citadelLevel, ServerPlayer player, boolean switchOnly) {
+        BlockPos center = JuraTempestCitadelBuilder.getCitadelCenter(citadelLevel, player.getUUID());
+        Vec3 gPos = JuraTempestCitadelBuilder.getPlazaGatePos(center);
         int ch = SANCTUARY_GATE_CHANNELS.getOrDefault(player.getUUID(), 0);
-        broadcastGateVisual(overworld, player.getUUID(), gPos, new Vec3(0, 0, 1), ch, switchOnly, 72000);
+        broadcastGateVisual(citadelLevel, player.getUUID(), gPos, new Vec3(0, 0, 1), ch, switchOnly, 72000);
     }
 
     public static void handleStepIntoOuterGate(ServerPlayer player, ActiveGate gate) {
@@ -783,11 +781,12 @@ public class DimensionalSanctuaryAbility {
     }
 
     public static void enterSanctuary(ServerPlayer player, UUID sanctuaryOwnerUuid) {
-        ServerLevel overworld = player.server.overworld();
-        BlockPos center = getSanctuaryCenter(sanctuaryOwnerUuid);
+        ServerLevel targetLevel = JuraTempestCitadelBuilder.resolveTargetLevel(player.server);
+        if (targetLevel == null) return;
+        BlockPos center = JuraTempestCitadelBuilder.getCitadelCenter(targetLevel, sanctuaryOwnerUuid);
 
-        // Xây dựng Đảo Nổi Biệt Thự Gỗ Sân Vườn (tự động nâng cấp & bảo toàn đồ đạc nếu đang ở bản cũ)
-        buildSanctuaryIfAbsent(overworld, player, center);
+        // Xây dựng trọn bộ Thành Trì Jura Tempest + Đấu Trường + Onsen + Cứu hộ 100% đồ từ rương bản cũ
+        JuraTempestCitadelBuilder.buildIfAbsent(targetLevel, player, center);
 
         // Lưu điểm trở về ngoài đời thực (nếu người chơi bước vào từ thế giới ngoài)
         if (!isInsideSanctuary(player.level(), player.position())) {
@@ -796,25 +795,24 @@ public class DimensionalSanctuaryAbility {
             ));
         }
 
-        // Mặc định cổng sân vườn đặt về kênh 0 (Quay lại chỗ vừa vào)
+        // Mặc định cổng Quảng Trường đặt về kênh 0 (Quay lại chỗ vừa vào)
         SANCTUARY_GATE_CHANNELS.put(player.getUUID(), 0);
 
-        // Điểm xuất hiện: Trên lối đi đá cuội rêu giữa Vườn Anh Đào & Suối Nước Nóng, nhìn thẳng vào Biệt Thự Gỗ!
-        Vec3 spawnPos = new Vec3(center.getX() + 0.5, center.getY() + 1.0, center.getZ() - 8.5);
-        List<Entity> pets = getNearbyPets(player, 12.0);
+        Vec3 spawnPos = JuraTempestCitadelBuilder.getPlazaSpawnPos(center);
+        List<Entity> pets = getNearbyPets(player, 16.0);
 
-        player.teleportTo(overworld, spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, -4.0F);
-        teleportPetsTo(pets, overworld, spawnPos);
+        player.teleportTo(targetLevel, spawnPos.x, spawnPos.y, spawnPos.z, 0.0F, -3.0F);
+        teleportPetsTo(pets, targetLevel, spawnPos);
 
-        // Đồng bộ hiển thị Cánh Cổng 3D ở hiên sân vườn
-        syncSanctuaryCourtyardGate(overworld, player, false);
+        // Đồng bộ hiển thị Cánh Cổng 3D ở Quảng Trường Khải Hoàn
+        syncSanctuaryCourtyardGate(targetLevel, player, false);
 
-        overworld.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 1.4F, 1.2F);
-        overworld.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z, SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
-        overworld.sendParticles(ParticleTypes.END_ROD, spawnPos.x, spawnPos.y + 1.0, spawnPos.z, 30, 0.5, 0.8, 0.5, 0.05);
+        targetLevel.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z, SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 1.4F, 1.2F);
+        targetLevel.playSound(null, spawnPos.x, spawnPos.y, spawnPos.z, SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
+        targetLevel.sendParticles(ParticleTypes.END_ROD, spawnPos.x, spawnPos.y + 1.0, spawnPos.z, 35, 0.6, 0.9, 0.6, 0.05);
 
         player.displayClientMessage(
-                Component.literal("§6§l🏡 [BIỆT THỰ GỖ SÂN VƯỜN] §eChào mừng về nhà! Suối nước nóng bên phải, Vườn Anh Đào bên trái."),
+                Component.literal("§6§l♛ [THÀNH TRÌ JURA TEMPEST] §eChào mừng Bệ Hạ Rimuru hồi cung! Hãy nhấn Chuột Phải Bệ Quản Trị trong Đại Điện để điều hành Thành Trì."),
                 true
         );
     }
@@ -1535,28 +1533,32 @@ public class DimensionalSanctuaryAbility {
             }
         }
 
-        // 2. Xử lý bên trong Đảo Nổi Biệt Thự Gỗ Sân Vườn (Mỗi 5 ticks trên Overworld)
-        if (level == level.getServer().overworld() && gameTime % 5 == 0) {
+        // 2. Xử lý bên trong Không Gian Riêng Thành Trì Jura Tempest (Mỗi 5 ticks)
+        ServerLevel citadelLevel = JuraTempestCitadelBuilder.resolveTargetLevel(level.getServer());
+        if (level == citadelLevel && gameTime % 5 == 0) {
             for (ServerPlayer player : level.players()) {
                 if (!isInsideSanctuary(level, player.position())) continue;
 
-                BlockPos center = getSanctuaryCenter(player.getUUID());
+                BlockPos center = JuraTempestCitadelBuilder.getCitadelCenter(level, player.getUUID());
                 int cy = center.getY();
                 double px = player.getX();
                 double py = player.getY();
                 double pz = player.getZ();
 
-                // Đồng bộ lại cổng sân vườn định kỳ phòng khi người chơi vừa đăng nhập lại bên trong đảo
+                // Đồng bộ lại cổng Quảng Trường định kỳ phòng khi người chơi vừa đăng nhập lại bên trong Thành Trì
                 if (gameTime % 100 == 0) {
                     syncSanctuaryCourtyardGate(level, player, true);
                 }
 
-                // 2.1. Kiểm tra Suối Nước Nóng Lộ Thiên (dx = +5.5..+11.0, dz = -9.5..-4.0, py quanh mặt hồ cy)
-                if (px >= center.getX() + 5.5 && px <= center.getX() + 11.0 &&
-                    pz >= center.getZ() - 9.5 && pz <= center.getZ() - 4.0 &&
-                    py >= cy - 0.8 && py <= cy + 2.0) {
+                // 2.1. Khu Onsen Hoàng Gia & Vườn Anh Đào (hồi Sinh Lực + hồi Ma Tố x3 + thanh tẩy toàn diện)
+                if (px >= center.getX() + JuraTempestCitadelBuilder.ONSEN_MIN_DX - 0.5
+                        && px <= center.getX() + JuraTempestCitadelBuilder.ONSEN_MAX_DX + 1.5
+                        && pz >= center.getZ() + JuraTempestCitadelBuilder.ONSEN_MIN_DZ - 0.5
+                        && pz <= center.getZ() + JuraTempestCitadelBuilder.ONSEN_MAX_DZ + 1.5
+                        && py >= cy - 1.0 && py <= cy + 2.5) {
 
-                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 1, false, false, true));
+                    player.heal(2.5F);
+                    player.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 2, false, false, true));
                     player.addEffect(new MobEffectInstance(MobEffects.SATURATION, 40, 0, false, false, true));
 
                     player.removeEffect(MobEffects.POISON);
@@ -1567,26 +1569,32 @@ public class DimensionalSanctuaryAbility {
                     player.removeEffect(MobEffects.CONFUSION);
                     player.removeEffect(MobEffects.BAD_OMEN);
 
-                    level.sendParticles(ParticleTypes.SPLASH, px, py + 0.6, pz, 3, 0.3, 0.1, 0.3, 0.04);
+                    long maxMp = MagiculesManager.getMaxMagicules(player);
+                    MagiculesManager.restoreMagicules(player, Math.max(5_000L, maxMp / 35L));
+
+                    level.sendParticles(ParticleTypes.SPLASH, px, py + 0.6, pz, 4, 0.35, 0.1, 0.35, 0.04);
+                    level.sendParticles(ParticleTypes.CHERRY_LEAVES, px, py + 2.2, pz, 2, 1.2, 0.4, 1.2, 0.01);
 
                     if (gameTime % 25 == 0) {
                         player.displayClientMessage(
-                                Component.literal("§b♨️ [SUỐI NƯỚC NÓNG ANH ĐÀO] §fNước khoáng ấm đang hồi phục sinh lực và thanh tẩy toàn diện..."),
+                                Component.literal("§b♨ [ONSEN HOÀNG GIA TEMPEST] §fSuối khoáng Ma Tố đang hồi phục HP & Ma Tố x3..."),
                                 true
                         );
                     }
 
-                    for (Entity pet : getNearbyPets(player, 7.0)) {
+                    for (Entity pet : getNearbyPets(player, 9.0)) {
                         if (pet instanceof LivingEntity le) {
+                            le.heal(2.0F);
                             le.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 1, false, false, true));
                         }
                     }
                 }
 
-                // 2.2. Kiểm tra bước vào Cánh Cổng Thần Môn Sân Vườn tại (cx + 0.5, cy + 1, cz - 12.0)
-                if (Math.abs(px - (center.getX() + 0.5)) <= 1.6 &&
-                    pz >= center.getZ() - 13.0 && pz <= center.getZ() - 11.0 &&
-                    py >= cy && py <= cy + 5.0) {
+                // 2.2. Kiểm tra bước vào Cánh Cổng Thần Môn tại Quảng Trường Khải Hoàn
+                Vec3 gatePos = JuraTempestCitadelBuilder.getPlazaGatePos(center);
+                if (Math.abs(px - gatePos.x) <= 2.2 &&
+                    pz >= gatePos.z - 1.2 && pz <= gatePos.z + 1.2 &&
+                    py >= cy && py <= cy + 6.0) {
 
                     Long lastTp = LAST_TELEPORT_TIME.get(player.getUUID());
                     if (lastTp == null || gameTime - lastTp > 45) {
@@ -1595,13 +1603,16 @@ public class DimensionalSanctuaryAbility {
                     }
                 }
 
-                // 2.3. BẢO ĐẢM TUYỆT ĐỐI 100% KHÔNG BAO GIỜ SPAWN QUÁI THÙ ĐỊCH TRÊN ĐẢO NỔI
-                // (Giữ lại ác ma đã ký khế ước / thú cưng đã thuần phục và Velgrynd đồng minh)
-                AABB islandBox = new AABB(center).inflate(22.0, 14.0, 22.0);
-                List<Mob> hostiles = level.getEntitiesOfClass(Mob.class, islandBox, m ->
+                // 2.3. Bảo vệ hòa bình Thành Trì (tuyệt đối giữ lại Cư Dân Tempest, Hội Đồng Thủy Tổ, Thú Cưng và Boss Đấu Trường!)
+                AABB citadelBox = new AABB(center.offset(0, 0, 18)).inflate(56.0, 28.0, 72.0);
+                List<Mob> hostiles = level.getEntitiesOfClass(Mob.class, citadelBox, m ->
                         m.isAlive()
                                 && !(m instanceof TamableAnimal tame && tame.isTame())
                                 && !(m instanceof VelgryndEntity velgrynd && velgrynd.isAllied())
+                                && !m.getTags().contains(JuraTempestManager.TAG_CITADEL_RESIDENT)
+                                && !m.getTags().contains(JuraTempestManager.TAG_COLOSSEUM_BOSS)
+                                && !m.getTags().contains(JuraTempestManager.TAG_TRAINING_DUMMY)
+                                && !JuraTempestCitadelBuilder.isInsideColosseumZone(center, m.position())
                                 && (m instanceof Monster || m instanceof Enemy || m.getType().getCategory() == MobCategory.MONSTER)
                 );
                 for (Mob mob : hostiles) {

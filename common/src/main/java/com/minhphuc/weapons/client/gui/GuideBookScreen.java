@@ -631,17 +631,14 @@ public class GuideBookScreen extends Screen {
     }
 
     private void renderPageDimensionalSanctuary(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {
-        drawHeaderTitle(g, left, top, bookW, "§b§l✦ DỊ GIỚI THẦN MÔN 2.0 (LÂU ĐÀI HOWL)", 0xFF55FFFF);
+        drawHeaderTitle(g, left, top, bookW, "§6§l✦ DỊ GIỚI THẦN MÔN 3.0 (THÀNH TRÌ JURA TEMPEST)", 0xFFFFD54F);
 
         int y = top + 34;
-        y = drawWrapped(g, "§6Chiêu 30 Chân Ma Vương: §eDị Giới Thần Môn (Dimensional Sanctuary)", left + 16, y, fullW, maxY);
-        y += 3;
-        y = drawWrapped(g, " §f1. §aĐảo Nổi Biệt Thự Anh Đào (33x33): §fKiến tạo không gian riêng an toàn tuyệt đối trên không, có sân vườn Anh Đào rơi hoa, Suối Nước Nóng lộ thiên, phòng ngủ đôi, kho rương đôi, bàn phù phép cấp 30 & rào vô hình chống rơi.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §f2. §dHệ Thống Cổng La Bàn 10 Kênh [0..9]: §fMô phỏng cánh cửa xoay màu trong Howl's Moving Castle:", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "    §e• Kênh [0]: §fBước qua để vào Đảo Nổi (hoặc quay về vị trí cũ trước khi vào).", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "    §b• Kênh [1..9]: §f9 Điểm Neo (Waypoints) đa sắc kết nối xuyên chiều Overworld <-> Nether <-> End!", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §f3. §aThao Tác Với Cánh Cửa 3D:", left + 16, y, fullW, maxY);
-        drawWrapped(g, "    §f• [Chuột Phải] vào cửa: Xoay kênh đổi màu tức thời.  §e• [Shift + Chuột Phải] vào cửa: Mở giao diện La Bàn Thần Môn đặt tên & lưu tọa độ.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "§6Chiêu 30 Chân Ma Vương: §eDị Giới Thần Môn -> Chiều Không Gian Riêng Jura Tempest", left + 16, y, fullW, maxY);
+        y += 2;
+        y = drawWrapped(g, " §f1. §6Thành Trì Đá Trắng & Vàng Hoàng Kim: §fBước qua Cổng §e[0]§f lần đầu sẽ kiến tạo trọn bộ Cung Điện Ngai Vàng, Bàn Tròn Hội Đồng Thủy Tổ, Kho Hoàng Gia (tự gom 100% đồ từ rương cũ), Khu Onsen (hồi 3x Ma Tố) & Đấu Trường Vô Cực.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §f2. §aCư Dân Nhộn Nhịp & Bảng Điều Khiển: §fTự có sẵn 5 Thợ Rèn/Vu Nữ, 4 Thủy Tổ Ác Ma & 3 Tinh Linh; nhấn §dChuột Phải Bệ Quản Trị§f (hoặc nút §6♛ Thành Trì§f trong [B]) để Mời Đồng Minh, Ban Danh Xưng (+MP/EP), đặt Bia Thử DMG & gọi 8 Boss!", left + 16, y, fullW, maxY);
+        drawWrapped(g, " §f3. §bLa Bàn Thần Môn [0..9]: §f[Chuột Phải] cửa để xoay kênh màu; [Shift+Chuột Phải] mở GUI lưu 9 tọa độ xuyên chiều.", left + 16, y, fullW, maxY);
     }
 
     private void renderPageTaisui(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {
