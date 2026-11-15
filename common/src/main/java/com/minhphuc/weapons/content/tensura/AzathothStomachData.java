@@ -1,6 +1,7 @@
 package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.entity.tensura.VeldoraEntity;
 import com.minhphuc.weapons.world.VeldoraWorldData;
 import net.minecraft.core.BlockPos;
@@ -65,8 +66,14 @@ public final class AzathothStomachData {
         Vec3 reach = eye.add(player.getLookAngle().scale(12.0D));
         AABB search = new AABB(eye, reach).inflate(2.0D);
 
+        List<VeldoraEntity> sealedSight = level.getEntitiesOfClass(VeldoraEntity.class, search, VeldoraEntity::isSealed);
+        if (!sealedSight.isEmpty()) {
+            unsealVeldoraViaAzathothBeam(level, player, sealedSight.get(0));
+            return true;
+        }
+
         List<LivingEntity> mobs = level.getEntitiesOfClass(LivingEntity.class, search,
-                e -> e != player && e.isAlive() && !(e instanceof VeldoraEntity v && v.isSealed()));
+                e -> e != player && e.isAlive() && !(e instanceof VeldoraEntity));
         CompoundTag data = EntityDataHelper.getCustomData(player);
         ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
         if (list.size() >= MAX_SLOTS) {
@@ -115,22 +122,92 @@ public final class AzathothStomachData {
         return false;
     }
 
+    public static void recordVoidAbsorb(ServerPlayer player, LivingEntity victim) {
+        if (player == null || victim == null) return;
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
+        if (list.size() >= MAX_SLOTS) return;
+        CompoundTag entityNbt = new CompoundTag();
+        if (!victim.saveAsPassenger(entityNbt)) return;
+        CompoundTag slot = new CompoundTag();
+        slot.putString("Name", victim.getName().getString());
+        slot.putString("Kind", "ENTITY");
+        slot.putLong("Ep", (long) Math.max(1000.0F, victim.getMaxHealth() * 450L));
+        slot.putString("Skill", "Hư Không Phân Rã (Azathoth)");
+        slot.put("EntityTag", entityNbt);
+        list.add(slot);
+        data.put(KEY_STOMACH, list);
+    }
+
+    public static void unsealVeldoraViaAzathothBeam(ServerLevel level, ServerPlayer player, VeldoraEntity veldora) {
+        ServerLevel ow = level.getServer().overworld();
+        VeldoraWorldData caveData = VeldoraWorldData.get(ow);
+        BlockPos cavePos = caveData.getOrRollCavePos(ow);
+
+        com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removeVeldoraCavePrison(ow, Vec3.atBottomCenterOf(cavePos));
+        com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removeVeldoraCavePrison(level, veldora.position());
+
+        veldora.setSealed(false);
+        veldora.setAllied(true);
+        veldora.tame(player);
+        veldora.setHumanForm(false);
+        veldora.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+        veldora.setHealth(veldora.getMaxHealth());
+        // Đặt an toàn gần người chơi để không tụt hố do tia Azathoth xóa đất
+        Vec3 safePos = player.position().add(player.getLookAngle().multiply(1, 0, 1).normalize().scale(6.0D));
+        veldora.moveTo(safePos.x, Math.max(player.getY(), level.getMinBuildHeight() + 5), safePos.z, player.getYRot() + 180.0F, 0.0F);
+
+        caveData.markUnsealed(player.getUUID());
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        data.putBoolean(KEY_VELDORA_BEFRIENDED, true);
+
+        ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
+        if (list.size() < MAX_SLOTS) {
+            CompoundTag slot = new CompoundTag();
+            slot.putString("Name", "Long Giam Vô Hạn (Đã Giải Mã)");
+            slot.putString("Kind", "ITEM");
+            slot.putLong("Ep", 1_500_000L);
+            slot.putString("Skill", "Long Chủng Phân Tích — Bạo Phong Long");
+            slot.put("ItemTag", new ItemStack(Items.DRAGON_BREATH, 1).save(level.registryAccess()));
+            list.add(slot);
+            data.put(KEY_STOMACH, list);
+        }
+
+        SageManager.sendCornerAlert(player, "Thần Hư Không Azathoth đã nuốt chửng Long Giam Vô Hạn! Veldora được Giải Phong Ấn & mở khóa [Triệu Hồi Veldora]!", 0xFF38BDF8, 8500, false);
+        player.displayClientMessage(Component.literal("§b§l[VELDORA] §f\"KUAHAHAHA!! Azathoth đã nghiền nát Long Giam Vô Hạn rồi! Này bạn thân, hãy dùng [Triệu Hồi Veldora] bất cứ khi nào cần ta!\""), false);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 3.0F, 0.9F);
+    }
+
     public static void analyzeOrUnsealVeldora(ServerLevel level, ServerPlayer player) {
         ServerLevel ow = level.getServer().overworld();
         VeldoraWorldData caveData = VeldoraWorldData.get(ow);
         BlockPos cavePos = caveData.getOrRollCavePos(ow);
 
         // Kiểm tra xem Veldora bị phong ấn có ở gần hay trong Hang Phong Ấn
-        List<VeldoraEntity> sealedList = level.getEntitiesOfClass(VeldoraEntity.class, player.getBoundingBox().inflate(28.0D), VeldoraEntity::isSealed);
-        boolean atCave = level == ow && player.blockPosition().distSqr(cavePos) <= 28 * 28;
+        List<VeldoraEntity> sealedList = level.getEntitiesOfClass(VeldoraEntity.class, player.getBoundingBox().inflate(36.0D), VeldoraEntity::isSealed);
+        boolean atCave = level == ow && player.blockPosition().distSqr(cavePos) <= 45 * 45;
 
         if (!sealedList.isEmpty() || (atCave && !caveData.isVeldoraUnsealed())) {
             com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removeVeldoraCavePrison(ow, Vec3.atBottomCenterOf(cavePos));
-            for (VeldoraEntity v : sealedList) {
-                v.setSealed(false);
-                v.setAllied(true);
-                v.tame(player);
-                v.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+            if (sealedList.isEmpty()) {
+                VeldoraEntity spawned = ModEntities.VELDORA.get().create(ow);
+                if (spawned != null) {
+                    Vec3 p = player.position().add(player.getLookAngle().multiply(1, 0, 1).normalize().scale(5.0D));
+                    spawned.moveTo(p.x, player.getY() + 0.5, p.z, 0.0F, 0.0F);
+                    spawned.setSealed(false);
+                    spawned.setAllied(true);
+                    spawned.tame(player);
+                    spawned.setHumanForm(false);
+                    spawned.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+                    ow.addFreshEntity(spawned);
+                }
+            } else {
+                for (VeldoraEntity v : sealedList) {
+                    v.setSealed(false);
+                    v.setAllied(true);
+                    v.tame(player);
+                    v.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+                }
             }
             caveData.markUnsealed(player.getUUID());
             EntityDataHelper.getCustomData(player).putBoolean(KEY_VELDORA_BEFRIENDED, true);

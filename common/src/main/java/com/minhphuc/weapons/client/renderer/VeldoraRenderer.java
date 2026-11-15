@@ -33,7 +33,7 @@ public class VeldoraRenderer extends MobRenderer<VeldoraEntity, EntityModel<Veld
     @Override
     public void render(VeldoraEntity entity, float entityYaw, float partialTicks, PoseStack poseStack, MultiBufferSource buffer, int packedLight) {
         this.model = entity.isHumanForm() ? humanModel : dragonModel;
-        this.shadowRadius = entity.isHumanForm() ? 0.5F : 2.8F;
+        this.shadowRadius = entity.isHumanForm() ? 0.5F : (entity.isSealed() ? 4.5F : 9.2F);
         super.render(entity, entityYaw, partialTicks, poseStack, buffer, packedLight);
     }
 
@@ -41,8 +41,11 @@ public class VeldoraRenderer extends MobRenderer<VeldoraEntity, EntityModel<Veld
     protected void scale(VeldoraEntity entity, PoseStack poseStack, float partialTicks) {
         if (entity.isHumanForm()) {
             poseStack.scale(1.06F, 1.06F, 1.06F);
+        } else if (entity.isSealed()) {
+            poseStack.scale(6.0F, 6.0F, 6.0F);
         } else {
-            poseStack.scale(2.85F, 2.85F, 2.85F);
+            // To gấp ~5 lần bản trước (2.85 -> 13.5) — tầm cỡ Cự Long Bạo Phong
+            poseStack.scale(13.5F, 13.5F, 13.5F);
         }
     }
 
