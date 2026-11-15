@@ -684,6 +684,70 @@ public class TensuraEvents {
             return EventResult.interruptFalse();
         }
 
+        // Ma Tố Quá Tải: +50% sát thương phép xuyên giáp cho người chơi
+        if (source.getEntity() instanceof ServerPlayer overdriveSp
+                && overdriveSp != victim
+                && MagiculesManager.isMagiculeOverdriveActive(overdriveSp)
+                && !victim.getTags().contains("MagiculeOverdriveHit")
+                && amount > 0.5F) {
+            victim.addTag("MagiculeOverdriveHit");
+            try {
+                victim.invulnerableTime = 0;
+                victim.hurt(overdriveSp.damageSources().indirectMagic(overdriveSp, overdriveSp), amount * 0.50F);
+            } finally {
+                victim.removeTag("MagiculeOverdriveHit");
+            }
+        }
+
+        // Hành Lang Linh Hồn: Thuộc hạ đồng minh được chia sẻ Quá Tải gây +40% sát thương phép
+        if (source.getEntity() instanceof LivingEntity allyAttacker
+                && allyAttacker != victim
+                && allyAttacker.getTags().contains(MagiculesManager.TAG_SOUL_CORRIDOR_OVERDRIVE)
+                && !victim.getTags().contains("SoulCorridorHit")
+                && amount > 0.5F) {
+            victim.addTag("SoulCorridorHit");
+            try {
+                victim.invulnerableTime = 0;
+                victim.hurt(allyAttacker.damageSources().magic(), amount * 0.40F);
+            } finally {
+                victim.removeTag("SoulCorridorHit");
+            }
+        }
+
+        // Khiên Ma Tố Chuyển Hóa: Hấp thụ sát thương vào thanh Ma Tố (100 MP = 1 DMG)
+        if (victim instanceof ServerPlayer aegisSp
+                && !aegisSp.getTags().contains("MagiculeAegisPartial")
+                && MagiculesManager.isMagiculeAegisActive(aegisSp)
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && amount > 0.0F) {
+            boolean urielBypassed = aegisSp.getTags().contains("KuboPenetrationDamage")
+                    || aegisSp.getTags().contains("ChronoaPenetrationDamage")
+                    || aegisSp.getTags().contains("DisintegrationDamage")
+                    || aegisSp.getTags().contains("VelgryndPenetrationDamage")
+                    || aegisSp.getTags().contains("VelzardPenetrationDamage")
+                    || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                    || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                    || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                    || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity;
+            boolean urielBlocks = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.isUrielDefenseActive(aegisSp)
+                    && !urielBypassed
+                    && !source.is(DamageTypes.FELL_OUT_OF_WORLD);
+            if (!urielBlocks) {
+                float remaining = MagiculesManager.absorbDamageWithMagiculeAegis(aegisSp, amount);
+                if (remaining <= 0.01F) {
+                    return EventResult.interruptFalse();
+                } else if (remaining < amount - 0.01F) {
+                    aegisSp.addTag("MagiculeAegisPartial");
+                    try {
+                        aegisSp.hurt(source, remaining);
+                    } finally {
+                        aegisSp.removeTag("MagiculeAegisPartial");
+                    }
+                    return EventResult.interruptFalse();
+                }
+            }
+        }
+
         boolean isVictimNamed = victim.getTags().contains("TensuraNamedMob") || (victim instanceof PrimordialDemonEntity pde && pde.isNamed());
         boolean isVictimDemonLord = victim.getTags().contains("TensuraDemonLordMob");
 
@@ -736,6 +800,7 @@ public class TensuraEvents {
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.MilimEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity
                         || livingAttacker instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon
                         || livingAttacker instanceof net.minecraft.world.entity.boss.wither.WitherBoss
@@ -756,6 +821,7 @@ public class TensuraEvents {
                     || source.is(DamageTypes.LIGHTNING_BOLT)
                     || victim.getTags().contains("DisintegrationDamage")
                     || victim.getTags().contains("KuboPenetrationDamage")
+                    || victim.getTags().contains("ChronoaPenetrationDamage")
                     || victim.getTags().contains("VelgryndPenetrationDamage")
                     || victim.getTags().contains("AzathothErased");
 
@@ -894,7 +960,10 @@ public class TensuraEvents {
                 boolean isFromKubo = (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
-                if (!isFromVelgrynd && !isFromVelzard && !isFromVeldora && !isFromKubo) {
+                boolean isFromChronoa = (source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || player.getTags().contains("ChronoaPenetrationDamage");
+                if (!isFromVelgrynd && !isFromVelzard && !isFromVeldora && !isFromKubo && !isFromChronoa) {
                     return EventResult.interruptFalse();
                 }
             } else if (!hasBody) {
@@ -924,8 +993,11 @@ public class TensuraEvents {
                 boolean isKubo = (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (direct instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
+                boolean isChronoa = (attacker instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || (direct instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || player.getTags().contains("ChronoaPenetrationDamage");
 
-                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd && !isKubo) {
+                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd && !isKubo && !isChronoa) {
                     // Chặn triệt để sát thương từ quái vật/sinh vật thường
                     return EventResult.interruptFalse();
                 }

@@ -222,8 +222,12 @@ public class DivineWeaponEvents {
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
                         || player.getTags().contains("KuboPenetrationDamage");
                 boolean isDisintegration = player.getTags().contains("DisintegrationDamage");
+                boolean isChronoaPierce = player.getTags().contains("ChronoaPenetrationDamage")
+                        || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                        || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity;
                 boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage")
                         || player.getTags().contains("VelzardPenetrationDamage")
+                        || isChronoaPierce
                         || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity;
 

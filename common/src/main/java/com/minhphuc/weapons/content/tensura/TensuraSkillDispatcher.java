@@ -24,12 +24,14 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 34 : 33;
+        return hasCreation ? 37 : 36;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
         boolean urielActive = EvolvedSkillHelper.isUrielDefenseActive(player);
         boolean rykuzinActive = RykuzinSinkaAbility.isActive(player);
+        boolean overdriveActive = MagiculesManager.isMagiculeOverdriveActive(player);
+        boolean aegisActive = MagiculesManager.isMagiculeAegisActive(player);
         if (hasCreation) {
             return switch (index) {
                 case 0 -> "§e§l1. Linh Tử Băng Hoại (Disintegration)";
@@ -66,6 +68,9 @@ public class TensuraSkillDispatcher {
                 case 31 -> "§b§l32. Trí Tuệ Vương Raphael (Kỹ Năng)";
                 case 32 -> "§5§l33. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 33 -> "§b§l34. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
+                case 34 -> "§6§l35. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
+                case 35 -> "§b§l36. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
+                case 36 -> "§6§l37. Ma Vương Bá Khí (Demon Lord's Haki)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -103,6 +108,9 @@ public class TensuraSkillDispatcher {
                 case 30 -> "§b§l31. Trí Tuệ Vương Raphael (Kỹ Năng)";
                 case 31 -> "§5§l32. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 32 -> "§b§l33. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
+                case 33 -> "§6§l34. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
+                case 34 -> "§b§l35. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
+                case 35 -> "§6§l36. Ma Vương Bá Khí (Demon Lord's Haki)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -253,6 +261,9 @@ public class TensuraSkillDispatcher {
                     }
                     case 32 -> ServerboundAzathothActionPacket.sendOpenGui(player);
                     case 33 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
+                    case 34 -> MagiculesManager.toggleMagiculeOverdrive(player);
+                    case 35 -> MagiculesManager.toggleMagiculeAegis(player);
+                    case 36 -> MagiculesManager.castDemonLordHaki(level, player);
                 }
             } else {
                 switch (index) {
@@ -298,6 +309,9 @@ public class TensuraSkillDispatcher {
                     }
                     case 31 -> ServerboundAzathothActionPacket.sendOpenGui(player);
                     case 32 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
+                    case 33 -> MagiculesManager.toggleMagiculeOverdrive(player);
+                    case 34 -> MagiculesManager.toggleMagiculeAegis(player);
+                    case 35 -> MagiculesManager.castDemonLordHaki(level, player);
                 }
             }
         } catch (Throwable t) {

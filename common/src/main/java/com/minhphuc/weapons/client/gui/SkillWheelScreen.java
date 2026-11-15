@@ -107,7 +107,7 @@ public class SkillWheelScreen extends Screen {
                 addLordSkillItems(list, hasCreation);
                 if (ClientSkillStateHandler.isPrimordial()) {
                     DemonType dtype = ClientSkillStateHandler.getDemonType();
-                    int offset = hasCreation ? 30 : 29;
+                    int offset = hasCreation ? 37 : 36;
                     for (int i = 0; i < 7; i++) {
                         Category cat = (i == 0 || i == 5) ? Category.ULTIMATE : Category.ATTACK;
                         list.add(new SkillItem(offset + i, "[Thủy Tổ] " + PrimordialPlayerDataHelper.getSkillName(dtype, i), cat, "lord_" + (offset + i), dtype.getGlowColor()));
@@ -187,6 +187,9 @@ public class SkillWheelScreen extends Screen {
         list.add(new SkillItem(30 + off, "Trí Tuệ Vương Raphael", Category.SPATIAL, "lord_" + (30 + off), 0x00E5FF));
         list.add(new SkillItem(31 + off, "Dạ Dày Vô Hạn Azathoth", Category.ULTIMATE, "lord_" + (31 + off), 0xA855F7));
         list.add(new SkillItem(32 + off, "Đại Chuyển Di Quân Đoàn (80m)", Category.SPATIAL, "lord_" + (32 + off), 0x0EA5E9));
+        list.add(new SkillItem(33 + off, "Ma Tố Quá Tải (Overdrive)", Category.ULTIMATE, "lord_" + (33 + off), 0xF59E0B));
+        list.add(new SkillItem(34 + off, "Khiên Ma Tố Chuyển Hóa", Category.DEFENSE, "lord_" + (34 + off), 0x06B6D4));
+        list.add(new SkillItem(35 + off, "Ma Vương Bá Khí (Haki)", Category.ULTIMATE, "lord_" + (35 + off), 0xEAB308));
     }
 
     private List<SkillItem> getFilteredSkills(List<SkillItem> all) {
