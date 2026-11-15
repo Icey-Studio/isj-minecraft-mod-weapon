@@ -187,8 +187,12 @@ public class VelzardEntity extends Monster {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new VelzardCombatGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.55D, false));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.95D));
+        this.goalSelector.addGoal(2, new DragonFlightGoal(this, 1.32D, this::isDragonForm, null));
+        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.55D, false));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.95D) {
+            @Override public boolean canUse() { return !isDragonForm() && super.canUse(); }
+            @Override public boolean canContinueToUse() { return !isDragonForm() && super.canContinueToUse(); }
+        });
         this.goalSelector.addGoal(7, new LookAtPlayerGoal(this, Player.class, 14.0F));
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
@@ -821,17 +825,18 @@ public class VelzardEntity extends Monster {
             tickActiveSkill(sl);
         } else {
             LivingEntity target = this.getTarget();
-            if (target != null && target.isAlive()) {
-                setFlyingAnim(true);
+            if ((target != null && target.isAlive()) || isDragonForm()) {
+                setFlyingAnim(!this.onGround() || isDragonForm() || (target != null));
                 this.setNoGravity(true);
 
-                double desiredY = target.getY() + 3.2D;
-                if (this.getY() < desiredY) {
-                    this.setDeltaMovement(this.getDeltaMovement().add(0, 0.045D, 0));
+                if (target != null && target.isAlive()) {
+                    double desiredY = target.getY() + 3.2D;
+                    if (this.getY() < desiredY) {
+                        this.setDeltaMovement(this.getDeltaMovement().add(0, 0.045D, 0));
+                    }
+                    double distSq = this.distanceToSqr(target);
+                    chooseSkillToCast(sl, target, distSq);
                 }
-
-                double distSq = this.distanceToSqr(target);
-                chooseSkillToCast(sl, target, distSq);
             } else {
                 setFlyingAnim(false);
                 this.setNoGravity(false);

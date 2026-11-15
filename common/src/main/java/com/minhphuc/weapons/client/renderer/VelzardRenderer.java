@@ -46,7 +46,7 @@ public class VelzardRenderer extends MobRenderer<VelzardEntity, EntityModel<Velz
 
     @Override
     protected void scale(VelzardEntity entity, PoseStack poseStack, float partialTickTime) {
-        float scale = entity.isDragonForm() ? 12.6F : (entity.isAwakened() ? 1.15F : 1.05F);
+        float scale = entity.isDragonForm() ? 7.5F : (entity.isAwakened() ? 1.15F : 1.05F);
         poseStack.scale(scale, scale, scale);
     }
 }

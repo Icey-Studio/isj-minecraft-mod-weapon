@@ -46,7 +46,7 @@ public class VelgryndRenderer extends MobRenderer<VelgryndEntity, EntityModel<Ve
 
     @Override
     protected void scale(VelgryndEntity entity, PoseStack poseStack, float partialTickTime) {
-        float scale = entity.isDragonForm() ? 12.2F : 1.08F;
+        float scale = entity.isDragonForm() ? 7.2F : 1.08F;
         poseStack.scale(scale, scale, scale);
     }
 }

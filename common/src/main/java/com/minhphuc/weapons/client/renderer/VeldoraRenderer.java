@@ -42,10 +42,11 @@ public class VeldoraRenderer extends MobRenderer<VeldoraEntity, EntityModel<Veld
         if (entity.isHumanForm()) {
             poseStack.scale(1.06F, 1.06F, 1.06F);
         } else if (entity.isSealed()) {
-            poseStack.scale(6.0F, 6.0F, 6.0F);
+            // Kích thước vừa khít bên trong Lồng Giam Vô Hạn R=15m, H=16m
+            poseStack.scale(3.8F, 3.8F, 3.8F);
         } else {
-            // To gấp ~5 lần bản trước (2.85 -> 13.5) — tầm cỡ Cự Long Bạo Phong
-            poseStack.scale(13.5F, 13.5F, 13.5F);
+            // Sải cánh >45 block, thân rồng thon dài oai vệ thay cho khối mập
+            poseStack.scale(7.8F, 7.8F, 7.8F);
         }
     }
 

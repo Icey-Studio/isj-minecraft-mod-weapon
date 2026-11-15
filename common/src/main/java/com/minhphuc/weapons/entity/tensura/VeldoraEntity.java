@@ -133,10 +133,17 @@ public class VeldoraEntity extends TamableAnimal {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new MeleeAttackGoal(this, 1.45D, true));
-        this.goalSelector.addGoal(2, new FollowOwnerGoal(this, 1.3D, 10.0F, 4.0F));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.9D));
-        this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 16.0F));
-        this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
+        this.goalSelector.addGoal(2, new DragonFlightGoal(this, 1.35D, () -> !isHumanForm() && !isSealed(), this::getOwner));
+        this.goalSelector.addGoal(3, new FollowOwnerGoal(this, 1.3D, 10.0F, 4.0F) {
+            @Override public boolean canUse() { return isHumanForm() && !isSealed() && super.canUse(); }
+            @Override public boolean canContinueToUse() { return isHumanForm() && !isSealed() && super.canContinueToUse(); }
+        });
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.9D) {
+            @Override public boolean canUse() { return isHumanForm() && !isSealed() && super.canUse(); }
+            @Override public boolean canContinueToUse() { return isHumanForm() && !isSealed() && super.canContinueToUse(); }
+        });
+        this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, Player.class, 16.0F));
+        this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
@@ -230,16 +237,15 @@ public class VeldoraEntity extends TamableAnimal {
     private void syncNavigationMode() {
         if (this.level().isClientSide()) return;
         boolean shouldFly = !isHumanForm() && !isSealed();
+        this.setNoGravity(shouldFly);
         if (shouldFly != usingFlyingNav) {
             usingFlyingNav = shouldFly;
             if (shouldFly) {
-                this.moveControl = new FlyingMoveControl(this, 18, false);
+                this.moveControl = new FlyingMoveControl(this, 20, true);
                 this.navigation = new FlyingPathNavigation(this, this.level());
-                this.setNoGravity(false);
             } else {
                 this.moveControl = new MoveControl(this);
                 this.navigation = new GroundPathNavigation(this, this.level());
-                this.setNoGravity(false);
             }
         }
     }
@@ -259,6 +265,8 @@ public class VeldoraEntity extends TamableAnimal {
         }
 
         if (isSealed()) {
+            this.setNoGravity(false);
+            this.entityData.set(DATA_FLYING_NOW, false);
             this.setDeltaMovement(Vec3.ZERO);
             if (this.tickCount % 15 == 0 && this.level() instanceof ServerLevel sl) {
                 sl.sendParticles(ParticleTypes.ENCHANTED_HIT, this.getX(), this.getY() + 1.8D, this.getZ(), 10, 1.5, 1.5, 1.5, 0.02);
@@ -266,8 +274,9 @@ public class VeldoraEntity extends TamableAnimal {
             return;
         }
 
+        syncNavigationMode();
         this.bossEvent.setProgress(Mth.clamp(this.getHealth() / Math.max(1.0F, this.getMaxHealth()), 0.0F, 1.0F));
-        this.entityData.set(DATA_FLYING_NOW, !isHumanForm() && !this.onGround());
+        this.entityData.set(DATA_FLYING_NOW, !isHumanForm() && (!this.onGround() || this.getDeltaMovement().lengthSqr() > 0.001));
 
         // Siêu hồi phục Long Chủng (+60 HP/s Dragon, +20 HP/s Human)
         if (this.tickCount % 20 == 0 && this.getHealth() < this.getMaxHealth()) {
@@ -570,6 +579,18 @@ public class VeldoraEntity extends TamableAnimal {
         setHumanForm(tag.getBoolean("HumanForm"));
         setSealed(tag.getBoolean("Sealed"));
         setAllied(tag.getBoolean("Allied"));
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        if (this.level() instanceof ServerLevel sl) {
+            com.minhphuc.weapons.world.VeldoraWorldData vd = com.minhphuc.weapons.world.VeldoraWorldData.get(sl.getServer().overworld());
+            vd.setVeldoraDead(true, this.isHumanForm());
+            if (!isSealed()) {
+                broadcastNearby("§c§l[BẠO PHONG LONG] §fVeldora Tempest đã ngã xuống! Dùng §bGiải Phóng Bạo Phong Long §f(hoặc nút §cThu Hồi / Hồi Sinh Veldora§f, tiêu hao 70% HP & Ma Tố) để hồi sinh ông ấy!");
+            }
+        }
+        super.die(source);
     }
 
     @Override

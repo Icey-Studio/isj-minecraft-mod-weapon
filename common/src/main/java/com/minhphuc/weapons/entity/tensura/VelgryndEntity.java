@@ -189,8 +189,15 @@ public class VelgryndEntity extends Monster {
     protected void registerGoals() {
         this.goalSelector.addGoal(0, new FloatGoal(this));
         this.goalSelector.addGoal(1, new VelgryndCombatGoal(this));
-        this.goalSelector.addGoal(2, new MeleeAttackGoal(this, 1.5D, false));
-        this.goalSelector.addGoal(3, new WaterAvoidingRandomStrollGoal(this, 0.9D));
+        this.goalSelector.addGoal(2, new DragonFlightGoal(this, 1.30D, this::isDragonForm, () -> {
+            UUID uid = getParsedOwnerUUID();
+            return (uid != null && this.level() instanceof ServerLevel sl) ? sl.getServer().getPlayerList().getPlayer(uid) : null;
+        }));
+        this.goalSelector.addGoal(3, new MeleeAttackGoal(this, 1.5D, false));
+        this.goalSelector.addGoal(4, new WaterAvoidingRandomStrollGoal(this, 0.9D) {
+            @Override public boolean canUse() { return !isDragonForm() && super.canUse(); }
+            @Override public boolean canContinueToUse() { return !isDragonForm() && super.canContinueToUse(); }
+        });
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, Player.class, 12.0F));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
@@ -445,12 +452,14 @@ public class VelgryndEntity extends Monster {
 
         // Quản lý trạng thái bay lượn trên không trung
         LivingEntity curCombatTarget = this.getTarget();
-        if (curCombatTarget != null && curCombatTarget.isAlive()) {
-            setFlyingAnim(true);
+        if ((curCombatTarget != null && curCombatTarget.isAlive()) || isDragonForm()) {
+            setFlyingAnim(!this.onGround() || isDragonForm() || (curCombatTarget != null));
             this.setNoGravity(true);
-            double desiredY = curCombatTarget.getY() + 3.5D;
-            if (this.getY() < desiredY) {
-                this.setDeltaMovement(this.getDeltaMovement().add(0, 0.04D, 0));
+            if (curCombatTarget != null && curCombatTarget.isAlive()) {
+                double desiredY = curCombatTarget.getY() + 3.5D;
+                if (this.getY() < desiredY) {
+                    this.setDeltaMovement(this.getDeltaMovement().add(0, 0.04D, 0));
+                }
             }
         } else {
             setFlyingAnim(false);
