@@ -11,20 +11,22 @@ import java.util.function.Predicate;
 
 /**
  * Shared 3D Western Dragon model for True Dragons (Velgrynd Fire Dragon, Velzard Ice Dragon)
- * reusing the exact VeldoraDragonModel geometry & proportions.
+ * reusing the exact VeldoraDragonModel geometry & part names.
  */
 public class TrueDragonModel<T extends Mob> extends EntityModel<T> {
 
     private final ModelPart root;
-    private final ModelPart headPivot;
-    private final ModelPart leftWingPivot;
-    private final ModelPart rightWingPivot;
-    private final ModelPart tail1;
-    private final ModelPart tail2;
-    private final ModelPart legFL;
-    private final ModelPart legFR;
-    private final ModelPart legBL;
-    private final ModelPart legBR;
+    private final ModelPart neck;
+    private final ModelPart head;
+    private final ModelPart jaw;
+    private final ModelPart wingLeft;
+    private final ModelPart wingRight;
+    private final ModelPart frontLegLeft;
+    private final ModelPart frontLegRight;
+    private final ModelPart hindLegLeft;
+    private final ModelPart hindLegRight;
+    private final ModelPart tailBase;
+    private final ModelPart tailTip;
 
     private final Predicate<T> isFlyingPred;
     private final Predicate<T> isCastingPred;
@@ -34,54 +36,42 @@ public class TrueDragonModel<T extends Mob> extends EntityModel<T> {
         this.isFlyingPred = isFlyingPred;
         this.isCastingPred = isCastingPred;
         ModelPart body = root.getChild("body");
-        ModelPart neck = body.getChild("neck");
-        this.headPivot = neck.getChild("head");
-        this.leftWingPivot = body.getChild("left_wing");
-        this.rightWingPivot = body.getChild("right_wing");
-        this.tail1 = body.getChild("tail1");
-        this.tail2 = this.tail1.getChild("tail2");
-        this.legFL = body.getChild("leg_fl");
-        this.legFR = body.getChild("leg_fr");
-        this.legBL = body.getChild("leg_bl");
-        this.legBR = body.getChild("leg_br");
+        this.neck = body.getChild("neck");
+        this.head = this.neck.getChild("head");
+        this.jaw = this.head.getChild("jaw");
+        this.wingLeft = body.getChild("wing_left");
+        this.wingRight = body.getChild("wing_right");
+        this.frontLegLeft = body.getChild("front_leg_left");
+        this.frontLegRight = body.getChild("front_leg_right");
+        this.hindLegLeft = body.getChild("hind_leg_left");
+        this.hindLegRight = body.getChild("hind_leg_right");
+        this.tailBase = body.getChild("tail_base");
+        this.tailTip = this.tailBase.getChild("tail_tip");
     }
 
     @Override
     public void setupAnim(T entity, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
-        this.headPivot.yRot = netHeadYaw * ((float) Math.PI / 180F) * 0.65F;
-        this.headPivot.xRot = headPitch * ((float) Math.PI / 180F) * 0.55F;
+        this.neck.yRot = netHeadYaw * ((float) Math.PI / 180F) * 0.45F;
+        this.head.yRot = netHeadYaw * ((float) Math.PI / 180F) * 0.55F;
+        this.head.xRot = 0.25F + headPitch * ((float) Math.PI / 180F) * 0.55F;
+
+        boolean casting = isCastingPred.test(entity);
+        this.jaw.xRot = casting ? 0.58F : 0.10F + 0.06F * Mth.sin(ageInTicks * 0.1F);
 
         boolean flying = isFlyingPred.test(entity) || !entity.onGround();
-        boolean casting = isCastingPred.test(entity);
+        float flapSpeed = flying ? 0.36F : 0.08F;
+        float flapAmp = flying ? 0.62F : 0.12F;
+        float flap = Mth.sin(ageInTicks * flapSpeed) * flapAmp;
+        this.wingLeft.zRot = -0.25F + flap;
+        this.wingRight.zRot = 0.25F - flap;
 
-        if (flying) {
-            float flap = Mth.sin(ageInTicks * 0.28F) * 0.48F;
-            this.leftWingPivot.zRot = -0.22F + flap;
-            this.rightWingPivot.zRot = 0.22F - flap;
-            this.leftWingPivot.yRot = -0.15F;
-            this.rightWingPivot.yRot = 0.15F;
-        } else {
-            float breath = Mth.sin(ageInTicks * 0.08F) * 0.06F;
-            this.leftWingPivot.zRot = -0.58F + breath;
-            this.rightWingPivot.zRot = 0.58F - breath;
-            this.leftWingPivot.yRot = -0.45F;
-            this.rightWingPivot.yRot = 0.45F;
-        }
+        this.frontLegLeft.xRot = Mth.cos(limbSwing * 0.6F) * 0.7F * limbSwingAmount;
+        this.hindLegRight.xRot = Mth.cos(limbSwing * 0.6F) * 0.7F * limbSwingAmount;
+        this.frontLegRight.xRot = Mth.cos(limbSwing * 0.6F + (float) Math.PI) * 0.7F * limbSwingAmount;
+        this.hindLegLeft.xRot = Mth.cos(limbSwing * 0.6F + (float) Math.PI) * 0.7F * limbSwingAmount;
 
-        if (casting) {
-            this.headPivot.xRot -= 0.35F;
-            this.leftWingPivot.zRot = 0.2F;
-            this.rightWingPivot.zRot = -0.2F;
-        }
-
-        float sway = Mth.sin(ageInTicks * 0.12F) * 0.18F;
-        this.tail1.yRot = sway;
-        this.tail2.yRot = sway * 1.35F;
-
-        this.legFL.xRot = Mth.cos(limbSwing * 0.5F) * 0.65F * limbSwingAmount;
-        this.legFR.xRot = Mth.cos(limbSwing * 0.5F + (float) Math.PI) * 0.65F * limbSwingAmount;
-        this.legBL.xRot = Mth.cos(limbSwing * 0.5F + (float) Math.PI) * 0.65F * limbSwingAmount;
-        this.legBR.xRot = Mth.cos(limbSwing * 0.5F) * 0.65F * limbSwingAmount;
+        this.tailBase.yRot = Mth.sin(ageInTicks * 0.14F) * 0.22F;
+        this.tailTip.yRot = Mth.sin(ageInTicks * 0.14F - 0.8F) * 0.30F;
     }
 
     @Override
