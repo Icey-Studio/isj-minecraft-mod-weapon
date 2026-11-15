@@ -344,11 +344,8 @@ public class SkillWheelScreen extends Screen {
             int starY = cy + 3;
             g.drawString(font, isFav ? "§e★" : "§7☆", starX + 4, starY + 2, 0xFFFFFFFF, false);
 
-            // Cooldown hoặc Gợi ý loại
-            int cdTicks = ClientSkillStateHandler.getRemainingCooldownTicks(item.cooldownKey());
-            String sub = cdTicks > 0
-                    ? String.format("§c⏳ %.1fs", cdTicks / 20.0D)
-                    : "§7[" + item.category().label + "] §8(Click=Chọn | Shift+Click=Tung)";
+            // Đặc quyền người chơi: Không cần hồi chiêu
+            String sub = "§7[" + item.category().label + "] §a⚡ 0s CD §8(Click=Chọn | Shift+Click=Tung)";
             g.drawString(font, font.plainSubstrByWidth(sub, cardW - 26), cx + 7, cy + 15, 0xFF94A3B8, false);
         }
 

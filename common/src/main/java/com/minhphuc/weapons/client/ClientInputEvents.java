@@ -32,15 +32,17 @@ public class ClientInputEvents {
                         com.minhphuc.weapons.network.ServerboundSkillActionPacket.ACTION_REQUEST_SYNC, 0));
             }
 
-            // Khi Trí Tuệ Vương Raphael tiếp quản Auto-Battle: xoay mượt góc nhìn bám theo mục tiêu thù địch gần nhất
+            // Khi Trí Tuệ Vương Raphael tiếp quản Auto-Battle: xoay nhanh & chính xác bám theo boss/mục tiêu thù địch gần nhất
             if (ClientSkillStateHandler.isRaphaelAutoBattle() && mc.screen == null && !mc.player.isShiftKeyDown()) {
                 net.minecraft.world.entity.LivingEntity bestTarget = null;
-                double bestD2 = 36.0D * 36.0D;
-                for (net.minecraft.world.entity.Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(36.0D))) {
+                double bestScore = Double.POSITIVE_INFINITY;
+                for (net.minecraft.world.entity.Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(44.0D))) {
                     if (e instanceof net.minecraft.world.entity.monster.Enemy && e instanceof net.minecraft.world.entity.LivingEntity le && le.isAlive()) {
-                        double d2 = mc.player.distanceToSqr(le);
-                        if (d2 < bestD2) {
-                            bestD2 = d2;
+                        double distSq = mc.player.distanceToSqr(le);
+                        // Ưu tiên mục tiêu boss (Charybdis / Máu lớn) hoặc kẻ địch áp sát
+                        double score = distSq - (le.getMaxHealth() >= 200.0F ? 180.0D : 0.0D);
+                        if (score < bestScore) {
+                            bestScore = score;
                             bestTarget = le;
                         }
                     }
@@ -51,8 +53,8 @@ public class ClientInputEvents {
                     double horiz = Math.hypot(aim.x, aim.z);
                     float targetYaw = (float) (Math.atan2(-aim.x, aim.z) * (180.0D / Math.PI));
                     float targetPitch = (float) (-Math.atan2(aim.y, Math.max(0.01D, horiz)) * (180.0D / Math.PI));
-                    mc.player.setYRot(net.minecraft.util.Mth.rotLerp(0.18F, mc.player.getYRot(), targetYaw));
-                    mc.player.setXRot(net.minecraft.util.Mth.lerp(0.18F, mc.player.getXRot(), net.minecraft.util.Mth.clamp(targetPitch, -65.0F, 65.0F)));
+                    mc.player.setYRot(net.minecraft.util.Mth.rotLerp(0.32F, mc.player.getYRot(), targetYaw));
+                    mc.player.setXRot(net.minecraft.util.Mth.lerp(0.32F, mc.player.getXRot(), net.minecraft.util.Mth.clamp(targetPitch, -75.0F, 75.0F)));
                 }
             }
 
@@ -121,15 +123,14 @@ public class ClientInputEvents {
             if (ModKeyBindings.SAGE_ACTION_KEY.consumeClick()) {
                 if (mc.screen == null) {
                     if (mc.player.isShiftKeyDown()) {
-                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundAzathothActionPacket(
-                                com.minhphuc.weapons.network.ServerboundAzathothActionPacket.ACTION_OPEN_GUI, 0));
-                    } else if (SageHudManager.hasPendingVeldoraWarp()) {
+                        // Shift+V: Quét Vạn Vật đánh dấu mục tiêu xung quanh 24m
+                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
+                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_SCAN_AREA));
+                    } else {
+                        // Phím V: Dành riêng cho Dịch Chuyển tới Hang Động Phong Ấn Bạo Phong Long Veldora
                         SageHudManager.clearVeldoraWarp();
                         ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
                                 com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_WARP_VELDORA));
-                    } else {
-                        ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
-                                com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE));
                     }
                 }
             }

@@ -349,8 +349,8 @@ public final class SageManager {
         if (RykuzinSinkaAbility.isActive(sp)) {
             pushAlert(sp, "RYKUZIN_ACTIVE_NOTE", "Tiên Tri Rykuzin Sinka đang quét quỹ đạo tấn công xung quanh bạn.", "", 2400);
         }
-        if (AzathothStomachData.getEntries(sp).size() >= 20) {
-            pushAlert(sp, "STOMACH_ALMOST_FULL", "Dạ Dày Vô Hạn Azathoth sắp đầy (" + AzathothStomachData.getEntries(sp).size() + "/24 ô)! Hãy chuyển hóa bớt thành Ma Tố.", "", 1800);
+        if (AzathothStomachData.getEntries(sp).size() >= 108) {
+            pushAlert(sp, "STOMACH_ALMOST_FULL", "Dạ Dày Vô Hạn Azathoth sắp đầy (" + AzathothStomachData.getEntries(sp).size() + "/" + AzathothStomachData.MAX_SLOTS + " ô)! Hãy chuyển hóa bớt thành Ma Tố.", "", 1800);
         }
         if (data.getBoolean("TensuraTrueDemonLord") && !data.getBoolean("RaphaelAscendedNotified")) {
             data.putBoolean("RaphaelAscendedNotified", true);
@@ -487,23 +487,32 @@ public final class SageManager {
             sl.sendParticles(cyan, sp.getX() + Math.cos(a) * 0.9D, sp.getY() + 0.15D, sp.getZ() + Math.sin(a) * 0.9D, 1, 0, 0, 0, 0);
         }
 
-        // Duy trì phòng hộ & thanh tẩy trạng thái bất lợi
-        if (now % 20L == 0L) {
-            sp.heal(1.5F);
-            if (sp.getFoodData().getFoodLevel() < 16) sp.getFoodData().eat(6, 0.8F);
+        // Duy trì phòng hộ khẩn cấp, hồi phục & thanh tẩy trạng thái bất lợi (nhanh & thông minh)
+        if (now % 15L == 0L) {
+            sp.heal(2.5F);
+            if (sp.getFoodData().getFoodLevel() < 18) sp.getFoodData().eat(6, 0.9F);
             if (sp.isOnFire()) sp.clearFire();
             sp.removeEffect(MobEffects.POISON);
             sp.removeEffect(MobEffects.WITHER);
             sp.removeEffect(MobEffects.DARKNESS);
             sp.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 45, 1, true, false));
+            sp.removeEffect(MobEffects.WEAKNESS);
+            sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 50, 1, true, false));
+            sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 50, 1, true, false));
         }
-        if (now % 60L == 0L && !EvolvedSkillHelper.isUrielDefenseActive(sp)) {
+        // Khẩn cấp bật Đa Trùng Kết Giới / Hồi Máu ngay khi HP xuống dưới 45%
+        if (sp.getHealth() < sp.getMaxHealth() * 0.45F && now % 20L == 0L) {
+            sp.heal(8.0F);
+            if (!EvolvedSkillHelper.isUrielDefenseActive(sp)) {
+                MultilayerBarrierAbility.cast(sl, sp);
+            }
+            RaphaelSkillRegistry.execute(sl, sp, 10); // Siêu Hồi Phục Tế Bào
+        } else if (now % 60L == 0L && !EvolvedSkillHelper.isUrielDefenseActive(sp)) {
             MultilayerBarrierAbility.cast(sl, sp);
         }
 
-        // Tìm mục tiêu thù địch gần nhất trong 42m (bỏ qua đồng minh đã thuần phục & dân làng)
-        List<LivingEntity> hostiles = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(42.0D),
+        // Tìm mục tiêu thù địch trong 48m & chấm điểm ưu tiên Boss / mục tiêu áp sát
+        List<LivingEntity> hostiles = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(48.0D),
                 e -> e != sp && e.isAlive()
                         && (e instanceof Enemy || (e instanceof Mob m && m.getTarget() == sp))
                         && !(e instanceof Villager)
@@ -513,17 +522,24 @@ public final class SageManager {
 
         if (hostiles.isEmpty()) {
             if (now % 30L == 0L) {
-                sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO-PILOT] §7Đang tuần tra không gian... §8(Nhấn §eSHIFT §8để trả quyền)"), true);
+                sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO-PILOT] §7Đang tuần tra không gian... §8(Nhấn §e[X] §8hoặc §e[SHIFT] §8để trả quyền)"), true);
             }
             return;
         }
 
-        hostiles.sort((a, b) -> Double.compare(a.distanceToSqr(sp), b.distanceToSqr(sp)));
+        hostiles.sort((a, b) -> {
+            double scoreA = a.distanceToSqr(sp) - (isHighPriorityBoss(a) ? 400.0D : 0.0D);
+            double scoreB = b.distanceToSqr(sp) - (isHighPriorityBoss(b) ? 400.0D : 0.0D);
+            return Double.compare(scoreA, scoreB);
+        });
         LivingEntity target = hostiles.get(0);
         double dist = Math.sqrt(sp.distanceToSqr(target));
 
-        // 1) Điều khiển di chuyển cơ thể chủ động tiếp cận / né đòn / áp sát
+        // 1) Điều khiển di chuyển cơ thể tốc độ cao: bay áp sát trên cao (đánh Charybdis vây lưng) hoặc quần đảo né đòn
         sp.fallDistance = 0.0F;
+        double desiredY = (target instanceof CharybdisEntity)
+                ? (target.getY() + target.getBbHeight() + 1.5D)
+                : target.getY();
         Vec3 diff = target.position().subtract(sp.position());
         Vec3 horiz = new Vec3(diff.x, 0.0D, diff.z);
         double hLen = horiz.length();
@@ -531,28 +547,36 @@ public final class SageManager {
 
         double vy = sp.getDeltaMovement().y;
         if (sp.onGround() && sp.horizontalCollision) {
-            vy = 0.46D;
-        } else if (target.getY() > sp.getY() + 2.5D && dist < 24.0D) {
-            vy = 0.28D;
+            vy = 0.48D;
+        } else if (desiredY > sp.getY() + 1.8D) {
+            vy = Math.min(0.45D, (desiredY - sp.getY()) * 0.14D);
+        } else if (desiredY < sp.getY() - 2.5D && !sp.onGround()) {
+            vy = -0.25D;
         }
 
         Vec3 move;
-        if (dist > 7.5D) {
-            double speed = Math.min(0.46D, 0.26D + dist * 0.012D);
+        if (sp.getHealth() < sp.getMaxHealth() * 0.35F && dist < 8.0D) {
+            // Né lùi khẩn cấp khi máu thấp & địch quá gần
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 40L < 20L) ? 0.42D : -0.42D);
+            move = new Vec3(-dirH.x * 0.38D + tangent.x, Math.max(vy, 0.18D), -dirH.z * 0.38D + tangent.z);
+        } else if (dist > 8.0D) {
+            double speed = Math.min(0.58D, 0.34D + dist * 0.014D);
             move = new Vec3(dirH.x * speed, vy, dirH.z * speed);
-        } else if (dist < 3.6D) {
-            // Quần đảo quanh mục tiêu khi cận chiến
-            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 80L < 40L) ? 0.28D : -0.28D);
-            move = new Vec3(tangent.x - dirH.x * 0.08D, vy, tangent.z - dirH.z * 0.08D);
+        } else if (dist < 3.4D) {
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 60L < 30L) ? 0.36D : -0.36D);
+            move = new Vec3(tangent.x - dirH.x * 0.10D, vy, tangent.z - dirH.z * 0.10D);
         } else {
-            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale(0.18D);
-            move = new Vec3(dirH.x * 0.16D + tangent.x, vy, dirH.z * 0.16D + tangent.z);
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale(0.24D);
+            move = new Vec3(dirH.x * 0.22D + tangent.x, vy, dirH.z * 0.22D + tangent.z);
         }
         sp.setDeltaMovement(move);
         sp.hurtMarked = true;
 
-        // Căn hướng nhìn về phía mục tiêu để tung kỹ năng chuẩn xác
-        Vec3 eyeAim = target.getEyePosition().subtract(sp.getEyePosition());
+        // Căn hướng nhìn chính xác về phía mục tiêu để tung kỹ năng
+        Vec3 aimPoint = (target instanceof CharybdisEntity)
+                ? target.position().add(0.0D, target.getBbHeight() * 0.85D, 0.0D)
+                : target.getEyePosition();
+        Vec3 eyeAim = aimPoint.subtract(sp.getEyePosition());
         double hDist = Math.max(0.01D, Math.hypot(eyeAim.x, eyeAim.z));
         float yaw = (float) (Math.atan2(-eyeAim.x, eyeAim.z) * (180.0D / Math.PI));
         float pitch = (float) (-Math.atan2(eyeAim.y, hDist) * (180.0D / Math.PI));
@@ -560,20 +584,20 @@ public final class SageManager {
         sp.setXRot(pitch);
         sp.setYHeadRot(yaw);
 
-        // Cận chiến tự động khi đứng gần
-        if (dist <= 4.6D && now % 10L == 0L) {
+        // Cận chiến liên hoàn tốc độ cao (mỗi 6 ticks)
+        if (dist <= 4.8D && now % 6L == 0L) {
             sp.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
             sp.attack(target);
         }
 
-        // 2) Tự do thi triển toàn bộ kho kỹ năng Tensura & Raphael (mỗi 24 ticks)
+        // 2) Tác chiến thông minh không hồi chiêu (tốc độ tung chiêu gấp đôi: mỗi 12 ticks = 0.6s)
         long lastCast = data.getLong("RaphaelAutoLastCast");
-        if (now - lastCast >= 24L) {
+        if (now - lastCast >= 12L) {
             data.putLong("RaphaelAutoLastCast", now);
             int rot = data.getInt("RaphaelAutoSkillRot");
             data.putInt("RaphaelAutoSkillRot", (rot + 1) % 14);
 
-            if (dist > 18.0D && rot % 3 == 0) {
+            if (dist > 18.0D && rot % 2 == 0) {
                 SpatialTeleportAbility.castCombatBlink(sl, sp);
             } else {
                 switch (rot) {
@@ -597,19 +621,32 @@ public final class SageManager {
                         else RaphaelSkillRegistry.execute(sl, sp, 48);
                     }
                     case 10 -> {
-                        if (target.getMaxHealth() >= 250.0F) InfiniteDragonPrisonAbility.cast(sl, sp, 2);
+                        if (target.getMaxHealth() >= 250.0F) InfiniteDragonPrisonAbility.cast(sl, sp, 1);
                         else RaphaelSkillRegistry.execute(sl, sp, 22);
                     }
                     case 11 -> {
-                        if (target.getMaxHealth() >= 300.0F) SkillNullificationAbility.cast(sl, sp);
-                        else RaphaelSkillRegistry.execute(sl, sp, 24);
+                        if (target.getMaxHealth() >= 300.0F && !SkillNullificationAbility.isEntitySkillSealed(target)) {
+                            SkillNullificationAbility.cast(sl, sp);
+                        } else {
+                            RaphaelSkillRegistry.execute(sl, sp, 24);
+                        }
                     }
                     case 12 -> NihilityCollapseAbility.cast(sl, sp);
                     case 13 -> BeelzebuthAbility.executeBeelzebuth(sl, sp);
                 }
             }
-            sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO] §fĐang tác chiến với §e" + target.getName().getString() + " §8| Nhấn §c[SHIFT] §8để trở lại"), true);
+            sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO] §fĐang tác chiến: §e" + target.getName().getString() + " §8| §c[X] / [SHIFT] §8trả quyền"), true);
         }
+    }
+
+    private static boolean isHighPriorityBoss(LivingEntity e) {
+        return e instanceof CharybdisEntity
+                || e instanceof MilimEntity
+                || e instanceof VelgryndEntity
+                || e instanceof VelzardEntity
+                || e instanceof OrcDisasterGeldEntity
+                || e instanceof ChronoaEntity
+                || e.getMaxHealth() >= 200.0F;
     }
 
     private static String getCardinalDirection(double x1, double z1, double x2, double z2) {

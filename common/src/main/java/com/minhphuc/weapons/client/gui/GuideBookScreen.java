@@ -426,14 +426,13 @@ public class GuideBookScreen extends Screen {
         y = drawWrapped(g, "§eChào mừng! §fThần thư lưu truyền toàn bộ công thức, lộ trình thức tỉnh Chân Ma Vương, Thất Đại Thủy Tổ, Song Long, Không Gian & Boss Dark Gathering.", x, y, fullW, maxY);
         y += 5;
 
-        y = drawWrapped(g, "§b⚡ Hệ Thống Phím Tắt & Thao Tác Mới:", x, y, fullW, maxY);
+        y = drawWrapped(g, "§b⚡ Hệ Thống Phím Tắt & Đặc Quyền Mới:", x, y, fullW, maxY);
         y += 2;
-        y = drawWrapped(g, " §e• Phím [G] (Bánh Xe Kỹ Năng): §fMở menu chọn nhanh toàn bộ chiêu thức theo nhóm, ghim 4 ô Yêu Thích, xem hồi chiêu & bật Safe Mode (bảo vệ địa hình).", x + 2, y, fullW - 4, maxY);
-        y = drawWrapped(g, " §e• Phím [Z] / [Shift+Z]: §fChuyển đổi chiêu thức cho Nguyệt Quang Kiếm, Chân Ma Vương, Giáp Thần Linh hoặc khi Nhập Xác Ác Ma.", x + 2, y, fullW - 4, maxY);
-        y = drawWrapped(g, " §a• [Chuột Phải]: §fThi triển kỹ năng đang chọn (tay không hoặc khi cầm Thần Khí).", x + 2, y, fullW - 4, maxY);
-        y = drawWrapped(g, " §d• Phím [X]: §fKích hoạt Nghịch Thời Nhất Trảm (khi cầm kiếm thần hoặc ở dạng Ma Vương).", x + 2, y, fullW - 4, maxY);
-        y = drawWrapped(g, " §b• Phím [Page Up]: §fMở ổ xoay chọn 4 loại Ma Đạn Hoàng Kim cho Súng Lục Carrera.", x + 2, y, fullW - 4, maxY);
-        y = drawWrapped(g, " §7• Mini-HUD Góc Màn Hình: §fHiển thị chiêu đang chọn, trạng thái [Safe Mode] và số Ấn Ký Vĩnh Viễn đang đặt.", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §e• [G] Bánh Xe Kỹ Năng / [Z] Đổi Chiêu: §fChọn nhanh chiêu, ghim 4 ô Yêu Thích & Safe Mode. §a(Đặc quyền: 0s Cooldown!)", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §b• [B] Dạ Dày Azathoth / [X] Tự Động Raphael: §f[B] mở Không Gian Ảo (120 ô, click túi cất đồ); [X] bật/tắt Raphael Auto-Battle!", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §3• [V] Hang Phong Ấn / [K] Nghịch Thời Trảm: §f[V] dịch chuyển tới Hang Veldora (Shift+V quét 24m); [K] chém Nghịch Thời.", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §a• [Chuột Phải] Thi Triển / [Page Up] Đạn Súng: §fTung kỹ năng đang chọn (tay không / Giáp Thần / Nhập Xác).", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §7• HUD Ma Tố (MP/EP) & Mini-HUD: §fTheo dõi Ma Tố tái sinh liên tục, Chỉ số EP, Safe Mode & 5 Neo Không Gian.", x + 2, y, fullW - 4, maxY);
         y += 4;
         drawWrapped(g, "§6▸ Bấm nút [✦ Mục Lục] ở dưới hoặc [Trang Sau ▶] để tra cứu chi tiết từng mục!", x, y, fullW, maxY);
     }
@@ -490,9 +489,9 @@ public class GuideBookScreen extends Screen {
         int y = top + 123;
         y = drawWrapped(g, "§d⚡ Đặc Quyền Sau Khi Tiến Hóa Chân Ma Vương:", left + 16, y, fullW, maxY);
         y += 2;
-        y = drawWrapped(g, " §f• §a40 Tim (80 HP)§f, Speed I & Resistance I vĩnh viễn + §bQuyền Bay Lượn§f tự do.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §f• §eBảo Toàn Sau Khi Chết: §fTự động khôi phục quyền bay, máu và dữ liệu Ma Vương khi hồi sinh.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §f• §5Mở khóa 30 Tuyệt Kỹ (§b[Z] / [G]§5): §fTay không điều khiển từ Bạo Thực Vương tới Azathoth, Long Giam Vô Hạn & Dị Giới Thần Môn.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §f• §a40 Tim (80 HP)§f, Speed I & Resistance I vĩnh viễn + §bQuyền Bay Lượn§f & §b0s Hồi Chiêu§f.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §f• §eBảo Toàn & Ma Tố: §fTự khôi phục bay/máu khi hồi sinh; Ma Tố & EP tăng mạnh (+5M MP) theo thức tỉnh.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §f• §5Kho 30+ Tuyệt Kỹ (§b[Z] / [G]§5): §fTay không tung Azathoth, Long Giam Vô Hạn, Dị Giới Thần Môn & Sáng Tạo Vật Chất.", left + 16, y, fullW, maxY);
     }
 
     private void renderPageDivineArmor(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {
@@ -1009,12 +1008,12 @@ public class GuideBookScreen extends Screen {
         drawHeaderTitle(g, left, top, bookW, "§b§l✦ BẠO PHONG LONG, RAPHAEL & AZATHOTH", 0xFF38BDF8);
         int y = top + 34;
         y = drawWrapped(g, " §b1. Tam Đại Long Chủng (Veldora / Velgrynd / Velzard):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §eVeldora §fmở phong ấn bằng §dAzathoth§f trong §6Hang Động Lồng Giam§f; cả 3 Long Chủng đều có §cChân Thân Rồng Khổng Lồ§f, ma pháp bão/lửa/băng & §5Phong Sát Kỹ Năng§f!", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• Người chơi tung §5Phong Sát§f sẽ vô hiệu §ctoàn bộ kỹ năng của bất kỳ ai§f (Long Chủng, Milim, Thủy Tổ, Ác Ma, Người chơi).", left + 16, y, fullW, maxY);
-        y += 3;
-        y = drawWrapped(g, " §b2. Trí Tuệ Vương Raphael (Phím [G]):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• Mở bảng §e50 Kỹ Năng Chủ Động§f & hệ thống §b50 Thông Báo Thời Gian Thực§f hỗ trợ chiến đấu, phân tích, sinh tồn, luyện kim & không gian.", left + 16, y, fullW, maxY);
-        drawWrapped(g, " §d3. Azathoth & Triệu Hồi Veldora: §fDạ Dày Hư Ảo giam cầm/giải phong ấn & triệu hồi Veldora (70% ứng chiến / 30% đang bận).", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Nhấn §a[V] §fđến Hang Veldora, giải phong ấn bằng §dAzathoth§f. Cả 3 Long Chủng đều §cphá khối khi bay (dạng rồng)§f & dùng §echiêu Ma Vương uy lực 1.4x§f (Veldora người biết bay).", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §5Phong Sát Kỹ Năng§f vô hiệu mọi chiêu thức của Boss/Ác Ma/Người chơi (ưu tiên mục tiêu đang nhìn hoặc 32m).", left + 16, y, fullW, maxY);
+        y += 2;
+        y = drawWrapped(g, " §b2. Trí Tuệ Vương Raphael ([G] & Auto-Battle [X]):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §e50 Kỹ Năng Chủ Động§f + §bAuto-Battle [X]§f tự bay né đòn, bật Uriel khi nguy cấp & xả chiêu 0.6s/lần ([X] / [Shift] trả quyền).", left + 16, y, fullW, maxY);
+        drawWrapped(g, " §d3. Dạ Dày Vô Hạn Azathoth ([B]): §f120 ô chứa đồ, §eClick Túi Đồ cất trực tiếp§f, §dAuto-Loot Hư Không§f & Chuyển Hóa tăng vĩnh viễn §bMa Tố / EP§f!", left + 16, y, fullW, maxY);
     }
 
     private void renderPageTempestAndLabyrinth(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {
@@ -1026,10 +1025,10 @@ public class GuideBookScreen extends Screen {
         drawWrapped(g, "§e[Tế Đàn Tinh Linh (Hỏa/Phong/Thổ/Thủy/Quang/Ám) · Cổng Mê Cung 100 Tầng]", left + 70, iconY + 5, bookW - 84, maxY);
 
         int y = top + 56;
-        y = drawWrapped(g, " §3• Charybdis & Orc Disaster Geld: §fCharybdis bay cùng đàn Megalodon & vảy giảm 80% phép (đánh Vây Lưng trên cao để vỡ). Geld tích §cĐói Khát§f từ xác lính Orc & dùng Chaos Eater ở <50% HP.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §3• Charybdis & Orc Disaster Geld: §fCharybdis tự xuất hiện ở Biển/Overworld đêm hoặc triệu hồi; đập Vây Lưng trên cao để vỡ khiên phép 80%!", left + 16, y, fullW, maxY);
         y = drawWrapped(g, " §c• Phẫn Nộ Chi Vương Satanel: §fQuyền năng ĐỘC QUYỀN của §dMilim Nava§f khi lâm chiến — ma tố tăng vô tận.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §a• Tinh Linh & Dân Làng Tempest: §fĐặt Tế Đàn Tinh Linh + xúc tác nguyên tố để triệu hồi 6 Tinh Linh; Dân làng tự cầu nguyện nhận Chúc Phúc thành Công Dân Tempest!", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §5• Mê Cung 100 Tầng Ramiris & Chronoa: §fKhám phá Cổng Mê Cung Cổ Đại leo 100 tầng săn Boss; Dũng Giả §dChronoa§f hắc hóa trang bị Giáp Thần ~65% sức mạnh (thanh tẩy bằng Táo Vàng khi <30% HP).", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §a• Tinh Linh & Dân Làng Tempest: §fĐặt Tế Đàn Tinh Linh + xúc tác nguyên tố để triệu hồi 6 Tinh Linh; Dân làng nhận Chúc Phúc thành Công Dân Tempest!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §5• Mê Cung 100 Tầng Ramiris & Chronoa: §fBấm §bRaphael #8§f trong [G] để quét tọa độ Cổng Mê Cung gần nhất! Thanh tẩy Chronoa bằng Táo Vàng khi <30% HP.", left + 16, y, fullW, maxY);
         drawWrapped(g, " §4• Di Tích Tâm Linh Cấp S: §fĐập vỡ Tà Thần Tượng trước khi Lời Nguyền Đếm Ngược đạt 100%!", left + 16, y, fullW, maxY);
     }
 

@@ -23,6 +23,10 @@ public class ClientboundSyncSkillStatePacket {
     private final List<Integer> favoriteIds;
     private final Map<String, Integer> cooldownTicks;
     private final boolean raphaelAutoBattle;
+    private final long magicules;
+    private final long maxMagicules;
+    private final long ep;
+    private final boolean azathothAutoLoot;
 
     public ClientboundSyncSkillStatePacket(
             boolean safeMode,
@@ -38,7 +42,11 @@ public class ClientboundSyncSkillStatePacket {
             List<String> anchorLabels,
             List<Integer> favoriteIds,
             Map<String, Integer> cooldownTicks,
-            boolean raphaelAutoBattle
+            boolean raphaelAutoBattle,
+            long magicules,
+            long maxMagicules,
+            long ep,
+            boolean azathothAutoLoot
     ) {
         this.safeMode = safeMode;
         this.hasTacticalMark = hasTacticalMark;
@@ -54,6 +62,10 @@ public class ClientboundSyncSkillStatePacket {
         this.favoriteIds = favoriteIds != null ? new ArrayList<>(favoriteIds) : List.of();
         this.cooldownTicks = cooldownTicks != null ? new HashMap<>(cooldownTicks) : Map.of();
         this.raphaelAutoBattle = raphaelAutoBattle;
+        this.magicules = magicules;
+        this.maxMagicules = Math.max(1L, maxMagicules);
+        this.ep = ep;
+        this.azathothAutoLoot = azathothAutoLoot;
     }
 
     public ClientboundSyncSkillStatePacket(FriendlyByteBuf buf) {
@@ -89,6 +101,10 @@ public class ClientboundSyncSkillStatePacket {
         }
         this.cooldownTicks = cds;
         this.raphaelAutoBattle = buf.readBoolean();
+        this.magicules = buf.readVarLong();
+        this.maxMagicules = Math.max(1L, buf.readVarLong());
+        this.ep = buf.readVarLong();
+        this.azathothAutoLoot = buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -119,6 +135,10 @@ public class ClientboundSyncSkillStatePacket {
             buf.writeVarInt(entry.getValue());
         }
         buf.writeBoolean(this.raphaelAutoBattle);
+        buf.writeVarLong(this.magicules);
+        buf.writeVarLong(this.maxMagicules);
+        buf.writeVarLong(this.ep);
+        buf.writeBoolean(this.azathothAutoLoot);
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
@@ -137,7 +157,11 @@ public class ClientboundSyncSkillStatePacket {
                 this.anchorLabels,
                 this.favoriteIds,
                 this.cooldownTicks,
-                this.raphaelAutoBattle
+                this.raphaelAutoBattle,
+                this.magicules,
+                this.maxMagicules,
+                this.ep,
+                this.azathothAutoLoot
         ));
     }
 }

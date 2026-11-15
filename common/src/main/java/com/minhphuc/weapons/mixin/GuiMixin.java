@@ -153,45 +153,70 @@ public class GuiMixin {
             return;
         }
 
+        var font = mc.font;
         boolean possessing = ClientPossessionHandler.isLocalPlayerPossessing();
         boolean activeLord = ClientSkillStateHandler.isTrueDemonLord()
                 || ClientSkillStateHandler.isPrimordial()
                 || DivineArmorItem.isWearingAnyPiece(mc.player);
-        if (!possessing && !activeLord) return;
 
-        String skillName = ClientSkillStateHandler.getCurrentSkillName();
-        if (skillName == null || skillName.isEmpty()) return;
+        int nextHudY = 8;
+        if (possessing || activeLord) {
+            String skillName = ClientSkillStateHandler.getCurrentSkillName();
+            if (skillName != null && !skillName.isEmpty()) {
+                String line1 = (possessing ? "§5§l[NHẬP XÁC] §f" : "§6§l[KỸ NĂNG] §f") + skillName + " §a⚡0s";
 
-        var font = mc.font;
-        String cdKey = possessing
-                ? "possess_" + (ClientPossessionHandler.getLocalData() != null ? ClientPossessionHandler.getLocalData().selectedSkillIndex() : 0)
-                : "lord_" + ClientSkillStateHandler.getLordSelectedIndex();
-        int cdTicks = ClientSkillStateHandler.getRemainingCooldownTicks(cdKey);
+                StringBuilder line2 = new StringBuilder();
+                line2.append(ClientSkillStateHandler.isSafeMode() ? "§a🛡 Safe:BẬT " : "§7💥 Safe:TẮT ");
+                if (ClientSkillStateHandler.hasTacticalMark()) line2.append("§b📍ChiếnThuật ");
+                List<String> anchors = ClientSkillStateHandler.getAnchorLabels();
+                if (!anchors.isEmpty()) {
+                    int activeIdx = Math.clamp(ClientSkillStateHandler.getSelectedAnchorIndex(), 0, anchors.size() - 1);
+                    line2.append("§6🏠Neo ").append(anchors.size()).append("/5 [#").append(activeIdx + 1).append("] ");
+                } else if (ClientSkillStateHandler.hasAnchorMark()) {
+                    line2.append("§6🏠VĩnhViễn ");
+                }
+                line2.append("§8| §e[Z]Đổi [G]Wheel [B]DạDày");
 
-        String line1 = (possessing ? "§5§l[NHẬP XÁC] §f" : "§6§l[KỸ NĂNG] §f") + skillName;
-        if (cdTicks > 0) {
-            line1 += String.format(" §c(⏳ %.1fs)", cdTicks / 20.0D);
+                int w = Math.max(font.width(line1), font.width(line2.toString())) + 12;
+                int x = 8;
+                int y = nextHudY;
+                guiGraphics.fill(x, y, x + w, y + 25, 0xAA0E0A16);
+                guiGraphics.fill(x, y, x + 2, y + 25, possessing ? 0xFFA855F7 : 0xFFD4AF37);
+                guiGraphics.drawString(font, line1, x + 6, y + 4, 0xFFFFFFFF, true);
+                guiGraphics.drawString(font, line2.toString(), x + 6, y + 14, 0xFFE2E8F0, false);
+                nextHudY += 28;
+            }
         }
 
-        StringBuilder line2 = new StringBuilder();
-        line2.append(ClientSkillStateHandler.isSafeMode() ? "§a🛡 Safe:BẬT " : "§7💥 Safe:TẮT ");
-        if (ClientSkillStateHandler.hasTacticalMark()) line2.append("§b📍ChiếnThuật ");
-        List<String> anchors = ClientSkillStateHandler.getAnchorLabels();
-        if (!anchors.isEmpty()) {
-            int activeIdx = Math.clamp(ClientSkillStateHandler.getSelectedAnchorIndex(), 0, anchors.size() - 1);
-            line2.append("§6🏠Neo ").append(anchors.size()).append("/5 [#").append(activeIdx + 1).append("] ");
-        } else if (ClientSkillStateHandler.hasAnchorMark()) {
-            line2.append("§6🏠VĩnhViễn ");
-        }
-        line2.append("§8| §e[Z]Đổi [G]BánhXe");
+        // Thanh HUD Ma Tố (Magicules / EP) + Trạng thái Tự Động & 0s Cooldown
+        long mp = ClientSkillStateHandler.getMagicules();
+        long maxMp = Math.max(1L, ClientSkillStateHandler.getMaxMagicules());
+        long ep = ClientSkillStateHandler.getEp();
+        float mpRatio = Math.clamp((float) mp / (float) maxMp, 0.0F, 1.0F);
+        String mpLine = "§b✦ Ma Tố: §f"
+                + com.minhphuc.weapons.content.tensura.MagiculesManager.formatCompact(mp)
+                + "§7/"
+                + com.minhphuc.weapons.content.tensura.MagiculesManager.formatCompact(maxMp)
+                + "  §6EP: §e"
+                + com.minhphuc.weapons.content.tensura.MagiculesManager.formatCompact(ep);
+        String subTags = (ClientSkillStateHandler.isAzathothAutoLoot() ? "§d🧲AutoLoot:ON " : "")
+                + "§8[X]Auto [V]Veldora";
 
-        int w = Math.max(font.width(line1), font.width(line2.toString())) + 12;
-        int x = 8;
-        int y = 8;
-        guiGraphics.fill(x, y, x + w, y + 25, 0xAA0E0A16);
-        guiGraphics.fill(x, y, x + 2, y + 25, possessing ? 0xFFA855F7 : 0xFFD4AF37);
-        guiGraphics.drawString(font, line1, x + 6, y + 4, 0xFFFFFFFF, true);
-        guiGraphics.drawString(font, line2.toString(), x + 6, y + 14, 0xFFE2E8F0, false);
+        int mpW = Math.max(178, Math.max(font.width(mpLine), font.width(subTags)) + 14);
+        int mpX = 8;
+        int mpY = nextHudY;
+        guiGraphics.fill(mpX, mpY, mpX + mpW, mpY + 26, 0xAA08101C);
+        guiGraphics.fill(mpX, mpY, mpX + 2, mpY + 26, 0xFF38BDF8);
+        guiGraphics.drawString(font, mpLine, mpX + 6, mpY + 3, 0xFFFFFFFF, false);
+
+        int barX = mpX + 6;
+        int barY = mpY + 13;
+        int barW = mpW - 12;
+        guiGraphics.fill(barX, barY, barX + barW, barY + 4, 0xFF1E293B);
+        int fillW = Math.max(2, Math.round(barW * mpRatio));
+        int barColor = mpRatio > 0.75F ? 0xFF38BDF8 : (mpRatio > 0.30F ? 0xFFA855F7 : 0xFFEC4899);
+        guiGraphics.fill(barX, barY, barX + fillW, barY + 4, barColor);
+        guiGraphics.drawString(font, subTags, mpX + 6, mpY + 18, 0xFF94A3B8, false);
 
         // Hiệu ứng HUD & Đổi Quyền Điều Khiển khi Trí Tuệ Vương Raphael tiếp quản cơ thể
         boolean raphaelAuto = ClientSkillStateHandler.isRaphaelAutoBattle();
@@ -216,7 +241,7 @@ public class GuiMixin {
             guiGraphics.fill(0, 0, 2, sh, borderColor);
             guiGraphics.fill(sw - 2, 0, sw, sh, borderColor);
 
-            String banner = "§b§l≪ TRÍ TUỆ VƯƠNG RAPHAEL ĐANG TIẾP QUẢN CƠ THỂ — NHẤN [SHIFT] ĐỂ TRẢ QUYỀN ≫";
+            String banner = "§b§l≪ TRÍ TUỆ VƯƠNG RAPHAEL ĐANG TIẾP QUẢN CƠ THỂ — NHẤN [X] / [SHIFT] ĐỂ TRẢ QUYỀN ≫";
             int bw = font.width(banner) + 18;
             int bx = (sw - bw) / 2;
             int by = 6;

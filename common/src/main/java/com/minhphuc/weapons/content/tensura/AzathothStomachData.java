@@ -39,7 +39,8 @@ public final class AzathothStomachData {
 
     public static final String KEY_STOMACH = "AzathothStomachList";
     public static final String KEY_VELDORA_BEFRIENDED = "VeldoraSummonUnlocked";
-    public static final int MAX_SLOTS = 24;
+    public static final String KEY_AUTO_LOOT = "AzathothAutoLoot";
+    public static final int MAX_SLOTS = 120;
 
     public record StomachEntry(String name, String kind, long epValue, String analyzedSkill) {}
 
@@ -130,17 +131,15 @@ public final class AzathothStomachData {
         List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, search);
         if (!drops.isEmpty()) {
             ItemEntity ie = drops.get(0);
-            CompoundTag slot = new CompoundTag();
-            slot.putString("Name", ie.getItem().getHoverName().getString() + " x" + ie.getItem().getCount());
-            slot.putString("Kind", "ITEM");
-            slot.putLong("Ep", 25000L * ie.getItem().getCount());
-            slot.putString("Skill", "Vật Phẩm Cách Ly Không Gian Ảo");
-            slot.put("ItemTag", ie.getItem().save(level.registryAccess()));
-            list.add(slot);
-            data.put(KEY_STOMACH, list);
-            ie.discard();
-            player.displayClientMessage(Component.literal("§5§l[DẠ DÀY VÔ HẠN] §fĐã cất giữ vật phẩm vào Không Gian Ảo!"), true);
-            return true;
+            ItemStack st = ie.getItem().copy();
+            if (storeItemStackIntoStomach(player, st, true)) {
+                if (st.isEmpty()) {
+                    ie.discard();
+                } else {
+                    ie.setItem(st);
+                }
+                return true;
+            }
         }
         return false;
     }
@@ -291,12 +290,14 @@ public final class AzathothStomachData {
         } else if ("ITEM".equals(kind) && slot.contains("ItemTag")) {
             ItemStack st = ItemStack.parseOptional(level.registryAccess(), slot.getCompound("ItemTag"));
             if (!st.isEmpty()) {
-                level.addFreshEntity(new ItemEntity(level, dropPos.x, dropPos.y + 0.5, dropPos.z, st));
+                // Trả thẳng về túi đồ người chơi (chỉ rơi ra đất nếu túi đầy hoàn toàn)
+                player.getInventory().placeItemBackInInventory(st);
+                player.containerMenu.broadcastChanges();
             }
         }
         list.remove(index);
         data.put(KEY_STOMACH, list);
-        player.displayClientMessage(Component.literal("§d✦ Đã Giải Phóng: §f" + slot.getString("Name")), true);
+        player.displayClientMessage(Component.literal("§d✦ Đã Giải Phóng Về Túi Đồ: §f" + slot.getString("Name")), true);
     }
 
     public static void convertToMagicules(ServerLevel level, ServerPlayer player, int index) {
@@ -310,10 +311,12 @@ public final class AzathothStomachData {
         player.heal(heal);
         player.getFoodData().eat(8, 1.0F);
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, 1));
+        MagiculesManager.addAzathothConversion(player, Math.max(20_000L, ep));
 
         list.remove(index);
         data.put(KEY_STOMACH, list);
-        SageManager.sendCornerAlert(player, "Chuyển Hóa Ma Tố: Đã phân rã [" + slot.getString("Name") + "] -> Hồi +" + (int) heal + " HP!", 0xFF34D399, 4500, false);
+        TensuraSkillHelper.syncSkillStateToClient(player);
+        SageManager.sendCornerAlert(player, "Chuyển Hóa Ma Tố: Đã phân rã [" + slot.getString("Name") + "] -> Hồi +" + (int) heal + " HP & Tăng Ma Tố/EP vĩnh viễn!", 0xFF34D399, 4500, false);
     }
 
     public static void autoCraftItem(ServerLevel level, ServerPlayer player, int craftKind) {
@@ -331,5 +334,136 @@ public final class AzathothStomachData {
                 : new ItemStack(Items.NETHERITE_INGOT, 1);
         player.getInventory().placeItemBackInInventory(crafted);
         SageManager.sendCornerAlert(player, "Auto-Craft Hoàn Tất: Đã tổng hợp " + crafted.getHoverName().getString() + " x" + crafted.getCount() + " trong Không Gian Ảo!", 0xFF38BDF8, 4500, false);
+    }
+
+    public static boolean storeItemStackIntoStomach(ServerPlayer player, ItemStack stack, boolean notify) {
+        if (player == null || stack == null || stack.isEmpty()) return false;
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
+        var registryAccess = player.level().registryAccess();
+        String itemName = stack.getHoverName().getString();
+        boolean changed = false;
+
+        // Gộp vào ô cùng loại nếu còn chỗ chồng (Stackable merge)
+        for (int i = 0; i < list.size() && !stack.isEmpty(); i++) {
+            CompoundTag slot = list.getCompound(i);
+            if (!"ITEM".equals(slot.getString("Kind")) || !slot.contains("ItemTag")) continue;
+            ItemStack existing = ItemStack.parseOptional(registryAccess, slot.getCompound("ItemTag"));
+            if (!existing.isEmpty() && existing.getCount() < existing.getMaxStackSize()
+                    && ItemStack.isSameItemSameComponents(existing, stack)) {
+                int space = existing.getMaxStackSize() - existing.getCount();
+                int move = Math.min(space, stack.getCount());
+                if (move > 0) {
+                    existing.grow(move);
+                    stack.shrink(move);
+                    slot.putString("Name", existing.getHoverName().getString() + " x" + existing.getCount());
+                    slot.putLong("Ep", 25000L * existing.getCount());
+                    slot.put("ItemTag", existing.save(registryAccess));
+                    changed = true;
+                }
+            }
+        }
+
+        if (!stack.isEmpty()) {
+            if (list.size() >= MAX_SLOTS) {
+                if (changed) {
+                    data.put(KEY_STOMACH, list);
+                }
+                if (notify) {
+                    player.displayClientMessage(Component.literal("§5⚠ Không Gian Ảo tạm đầy (" + MAX_SLOTS + " ô)! Hãy chuyển hóa bớt thành Ma Tố!"), true);
+                }
+                return changed;
+            }
+            CompoundTag slot = new CompoundTag();
+            ItemStack saved = stack.copy();
+            slot.putString("Name", saved.getHoverName().getString() + " x" + saved.getCount());
+            slot.putString("Kind", "ITEM");
+            slot.putLong("Ep", 25000L * saved.getCount());
+            slot.putString("Skill", "Vật Phẩm Cách Ly Không Gian Ảo");
+            slot.put("ItemTag", saved.save(registryAccess));
+            list.add(slot);
+            stack.setCount(0);
+            changed = true;
+        }
+
+        if (changed) {
+            data.put(KEY_STOMACH, list);
+            if (notify) {
+                player.displayClientMessage(Component.literal("§5§l[DẠ DÀY VÔ HẠN] §fĐã cất §d" + itemName + " §fvào Không Gian Ảo!"), true);
+            }
+        }
+        return changed;
+    }
+
+    public static void depositInventorySlot(ServerPlayer player, int invSlot) {
+        if (player == null || invSlot < 0 || invSlot >= 36) return;
+        ItemStack stack = player.getInventory().getItem(invSlot);
+        if (stack.isEmpty()) return;
+        ItemStack moving = stack.copy();
+        if (storeItemStackIntoStomach(player, moving, true)) {
+            player.getInventory().setItem(invSlot, moving);
+            player.containerMenu.broadcastChanges();
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 0.7F, 1.35F);
+        }
+    }
+
+    public static void depositAllBackpack(ServerPlayer player) {
+        if (player == null) return;
+        int movedStacks = 0;
+        for (int slot = 9; slot < 36; slot++) {
+            ItemStack st = player.getInventory().getItem(slot);
+            if (st.isEmpty() || st.is(com.minhphuc.weapons.init.ModItems.GUIDE_BOOK.get())) continue;
+            ItemStack moving = st.copy();
+            if (storeItemStackIntoStomach(player, moving, false)) {
+                player.getInventory().setItem(slot, moving);
+                movedStacks++;
+            }
+        }
+        player.containerMenu.broadcastChanges();
+        if (movedStacks > 0) {
+            player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
+                    SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.0F, 1.25F);
+            player.displayClientMessage(Component.literal("§5§l[AZATHOTH] §fĐã thu nạp §e" + movedStacks + " §fngăn đồ từ ba-lô vào Không Gian Ảo!"), true);
+        } else {
+            player.displayClientMessage(Component.literal("§7Ba-lô trống hoặc Không Gian Ảo đã đầy (" + MAX_SLOTS + " ô)."), true);
+        }
+    }
+
+    public static boolean isAutoLootEnabled(ServerPlayer player) {
+        if (player == null) return false;
+        return EntityDataHelper.getCustomData(player).getBoolean(KEY_AUTO_LOOT);
+    }
+
+    public static void toggleAutoLoot(ServerPlayer player) {
+        if (player == null) return;
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        boolean next = !data.getBoolean(KEY_AUTO_LOOT);
+        data.putBoolean(KEY_AUTO_LOOT, next);
+        TensuraSkillHelper.syncSkillStateToClient(player);
+        SageManager.sendCornerAlert(player,
+                next ? "§dAuto-Loot Hư Không: §aBẬT §f— Vật phẩm rơi xung quanh sẽ tự động hút vào Dạ Dày Vô Hạn!"
+                     : "§dAuto-Loot Hư Không: §cTẮT §f— Ngừng tự động hút vật phẩm rơi.",
+                0xFFA855F7, 4000, false);
+    }
+
+    public static void tickAutoLoot(ServerPlayer player) {
+        if (player == null || player.level().isClientSide() || player.isSpectator()) return;
+        if (player.tickCount % 5 != 0 || !isAutoLootEnabled(player)) return;
+        ServerLevel level = player.serverLevel();
+        List<ItemEntity> drops = level.getEntitiesOfClass(ItemEntity.class, player.getBoundingBox().inflate(7.5D),
+                ie -> ie.isAlive() && !ie.hasPickUpDelay() && ie.getAge() >= 15);
+        for (ItemEntity ie : drops) {
+            ItemStack copy = ie.getItem().copy();
+            if (storeItemStackIntoStomach(player, copy, false)) {
+                if (copy.isEmpty()) {
+                    ie.discard();
+                } else {
+                    ie.setItem(copy);
+                }
+                level.sendParticles(net.minecraft.core.particles.ParticleTypes.WITCH,
+                        ie.getX(), ie.getY() + 0.25D, ie.getZ(), 4, 0.15, 0.15, 0.15, 0.01);
+            }
+        }
     }
 }

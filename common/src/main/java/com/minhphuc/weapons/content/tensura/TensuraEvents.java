@@ -188,6 +188,8 @@ public class TensuraEvents {
 
         // 3. Đại Hiền Giả / Raphael: Quét Hang Động Phong Ấn, vũ khí phẩm cấp & Auto-Battle
         SageManager.tickPlayer(sp);
+        MagiculesManager.tickPlayer(sp);
+        AzathothStomachData.tickAutoLoot(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
