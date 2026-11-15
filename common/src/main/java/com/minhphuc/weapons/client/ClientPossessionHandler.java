@@ -65,4 +65,8 @@ public class ClientPossessionHandler {
         if (mc.player == null) return null;
         return getData(mc.player);
     }
+
+    public static void clearAll() {
+        POSSESSION_MAP.clear();
+    }
 }

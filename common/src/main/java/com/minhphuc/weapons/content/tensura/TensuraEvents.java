@@ -224,10 +224,11 @@ public class TensuraEvents {
             com.minhphuc.weapons.world.VeldoraWorldData.get(ow).ensurePrisonRegisteredIfSealed(ow);
         }
 
-        // Đồng bộ kết giới, lồng giam bảo hộ thời tiết và các Ấn Ký Không Gian
+        // Đồng bộ kết giới, lồng giam bảo hộ thời tiết, Ấn Ký Không Gian và trạng thái Nhập Xác
         AntiMagicBarrierManager.syncBarriersToPlayer(player);
         com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(player);
         SpatialTeleportAbility.syncVisualMarksToPlayer(player);
+        PrimordialPossessionManager.syncToClient(player);
     }
 
     public static boolean hasSeedItemInInventory(ServerPlayer player) {

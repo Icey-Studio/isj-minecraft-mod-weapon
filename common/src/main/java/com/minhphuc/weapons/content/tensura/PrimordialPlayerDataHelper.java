@@ -149,29 +149,35 @@ public class PrimordialPlayerDataHelper {
             return "Linh Tử Bộc Phát (Spiritron Outburst)";
         }
         if (type == null) return "Chưa thức tỉnh";
-        return switch (type) {
-            case NOIR -> switch (skillIndex) {
+        if (type == DemonType.NOIR) {
+            return switch (skillIndex) {
                 case 1 -> "Thế Giới Cám Dỗ (Temptation World)";
                 case 2 -> "Vũ Điệu Móng Vuốt Vực Thẳm (End of Despair)";
                 case 3 -> "Nghịch Chuyển Sinh Tử (Reversal of Life & Death)";
                 case 4 -> "Hắc Hạch Hư Vô Sụp Đổ (Cataclysmic Black Hole)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case ROUGE -> switch (skillIndex) {
+        }
+        if (type == DemonType.ROUGE) {
+            return switch (skillIndex) {
                 case 1 -> "Hỏa Ngục Bộc Viêm (Prominence Flare)";
                 case 2 -> "Xích Hồng Ma Trảm (Crimson Severance)";
                 case 3 -> "Bức Tường Hỏa Ma (Infernal Bastion)";
                 case 4 -> "Lôi Hỏa Diệt Thế (Lucifer's Judgment)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case BLANC -> switch (skillIndex) {
+        }
+        if (type == DemonType.BLANC) {
+            return switch (skillIndex) {
                 case 1 -> "Bạch Viêm Tuyệt Diệt (White Flare)";
                 case 2 -> "Mị Hoặc Tinh Thần (Mind Domination)";
                 case 3 -> "Lãnh Băng Hồ Điệp (Frost Butterflies)";
                 case 4 -> "Trắng Xóa Hư Vô (Absolute Annihilation)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case JAUNE -> switch (skillIndex) {
+        }
+        if (type == DemonType.JAUNE) {
+            return switch (skillIndex) {
                 case 1 -> "Bão Đạn Hạt Nhân (Barrage Guns of Abaddon)";
                 case 2 -> "Hố Đen Trọng Lực Sụp Đổ (Gravity Collapse: Event Horizon)";
                 case 3 -> "Cự Pháo Hạt Nhân Xuyên Thấu (Nuclear Cannon: Abaddon Piercer)";
@@ -179,27 +185,34 @@ public class PrimordialPlayerDataHelper {
                 case 5 -> "Cấm Thuật Tận Diệt Hạt Nhân (Abyss Annihilation / Supernova)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case VIOLET -> switch (skillIndex) {
+        }
+        if (type == DemonType.VIOLET) {
+            return switch (skillIndex) {
                 case 1 -> "Tử Độc Nở Rộ (Toxic Bloom)";
                 case 2 -> "Hắc Tử Xuyên Tâm (Shadow Poison Ray)";
                 case 3 -> "Huyễn Ảnh Tốc Biến (Violet Phantom Dash)";
                 case 4 -> "Mưa Ăn Mòn Tuyệt Tự (Corrosive Ruin)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case BLEU -> switch (skillIndex) {
+        }
+        if (type == DemonType.BLEU) {
+            return switch (skillIndex) {
                 case 1 -> "Băng Tinh Vũ Bão (Absolute Zero Shards)";
                 case 2 -> "Hàn Băng Pháo Đài (Glacial Bastion)";
                 case 3 -> "Lồng Giam Không Gian (Dimensional Canvas)";
                 case 4 -> "Bão Tuyết Vĩnh Cửu (Eternal Blizzard)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-            case VERT -> switch (skillIndex) {
+        }
+        if (type == DemonType.VERT) {
+            return switch (skillIndex) {
                 case 1 -> "Lục Phong Tiễu Sát (Emerald Tempest Blades)";
                 case 2 -> "Hấp Thụ Sinh Khí (Abyssal Vitality Drain)";
                 case 3 -> "Kết Giới Lục Thần (Emerald Barrier Gale)";
                 case 4 -> "Cuồng Phong Tai Ương (Calamity Maelstrom)";
                 default -> "Kỹ Năng Thủy Tổ";
             };
-        };
+        }
+        return "Kỹ Năng Thủy Tổ";
     }
 }

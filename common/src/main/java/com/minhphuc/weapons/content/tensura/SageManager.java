@@ -140,6 +140,26 @@ public final class SageManager {
         sendCornerAlert(sp, text + (extra != null && !extra.isEmpty() ? " " + extra : ""), 0xFF38BDF8, 6500, false);
     }
 
+    /**
+     * Báo cáo sự cố kỹ thuật / lỗi thi triển kỹ năng theo thời gian thực qua góc HUD của Raphael.
+     */
+    public static void reportSystemAnomaly(ServerPlayer sp, String context, Throwable err) {
+        String reason = (err != null && err.getMessage() != null && !err.getMessage().isBlank())
+                ? err.getMessage()
+                : (err != null ? err.getClass().getSimpleName() : "Lỗi không xác định");
+        com.minhphuc.weapons.WeaponsMod.LOGGER.error("[Raphael Diagnostics] Lỗi tại '{}'", context, err);
+        if (sp == null || sp.level().isClientSide()) return;
+        CompoundTag data = EntityDataHelper.getCustomData(sp);
+        long now = sp.level().getGameTime();
+        String key = "SageAnomalyTick_" + Math.abs(context.hashCode());
+        long last = data.getLong(key);
+        if (last != 0L && now - last < 60L) return;
+        data.putLong(key, now);
+        sendCornerAlert(sp,
+                "Cảnh báo lỗi hệ thống [" + context + "]: " + reason + " — Hãy khởi động lại game nếu vừa cập nhật mod.",
+                0xFFEF4444, 8000, false);
+    }
+
     public static void tickPlayer(ServerPlayer sp) {
         if (sp == null || sp.level().isClientSide()) return;
         ServerLevel sl = sp.serverLevel();

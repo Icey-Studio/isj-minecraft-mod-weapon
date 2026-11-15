@@ -55,6 +55,7 @@ public class ServerboundSkillActionPacket {
             switch (this.action) {
                 case ACTION_REQUEST_SYNC -> {
                     SpatialTeleportAbility.syncVisualMarksToPlayer(player);
+                    PrimordialPossessionManager.syncToClient(player);
                     TensuraSkillHelper.syncSkillStateToClient(player);
                 }
                 case ACTION_TOGGLE_SAFE_MODE -> {

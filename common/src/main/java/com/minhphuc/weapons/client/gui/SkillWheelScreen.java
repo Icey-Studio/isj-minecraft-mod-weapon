@@ -1,7 +1,9 @@
 package com.minhphuc.weapons.client.gui;
 
+import com.minhphuc.weapons.WeaponsMod;
 import com.minhphuc.weapons.client.ClientPossessionHandler;
 import com.minhphuc.weapons.client.ClientSkillStateHandler;
+import com.minhphuc.weapons.client.SageHudManager;
 import com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper;
 import com.minhphuc.weapons.content.tensura.PrimordialSkillPool;
 import com.minhphuc.weapons.entity.tensura.DemonType;
@@ -64,49 +66,62 @@ public class SkillWheelScreen extends Screen {
         ModMessages.sendToServer(new ServerboundSkillActionPacket(ServerboundSkillActionPacket.ACTION_REQUEST_SYNC, 0));
     }
 
+    private boolean errorReported = false;
+
     private List<SkillItem> buildAllSkillsForMode() {
         List<SkillItem> list = new ArrayList<>();
-        boolean possessing = ClientPossessionHandler.isLocalPlayerPossessing();
+        try {
+            boolean possessing = ClientPossessionHandler.isLocalPlayerPossessing();
 
-        if (possessing) {
-            var pData = ClientPossessionHandler.getLocalData();
-            DemonType dtype = (pData != null && pData.demonType() != null) ? pData.demonType() : DemonType.NOIR;
-            list.add(new SkillItem(0, "Tà Khứ Vũ Thê Tử (Death Streak)", Category.ULTIMATE, "possess_0", 0xC084FC));
-            list.add(new SkillItem(1, PrimordialPlayerDataHelper.getSkillName(dtype, 1), Category.ATTACK, "possess_1", dtype.getGlowColor()));
-            list.add(new SkillItem(2, PrimordialPlayerDataHelper.getSkillName(dtype, 2), Category.ATTACK, "possess_2", dtype.getGlowColor()));
-            list.add(new SkillItem(3, PrimordialPlayerDataHelper.getSkillName(dtype, 3), Category.ATTACK, "possess_3", dtype.getGlowColor()));
-            list.add(new SkillItem(4, PrimordialPlayerDataHelper.getSkillName(dtype, 4), Category.ATTACK, "possess_4", dtype.getGlowColor()));
-            list.add(new SkillItem(5, PrimordialPlayerDataHelper.getSkillName(dtype, 5), Category.ULTIMATE, "possess_5", 0xF59E0B));
-            list.add(new SkillItem(6, "Linh Tử Bộc Phát (Spiritron Outburst)", Category.ATTACK, "possess_6", 0x38BDF8));
-            list.add(new SkillItem(7, "Linh Tử Băng Hoại (Disintegration)", Category.ULTIMATE, "possess_7", 0xFACC15));
-            list.add(new SkillItem(8, "Bành Trướng Lãnh Địa (Domain)", Category.DEFENSE, "possess_8", 0x818CF8));
+            if (possessing) {
+                var pData = ClientPossessionHandler.getLocalData();
+                DemonType dtype = (pData != null && pData.demonType() != null) ? pData.demonType() : DemonType.NOIR;
+                list.add(new SkillItem(0, "Tà Khứ Vũ Thê Tử (Death Streak)", Category.ULTIMATE, "possess_0", 0xC084FC));
+                list.add(new SkillItem(1, PrimordialPlayerDataHelper.getSkillName(dtype, 1), Category.ATTACK, "possess_1", dtype.getGlowColor()));
+                list.add(new SkillItem(2, PrimordialPlayerDataHelper.getSkillName(dtype, 2), Category.ATTACK, "possess_2", dtype.getGlowColor()));
+                list.add(new SkillItem(3, PrimordialPlayerDataHelper.getSkillName(dtype, 3), Category.ATTACK, "possess_3", dtype.getGlowColor()));
+                list.add(new SkillItem(4, PrimordialPlayerDataHelper.getSkillName(dtype, 4), Category.ATTACK, "possess_4", dtype.getGlowColor()));
+                list.add(new SkillItem(5, PrimordialPlayerDataHelper.getSkillName(dtype, 5), Category.ULTIMATE, "possess_5", 0xF59E0B));
+                list.add(new SkillItem(6, "Linh Tử Bộc Phát (Spiritron Outburst)", Category.ATTACK, "possess_6", 0x38BDF8));
+                list.add(new SkillItem(7, "Linh Tử Băng Hoại (Disintegration)", Category.ULTIMATE, "possess_7", 0xFACC15));
+                list.add(new SkillItem(8, "Bành Trướng Lãnh Địa (Domain)", Category.DEFENSE, "possess_8", 0x818CF8));
 
-            if (pData != null && pData.skillsString() != null && !pData.skillsString().isEmpty()) {
-                String[] parts = pData.skillsString().split(",");
-                for (int i = 0; i < parts.length; i++) {
-                    var entry = PrimordialSkillPool.getSkillById(parts[i].trim());
-                    if (entry != null) {
-                        Category cat = (entry.id() == PrimordialSkillPool.SKILL_ALKAID_CHAOS || entry.id() == PrimordialSkillPool.SKILL_SPACE_TELEPORT)
-                                ? Category.SPATIAL
-                                : (entry.id() == PrimordialSkillPool.SKILL_DRAGON_NOVA || entry.id() == PrimordialSkillPool.SKILL_BEELZEBUTH
-                                    ? Category.ULTIMATE : Category.ATTACK);
-                        list.add(new SkillItem(20 + i, "[Thức Tỉnh] " + entry.displayNameVi(), cat, "possess_" + (20 + i), entry.iconColorHex()));
+                if (pData != null && pData.skillsString() != null && !pData.skillsString().isEmpty()) {
+                    String[] parts = pData.skillsString().split(",");
+                    for (int i = 0; i < parts.length; i++) {
+                        var entry = PrimordialSkillPool.getSkillById(parts[i].trim());
+                        if (entry != null) {
+                            Category cat = (entry.id() == PrimordialSkillPool.SKILL_ALKAID_CHAOS || entry.id() == PrimordialSkillPool.SKILL_SPACE_TELEPORT)
+                                    ? Category.SPATIAL
+                                    : (entry.id() == PrimordialSkillPool.SKILL_DRAGON_NOVA || entry.id() == PrimordialSkillPool.SKILL_BEELZEBUTH
+                                        ? Category.ULTIMATE : Category.ATTACK);
+                            list.add(new SkillItem(20 + i, "[Thức Tỉnh] " + entry.displayNameVi(), cat, "possess_" + (20 + i), entry.iconColorHex()));
+                        }
+                    }
+                }
+
+                // Contract skills 100..116
+                addContractSkillItems(list, true);
+            } else {
+                boolean hasCreation = ClientSkillStateHandler.hasCreation();
+                addLordSkillItems(list, hasCreation);
+                if (ClientSkillStateHandler.isPrimordial()) {
+                    DemonType dtype = ClientSkillStateHandler.getDemonType();
+                    int offset = hasCreation ? 30 : 29;
+                    for (int i = 0; i < 7; i++) {
+                        Category cat = (i == 0 || i == 5) ? Category.ULTIMATE : Category.ATTACK;
+                        list.add(new SkillItem(offset + i, "[Thủy Tổ] " + PrimordialPlayerDataHelper.getSkillName(dtype, i), cat, "lord_" + (offset + i), dtype.getGlowColor()));
                     }
                 }
             }
-
-            // Contract skills 100..116
-            addContractSkillItems(list, true);
-        } else {
-            boolean hasCreation = ClientSkillStateHandler.hasCreation();
-            addLordSkillItems(list, hasCreation);
-            if (ClientSkillStateHandler.isPrimordial()) {
-                DemonType dtype = ClientSkillStateHandler.getDemonType();
-                int offset = hasCreation ? 30 : 29;
-                for (int i = 0; i < 7; i++) {
-                    Category cat = (i == 0 || i == 5) ? Category.ULTIMATE : Category.ATTACK;
-                    list.add(new SkillItem(offset + i, "[Thủy Tổ] " + PrimordialPlayerDataHelper.getSkillName(dtype, i), cat, "lord_" + (offset + i), dtype.getGlowColor()));
-                }
+        } catch (Throwable t) {
+            WeaponsMod.LOGGER.error("[SkillWheelScreen] Lỗi nạp danh sách kỹ năng [G]:", t);
+            if (!errorReported) {
+                errorReported = true;
+                String msg = t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "");
+                SageHudManager.pushAlert("§b§l<< TRÍ TUỆ VƯƠNG RAPHAEL >>",
+                        "Phát hiện lỗi nạp Bánh Xe Kỹ Năng [G]: " + msg,
+                        0xFFEF4444, 8000, false);
             }
         }
         return list;
@@ -191,8 +206,9 @@ public class SkillWheelScreen extends Screen {
         // phải gọi trước khi vẽ panel để giao diện không bị làm mờ đè lên.
         super.render(g, mouseX, mouseY, partialTick);
 
-        int left = (this.width - PANEL_W) / 2;
-        int top = (this.height - PANEL_H) / 2;
+        try {
+            int left = (this.width - PANEL_W) / 2;
+            int top = (this.height - PANEL_H) / 2;
 
         boolean possessing = ClientPossessionHandler.isLocalPlayerPossessing();
         boolean safeMode = ClientSkillStateHandler.isSafeMode();
@@ -360,8 +376,21 @@ public class SkillWheelScreen extends Screen {
             }
         }
 
-        if (hoverTooltip != null) {
-            g.renderTooltip(font, Component.literal(hoverTooltip), mouseX, mouseY);
+            if (hoverTooltip != null) {
+                g.renderTooltip(font, Component.literal(hoverTooltip), mouseX, mouseY);
+            }
+        } catch (Throwable t) {
+            WeaponsMod.LOGGER.error("[SkillWheelScreen] Lỗi hiển thị Bánh Xe Kỹ Năng [G]:", t);
+            if (!errorReported) {
+                errorReported = true;
+                String msg = t.getClass().getSimpleName() + (t.getMessage() != null ? ": " + t.getMessage() : "");
+                SageHudManager.pushAlert("§b§l<< TRÍ TUỆ VƯƠNG RAPHAEL >>",
+                        "Phát hiện lỗi hiển thị Bánh Xe Kỹ Năng [G]: " + msg,
+                        0xFFEF4444, 8000, false);
+            }
+            if (minecraft != null) {
+                minecraft.setScreen(null);
+            }
         }
     }
 
