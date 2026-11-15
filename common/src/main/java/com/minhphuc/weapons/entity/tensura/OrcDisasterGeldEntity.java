@@ -169,6 +169,9 @@ public class OrcDisasterGeldEntity extends Monster {
 
         LivingEntity target = this.getTarget();
         if (target != null && target.isAlive()) {
+            if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
+                return;
+            }
             if (summonHordeCooldown > 0) summonHordeCooldown--;
             if (chaosEaterCooldown > 0) chaosEaterCooldown--;
 

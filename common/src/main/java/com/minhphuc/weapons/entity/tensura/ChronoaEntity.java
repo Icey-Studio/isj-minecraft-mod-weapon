@@ -227,6 +227,9 @@ public class ChronoaEntity extends PathfinderMob {
         }
 
         if (isCorrupted()) {
+            if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
+                return;
+            }
             LivingEntity target = this.getTarget();
             if (target != null && target.isAlive()) {
                 if (timeStopCooldown > 0) timeStopCooldown--;

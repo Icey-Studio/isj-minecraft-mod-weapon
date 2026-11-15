@@ -411,6 +411,13 @@ public class MilimEntity extends Monster {
                 this.setDeltaMovement(this.getDeltaMovement().add(0, 0.05D, 0));
             }
 
+            if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
+                this.cancelDragonNova();
+                this.setCastingState(0);
+                this.phantomDashTelegraphTicks = 0;
+                return;
+            }
+
             // Tiến trình Tụ Lực Long Tinh Bộc Viêm Bá
             if (isChannelingDragonNova()) {
                 tickDragonNovaChanneling(sl);

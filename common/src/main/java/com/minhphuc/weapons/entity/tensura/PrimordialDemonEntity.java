@@ -1940,7 +1940,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
     }
 
     public boolean canCastSkill() {
-        if (isSkillSealed()) {
+        if (isSkillSealed() || com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
             return false;
         }
         if (com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager.isInBarrier(this.level(), this.position())) {
@@ -3151,8 +3151,14 @@ public class PrimordialDemonEntity extends TamableAnimal {
             boolean isBoss = PrimordialDemonEntity.isBossTarget(target);
             var random = this.demon.getRandom();
 
-            // 1. Kích hoạt Lãnh Địa (Domain Expansion):
+            // 1. Kích hoạt Lãnh Địa (Domain Expansion) hoặc Phong Sát Kỹ Năng (12% khi đấu Boss/Player):
             // Khi chưa bật lãnh địa và gặp Boss, hoặc gặp kẻ địch nguy hiểm, hoặc 15% ngẫu nhiên
+            if (!this.demon.isAlliedTo(target) && random.nextFloat() < 0.12F) {
+                com.minhphuc.weapons.content.tensura.SkillNullificationAbility.castBossSkillSeal(
+                        (ServerLevel) this.demon.level(), this.demon, 28.0F, 160);
+                this.demon.triggerSkillCooldown(60);
+                return;
+            }
             if (this.demon.activeDomainTicks <= 0 && (isBoss || (dist <= 16.0D && random.nextFloat() < 0.15F))) {
                 demon.executeSkillFourDomain(target, type);
                 return;

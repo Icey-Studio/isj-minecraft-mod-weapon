@@ -195,6 +195,10 @@ public class CharybdisEntity extends Monster {
                 this.setDeltaMovement(this.getDeltaMovement().add(0, -0.04D, 0));
             }
 
+            if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
+                return;
+            }
+
             if (scaleVolleyCooldown > 0) scaleVolleyCooldown--;
             if (suctionCooldown > 0) suctionCooldown--;
             if (escortSpawnCooldown > 0) escortSpawnCooldown--;

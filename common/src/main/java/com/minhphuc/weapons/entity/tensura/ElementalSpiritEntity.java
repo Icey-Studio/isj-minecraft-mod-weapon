@@ -182,6 +182,9 @@ public class ElementalSpiritEntity extends TamableAnimal {
 
         // Tấn công phép thuật nguyên tố
         if (castCooldown > 0) castCooldown--;
+        if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
+            return;
+        }
         LivingEntity target = this.getTarget();
         if (target != null && target.isAlive() && castCooldown <= 0 && this.distanceToSqr(target) <= 22.0D * 22.0D) {
             castElementalMagic(sl, type, target);

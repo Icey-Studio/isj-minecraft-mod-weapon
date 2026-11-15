@@ -362,8 +362,8 @@ public class UnderworldDemonEntity extends TamableAnimal {
                 }
             }
 
-            // Bắn ma pháp nguyên tố (Thượng Cấp, Đại Ác Ma, Công Tước, Ma Vương)
-            if (canUseMagic()) {
+            // Bắn ma pháp nguyên tố & Phong Sát Kỹ Năng (Đại Ác Ma / Ma Vương)
+            if (canUseMagic() && !com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
                 if (castingTicks > 0) {
                     castingTicks--;
                     if (castingTicks == 0) {
@@ -375,8 +375,14 @@ public class UnderworldDemonEntity extends TamableAnimal {
                 if (target != null && target.isAlive() && magicCooldown <= 0 && !this.isPassiveMode()) {
                     double distSq = this.distanceToSqr(target);
                     if (distSq >= 16.0D && distSq <= 484.0D && this.hasLineOfSight(target)) {
-                        castLineageMagic(target);
-                        magicCooldown = (getRank() == DemonRank.ARCHDEMON || isDemonLord()) ? 50 : 75;
+                        if ((getRank() == DemonRank.ARCHDEMON || isDemonLord()) && this.random.nextFloat() < 0.18F) {
+                            com.minhphuc.weapons.content.tensura.SkillNullificationAbility.castBossSkillSeal(
+                                    (ServerLevel) this.level(), this, 22.0F, 140);
+                            magicCooldown = 140;
+                        } else {
+                            castLineageMagic(target);
+                            magicCooldown = (getRank() == DemonRank.ARCHDEMON || isDemonLord()) ? 50 : 75;
+                        }
                     }
                 }
             }

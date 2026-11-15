@@ -518,9 +518,9 @@ public class PrimordialPossessionManager {
         int skill = getSelectedSkillIndex(player);
 
         // Đồng bộ luật Kháng Ma Kết Giới & Phong Sát cho toàn bộ kỹ năng Nhập Xác
-        if (SkillNullificationAbility.isPlayerSealed(player) && !isPossessionSkillAllowedWhenSealed(player, skill)) {
+        if (SkillNullificationAbility.isEntitySkillSealed(player)) {
             player.displayClientMessage(
-                    Component.literal("§c⚠️ [PHONG SÁT KỸ NĂNG] Ma pháp Ác Ma bị phong ấn, chỉ còn dùng được Kiếm Thuật Vật Lý!"),
+                    Component.literal("§c⚠️ [PHONG SÁT KỸ NĂNG] Toàn bộ kỹ năng của bạn đang bị vô hiệu hóa hoàn toàn!"),
                     true
             );
             level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.FIRE_EXTINGUISH, SoundSource.PLAYERS, 1.0F, 0.8F);
