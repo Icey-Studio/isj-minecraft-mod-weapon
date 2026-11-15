@@ -1,9 +1,11 @@
 package com.minhphuc.weapons.mixin;
 
 import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
+import com.minhphuc.weapons.client.renderer.UnderworldSkyRenderer;
 import com.minhphuc.weapons.content.tensura.WeatherBarrierTracker;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.LevelRenderer;
 import net.minecraft.client.renderer.LightTexture;
 import org.joml.Matrix4f;
@@ -22,7 +24,13 @@ public abstract class LevelRendererMixin {
             if (age >= 0 && age < 28.0f) {
                 // Hủy bầu trời ban ngày của Minecraft khi đang ngoài quỹ đạo vũ trụ
                 ci.cancel();
+                return;
             }
+        }
+        Minecraft mc = Minecraft.getInstance();
+        if (UnderworldSkyRenderer.isUnderworld(mc.level)) {
+            UnderworldSkyRenderer.renderUnderworldSky(frustumMatrix, partialTick, camera);
+            ci.cancel();
         }
     }
 
