@@ -22,6 +22,7 @@ public class ClientboundSyncSkillStatePacket {
     private final List<String> anchorLabels;
     private final List<Integer> favoriteIds;
     private final Map<String, Integer> cooldownTicks;
+    private final boolean raphaelAutoBattle;
 
     public ClientboundSyncSkillStatePacket(
             boolean safeMode,
@@ -36,7 +37,8 @@ public class ClientboundSyncSkillStatePacket {
             int selectedAnchorIndex,
             List<String> anchorLabels,
             List<Integer> favoriteIds,
-            Map<String, Integer> cooldownTicks
+            Map<String, Integer> cooldownTicks,
+            boolean raphaelAutoBattle
     ) {
         this.safeMode = safeMode;
         this.hasTacticalMark = hasTacticalMark;
@@ -51,6 +53,7 @@ public class ClientboundSyncSkillStatePacket {
         this.anchorLabels = anchorLabels != null ? new ArrayList<>(anchorLabels) : List.of();
         this.favoriteIds = favoriteIds != null ? new ArrayList<>(favoriteIds) : List.of();
         this.cooldownTicks = cooldownTicks != null ? new HashMap<>(cooldownTicks) : Map.of();
+        this.raphaelAutoBattle = raphaelAutoBattle;
     }
 
     public ClientboundSyncSkillStatePacket(FriendlyByteBuf buf) {
@@ -85,6 +88,7 @@ public class ClientboundSyncSkillStatePacket {
             cds.put(buf.readUtf(), buf.readVarInt());
         }
         this.cooldownTicks = cds;
+        this.raphaelAutoBattle = buf.readBoolean();
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -114,6 +118,7 @@ public class ClientboundSyncSkillStatePacket {
             buf.writeUtf(entry.getKey());
             buf.writeVarInt(entry.getValue());
         }
+        buf.writeBoolean(this.raphaelAutoBattle);
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> contextSupplier) {
@@ -131,7 +136,8 @@ public class ClientboundSyncSkillStatePacket {
                 this.selectedAnchorIndex,
                 this.anchorLabels,
                 this.favoriteIds,
-                this.cooldownTicks
+                this.cooldownTicks,
+                this.raphaelAutoBattle
         ));
     }
 }

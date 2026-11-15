@@ -275,11 +275,12 @@ public class TensuraSkillHelper {
         List<String> anchorLabels = SpatialTeleportAbility.getAnchorLabels(player);
         List<Integer> favorites = getFavoriteSkills(player, possessing);
         Map<String, Integer> cooldowns = getActiveCooldownTicks(player);
+        boolean raphaelAuto = root.getBoolean("TensuraRaphaelAutoBattle");
 
         com.minhphuc.weapons.network.ModMessages.sendToPlayer(
                 new com.minhphuc.weapons.network.ClientboundSyncSkillStatePacket(
                         safeMode, hasTactical, hasAnchor, isTrueDemonLord, hasCreation, isPrimordial,
-                        demonOrd, lordIdx, currentName, selectedAnchor, anchorLabels, favorites, cooldowns
+                        demonOrd, lordIdx, currentName, selectedAnchor, anchorLabels, favorites, cooldowns, raphaelAuto
                 ),
                 player
         );

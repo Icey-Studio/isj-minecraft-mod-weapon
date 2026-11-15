@@ -24,7 +24,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 33 : 32;
+        return hasCreation ? 34 : 33;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -63,8 +63,9 @@ public class TensuraSkillDispatcher {
                 case 28 -> "§6§l29. Ban Danh Xưng (Naming Ability)";
                 case 29 -> "§b§l30. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 30 -> "§3§l31. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 31 -> "§b§l32. Trí Tuệ Vương Raphael (50 Kỹ Năng)";
+                case 31 -> "§b§l32. Trí Tuệ Vương Raphael (Kỹ Năng)";
                 case 32 -> "§5§l33. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
+                case 33 -> "§b§l34. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -99,8 +100,9 @@ public class TensuraSkillDispatcher {
                 case 27 -> "§6§l28. Ban Danh Xưng (Naming Ability)";
                 case 28 -> "§b§l29. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 29 -> "§3§l30. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 30 -> "§b§l31. Trí Tuệ Vương Raphael (50 Kỹ Năng)";
+                case 30 -> "§b§l31. Trí Tuệ Vương Raphael (Kỹ Năng)";
                 case 31 -> "§5§l32. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
+                case 32 -> "§b§l33. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -249,6 +251,7 @@ public class TensuraSkillDispatcher {
                     ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
                 }
                 case 32 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                case 33 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
             }
         } else {
             switch (index) {
@@ -293,6 +296,7 @@ public class TensuraSkillDispatcher {
                     ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
                 }
                 case 31 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                case 32 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
             }
         }
     }

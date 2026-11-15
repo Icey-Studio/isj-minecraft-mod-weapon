@@ -205,11 +205,17 @@ public class SpatialTeleportAbility {
         public final ServerLevel targetLevel;
         public final Vec3 destPos;
         public final int anchorSlot;
+        public final float circleRadius;
         public int ticksElapsed = 0;
         public final int totalTicks = 32;
 
         public PendingSendToAnchor(ServerLevel originLevel, UUID casterUuid, List<UUID> targetUuids, Vec3 sourceCenter,
                                    ServerLevel targetLevel, Vec3 destPos, int anchorSlot) {
+            this(originLevel, casterUuid, targetUuids, sourceCenter, targetLevel, destPos, anchorSlot, 2.4F);
+        }
+
+        public PendingSendToAnchor(ServerLevel originLevel, UUID casterUuid, List<UUID> targetUuids, Vec3 sourceCenter,
+                                   ServerLevel targetLevel, Vec3 destPos, int anchorSlot, float circleRadius) {
             this.originLevel = originLevel;
             this.casterUuid = casterUuid;
             this.targetUuids = targetUuids;
@@ -217,7 +223,21 @@ public class SpatialTeleportAbility {
             this.targetLevel = targetLevel;
             this.destPos = destPos;
             this.anchorSlot = anchorSlot;
+            this.circleRadius = Math.max(2.4F, circleRadius);
         }
+    }
+
+    public static float computeDynamicCircleRadius(Collection<Entity> entities, float minRadius) {
+        double maxSpan = 0.0D;
+        if (entities != null) {
+            for (Entity e : entities) {
+                if (e != null) {
+                    maxSpan = Math.max(maxSpan, Math.max(e.getBbWidth(), e.getBbHeight() * 0.65D));
+                }
+            }
+        }
+        if (maxSpan <= 1.6D) return minRadius;
+        return (float) Math.max(minRadius, Math.min(22.0D, maxSpan * 1.15D + 1.5D));
     }
 
     private record ClickedEntityRecord(UUID entityUuid, long gameTick) {}
@@ -588,11 +608,12 @@ public class SpatialTeleportAbility {
             // Hủy vòng đếm ngược cố định cũ nếu có
             removeCountdownCircle(player.getUUID());
 
+            float circleRadius = computeDynamicCircleRadius(collected, 2.8f);
             level.playSound(null, circleCenter.x, circleCenter.y, circleCenter.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.5F, 1.25F);
             level.playSound(null, circleCenter.x, circleCenter.y, circleCenter.z, SoundEvents.ILLUSIONER_PREPARE_MIRROR, SoundSource.PLAYERS, 2.2F, 1.1F);
-            spawnMagicCircleParticles(level, circleCenter, 2.8D, 50);
+            spawnMagicCircleParticles(level, circleCenter, circleRadius, Math.min(120, Math.round(circleRadius * 18)));
 
-            // Kích hoạt Ma Pháp Trận 3D + Góc quay camera thấy tạo ra Ma Pháp Trận 3D & tia sáng bay lên (44 ticks)
+            // Kích hoạt Ma Pháp Trận 3D tự co giãn theo kích thước mục tiêu (vd: Veldora) + Góc quay camera (44 ticks)
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                     SkillVisualConfig.SKILL_SPATIAL_TELEPORT,
                     player.getUUID(),
@@ -600,7 +621,7 @@ public class SpatialTeleportAbility {
                     new Vec3(MODE_DEPART_PERSONAL, 0.0, 0.0),
                     44,
                     ClientboundCinematicSkillPacket.ACTION_START,
-                    2.8f
+                    circleRadius
             ));
 
             String msg;
@@ -806,7 +827,9 @@ public class SpatialTeleportAbility {
         if (aimed != null) {
             sourceCenter = aimed.position();
             targets.add(aimed);
-            for (Entity nearAimed : collectTeleportableEntities(level, sourceCenter, 2.8D, 2.0D, 3.0D, player, false)) {
+            double nearRad = Math.max(2.8D, aimed.getBbWidth() * 0.9D);
+            double nearH = Math.max(3.0D, aimed.getBbHeight() + 1.5D);
+            for (Entity nearAimed : collectTeleportableEntities(level, sourceCenter, nearRad, 2.0D, nearH, player, false)) {
                 if (!targets.contains(nearAimed) && targets.size() < 32) {
                     targets.add(nearAimed);
                 }
@@ -845,8 +868,9 @@ public class SpatialTeleportAbility {
         targetLevel.getChunkSource().addRegionTicket(TicketType.POST_TELEPORT, new ChunkPos(destBlock), 3, 200);
         targetLevel.getChunk(destBlock);
 
-        // Khởi tạo Ma Pháp Trận 3D & tia sáng tại điểm đi để nhìn thấy phép dịch chuyển hoạt động (không khóa camera)
-        spawnMagicCircleParticles(level, sourceCenter, 2.4D, 42);
+        // Khởi tạo Ma Pháp Trận 3D tự co giãn theo kích thước thực thể lớn (Veldora, v.v.)
+        float dynamicRadius = computeDynamicCircleRadius(targets, 2.4f);
+        spawnMagicCircleParticles(level, sourceCenter, dynamicRadius, Math.min(120, Math.round(dynamicRadius * 18)));
         level.playSound(null, sourceCenter.x, sourceCenter.y, sourceCenter.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.2F, 1.3F);
         level.playSound(null, sourceCenter.x, sourceCenter.y, sourceCenter.z, SoundEvents.ILLUSIONER_PREPARE_MIRROR, SoundSource.PLAYERS, 2.0F, 1.15F);
         ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
@@ -856,7 +880,7 @@ public class SpatialTeleportAbility {
                 new Vec3(MODE_DEPART_PERSONAL, -1.0, 0.0), // sub = -1.0 -> vẽ Ma Pháp Trận gửi đi, KHÔNG khóa camera player
                 36,
                 ClientboundCinematicSkillPacket.ACTION_START,
-                2.4f
+                dynamicRadius
         ));
 
         List<UUID> targetUuids = new ArrayList<>(targets.size());
@@ -864,7 +888,7 @@ public class SpatialTeleportAbility {
             targetUuids.add(e.getUUID());
         }
         PENDING_SENDS.add(new PendingSendToAnchor(
-                level, player.getUUID(), targetUuids, sourceCenter, targetLevel, dest, resolvedSlot
+                level, player.getUUID(), targetUuids, sourceCenter, targetLevel, dest, resolvedSlot, dynamicRadius
         ));
 
         player.displayClientMessage(Component.literal(String.format(
@@ -905,7 +929,8 @@ public class SpatialTeleportAbility {
         }
 
         targetLevel.playSound(null, dest.x, dest.y, dest.z, SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 2.4F, 1.35F);
-        spawnMagicCircleParticles(targetLevel, dest, 2.6D, 45);
+        float arrivalRadius = Math.max(2.6f, send.circleRadius);
+        spawnMagicCircleParticles(targetLevel, dest, arrivalRadius, Math.min(140, Math.round(arrivalRadius * 16)));
         ModMessages.sendToPlayers(targetLevel.players(), new ClientboundCinematicSkillPacket(
                 SkillVisualConfig.SKILL_SPATIAL_TELEPORT,
                 send.casterUuid,
@@ -913,18 +938,86 @@ public class SpatialTeleportAbility {
                 new Vec3(MODE_ARRIVAL_CINEMATIC, -1.0, 2.0), // dir.y = -1.0 (KHÔNG khóa camera player); dir.z = 2.0 (skipGroundCircle)
                 50,
                 ClientboundCinematicSkillPacket.ACTION_START,
-                2.4f
+                arrivalRadius
         ));
 
         ServerPlayer caster = originLevel.getServer() != null
                 ? originLevel.getServer().getPlayerList().getPlayer(send.casterUuid)
                 : null;
         if (caster != null) {
+            String label = send.anchorSlot >= 0 ? ("ẤN KÝ #" + (send.anchorSlot + 1)) : "ĐIỂM ĐÍCH";
             caster.displayClientMessage(Component.literal(String.format(
-                    "§6§l✦ [GỬI TỚI ẤN KÝ #%d] §fĐã dịch chuyển xong §e%d sinh vật §f& §b%d vật phẩm/đối tượng §ftới [%.0f, %.0f, %.0f]!",
-                    send.anchorSlot + 1, livingCount, objectCount, dest.x, dest.y, dest.z
+                    "§6§l✦ [GỬI TỚI %s] §fĐã dịch chuyển xong §e%d sinh vật §f& §b%d vật phẩm/đối tượng §ftới [%.0f, %.0f, %.0f]!",
+                    label, livingCount, objectCount, dest.x, dest.y, dest.z
             )), true);
         }
+    }
+
+    /**
+     * ĐẠI CHUYỂN DI QUÂN ĐOÀN (MASS ARMY SHIFT - 80m):
+     * Tạo Ma Pháp Trận đường kính 80m (bán kính 40m) để dịch chuyển đồng loạt toàn bộ binh đoàn mob,
+     * ác ma, tinh linh & vật phẩm rơi tới Ấn Ký / Điểm Đánh Dấu đích!
+     */
+    public static void castMassArmyTeleport(ServerLevel level, ServerPlayer player, int anchorSlot) {
+        if (level == null || player == null) return;
+
+        long now = System.currentTimeMillis();
+        if (now - LAST_CAST_TIME.getOrDefault(player.getUUID(), 0L) < 500) return;
+        LAST_CAST_TIME.put(player.getUUID(), now);
+
+        SpatialMark mark = (anchorSlot >= 0) ? getAnchorMark(player, anchorSlot) : getActiveAnchorMark(player);
+        int resolvedSlot = (anchorSlot >= 0) ? anchorSlot : getSelectedAnchorIndex(player);
+        if (mark == null) {
+            mark = getMark(player, false);
+            resolvedSlot = -1;
+        }
+        if (mark == null) {
+            player.displayClientMessage(Component.literal("§c⚠ Chưa có Ấn Ký Vĩnh Viễn hoặc Điểm Đánh Dấu đích cho Đại Chuyển Di 80m! Hãy dùng [Đánh Dấu] trước."), true);
+            return;
+        }
+
+        double collectRadius = 40.0D; // Ma pháp trận đường kính 80m (bán kính 40m)
+        float circleRadius = 40.0F;
+        Vec3 sourceCenter = player.position();
+        List<Entity> allTargets = collectTeleportableEntities(level, sourceCenter, collectRadius, 12.0D, 32.0D, player, true);
+        if (allTargets.size() > 256) {
+            allTargets = allTargets.subList(0, 256);
+        }
+        if (allTargets.isEmpty()) {
+            player.displayClientMessage(Component.literal("§e⚠ Không có sinh vật hay vật phẩm nào trong phạm vi Ma Pháp Trận 80m để chuyển đi!"), true);
+            return;
+        }
+
+        ServerLevel targetLevel = (level.getServer() != null) ? level.getServer().getLevel(mark.dimension()) : null;
+        if (targetLevel == null) targetLevel = level;
+        Vec3 dest = mark.pos();
+        BlockPos destBlock = BlockPos.containing(dest);
+        targetLevel.getChunkSource().addRegionTicket(TicketType.POST_TELEPORT, new ChunkPos(destBlock), 4, 240);
+        targetLevel.getChunk(destBlock);
+
+        spawnMagicCircleParticles(level, sourceCenter, circleRadius, 180);
+        level.playSound(null, sourceCenter.x, sourceCenter.y, sourceCenter.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.PLAYERS, 2.5F, 0.9F);
+        level.playSound(null, sourceCenter.x, sourceCenter.y, sourceCenter.z, SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 3.0F, 1.1F);
+        ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                SkillVisualConfig.SKILL_SPATIAL_TELEPORT,
+                player.getUUID(),
+                sourceCenter,
+                new Vec3(MODE_DEPART_PERSONAL, -1.0, 0.0),
+                44,
+                ClientboundCinematicSkillPacket.ACTION_START,
+                circleRadius
+        ));
+
+        List<UUID> targetUuids = new ArrayList<>(allTargets.size());
+        for (Entity e : allTargets) {
+            targetUuids.add(e.getUUID());
+        }
+        PENDING_SENDS.add(new PendingSendToAnchor(
+                level, player.getUUID(), targetUuids, sourceCenter, targetLevel, dest, resolvedSlot, 18.0F
+        ));
+
+        String destLabel = (resolvedSlot >= 0) ? ("Ấn Ký #" + (resolvedSlot + 1)) : "Điểm Đánh Dấu";
+        SageManager.sendCornerAlert(player, "Khởi tạo Đại Chuyển Di Quân Đoàn (Ma Pháp Trận 80m)! Chuẩn bị chuyển " + targetUuids.size() + " mục tiêu tới " + destLabel + "!", 0xFF00E5FF, 5500, false);
     }
 
     public static void castTeleportFromDemon(ServerLevel level, ServerPlayer owner, PrimordialDemonEntity demon) {
@@ -1874,8 +1967,10 @@ public class SpatialTeleportAbility {
         if (total <= 1 || index == 0) {
             return new Vec3(dest.x + 0.9D, dest.y + 0.08D, dest.z + 0.5D);
         }
-        double angle = (index * Math.PI * 2.0D) / Math.max(1, total);
-        double ringRadius = 1.0D + Math.min(2.2D, (total / 8.0D) * 0.6D);
+        double angle = index * 2.39996323D; // Golden angle spiral cho đội quân hàng trăm đơn vị
+        double ringRadius = total > 20
+                ? 1.5D + Math.sqrt(index) * 1.15D
+                : 1.0D + Math.min(2.4D, (total / 8.0D) * 0.65D);
         return new Vec3(
                 dest.x + Math.cos(angle) * ringRadius,
                 dest.y + 0.1D,

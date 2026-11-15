@@ -136,17 +136,18 @@ public final class RaphaelSkillRegistry {
             new RaphaelSkill(38, Category.CRAFTING, "39. Pha Chế Nước Thánh Hồi Máu II", "Tạo 1 Potion Instant Health II (cần 1 Gold Nugget / miễn phí Creative)"),
             new RaphaelSkill(39, Category.CRAFTING, "40. Mở Dạ Dày Vô Hạn Azathoth", "Mở thẳng Giao Diện Không Gian Ảo Azathoth để hấp thụ/chuyển hóa"),
 
-            // === NHÓM V: THAO TÚNG PHÁP TẮC & KHÔNG GIAN (40..49) ===
-            new RaphaelSkill(40, Category.LAW_SPACE, "41. Chuyển Vị Không Gian 16m (Blink)", "Dịch chuyển tức thì tối đa 16m theo hướng nhìn an toàn"),
+            // === NHÓM V: THAO TÚNG PHÁP TẮC & KHÔNG GIAN (40..50) ===
+            new RaphaelSkill(40, Category.LAW_SPACE, "41. Không Gian Dịch Chuyển (Teleport)", "Mở Ma Pháp Trận Dịch Chuyển (Shift = Blink tức thì)"),
             new RaphaelSkill(41, Category.LAW_SPACE, "42. Điều Khiển Thời Tiết (Weather Law)", "Xua tan bão sấm hoặc gọi mưa dập lửa tức thì"),
             new RaphaelSkill(42, Category.LAW_SPACE, "43. Gia Tốc Thời Gian Cá Nhân", "Cấp Speed IV + Haste IV trong 8s để di chuyển & đào siêu tốc"),
             new RaphaelSkill(43, Category.LAW_SPACE, "44. Vòng Xoáy Không Gian Gom Quái", "Hút toàn bộ kẻ địch & vật phẩm rơi trong 16m về trước mặt"),
             new RaphaelSkill(44, Category.LAW_SPACE, "45. Thanh Tẩy Nhiệt & Tuyết Bột", "Dập toàn bộ lửa & phá hủy Powder Snow quanh người chơi 8m"),
-            new RaphaelSkill(45, Category.LAW_SPACE, "46. Hồi Quy Điểm Neo Không Gian", "Dịch chuyển tức thời về Ấn Ký Không Gian Vĩnh Viễn đang chọn"),
+            new RaphaelSkill(45, Category.LAW_SPACE, "46. Hồi Quy / Gửi Tới Điểm Neo", "Ngắm mob = gửi tới Ấn Ký; Không = dịch chuyển về Điểm Neo"),
             new RaphaelSkill(46, Category.LAW_SPACE, "47. Giải Phong Ấn Veldora Khẩn Cấp", "Quét & Giải Phong Ấn Veldora nếu đang ở Hang Động Phong Ấn"),
             new RaphaelSkill(47, Category.LAW_SPACE, "48. Thoát Hiểm Hầm Ngục Lên Mặt Đất", "Dịch chuyển lên đỉnh địa hình thoáng cao nhất ngay phía trên"),
             new RaphaelSkill(48, Category.LAW_SPACE, "49. Cộng Hưởng Linh Tử Raphael", "Bắn tia Linh Tử xuyên giáp 32m gây 75 sát thương chuẩn"),
-            new RaphaelSkill(49, Category.LAW_SPACE, "50. Khải Huyền Thống Lĩnh (Overdrive)", "Kích hoạt đồng thời 5 buff tối cao trong 20 giây!")
+            new RaphaelSkill(49, Category.LAW_SPACE, "50. Khải Huyền Thống Lĩnh (Overdrive)", "Kích hoạt đồng thời 5 buff tối cao trong 20 giây!"),
+            new RaphaelSkill(50, Category.LAW_SPACE, "51. Đại Chuyển Di Quân Đoàn (80m)", "Tạo Ma Pháp Trận 80m đưa toàn bộ mob & vật phẩm tới Ấn Ký!")
     );
 
     private RaphaelSkillRegistry() {}
@@ -342,7 +343,13 @@ public final class RaphaelSkillRegistry {
             }
             case 39 -> ServerboundAzathothActionPacket.sendOpenGui(sp);
 
-            case 40 -> executeInstantBlink(level, sp);
+            case 40 -> {
+                if (sp.isShiftKeyDown()) {
+                    executeInstantBlink(level, sp);
+                } else {
+                    SpatialTeleportAbility.castTeleport(level, sp);
+                }
+            }
             case 41 -> {
                 if (level.isRaining() || level.isThundering()) {
                     level.setWeatherParameters(12000, 0, false, false);
@@ -372,7 +379,13 @@ public final class RaphaelSkillRegistry {
                 SageManager.sendCornerAlert(sp, "Vòng Xoáy Không Gian: Đã gom " + pulled + " mục tiêu & vật phẩm rơi!", 0xFFA855F7, 4500, false);
             }
             case 44 -> executeThermalSnowClean(level, sp);
-            case 45 -> SpatialTeleportAbility.castTeleportToSlot(level, sp, 1);
+            case 45 -> {
+                if (!level.getEntitiesOfClass(LivingEntity.class, new AABB(sp.getEyePosition(), sp.getEyePosition().add(sp.getLookAngle().scale(22.0D))).inflate(1.8D), e -> e != sp && e.isAlive()).isEmpty()) {
+                    SpatialTeleportAbility.castSendToAnchor(level, sp, -1);
+                } else {
+                    SpatialTeleportAbility.castTeleportToSlot(level, sp, -1);
+                }
+            }
             case 46 -> AzathothStomachData.analyzeOrUnsealVeldora(level, sp);
             case 47 -> {
                 int topY = level.getHeight(Heightmap.Types.MOTION_BLOCKING, sp.blockPosition().getX(), sp.blockPosition().getZ());
@@ -390,6 +403,7 @@ public final class RaphaelSkillRegistry {
                 level.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.3F, 1.3F);
                 SageManager.sendCornerAlert(sp, "Khải Huyền Thống Lĩnh (Overdrive): Kích hoạt 5 Buff Tối Cao suốt 20 giây!", 0xFFFFD700, 5500, false);
             }
+            case 50 -> SpatialTeleportAbility.castMassArmyTeleport(level, sp, -1);
         }
         level.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 0.7F, 1.6F);
     }

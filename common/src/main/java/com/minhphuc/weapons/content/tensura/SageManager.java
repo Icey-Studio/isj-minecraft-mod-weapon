@@ -1,7 +1,13 @@
 package com.minhphuc.weapons.content.tensura;
 
+import com.minhphuc.weapons.content.darkgathering.ReverseVelocityIaijutsuAbility;
 import com.minhphuc.weapons.content.darkgathering.RykuzinSinkaAbility;
+import com.minhphuc.weapons.content.darkgathering.TaisuiExtinctionStarsAbility;
+import com.minhphuc.weapons.content.darkgathering.TengaiKyuseiSwordAbility;
+import com.minhphuc.weapons.content.divine.JacobsLadderAbility;
+import com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility;
 import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
+import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity;
 import com.minhphuc.weapons.entity.tensura.CharybdisEntity;
@@ -20,7 +26,9 @@ import com.minhphuc.weapons.network.ServerboundSageActionPacket;
 import com.minhphuc.weapons.world.LabyrinthWorldData;
 import com.minhphuc.weapons.world.VeldoraWorldData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
@@ -29,10 +37,13 @@ import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
+import net.minecraft.world.entity.TamableAnimal;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.level.Level;
@@ -134,6 +145,18 @@ public final class SageManager {
         ServerLevel sl = sp.serverLevel();
         long now = sl.getGameTime();
         CompoundTag data = EntityDataHelper.getCustomData(sp);
+
+        // CHẾ ĐỘ TỰ ĐỘNG (RAPHAEL AUTO-PILOT TAKEOVER): Nhấn Shift để trả lại quyền điều khiển
+        if (data.getBoolean(TAG_AUTO_BATTLE)) {
+            if (sp.isShiftKeyDown()) {
+                data.putBoolean(TAG_AUTO_BATTLE, false);
+                TensuraSkillHelper.syncSkillStateToClient(sp);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.3F, 1.4F);
+                sendCornerAlert(sp, "Đã phát hiện [Shift] — Hoàn trả toàn bộ quyền điều khiển về chủ nhân!", 0xFF22C55E, 4500, false);
+            } else {
+                tickAutonomousRaphael(sl, sp, now, data);
+            }
+        }
 
         // N01, N17: Sinh & Phát tín hiệu Hang Veldora / Mê Cung Ramiris (Overworld)
         if (sl.dimension() == Level.OVERWORLD && now % 40L == 0L) {
@@ -387,7 +410,7 @@ public final class SageManager {
                 VeldoraWorldData caveData = VeldoraWorldData.get(ow);
                 caveData.ensureCaveGenerated(ow);
                 BlockPos cavePos = caveData.getOrRollCavePos(ow);
-                BlockPos standPos = cavePos.offset(0, -1, 10);
+                BlockPos standPos = cavePos.offset(0, -1, 18);
                 if (sl != ow) {
                     sp.teleportTo(ow, standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 180.0F, -10.0F);
                 } else {
@@ -399,7 +422,18 @@ public final class SageManager {
             case ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE -> {
                 boolean next = !data.getBoolean(TAG_AUTO_BATTLE);
                 data.putBoolean(TAG_AUTO_BATTLE, next);
-                sendCornerAlert(sp, "Đã " + (next ? "§aBẬT" : "§cTẮT") + " §fchế độ §bỦy Thác Chiến Đấu (Auto-Battle Assist)§f!", 0xFF00E5FF, 4000, false);
+                TensuraSkillHelper.syncSkillStateToClient(sp);
+                DustParticleOptions auraDust = new DustParticleOptions(new Vector3f(0.0F, 0.9F, 1.0F), 1.6F);
+                for (int i = 0; i < 24; i++) {
+                    double a = i * (Math.PI * 2.0D / 24.0D);
+                    sl.sendParticles(auraDust, sp.getX() + Math.cos(a) * 1.4, sp.getY() + 1.0, sp.getZ() + Math.sin(a) * 1.4, 2, 0.05, 0.25, 0.05, 0.02);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(),
+                        next ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE,
+                        SoundSource.PLAYERS, 1.4F, next ? 1.5F : 1.2F);
+                sendCornerAlert(sp, next
+                        ? "§aBẬT §fChế Độ Ủy Thác Toàn Phần — §bTrí Tuệ Vương Raphael §fđang tiếp quản điều khiển! (Nhấn §eShift §fđể trở lại)"
+                        : "§cTẮT §fChế Độ Tự Động — Đã hoàn trả quyền điều khiển cơ thể cho chủ nhân!", 0xFF00E5FF, 5000, false);
             }
             case ServerboundSageActionPacket.ACTION_SCAN_AREA -> {
                 List<LivingEntity> scanned = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(24.0D), e -> e != sp && e.isAlive());
@@ -420,6 +454,141 @@ public final class SageManager {
                 sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 1.6F);
                 sendCornerAlert(sp, "Giải Mã & Thanh Tẩy Nguyên Tố: Đã hóa giải toàn bộ hiệu ứng nguyền rủa bất lợi!", 0xFF34D399, 4500, false);
             }
+        }
+    }
+
+    private static void tickAutonomousRaphael(ServerLevel sl, ServerPlayer sp, long now, CompoundTag data) {
+        if (sp.isSpectator()) return;
+
+        // Vòng sáng ma thuật bao quanh khi Raphael đang điều khiển cơ thể
+        if (now % 4L == 0L) {
+            DustParticleOptions cyan = new DustParticleOptions(new Vector3f(0.0F, 0.9F, 1.0F), 1.1F);
+            double a = (now * 0.35D) % (Math.PI * 2.0D);
+            sl.sendParticles(cyan, sp.getX() + Math.cos(a) * 0.9D, sp.getY() + 0.15D, sp.getZ() + Math.sin(a) * 0.9D, 1, 0, 0, 0, 0);
+        }
+
+        // Duy trì phòng hộ & thanh tẩy trạng thái bất lợi
+        if (now % 20L == 0L) {
+            sp.heal(1.5F);
+            if (sp.getFoodData().getFoodLevel() < 16) sp.getFoodData().eat(6, 0.8F);
+            if (sp.isOnFire()) sp.clearFire();
+            sp.removeEffect(MobEffects.POISON);
+            sp.removeEffect(MobEffects.WITHER);
+            sp.removeEffect(MobEffects.DARKNESS);
+            sp.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+            sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 45, 1, true, false));
+        }
+        if (now % 60L == 0L && !EvolvedSkillHelper.isUrielDefenseActive(sp)) {
+            MultilayerBarrierAbility.cast(sl, sp);
+        }
+
+        // Tìm mục tiêu thù địch gần nhất trong 42m (bỏ qua đồng minh đã thuần phục & dân làng)
+        List<LivingEntity> hostiles = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(42.0D),
+                e -> e != sp && e.isAlive()
+                        && (e instanceof Enemy || (e instanceof Mob m && m.getTarget() == sp))
+                        && !(e instanceof Villager)
+                        && !(e instanceof TamableAnimal ta && ta.isTame() && sp.getUUID().equals(ta.getOwnerUUID()))
+                        && !(e instanceof VelgryndEntity vg && vg.isAllied() && sp.getUUID().equals(vg.getParsedOwnerUUID()))
+                        && !(e instanceof PrimordialDemonEntity pd && sp.getUUID().equals(pd.getOwnerUUID())));
+
+        if (hostiles.isEmpty()) {
+            if (now % 30L == 0L) {
+                sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO-PILOT] §7Đang tuần tra không gian... §8(Nhấn §eSHIFT §8để trả quyền)"), true);
+            }
+            return;
+        }
+
+        hostiles.sort((a, b) -> Double.compare(a.distanceToSqr(sp), b.distanceToSqr(sp)));
+        LivingEntity target = hostiles.get(0);
+        double dist = Math.sqrt(sp.distanceToSqr(target));
+
+        // 1) Điều khiển di chuyển cơ thể chủ động tiếp cận / né đòn / áp sát
+        sp.fallDistance = 0.0F;
+        Vec3 diff = target.position().subtract(sp.position());
+        Vec3 horiz = new Vec3(diff.x, 0.0D, diff.z);
+        double hLen = horiz.length();
+        Vec3 dirH = hLen > 0.01D ? horiz.scale(1.0D / hLen) : new Vec3(0, 0, 1);
+
+        double vy = sp.getDeltaMovement().y;
+        if (sp.onGround() && sp.horizontalCollision) {
+            vy = 0.46D;
+        } else if (target.getY() > sp.getY() + 2.5D && dist < 24.0D) {
+            vy = 0.28D;
+        }
+
+        Vec3 move;
+        if (dist > 7.5D) {
+            double speed = Math.min(0.46D, 0.26D + dist * 0.012D);
+            move = new Vec3(dirH.x * speed, vy, dirH.z * speed);
+        } else if (dist < 3.6D) {
+            // Quần đảo quanh mục tiêu khi cận chiến
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 80L < 40L) ? 0.28D : -0.28D);
+            move = new Vec3(tangent.x - dirH.x * 0.08D, vy, tangent.z - dirH.z * 0.08D);
+        } else {
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale(0.18D);
+            move = new Vec3(dirH.x * 0.16D + tangent.x, vy, dirH.z * 0.16D + tangent.z);
+        }
+        sp.setDeltaMovement(move);
+        sp.hurtMarked = true;
+
+        // Căn hướng nhìn về phía mục tiêu để tung kỹ năng chuẩn xác
+        Vec3 eyeAim = target.getEyePosition().subtract(sp.getEyePosition());
+        double hDist = Math.max(0.01D, Math.hypot(eyeAim.x, eyeAim.z));
+        float yaw = (float) (Math.atan2(-eyeAim.x, eyeAim.z) * (180.0D / Math.PI));
+        float pitch = (float) (-Math.atan2(eyeAim.y, hDist) * (180.0D / Math.PI));
+        sp.setYRot(yaw);
+        sp.setXRot(pitch);
+        sp.setYHeadRot(yaw);
+
+        // Cận chiến tự động khi đứng gần
+        if (dist <= 4.6D && now % 10L == 0L) {
+            sp.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
+            sp.attack(target);
+        }
+
+        // 2) Tự do thi triển toàn bộ kho kỹ năng Tensura & Raphael (mỗi 24 ticks)
+        long lastCast = data.getLong("RaphaelAutoLastCast");
+        if (now - lastCast >= 24L) {
+            data.putLong("RaphaelAutoLastCast", now);
+            int rot = data.getInt("RaphaelAutoSkillRot");
+            data.putInt("RaphaelAutoSkillRot", (rot + 1) % 14);
+
+            if (dist > 18.0D && rot % 3 == 0) {
+                SpatialTeleportAbility.castCombatBlink(sl, sp);
+            } else {
+                switch (rot) {
+                    case 0 -> SpatialTeleportAbility.castCombatBlink(sl, sp);
+                    case 1 -> SanctuaryDisintegrationAbility.cast(sl, sp, ItemStack.EMPTY);
+                    case 2 -> JacobsLadderAbility.cast(sl, sp, ItemStack.EMPTY);
+                    case 3 -> HellflareAbility.cast(sl, sp);
+                    case 4 -> DarkFlameShotAbility.cast(sl, sp);
+                    case 5 -> DragonNovaAbility.cast(sl, sp);
+                    case 6 -> TaisuiExtinctionStarsAbility.cast(sl, sp);
+                    case 7 -> {
+                        if (dist <= 11.0D) ReverseVelocityIaijutsuAbility.castReverseVelocityIai(sl, sp);
+                        else ZoneTrackAbility.cast(sl, sp);
+                    }
+                    case 8 -> {
+                        if (dist <= 11.0D) TengaiKyuseiSwordAbility.castReverseTimeSlash(sl, sp);
+                        else HorizontalHolyBeamAbility.cast(sl, sp);
+                    }
+                    case 9 -> {
+                        if (hostiles.size() >= 3) SupernovaAbility.cast(sl, sp);
+                        else RaphaelSkillRegistry.execute(sl, sp, 48);
+                    }
+                    case 10 -> {
+                        if (target.getMaxHealth() >= 250.0F) InfiniteDragonPrisonAbility.cast(sl, sp, 2);
+                        else RaphaelSkillRegistry.execute(sl, sp, 22);
+                    }
+                    case 11 -> {
+                        if (target.getMaxHealth() >= 300.0F) SkillNullificationAbility.cast(sl, sp);
+                        else RaphaelSkillRegistry.execute(sl, sp, 24);
+                    }
+                    case 12 -> NihilityCollapseAbility.cast(sl, sp);
+                    case 13 -> BeelzebuthAbility.executeBeelzebuth(sl, sp);
+                }
+            }
+            sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO] §fĐang tác chiến với §e" + target.getName().getString() + " §8| Nhấn §c[SHIFT] §8để trở lại"), true);
         }
     }
 

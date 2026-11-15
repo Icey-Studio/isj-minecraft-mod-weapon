@@ -169,8 +169,9 @@ public class SkillWheelScreen extends Screen {
         list.add(new SkillItem(27 + off, "Ban Danh Xưng", Category.SPATIAL, "lord_" + (27 + off), 0xFBBF24));
         list.add(new SkillItem(28 + off, "Dị Giới Thần Môn", Category.SPATIAL, "lord_" + (28 + off), 0x10B981));
         list.add(new SkillItem(29 + off, "Triệu Hồi Veldora", Category.SPATIAL, "lord_" + (29 + off), 0x38BDF8));
-        list.add(new SkillItem(30 + off, "Trí Tuệ Vương Raphael (50)", Category.SPATIAL, "lord_" + (30 + off), 0x00E5FF));
+        list.add(new SkillItem(30 + off, "Trí Tuệ Vương Raphael", Category.SPATIAL, "lord_" + (30 + off), 0x00E5FF));
         list.add(new SkillItem(31 + off, "Dạ Dày Vô Hạn Azathoth", Category.ULTIMATE, "lord_" + (31 + off), 0xA855F7));
+        list.add(new SkillItem(32 + off, "Đại Chuyển Di Quân Đoàn (80m)", Category.SPATIAL, "lord_" + (32 + off), 0x0EA5E9));
     }
 
     private List<SkillItem> getFilteredSkills(List<SkillItem> all) {
