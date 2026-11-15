@@ -308,17 +308,6 @@ public class PrimordialPactItem extends Item {
                 return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
             }
         }
-
-        net.minecraft.world.level.block.state.BlockState state = level.getBlockState(pos);
-        if (state.is(com.minhphuc.weapons.init.ModBlocks.INCUBATION_CAPSULE.get())) {
-            if (player instanceof ServerPlayer sp) {
-                BlockPos basePos = state.hasProperty(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF)
-                        && state.getValue(com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleBlock.HALF) == net.minecraft.world.level.block.state.properties.DoubleBlockHalf.UPPER
-                        ? pos.below() : pos;
-                com.minhphuc.weapons.content.tensura.capsule.IncubationCapsuleManager.onInteract(sp, context.getHand(), basePos);
-            }
-            return net.minecraft.world.InteractionResult.sidedSuccess(level.isClientSide());
-        }
         return super.useOn(context);
     }
 

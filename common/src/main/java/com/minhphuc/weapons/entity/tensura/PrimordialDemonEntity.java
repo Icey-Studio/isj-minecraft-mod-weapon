@@ -1345,9 +1345,9 @@ public class PrimordialDemonEntity extends TamableAnimal {
             ItemStack heldItem = player.getItemInHand(hand);
 
             // ==========================================
-            // CẦM KHUNG XƯƠNG NHÂN TẠO → TIẾN HÓA THỂ XÁC VẬT LÝ
+            // CẦM XƯƠNG HOẶC KHUNG XƯƠNG NHÂN TẠO → TIẾN HÓA THỂ XÁC VẬT LÝ
             // ==========================================
-            if (heldItem.is(ModItems.ARTIFICIAL_SKELETON.get())) {
+            if (heldItem.is(net.minecraft.world.item.Items.BONE) || heldItem.is(ModItems.ARTIFICIAL_SKELETON.get())) {
                 if (this.level().isClientSide()) return InteractionResult.SUCCESS;
                 if (hasPhysicalBody()) {
                     player.displayClientMessage(Component.literal("§c§l✦ " + getEffectiveDemonName() + " §cđã có thể xác vật lý rồi!"), true);
@@ -1414,7 +1414,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
         } else {
             ItemStack heldItem = player.getItemInHand(hand);
-            if (heldItem.is(ModItems.ARTIFICIAL_SKELETON.get())) {
+            if (heldItem.is(net.minecraft.world.item.Items.BONE) || heldItem.is(ModItems.ARTIFICIAL_SKELETON.get())) {
                 if (!this.level().isClientSide()) {
                     player.displayClientMessage(Component.literal("§c§l✦ Ác ma này chưa lập khế ước với bạn! Chỉ có chủ nhân đã ký khế ước mới có thể ban thể xác vật lý!"), true);
                 }
