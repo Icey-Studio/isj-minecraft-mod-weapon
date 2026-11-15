@@ -1,6 +1,7 @@
 package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
+import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.entity.ModEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
@@ -67,6 +68,8 @@ public class VelgryndEntity extends Monster {
             SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
     public static final EntityDataAccessor<Boolean> DATA_IS_ENRAGED =
             SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_DRAGON_FORM =
+            SynchedEntityData.defineId(VelgryndEntity.class, EntityDataSerializers.BOOLEAN);
 
     private final ServerBossEvent bossEvent;
 
@@ -75,6 +78,9 @@ public class VelgryndEntity extends Monster {
     private int heatBladeCooldown = 80;
     private int cardinalAccelCooldown = 280;
     private int meteorRainCooldown = 260; // 13s cooldown (Thiên Hỏa Lạc Lôi)
+    private int fireVolleyCooldown = 90;
+    private int skillSealCooldown = 380;
+    private int dragonFormCooldown = 240;
     private int meteorTelegraphTicks = 0; // 30 ticks (1.5s telegraph)
     private final List<Vec3> meteorTargetPositions = new ArrayList<>();
     private int alliedSafeTicks = 0;
@@ -176,6 +182,7 @@ public class VelgryndEntity extends Monster {
         builder.define(DATA_OWNER_UUID, "");
         builder.define(DATA_IS_FLYING, false);
         builder.define(DATA_IS_ENRAGED, false);
+        builder.define(DATA_DRAGON_FORM, false);
     }
 
     @Override
@@ -236,6 +243,11 @@ public class VelgryndEntity extends Monster {
     public net.minecraft.world.InteractionResult mobInteract(Player player, net.minecraft.world.InteractionHand hand) {
         if (!this.level().isClientSide() && hand == net.minecraft.world.InteractionHand.MAIN_HAND) {
             if (this.isAllied()) {
+                if (player.isShiftKeyDown()) {
+                    setDragonForm(!isDragonForm());
+                    player.displayClientMessage(Component.literal("§c§l[VELGRYND] §fĐã chuyển sang " + (isDragonForm() ? "§4Chân Thân Rồng Lửa Khổng Lồ" : "§6Dạng Người")), true);
+                    return net.minecraft.world.InteractionResult.SUCCESS;
+                }
                 player.displayClientMessage(Component.literal("§6§l╔════════════════════════════════════════════════╗"), false);
                 player.displayClientMessage(Component.literal("§6§l║      §c§l✦ CHƯỚC NHIỆT LONG VELGRYND (ĐỒNG MINH) ✦      §6§l║"), false);
                 player.displayClientMessage(Component.literal("§6§l╠════════════════════════════════════════════════╣"), false);
@@ -291,6 +303,26 @@ public class VelgryndEntity extends Monster {
 
     public void setEnraged(boolean enraged) {
         this.entityData.set(DATA_IS_ENRAGED, enraged);
+    }
+
+    public boolean isDragonForm() {
+        return this.entityData.get(DATA_DRAGON_FORM);
+    }
+
+    public void setDragonForm(boolean dragon) {
+        boolean changed = this.entityData.get(DATA_DRAGON_FORM) != dragon;
+        this.entityData.set(DATA_DRAGON_FORM, dragon);
+        this.refreshDimensions();
+        if (changed && this.level() instanceof ServerLevel sl) {
+            sl.sendParticles(ParticleTypes.FLAME, this.getX(), this.getY() + 1.5D, this.getZ(), 55, 1.5, 1.5, 1.5, 0.14);
+            sl.sendParticles(ParticleTypes.EXPLOSION, this.getX(), this.getY() + 1.5D, this.getZ(), 2, 0.5, 0.5, 0.5, 0.05);
+            sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 2.5F, dragon ? 0.85F : 1.25F);
+        }
+    }
+
+    @Override
+    public EntityDimensions getDefaultDimensions(Pose pose) {
+        return isDragonForm() ? EntityDimensions.scalable(6.8F, 7.6F) : super.getDefaultDimensions(pose);
     }
 
     public int getCastingState() {
@@ -542,10 +574,33 @@ public class VelgryndEntity extends Monster {
             }
         }
 
-        // 4. Giảm hồi chiêu kỹ năng
+        // 4. Giảm hồi chiêu kỹ năng & tự chuyển Dạng Rồng Lửa
         if (timeCollapseCooldown > 0) timeCollapseCooldown--;
         if (heatBladeCooldown > 0) heatBladeCooldown--;
         if (cardinalAccelCooldown > 0) cardinalAccelCooldown--;
+        if (meteorRainCooldown > 0) meteorRainCooldown--;
+        if (fireVolleyCooldown > 0) fireVolleyCooldown--;
+        if (skillSealCooldown > 0) skillSealCooldown--;
+        if (dragonFormCooldown > 0) dragonFormCooldown--;
+
+        if (SkillNullificationAbility.isEntitySkillSealed(this)) {
+            this.activeSkillTicks = 0;
+            this.setCastingState(0);
+            if (this.tickCount % 15 == 0) {
+                sLevel.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 6, 0.5, 0.7, 0.5, 0.02);
+            }
+            return;
+        }
+
+        if (curCombatTarget != null && curCombatTarget.isAlive() && dragonFormCooldown <= 0) {
+            dragonFormCooldown = 280;
+            if (!isDragonForm() && (isEnraged() || this.getHealth() < this.getMaxHealth() * 0.85F || this.random.nextFloat() < 0.65F)) {
+                setDragonForm(true);
+                broadcastDialogue("Chân thân Chước Nhiệt Long giáng thế! Đừng hòng thoát khỏi biển lửa!");
+            } else if (isDragonForm() && !isEnraged() && this.random.nextFloat() < 0.30F) {
+                setDragonForm(false);
+            }
+        }
 
         // 5. Cập nhật thi triển chiêu thức chủ động
         if (activeSkillTicks > 0) {
@@ -1279,6 +1334,9 @@ public class VelgryndEntity extends Monster {
         if (tag.contains("HoldingFan")) {
             this.setHoldingFan(tag.getBoolean("HoldingFan"));
         }
+        if (tag.contains("DragonForm")) {
+            this.setDragonForm(tag.getBoolean("DragonForm"));
+        }
     }
 
     @Override
@@ -1289,13 +1347,44 @@ public class VelgryndEntity extends Monster {
         tag.putBoolean("IsAllied", this.isAllied());
         tag.putString("OwnerUUID", this.getOwnerUUID());
         tag.putBoolean("HoldingFan", this.isHoldingFan());
+        tag.putBoolean("DragonForm", this.isDragonForm());
     }
 
     public int getTimeCollapseCooldown() { return timeCollapseCooldown; }
     public int getHeatBladeCooldown() { return heatBladeCooldown; }
     public int getCardinalAccelCooldown() { return cardinalAccelCooldown; }
     public int getMeteorRainCooldown() { return meteorRainCooldown; }
+    public int getFireVolleyCooldown() { return fireVolleyCooldown; }
+    public int getSkillSealCooldown() { return skillSealCooldown; }
     public int getActiveSkillTicks() { return activeSkillTicks; }
+
+    public void castDragonFireVolley(LivingEntity target) {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        this.fireVolleyCooldown = isEnraged() ? 75 : 115;
+        this.setCastingState(2);
+        Vec3 start = this.getEyePosition();
+        Vec3 dir = target.getEyePosition().subtract(start).normalize();
+        for (int i = -2; i <= 2; i++) {
+            Vec3 aim = dir.add(i * 0.14D, 0.04D, -i * 0.14D).normalize();
+            var fb = new net.minecraft.world.entity.projectile.SmallFireball(sl, this, aim);
+            fb.setPos(start.x + aim.x * 2.5D, start.y + aim.y * 1.5D, start.z + aim.z * 2.5D);
+            sl.addFreshEntity(fb);
+        }
+        for (double d = 2.0D; d <= Math.min(30.0D, this.distanceTo(target) + 2.0D); d += 1.4D) {
+            Vec3 p = start.add(dir.scale(d));
+            sl.sendParticles(ParticleTypes.FLAME, p.x, p.y, p.z, 6, 0.5, 0.5, 0.5, 0.04);
+            sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, p.x, p.y, p.z, 2, 0.3, 0.3, 0.3, 0.02);
+        }
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 3.0F, 0.9F);
+        target.igniteForSeconds(6);
+        target.hurt(this.damageSources().inFire(), 48.0F);
+    }
+
+    public void castSkillSeal() {
+        if (!(this.level() instanceof ServerLevel sl)) return;
+        this.skillSealCooldown = 380;
+        SkillNullificationAbility.castBossSkillSeal(sl, this, 30.0F, 180);
+    }
 
     /**
      * AI Goal chuyên dụng điều phối chuỗi combo kỹ năng hủy diệt diện rộng tốc độ cao
@@ -1310,16 +1399,30 @@ public class VelgryndEntity extends Monster {
 
         @Override
         public boolean canUse() {
-            return velgrynd.getTarget() != null && velgrynd.getTarget().isAlive() && velgrynd.getActiveSkillTicks() <= 0;
+            return velgrynd.getTarget() != null && velgrynd.getTarget().isAlive()
+                    && velgrynd.getActiveSkillTicks() <= 0
+                    && !SkillNullificationAbility.isEntitySkillSealed(velgrynd);
         }
 
         @Override
         public void tick() {
             LivingEntity target = velgrynd.getTarget();
-            if (target == null) return;
+            if (target == null || SkillNullificationAbility.isEntitySkillSealed(velgrynd)) return;
 
             velgrynd.getLookControl().setLookAt(target, 30.0F, 30.0F);
             double distSq = velgrynd.distanceToSqr(target);
+
+            // 0. Phong Sát Kỹ Năng (Dragon Skill Nullification)
+            if (!velgrynd.isAllied() && velgrynd.getSkillSealCooldown() <= 0 && distSq <= 28.0D * 28.0D) {
+                velgrynd.castSkillSeal();
+                return;
+            }
+
+            // 0.5 Cửu Hỏa Cầu Long Đạn / Hơi Thở Rồng Lửa
+            if (velgrynd.getFireVolleyCooldown() <= 0 && distSq <= 34.0D * 34.0D) {
+                velgrynd.castDragonFireVolley(target);
+                return;
+            }
 
             // 1. Thao túng thời không (Ưu tiên thi triển khi có sẵn)
             if (velgrynd.getTimeCollapseCooldown() <= 0 && distSq <= 24.0D * 24.0D) {

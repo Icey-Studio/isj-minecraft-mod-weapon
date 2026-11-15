@@ -2,6 +2,7 @@ package com.minhphuc.weapons.entity.tensura;
 
 import com.minhphuc.weapons.content.divine.DivineArmorItem;
 import com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility;
+import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.init.ModItems;
 import net.minecraft.core.BlockPos;
@@ -83,6 +84,8 @@ public class VelzardEntity extends Monster {
             SynchedEntityData.defineId(VelzardEntity.class, EntityDataSerializers.INT);
     public static final EntityDataAccessor<Boolean> DATA_IS_CLONE =
             SynchedEntityData.defineId(VelzardEntity.class, EntityDataSerializers.BOOLEAN);
+    public static final EntityDataAccessor<Boolean> DATA_DRAGON_FORM =
+            SynchedEntityData.defineId(VelzardEntity.class, EntityDataSerializers.BOOLEAN);
 
     // Casting states
     public static final int CAST_NONE = 0;
@@ -105,6 +108,9 @@ public class VelzardEntity extends Monster {
     private int frostBloomCooldown = 140;
     private int mirrorDecoyCooldown = 0;
     private int snowStructureCooldown = 80;
+    private int iceCannonCooldown = 85;
+    private int skillSealCooldown = 360;
+    private int dragonFormCooldown = 260;
 
     // Active casting timers
     private int activeSkillTicks = 0;
@@ -166,6 +172,7 @@ public class VelzardEntity extends Monster {
         builder.define(DATA_IS_ENRAGED, false);
         builder.define(DATA_DRAGON_LAYERS, MAX_DRAGON_LAYERS);
         builder.define(DATA_IS_CLONE, false);
+        builder.define(DATA_DRAGON_FORM, false);
     }
 
     @Override
@@ -308,6 +315,25 @@ public class VelzardEntity extends Monster {
 
     public void setEnraged(boolean enraged) {
         this.entityData.set(DATA_IS_ENRAGED, enraged);
+    }
+
+    public boolean isDragonForm() {
+        return this.entityData.get(DATA_DRAGON_FORM);
+    }
+
+    public void setDragonForm(boolean dragon) {
+        boolean changed = this.entityData.get(DATA_DRAGON_FORM) != dragon;
+        this.entityData.set(DATA_DRAGON_FORM, dragon);
+        this.refreshDimensions();
+        if (changed && this.level() instanceof ServerLevel sl) {
+            sl.sendParticles(ParticleTypes.SNOWFLAKE, this.getX(), this.getY() + 1.5D, this.getZ(), 60, 1.8, 1.8, 1.8, 0.12);
+            sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.HOSTILE, 2.8F, dragon ? 0.9F : 1.35F);
+        }
+    }
+
+    @Override
+    public net.minecraft.world.entity.EntityDimensions getDefaultDimensions(net.minecraft.world.entity.Pose pose) {
+        return isDragonForm() ? net.minecraft.world.entity.EntityDimensions.scalable(7.0F, 7.8F) : super.getDefaultDimensions(pose);
     }
 
     @Override
@@ -759,10 +785,35 @@ public class VelzardEntity extends Monster {
         if (dragonBreathCooldown > 0) dragonBreathCooldown--;
         if (glacialPrisonCooldown > 0) glacialPrisonCooldown--;
         if (frostBloomCooldown > 0) frostBloomCooldown--;
+        if (iceCannonCooldown > 0) iceCannonCooldown--;
+        if (skillSealCooldown > 0) skillSealCooldown--;
+        if (dragonFormCooldown > 0) dragonFormCooldown--;
 
         // 6. Mặt Đất Băng Vĩnh Cửu (Permafrost Field Aura - Bán kính 20m)
         if (this.tickCount % 20 == 0) {
             tickPermafrostAura(sl);
+        }
+
+        // Chặn toàn bộ kỹ năng nếu bị Phong Sát Kỹ Năng!
+        if (SkillNullificationAbility.isEntitySkillSealed(this)) {
+            this.activeSkillTicks = 0;
+            this.setCastingState(CAST_NONE);
+            if (this.tickCount % 15 == 0) {
+                sl.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 6, 0.5, 0.7, 0.5, 0.02);
+            }
+            return;
+        }
+
+        // Tự chuyển đổi giữa Dạng Người <-> Chân Thân Bạch Băng Long
+        LivingEntity curTarget = this.getTarget();
+        if (curTarget != null && curTarget.isAlive() && dragonFormCooldown <= 0) {
+            dragonFormCooldown = 280;
+            if (!isDragonForm() && (isEnraged() || this.getHealth() < this.getMaxHealth() * 0.85F || this.random.nextFloat() < 0.65F)) {
+                setDragonForm(true);
+                broadcastDialogue("Chân thân Bạch Băng Long! Hãy đóng băng trong tuyệt vọng đi!");
+            } else if (isDragonForm() && !isEnraged() && this.random.nextFloat() < 0.30F) {
+                setDragonForm(false);
+            }
         }
 
         // 7. Quản lý kỹ năng đang thi triển
@@ -1096,6 +1147,20 @@ public class VelzardEntity extends Monster {
     private void chooseSkillToCast(ServerLevel sl, LivingEntity target, double distSq) {
         int rate = isEnraged() ? 2 : 1;
 
+        // 0. Phong Sát Kỹ Năng (White Ice Dragon Nullification)
+        if (skillSealCooldown <= 0 && distSq <= 30.0D * 30.0D) {
+            SkillNullificationAbility.castBossSkillSeal(sl, this, 32.0F, 180);
+            skillSealCooldown = 360;
+            return;
+        }
+
+        // 0.5 Băng Pháo Bão Tuyết (Cryo Ice Sphere Cannon Volley)
+        if (iceCannonCooldown <= 0 && distSq <= 36.0D * 36.0D) {
+            castIceCannonVolley(sl, target);
+            iceCannonCooldown = 85 / rate;
+            return;
+        }
+
         // 1. Hơi Thở Bạch Băng Long (Frost Dragon Breath)
         if (dragonBreathCooldown <= 0 && distSq <= 30.0D * 30.0D) {
             startSkill(CAST_DRAGON_BREATH, 40, target.position());
@@ -1136,6 +1201,26 @@ public class VelzardEntity extends Monster {
             castFrostBloom(sl, target);
             frostBloomCooldown = 140 / rate;
         }
+    }
+
+    private void castIceCannonVolley(ServerLevel sl, LivingEntity target) {
+        Vec3 start = this.getEyePosition();
+        Vec3 dir = target.getEyePosition().subtract(start).normalize();
+        for (int i = -2; i <= 2; i++) {
+            Vec3 aim = dir.add(i * 0.14D, 0.04D, -i * 0.14D).normalize();
+            var sb = new net.minecraft.world.entity.projectile.Snowball(sl, this);
+            sb.setPos(start.x + aim.x * 2.5D, start.y + aim.y * 1.5D, start.z + aim.z * 2.5D);
+            sb.shoot(aim.x, aim.y, aim.z, 2.2F, 1.0F);
+            sl.addFreshEntity(sb);
+        }
+        for (double d = 2.0D; d <= Math.min(32.0D, this.distanceTo(target) + 2.0D); d += 1.4D) {
+            Vec3 p = start.add(dir.scale(d));
+            sl.sendParticles(FROST_CYAN, p.x, p.y, p.z, 6, 0.5, 0.5, 0.5, 0.04);
+            sl.sendParticles(ParticleTypes.SNOWFLAKE, p.x, p.y, p.z, 5, 0.4, 0.4, 0.4, 0.02);
+        }
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 3.0F, 1.3F);
+        target.setTicksFrozen(Math.min(target.getTicksRequiredToFreeze() + 180, target.getTicksFrozen() + 120));
+        target.hurt(this.damageSources().freeze(), 68.0F);
     }
 
     private void startSkill(int skillType, int durationTicks, Vec3 targetPos) {
@@ -1371,6 +1456,7 @@ public class VelzardEntity extends Monster {
         compound.putBoolean("IsClone", isClone());
         compound.putInt("BlizzardTicks", blizzardTicksRemaining);
         compound.putBoolean("GeneratedStructures", hasGeneratedInitialStructures);
+        compound.putBoolean("DragonForm", isDragonForm());
     }
 
     @Override
@@ -1393,6 +1479,9 @@ public class VelzardEntity extends Monster {
         }
         if (compound.contains("GeneratedStructures")) {
             this.hasGeneratedInitialStructures = compound.getBoolean("GeneratedStructures");
+        }
+        if (compound.contains("DragonForm")) {
+            setDragonForm(compound.getBoolean("DragonForm"));
         }
     }
 

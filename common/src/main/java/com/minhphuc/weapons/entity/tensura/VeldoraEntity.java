@@ -1,5 +1,6 @@
 package com.minhphuc.weapons.entity.tensura;
 
+import com.minhphuc.weapons.content.tensura.SkillNullificationAbility;
 import com.minhphuc.weapons.content.tensura.TensuraNamingAbility;
 import com.minhphuc.weapons.content.tensura.TensuraSkillHelper;
 import com.minhphuc.weapons.init.ModItems;
@@ -97,6 +98,7 @@ public class VeldoraEntity extends TamableAnimal {
     private int formSwitchCooldown = 260;
     private int castingTicks = 0;
     private int namingCooldown = 240;
+    private int skillSealCooldown = 360;
     private boolean usingFlyingNav = false;
 
     public VeldoraEntity(EntityType<? extends TamableAnimal> entityType, Level level) {
@@ -188,7 +190,8 @@ public class VeldoraEntity extends TamableAnimal {
 
     @Override
     public EntityDimensions getDefaultDimensions(Pose pose) {
-        return isHumanForm() ? EntityDimensions.scalable(0.75F, 2.0F) : EntityDimensions.scalable(3.2F, 3.0F);
+        if (isHumanForm()) return EntityDimensions.scalable(0.75F, 2.0F);
+        return isSealed() ? EntityDimensions.scalable(4.2F, 4.0F) : EntityDimensions.scalable(7.5F, 8.2F);
     }
 
     public boolean isSealed() {
@@ -199,6 +202,7 @@ public class VeldoraEntity extends TamableAnimal {
         this.entityData.set(DATA_SEALED, sealed);
         this.setNoAi(sealed);
         this.setInvulnerable(sealed);
+        this.refreshDimensions();
     }
 
     public boolean isAllied() {
@@ -286,6 +290,15 @@ public class VeldoraEntity extends TamableAnimal {
         }
 
         LivingEntity target = this.getTarget();
+        if (skillSealCooldown > 0) skillSealCooldown--;
+
+        if (SkillNullificationAbility.isEntitySkillSealed(this)) {
+            if (this.tickCount % 15 == 0 && this.level() instanceof ServerLevel sl) {
+                sl.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.5D, this.getZ(), 6, 0.5, 0.7, 0.5, 0.02);
+            }
+            return;
+        }
+
         if (target != null && target.isAlive()) {
             // Trong chiến đấu Veldora tự do chuyển đổi giữa Rồng <-> Người
             if (formSwitchCooldown > 0) {
@@ -357,11 +370,17 @@ public class VeldoraEntity extends TamableAnimal {
             // DẠNG RỒNG: Mạnh gấp 5 lần Ác Ma Thủy Tổ & ngang ngửa Velgrynd!
             setCastingState(1);
             castingTicks = 18;
-            skillCooldown = 48;
+            skillCooldown = 44;
 
-            int roll = this.random.nextInt(3);
+            if (skillSealCooldown <= 0 && !isAllied() && dist <= 32.0D) {
+                SkillNullificationAbility.castBossSkillSeal(sl, this, 32.0F, 180);
+                skillSealCooldown = 360;
+                return;
+            }
+
+            int roll = this.random.nextInt(5);
             if (roll == 0) {
-                // Hắc Lôi Bạo Táp (Black Lightning Storm)
+                // Hắc Lôi Bạo Táp (Black Lightning Storm + Thiên Lôi Thật)
                 sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.HOSTILE, 3.0F, 0.7F);
                 sl.sendParticles(BLACK_LIGHTNING, target.getX(), target.getY() + 1.5D, target.getZ(), 45, 2.2, 2.5, 2.2, 0.15);
                 sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, target.getX(), target.getY() + 1.5D, target.getZ(), 40, 2.0, 2.0, 2.0, 0.25);
@@ -385,7 +404,7 @@ public class VeldoraEntity extends TamableAnimal {
                 if (TensuraSkillHelper.canDestroyTerrain(sl, this)) {
                     sl.explode(this, target.getX(), target.getY(), target.getZ(), 2.5F, Level.ExplosionInteraction.MOB);
                 }
-            } else {
+            } else if (roll == 2) {
                 // Tử Thần Cuồng Phong (Death Calling Wind Tornado)
                 sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.5F, 1.1F);
                 for (int h = 0; h < 12; h++) {
@@ -396,12 +415,43 @@ public class VeldoraEntity extends TamableAnimal {
                 }
                 float dmg = againstPrimordial ? 980.0F : 290.0F;
                 damageStormArea(sl, target.position(), 9.0D, dmg);
+            } else if (roll == 3) {
+                // Loạt Hắc Lôi Long Cầu (Triple Storm Dragon Plasma Orbs)
+                Vec3 eye = this.getEyePosition();
+                Vec3 dir = target.getEyePosition().subtract(eye).normalize();
+                for (int orb = -1; orb <= 1; orb++) {
+                    Vec3 aim = dir.add(orb * 0.16D, 0.02D, -orb * 0.16D).normalize();
+                    var fb = new net.minecraft.world.entity.projectile.SmallFireball(sl, this, aim);
+                    fb.setPos(eye.x + aim.x * 3.0D, eye.y + aim.y * 2.0D, eye.z + aim.z * 3.0D);
+                    sl.addFreshEntity(fb);
+                }
+                for (double d = 2.0D; d <= Math.min(28.0D, dist + 2.0D); d += 1.4D) {
+                    Vec3 pt = eye.add(dir.scale(d));
+                    sl.sendParticles(BLACK_LIGHTNING, pt.x, pt.y, pt.z, 5, 0.45, 0.45, 0.45, 0.04);
+                }
+                sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 2.6F, 0.9F);
+                damageStormArea(sl, target.position(), 5.5D, againstPrimordial ? 880.0F : 260.0F);
+            } else {
+                // Thiên Lôi Bạo Liệt (Storm Meteor Pillar)
+                Vec3 strikeCenter = target.position();
+                for (int y = 0; y < 14; y++) {
+                    sl.sendParticles(BLACK_LIGHTNING, strikeCenter.x, strikeCenter.y + y * 1.1D, strikeCenter.z, 8, 1.0, 0.3, 1.0, 0.05);
+                    sl.sendParticles(STORM_CYAN, strikeCenter.x, strikeCenter.y + y * 1.1D, strikeCenter.z, 6, 1.2, 0.3, 1.2, 0.04);
+                }
+                sl.playSound(null, strikeCenter.x, strikeCenter.y, strikeCenter.z, SoundEvents.LIGHTNING_BOLT_IMPACT, SoundSource.HOSTILE, 3.0F, 0.85F);
+                damageStormArea(sl, strikeCenter, 8.0D, againstPrimordial ? 1050.0F : 320.0F);
             }
         } else {
-            // DẠNG NGƯỜI: Linh hoạt Veldora-Style Killing Arts + Hadouken Ki Blast
+            // DẠNG NGƯỜI: Linh hoạt Veldora-Style Killing Arts + Hadouken Ki Blast + Phong Sát Quyền
             setCastingState(1);
             castingTicks = 12;
             skillCooldown = 36;
+
+            if (skillSealCooldown <= 0 && !isAllied() && dist <= 22.0D) {
+                SkillNullificationAbility.castBossSkillSeal(sl, this, 24.0F, 160);
+                skillSealCooldown = 360;
+                return;
+            }
 
             if (dist > 6.5D) {
                 // Tốc biến áp sát + Chưởng Sóng Kamehameha
