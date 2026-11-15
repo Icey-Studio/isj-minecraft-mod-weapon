@@ -279,10 +279,19 @@ public class InfiniteDragonPrisonAbility {
     }
 
     public static void castForVeldoraCave(ServerLevel level, Vec3 center) {
-        if (level == null || center == null || hasVeldoraCavePrison(level, center)) return;
-        double radius = 8.0D;
-        double domeHeight = 8.5D;
-        double skirtDepth = 2.5D;
+        if (level == null || center == null) return;
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison p : ACTIVE_PRISONS) {
+                if (p.level == level && (p.isVeldoraCavePrison || p.center.distanceTo(center) <= 4.0D)) {
+                    if (p.radius >= 14.5D) return;
+                    ACTIVE_PRISONS.remove(p);
+                    break;
+                }
+            }
+        }
+        double radius = 15.0D;
+        double domeHeight = 16.0D;
+        double skirtDepth = 3.0D;
         ActivePrison prison = new ActivePrison(level, null, center, radius, domeHeight, skirtDepth, 3);
         prison.maxDurationTicks = -1;
         prison.isVeldoraCavePrison = true;
@@ -297,7 +306,7 @@ public class InfiniteDragonPrisonAbility {
     }
 
     public static void removeVeldoraCavePrison(ServerLevel level, Vec3 center) {
-        removePrisonsInArea(level, center, 16.0D);
+        removePrisonsInArea(level, center, 24.0D);
     }
 
     /**

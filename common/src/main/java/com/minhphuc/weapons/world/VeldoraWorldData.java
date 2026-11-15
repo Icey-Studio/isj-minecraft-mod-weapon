@@ -32,6 +32,10 @@ public class VeldoraWorldData extends SavedData {
     private boolean veldoraUnsealed = false;
     private UUID unsealedByPlayer = null;
     private UUID prisonUuid = null;
+    private UUID activeVeldoraUuid = null;
+    private boolean veldoraDead = false;
+    private boolean veldoraStoredInStomach = false;
+    private boolean veldoraHumanForm = false;
 
     public static VeldoraWorldData get(ServerLevel overworld) {
         ServerLevel ow = overworld.getServer().overworld();
@@ -51,6 +55,10 @@ public class VeldoraWorldData extends SavedData {
         data.veldoraUnsealed = tag.getBoolean("VeldoraUnsealed");
         if (tag.hasUUID("UnsealedBy")) data.unsealedByPlayer = tag.getUUID("UnsealedBy");
         if (tag.hasUUID("PrisonUuid")) data.prisonUuid = tag.getUUID("PrisonUuid");
+        if (tag.hasUUID("ActiveVeldoraUuid")) data.activeVeldoraUuid = tag.getUUID("ActiveVeldoraUuid");
+        data.veldoraDead = tag.getBoolean("VeldoraDead");
+        data.veldoraStoredInStomach = tag.getBoolean("VeldoraStoredInStomach");
+        data.veldoraHumanForm = tag.getBoolean("VeldoraHumanForm");
         return data;
     }
 
@@ -64,7 +72,104 @@ public class VeldoraWorldData extends SavedData {
         tag.putBoolean("VeldoraUnsealed", veldoraUnsealed);
         if (unsealedByPlayer != null) tag.putUUID("UnsealedBy", unsealedByPlayer);
         if (prisonUuid != null) tag.putUUID("PrisonUuid", prisonUuid);
+        if (activeVeldoraUuid != null) tag.putUUID("ActiveVeldoraUuid", activeVeldoraUuid);
+        tag.putBoolean("VeldoraDead", veldoraDead);
+        tag.putBoolean("VeldoraStoredInStomach", veldoraStoredInStomach);
+        tag.putBoolean("VeldoraHumanForm", veldoraHumanForm);
         return tag;
+    }
+
+    @org.jetbrains.annotations.Nullable
+    public UUID getActiveVeldoraUuid() {
+        return activeVeldoraUuid;
+    }
+
+    public void setActiveVeldoraUuid(@org.jetbrains.annotations.Nullable UUID uuid) {
+        this.activeVeldoraUuid = uuid;
+        if (uuid != null) {
+            this.veldoraDead = false;
+            this.veldoraStoredInStomach = false;
+        }
+        setDirty();
+    }
+
+    public boolean isVeldoraDead() {
+        return veldoraDead;
+    }
+
+    public void setVeldoraDead(boolean dead, boolean humanForm) {
+        this.veldoraDead = dead;
+        this.veldoraHumanForm = humanForm;
+        if (dead) {
+            this.activeVeldoraUuid = null;
+            this.veldoraStoredInStomach = false;
+        }
+        setDirty();
+    }
+
+    public boolean isVeldoraStoredInStomach() {
+        return veldoraStoredInStomach;
+    }
+
+    public void setVeldoraStoredInStomach(boolean stored, boolean humanForm) {
+        this.veldoraStoredInStomach = stored;
+        this.veldoraHumanForm = humanForm;
+        if (stored) {
+            this.activeVeldoraUuid = null;
+            this.veldoraDead = false;
+        }
+        setDirty();
+    }
+
+    public boolean isVeldoraHumanForm() {
+        return veldoraHumanForm;
+    }
+
+    /**
+     * Tìm cá thể Veldora DUY NHẤT trên toàn server; nếu tồn tại nhiều bản sao dư thừa thì tự động xóa bỏ bản thừa.
+     */
+    @org.jetbrains.annotations.Nullable
+    public static VeldoraEntity findSingletonVeldora(net.minecraft.server.MinecraftServer server) {
+        if (server == null) return null;
+        VeldoraWorldData vd = get(server.overworld());
+        java.util.List<VeldoraEntity> found = new java.util.ArrayList<>();
+        for (ServerLevel sl : server.getAllLevels()) {
+            for (net.minecraft.world.entity.Entity e : sl.getAllEntities()) {
+                if (e instanceof VeldoraEntity v && v.isAlive()) {
+                    found.add(v);
+                }
+            }
+        }
+        if (found.isEmpty()) return null;
+
+        VeldoraEntity primary = null;
+        if (vd.activeVeldoraUuid != null) {
+            for (VeldoraEntity v : found) {
+                if (v.getUUID().equals(vd.activeVeldoraUuid)) {
+                    primary = v;
+                    break;
+                }
+            }
+        }
+        if (primary == null) {
+            for (VeldoraEntity v : found) {
+                if (v.isAllied()) {
+                    primary = v;
+                    break;
+                }
+            }
+        }
+        if (primary == null) primary = found.get(0);
+
+        for (VeldoraEntity v : found) {
+            if (v != primary) {
+                v.discard();
+            }
+        }
+        if (!primary.getUUID().equals(vd.activeVeldoraUuid)) {
+            vd.setActiveVeldoraUuid(primary.getUUID());
+        }
+        return primary;
     }
 
     public BlockPos getOrRollCavePos(ServerLevel ow) {
@@ -108,11 +213,12 @@ public class VeldoraWorldData extends SavedData {
     public void ensureCaveGenerated(ServerLevel level) {
         if (level.dimension() != Level.OVERWORLD) return;
         BlockPos center = getOrRollCavePos(level);
-        if (!caveGenerated) {
-            // Nạp chunk tại vị trí Hang Động Phong Ấn & chạm rỗng không gian đá ma thuật
+        boolean needsCarve = !caveGenerated || (!veldoraUnsealed && level.getBlockState(center.above(16)).isSolid());
+        if (needsCarve) {
+            // Nạp chunk tại vị trí Hang Động Phong Ấn & chạm rỗng không gian đá ma thuật khổng lồ đủ chứa Lồng Giam 15m
             level.getChunk(center);
-            int rx = 16;
-            int ry = 13;
+            int rx = 26;
+            int ry = 22;
             BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
             for (int dx = -rx; dx <= rx; dx++) {
                 for (int dz = -rx; dz <= rx; dz++) {
@@ -130,20 +236,20 @@ public class VeldoraWorldData extends SavedData {
                     }
                 }
             }
-            // Đặt bệ phong ấn vàng ở chính giữa & đèn biển chiếu sáng vòng ngoài Lồng Giam
+            // Đặt bệ phong ấn vàng ở chính giữa & đèn biển chiếu sáng vòng ngoài Lồng Giam 15m
             level.setBlock(center.below(), Blocks.GOLD_BLOCK.defaultBlockState(), 2);
-            level.setBlock(center.offset(11, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(-11, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(0, 0, 11), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(0, 0, -11), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+            level.setBlock(center.offset(18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+            level.setBlock(center.offset(-18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+            level.setBlock(center.offset(0, 0, 18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+            level.setBlock(center.offset(0, 0, -18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
 
             caveGenerated = true;
             setDirty();
         }
 
-        if (!veldoraUnsealed) {
-            // Sinh Bạo Phong Long Veldora đang bị phong ấn nếu chưa có trong hang
-            if (level.getEntitiesOfClass(VeldoraEntity.class, new net.minecraft.world.phys.AABB(center).inflate(16)).isEmpty()) {
+        if (!veldoraUnsealed && !veldoraDead && !veldoraStoredInStomach) {
+            // Sinh DUY NHẤT 1 Bạo Phong Long Veldora đang bị phong ấn nếu chưa tồn tại cá thể nào
+            if (findSingletonVeldora(level.getServer()) == null) {
                 VeldoraEntity veldora = ModEntities.VELDORA.get().create(level);
                 if (veldora != null) {
                     veldora.moveTo(center.getX() + 0.5, center.getY(), center.getZ() + 0.5, 0.0F, 0.0F);
@@ -151,9 +257,10 @@ public class VeldoraWorldData extends SavedData {
                     veldora.setHumanForm(false);
                     veldora.setCustomName(Component.literal("§b§l[PHONG ẤN] §f§lBạo Phong Long Veldora"));
                     level.addFreshEntity(veldora);
+                    setActiveVeldoraUuid(veldora.getUUID());
                 }
             }
-            // Đặt & duy trì vòm Lồng Giam Vô Hạn 3D (hình bán cầu đa diện hoàng kim - thất sắc giống hệt kỹ năng người chơi)
+            // Đặt & duy trì vòm Lồng Giam Vô Hạn 3D cỡ đại (R=15m, H=16m)
             InfiniteDragonPrisonAbility.castForVeldoraCave(level, Vec3.atBottomCenterOf(center.below()));
         }
     }

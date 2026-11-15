@@ -37,7 +37,7 @@ import java.util.Optional;
  */
 public final class AzathothStomachData {
 
-    private static final String KEY_STOMACH = "AzathothStomachList";
+    public static final String KEY_STOMACH = "AzathothStomachList";
     public static final String KEY_VELDORA_BEFRIENDED = "VeldoraSummonUnlocked";
     public static final int MAX_SLOTS = 24;
 
@@ -72,14 +72,37 @@ public final class AzathothStomachData {
             return true;
         }
 
-        List<LivingEntity> mobs = level.getEntitiesOfClass(LivingEntity.class, search,
-                e -> e != player && e.isAlive() && !(e instanceof VeldoraEntity));
+        // Thu hồi Veldora duy nhất vào Không Gian Ảo Dạ Dày Vô Hạn nếu người chơi nhắm thẳng vào ông ta
+        List<VeldoraEntity> liveVeldoras = level.getEntitiesOfClass(VeldoraEntity.class, search, e -> e.isAlive() && !e.isSealed());
         CompoundTag data = EntityDataHelper.getCustomData(player);
         ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
         if (list.size() >= MAX_SLOTS) {
             player.displayClientMessage(Component.literal("§5⚠ Không Gian Ảo tạm đầy (" + MAX_SLOTS + " ô)! Hãy chuyển hóa bớt thành Ma Tố!"), true);
             return false;
         }
+
+        if (!liveVeldoras.isEmpty()) {
+            VeldoraEntity targetV = liveVeldoras.get(0);
+            removeVeldoraStomachEntries(list);
+            CompoundTag slot = new CompoundTag();
+            slot.putString("Name", "§bBạo Phong Long Veldora (" + (targetV.isHumanForm() ? "Dạng Người" : "Dạng Rồng") + ")");
+            slot.putString("Kind", "ENTITY");
+            slot.putString("SpecialKind", "VELDORA");
+            slot.putBoolean("HumanForm", targetV.isHumanForm());
+            slot.putLong("Ep", 95_000_000L);
+            slot.putString("Skill", "Long Chủng Chân Thân — Ấn Định Tuyệt Đối");
+            list.add(slot);
+            data.put(KEY_STOMACH, list);
+
+            VeldoraWorldData.get(level.getServer().overworld()).setVeldoraStoredInStomach(true, targetV.isHumanForm());
+            targetV.discard();
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.4F, 0.75F);
+            player.displayClientMessage(Component.literal("§5§l[KHÔNG GIAN VÔ TẬN] §fĐã thu hồi duy nhất §bBạo Phong Long Veldora §fvào Dạ Dày Vô Hạn!"), true);
+            return true;
+        }
+
+        List<LivingEntity> mobs = level.getEntitiesOfClass(LivingEntity.class, search,
+                e -> e != player && e.isAlive() && !(e instanceof VeldoraEntity));
 
         if (!mobs.isEmpty()) {
             LivingEntity victim = mobs.get(0);
@@ -122,8 +145,19 @@ public final class AzathothStomachData {
         return false;
     }
 
+    public static void removeVeldoraStomachEntries(ListTag list) {
+        for (int i = list.size() - 1; i >= 0; i--) {
+            CompoundTag slot = list.getCompound(i);
+            if ("VELDORA".equals(slot.getString("SpecialKind"))) {
+                list.remove(i);
+            } else if (slot.contains("EntityTag") && "weapons:veldora".equals(slot.getCompound("EntityTag").getString("id"))) {
+                list.remove(i);
+            }
+        }
+    }
+
     public static void recordVoidAbsorb(ServerPlayer player, LivingEntity victim) {
-        if (player == null || victim == null) return;
+        if (player == null || victim == null || victim instanceof VeldoraEntity) return;
         CompoundTag data = EntityDataHelper.getCustomData(player);
         ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
         if (list.size() >= MAX_SLOTS) return;
@@ -158,6 +192,8 @@ public final class AzathothStomachData {
         veldora.moveTo(safePos.x, Math.max(player.getY(), level.getMinBuildHeight() + 5), safePos.z, player.getYRot() + 180.0F, 0.0F);
 
         caveData.markUnsealed(player.getUUID());
+        caveData.setActiveVeldoraUuid(veldora.getUUID());
+        VeldoraWorldData.findSingletonVeldora(level.getServer());
         CompoundTag data = EntityDataHelper.getCustomData(player);
         data.putBoolean(KEY_VELDORA_BEFRIENDED, true);
 
@@ -189,7 +225,11 @@ public final class AzathothStomachData {
 
         if (!sealedList.isEmpty() || (atCave && !caveData.isVeldoraUnsealed())) {
             com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.removeVeldoraCavePrison(ow, Vec3.atBottomCenterOf(cavePos));
-            if (sealedList.isEmpty()) {
+            VeldoraEntity singleton = VeldoraWorldData.findSingletonVeldora(level.getServer());
+            if (singleton == null && !sealedList.isEmpty()) {
+                singleton = sealedList.get(0);
+            }
+            if (singleton == null) {
                 VeldoraEntity spawned = ModEntities.VELDORA.get().create(ow);
                 if (spawned != null) {
                     Vec3 p = player.position().add(player.getLookAngle().multiply(1, 0, 1).normalize().scale(5.0D));
@@ -200,13 +240,16 @@ public final class AzathothStomachData {
                     spawned.setHumanForm(false);
                     spawned.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
                     ow.addFreshEntity(spawned);
+                    caveData.setActiveVeldoraUuid(spawned.getUUID());
                 }
             } else {
-                for (VeldoraEntity v : sealedList) {
-                    v.setSealed(false);
-                    v.setAllied(true);
-                    v.tame(player);
-                    v.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+                singleton.setSealed(false);
+                singleton.setAllied(true);
+                singleton.tame(player);
+                singleton.setCustomName(Component.literal("§b§l[BẠO PHONG LONG] §f§lVeldora Tempest"));
+                caveData.setActiveVeldoraUuid(singleton.getUUID());
+                for (VeldoraEntity extra : sealedList) {
+                    if (extra != singleton) extra.discard();
                 }
             }
             caveData.markUnsealed(player.getUUID());
@@ -228,6 +271,16 @@ public final class AzathothStomachData {
         CompoundTag slot = list.getCompound(index);
         String kind = slot.getString("Kind");
         Vec3 dropPos = player.position().add(player.getLookAngle().scale(2.5D));
+
+        if ("VELDORA".equals(slot.getString("SpecialKind"))
+                || ("ENTITY".equals(kind) && slot.contains("EntityTag") && "weapons:veldora".equals(slot.getCompound("EntityTag").getString("id")))) {
+            boolean humanForm = slot.getBoolean("HumanForm");
+            removeVeldoraStomachEntries(list);
+            data.put(KEY_STOMACH, list);
+            VeldoraWorldData.get(level.getServer().overworld()).setVeldoraStoredInStomach(true, humanForm);
+            SummonVeldoraAbility.releaseOrReviveSingle(level, player, humanForm, false);
+            return;
+        }
 
         if ("ENTITY".equals(kind) && slot.contains("EntityTag")) {
             Optional<Entity> restored = EntityType.create(slot.getCompound("EntityTag"), level);
