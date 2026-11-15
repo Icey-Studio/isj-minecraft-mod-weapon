@@ -1510,10 +1510,9 @@ public class DimensionalSanctuaryAbility {
     public static void tick(ServerLevel level) {
         long gameTime = level.getGameTime();
 
-        // 1. Quét tương tác bước qua Cánh Cửa Không Gian ngoài đời thực
+        // 1. Quét tương tác bước qua Cánh Cửa Không Gian ngoài đời thực (snapshot tránh ConcurrentModificationException)
         if (!ACTIVE_GATES.isEmpty()) {
-            for (Map.Entry<UUID, ActiveGate> entry : ACTIVE_GATES.entrySet()) {
-                ActiveGate gate = entry.getValue();
+            for (ActiveGate gate : List.copyOf(ACTIVE_GATES.values())) {
                 if (gate.level != level) continue;
 
                 List<Entity> touching = level.getEntities((Entity) null, gate.triggerBox);
@@ -1536,7 +1535,7 @@ public class DimensionalSanctuaryAbility {
         // 2. Xử lý bên trong Không Gian Riêng Thành Trì Jura Tempest (Mỗi 5 ticks)
         ServerLevel citadelLevel = JuraTempestCitadelBuilder.resolveTargetLevel(level.getServer());
         if (level == citadelLevel && gameTime % 5 == 0) {
-            for (ServerPlayer player : level.players()) {
+            for (ServerPlayer player : List.copyOf(level.players())) {
                 if (!isInsideSanctuary(level, player.position())) continue;
 
                 BlockPos center = JuraTempestCitadelBuilder.getCitadelCenter(level, player.getUUID());
@@ -1600,6 +1599,7 @@ public class DimensionalSanctuaryAbility {
                     if (lastTp == null || gameTime - lastTp > 45) {
                         LAST_TELEPORT_TIME.put(player.getUUID(), gameTime);
                         handleStepIntoSanctuaryGate(player);
+                        continue;
                     }
                 }
 
