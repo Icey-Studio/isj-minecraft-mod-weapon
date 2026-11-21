@@ -127,7 +127,44 @@ Toàn bộ các kỹ năng cổ xưa, kỹ năng tiến hóa từ sách cũ đã
 
 ---
 
-## 6. Danh Mục Tính Năng Bị Loại Bỏ Hoàn Toàn (Removed Features)
+## 6. Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One — 强欲者)
+
+* **Điều kiện thức tỉnh**: Người chơi bắt buộc phải đã thức tỉnh thành **Chân Ma Vương**.
+* **Phương thức đạt được**:
+  1. *Lộ trình nguyên tác*: Khiêu chiến tiêu diệt Mariabell Rosso để thu được **Tinh Hồn Mariabell Rosso (`mariabell_soul`)**, sau đó tiến hành thanh tẩy linh hồn để khắc sâu kỹ năng độc nhất vào linh hồn.
+  2. *Lộ trình tức thì*: Sử dụng **Ngọc Thức Tỉnh Kẻ Tham Lam (`greed_awakening_orb`)** bằng cách click Chuột Phải để lập tức mở khóa kỹ năng.
+* **Quyền năng tác chiến 3 Thức**:
+  * **Thức 1 — Khống Chế Dục Vọng (`Crouch`)**: Vòng ma thuật hồng neon tỏa rộng 22m, cưỡng chế tẩy não toàn bộ quái vật không thuộc cấp Chân Long/Ma Vương Tối Cổ thành thuộc hạ trung thành (mắt đỏ, nhận buff Sức mạnh III, Tốc độ II, Hồi phục III và tự động tấn công kẻ địch của người chơi).
+  * **Thức 2 — Xiềng Xích Tham Lam (`Chuột Phải`)**: Phóng sợi xích ma pháp màu hồng neon trói chân mục tiêu, hút 20% máu và **CƯỠNG CHẾ THAO TÚNG** biến mục tiêu thành Con Rối Hộ Vệ phục tùng (giữ lại máu, không giết luôn quái).
+  * **Thức 3 — Bùng Nổ Dục Vọng (`Shift + Chuột Phải`)**: Kích nổ lòng tham trong tâm trí kẻ địch, gây **85 - 180 sát thương chuẩn** xuyên thấu mọi kết giới bảo vệ kèm sóng xung kích chấn động âm thanh. Toàn bộ con rối phát nổ bộc phát sát thương cực đại.
+* **Nội tại linh hồn bất diệt & Cơ chế Con Rối**:
+  * Lưu trữ vĩnh viễn trên dữ liệu người chơi, không bao giờ bị mất khi tử vong.
+  * Con rối trung thành tự động theo sau bảo vệ chủ nhân (tự dịch chuyển nếu đi xa), tự động tấn công kẻ thù và không bao giờ đánh chủ.
+  * Tăng **1.5x (thêm 50%) EXP** nhận được khi kết liễu bất kỳ sinh vật nào.
+  * Tỉ lệ **35% tước đoạt vũ khí** của nạn nhân trực tiếp vào Không Gian Ảo Dạ Dày Azathoth.
+
+---
+
+## 7. Hệ Thống Cố Vấn Tác Chiến 1-Chạm Đại Hiền Giả (1-Tap Tactical Co-Pilot)
+
+* **Nguyên lý hoạt động**: Đại Hiền Giả / Raphael liên tục giám sát trạng thái cơ thể, trang bị và môi trường xung quanh người chơi trong thời gian thực.
+* **Tự động né tránh khung Chat**: Khi người chơi mở khung chat hoặc gõ lệnh (`/`), banner HUD của Raphael tự động nâng cao lên đỉnh màn hình để không bao giờ bị ô chat hay bảng gợi ý lệnh che khuất.
+* **Cơ chế phản hồi 1-chạm**: Khi phát hiện nguy cấp hoặc cơ hội tác chiến, hệ thống gửi thông báo kèm mã hành động chiến thuật `[Y] Đồng ý / [N] Từ chối`:
+  * `[Y] (Chấp thuận)`: Gửi gói tin C2S `ServerboundSageActionPacket` tới máy chủ để thực thi giải pháp tối ưu chỉ trong **1 tick duy nhất**:
+    1. *Cấp cứu sinh mệnh*: Hồi phục khẩn cấp 10 Tim và thanh tẩy bùa hại khi HP < 25%.
+    2. *Thoát ly Hư Không*: Kích hoạt ma pháp không gian đưa người chơi trở về mặt đất an toàn khi rơi Void.
+    3. *Hóa đá dung nham*: Đóng băng biển dung nham thành đá hắc diện thạch / đá cuội khi ngã xuống Lava.
+    4. *Đảo hướng đạn đạo*: Đổi hướng toàn bộ mũi tên / đạn ma pháp của quái vật quay ngược lại kẻ bắn.
+    5. *Hút đồ Azathoth*: Hút sạch quặng, khoáng sản, vật phẩm rơi vãi xung quanh vào Dạ Dày Vô Hạn.
+    6. *Sửa chữa vũ trang*: Khôi phục 250 độ bền vũ khí chính/phụ ngay giữa trận đánh.
+    7. *Trấn an Veldora*: Sử dụng năng lượng Azathoth bình ổn tâm trí Bạo Phong Long khi rồng phát cuồng.
+    8. *Kích hoạt Overdrive*: Tăng cường luân chuyển ma tố khi cạn kiệt năng lượng.
+    9. *Tái sinh nhục thân bằng Nhãn Cầu Thị Thực*: Giải trừ 100% án tử moi Tim / Não của Cửu Thế Quyền Hiện, hồi đầy máu và cấp hiệu ứng hồi phục thần thánh.
+  * `[N] (Từ chối)`: Đóng thông báo chiến thuật, nhường toàn quyền quyết định cho người chơi.
+
+---
+
+## 8. Danh Mục Tính Năng Bị Loại Bỏ Hoàn Toàn (Removed Features)
 
 1. **Găng Tay Vô Cực & 6 Viên Đá Vô Cực** (Cùng sự kiện rơi đá từ Wither, Warden, Ender Dragon...).
 2. **Bát Môn Thiên Phạt Trận** (Lồng giam 7 cột sáng cũ).

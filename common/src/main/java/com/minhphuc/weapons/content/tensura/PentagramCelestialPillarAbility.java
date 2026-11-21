@@ -304,12 +304,13 @@ public class PentagramCelestialPillarAbility {
         List<LivingEntity> targets = p.level.getEntitiesOfClass(LivingEntity.class, box,
                 e -> e.isAlive() && e != p.caster);
 
+        float mult = PrimordialArmorItem.getSkillPowerMultiplier(p.caster);
         for (LivingEntity v : targets) {
             v.setRemainingFireTicks(240);
             if (p.caster != null) {
-                v.hurt(p.caster.damageSources().magic(), 650.0F);
+                v.hurt(p.caster.damageSources().magic(), 650.0F * mult);
             } else {
-                v.hurt(p.level.damageSources().magic(), 650.0F);
+                v.hurt(p.level.damageSources().magic(), 650.0F * mult);
             }
         }
     }

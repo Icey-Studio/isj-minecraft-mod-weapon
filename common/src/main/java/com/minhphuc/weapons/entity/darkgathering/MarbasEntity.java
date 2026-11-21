@@ -64,13 +64,13 @@ public class MarbasEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 1500.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.30D)
-                .add(Attributes.ATTACK_DAMAGE, 40.0D)
-                .add(Attributes.ARMOR, 22.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 12.0D)
+                .add(Attributes.MAX_HEALTH, 6600.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.34D)
+                .add(Attributes.ATTACK_DAMAGE, 240.0D)
+                .add(Attributes.ARMOR, 34.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 22.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.FOLLOW_RANGE, 48.0D);
+                .add(Attributes.FOLLOW_RANGE, 52.0D);
     }
 
     @Override
@@ -96,6 +96,8 @@ public class MarbasEntity extends Monster {
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, com.minhphuc.weapons.entity.tensura.VeldoraEntity.class, 5, false, false,
+                e -> e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, false));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, IronGolem.class, false));
         this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Monster.class, 20, true, false,
@@ -138,7 +140,7 @@ public class MarbasEntity extends Monster {
             for (LivingEntity victim : inDomain) {
                 // Ép Tim Tử Tuyệt (Severed Heart Grasp): Nạn nhân chạy nước rút sẽ bị bóp nghẹt tim
                 if (victim.isSprinting() || victim.getDeltaMovement().horizontalDistanceSqr() > 0.08D) {
-                    victim.hurt(sl.damageSources().magic(), 5.0F); // 2.5 tim sát thương chuẩn
+                    victim.hurt(sl.damageSources().magic(), 15.0F); // 2.5 tim sát thương chuẩn
                     victim.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2, false, false, true));
                     if (hasPlayerNearby) {
                         sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
@@ -150,7 +152,7 @@ public class MarbasEntity extends Monster {
 
             // Tái Cấu Trúc Sinh Thể: Hồi máu tự nhiên khi chiến đấu
             if (this.getHealth() < this.getMaxHealth()) {
-                this.heal(10.0F);
+                this.heal(30.0F);
                 if (hasPlayerNearby) {
                     sl.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + 2.0D, this.getZ(), 6, 0.5D, 0.8D, 0.5D, 0.02D);
                 }
@@ -177,7 +179,7 @@ public class MarbasEntity extends Monster {
                     e -> e.isAlive() && e != this && !(e instanceof MarbasEntity));
 
             for (LivingEntity v : victims) {
-                v.hurt(sl.damageSources().mobAttack(this), 25.0F);
+                v.hurt(sl.damageSources().mobAttack(this), 75.0F);
                 v.addEffect(new MobEffectInstance(MobEffects.BLINDNESS, 80, 0, false, false, true));
                 v.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 1, false, false, true));
 

@@ -82,25 +82,25 @@ public final class SummonVeldoraAbility {
             return;
         }
 
-        // 2) VELDORA ĐÃ TỬ TRẬN -> HỒI SINH VỚI GIÁ 70% HP & MA TỐ!
+        // 2) VELDORA ĐÃ TỬ TRẬN -> HỒI SINH BẰNG 70% MA TỐ (MAGICULES)!
         if (vd.isVeldoraDead()) {
+            boolean exhaustedDeath = false;
             if (!player.isCreative()) {
-                float hpCost = player.getMaxHealth() * 0.70F;
-                if (player.getHealth() <= 2.0F) {
-                    SageManager.sendCornerAlert(player, "Sinh lực quá yếu để Giải Phóng & Hồi Sinh Bạo Phong Long (cần tối thiểu > 2 HP để chịu 70% tiêu hao)!", 0xFFEF4444, 6000, true);
+                if (MagiculesManager.getCurrentMagicules(player) <= 0L) {
+                    SageManager.sendCornerAlert(player, "Ma Tố đã cạn kiệt (0 MP), hãy chờ Ma Tố hồi phục trước khi Hồi Sinh Bạo Phong Long!", 0xFFEF4444, 6000, true);
                     return;
                 }
-                float remaining = Math.max(1.0F, player.getHealth() - hpCost);
-                player.setHealth(remaining);
-                int food = player.getFoodData().getFoodLevel();
-                player.getFoodData().setFoodLevel(Math.max(1, food - 12));
-                player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 1));
+                long mpCost = Math.max(50_000L, Math.round(MagiculesManager.getMaxMagicules(player) * 0.70D));
+                exhaustedDeath = MagiculesManager.consumeMagiculesWithExhaustion(player, mpCost, false, "Hồi Sinh Bạo Phong Long Veldora");
             }
             vd.setVeldoraDead(false, humanForm);
             VeldoraEntity revived = spawnCanonicalVeldora(level, player, humanForm, vd);
             if (revived != null) {
-                SageManager.sendCornerAlert(player, "Giải Phóng Bạo Phong Long Thành Công! Đã tiêu hao 70% HP & Ma Tố để HỒI SINH Veldora Tempest!", 0xFFF59E0B, 7000, false);
+                SageManager.sendCornerAlert(player, "Giải Phóng Bạo Phong Long Thành Công! Đã tiêu hao 70% Ma Tố để HỒI SINH Veldora Tempest!", 0xFFF59E0B, 7000, false);
                 player.displayClientMessage(Component.literal("§b§l[VELDORA] §f\"KUAHAHA!! Đa tạ bạn hiền đã rót Ma Tố hồi sinh ta từ Hư Không!\""), false);
+            }
+            if (exhaustedDeath) {
+                MagiculesManager.triggerMagiculeExhaustionDeath(player, "Hồi Sinh Veldora");
             }
             return;
         }
@@ -133,9 +133,9 @@ public final class SummonVeldoraAbility {
         VeldoraEntity existing = VeldoraWorldData.findSingletonVeldora(level.getServer());
         if (existing == null || !existing.isAlive()) {
             if (vd.isVeldoraStoredInStomach()) {
-                SageManager.sendCornerAlert(player, "Veldora hiện đang nghỉ ngơi trong Không Gian Ảo Azathoth — có thể bấm Gọi (Rồng) hoặc Gọi (Người) ngay!", 0xFF38BDF8, 4500, false);
+                SageManager.sendCornerAlert(player, "Veldora hiện đang ở trong Không Gian Ảo có thể dùng triệu hồi Bạo Phong Long!", 0xFF38BDF8, 4500, false);
             } else {
-                SageManager.sendCornerAlert(player, "Không thấy Veldora đang hoạt động ngoài thế giới để thu hồi!", 0xFFF59E0B, 4500, false);
+                SageManager.sendCornerAlert(player, "Không tìm thấy cá thể veldora!", 0xFFF59E0B, 4500, false);
             }
             return;
         }
@@ -170,12 +170,17 @@ public final class SummonVeldoraAbility {
 
     private static boolean rollBusyExcuse(ServerLevel level, ServerPlayer player) {
         if (level.random.nextFloat() < 0.30F) {
-            String excuse = switch (level.random.nextInt(3)) {
+            String excuse = switch (level.random.nextInt(7)) {
                 case 0 -> "Kuahaha... Chờ chút đi bạn hiền, ta đang đọc dở tập Manga!";
-                case 1 -> "Xin lỗi nha, Ifrit vừa thách đấu cờ Shogi với ta trong dạ dày!";
+                case 1 -> "Xin lỗi nha, Ifrit vừa thách đấu cờ Shogi với ta!";
+                case 2 -> "Xin lỗi nha bạn hiền, ta đang rất bận";
+                case 3 -> "Gọi lại sau đi";
+                case 4 -> "....";
+                case 5 -> "Ai vậy?";
+                case 6 -> "không";
                 default -> "Bạo Phong Long hiện đang bận tập chiêu mới, lát nữa gọi lại nhé!";
             };
-            SageManager.sendCornerAlert(player, "Triệu Hồi Veldora Thất Bại (30% Đang Bận): \"" + excuse + "\"", 0xFFFB7185, 6500, false);
+            SageManager.sendCornerAlert(player, "Triệu Hồi Veldora Thất Bại vì cá thể không đồng ý: \"" + excuse + "\"", 0xFFFB7185, 6500, false);
             level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
             return true;
         }

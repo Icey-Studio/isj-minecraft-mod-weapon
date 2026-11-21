@@ -159,6 +159,22 @@ public class PrimordialPactItem extends Item {
         return false;
     }
 
+    /**
+     * Tìm cá thể Ác Ma Thủy Tổ đang còn sống của chủng loại này trên TOÀN BỘ các dimension.
+     * Đảm bảo mỗi Ác Ma Thủy Tổ chỉ tồn tại tối đa 1 cá thể duy nhất tại một thời điểm.
+     */
+    public static PrimordialDemonEntity findActivePrimordial(net.minecraft.server.MinecraftServer server, DemonType type, PrimordialDemonEntity exclude) {
+        if (server == null || type == null) return null;
+        for (ServerLevel lvl : server.getAllLevels()) {
+            for (Entity e : lvl.getAllEntities()) {
+                if (e instanceof PrimordialDemonEntity pde && pde != exclude && pde.isAlive() && pde.getDemonType() == type) {
+                    return pde;
+                }
+            }
+        }
+        return null;
+    }
+
     @Override
     public Component getName(ItemStack stack) {
         DemonType type = getDemonType(stack);
@@ -331,6 +347,16 @@ public class PrimordialPactItem extends Item {
 
         ServerLevel serverLevel = (ServerLevel) level;
 
+        // Quy Tắc Bản Thể Độc Tôn: Nếu người chơi đang mặc đủ bộ đồ Thủy Tổ này -> Chặn triệu hồi từ Khế Ước
+        if (PrimordialArmorItem.isAnyPlayerWearingFullDemonSet(serverLevel.getServer(), type)) {
+            player.displayClientMessage(
+                    Component.literal("§c§l« QUY TẮC BẢN THỂ ĐỘC TÔN: Người chơi đang hiện thân là Ác Ma Thủy Tổ " + (type != null ? type.getColorName() : "") + "! Không thể triệu hồi bản thể thứ hai! »"),
+                    true
+            );
+            player.playNotifySound(SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.2F, 0.8F);
+            return InteractionResultHolder.fail(stack);
+        }
+
         // Tìm ác ma đã được triệu hồi trước đó nếu có
         String demonUuidStr = ItemStackDataHelper.getString(stack, "DemonUUID");
         PrimordialDemonEntity targetDemon = null;
@@ -394,13 +420,31 @@ public class PrimordialPactItem extends Item {
             }
         } else {
             // ==========================================
-            // CHUỘT PHẢI THƯỜNG KHI CHƯA TRIỆU HỒI: TRIỆU HỒI XUẤT THẾ!
+            // CHUỘT PHẢI THƯỜNG KHI CHƯA TRIỆU HỒI: TRIỆU HỒI XUẤT THẾ (TỐI ĐA 1 CÁ THỂ DUY NHẤT)!
             // ==========================================
+            double spawnX = player.getX() + player.getLookAngle().x * 2.5D;
+            double spawnY = player.getY();
+            double spawnZ = player.getZ() + player.getLookAngle().z * 2.5D;
+
+            PrimordialDemonEntity globalExisting = findActivePrimordial(serverLevel.getServer(), type, null);
+            if (globalExisting != null) {
+                if (globalExisting.isOwnedBy(player)) {
+                    globalExisting.teleportTo(serverLevel, spawnX, spawnY, spawnZ, java.util.Set.of(), player.getYRot() + 180.0F, 0.0F);
+                    globalExisting.setOrderedToSit(false);
+                    ItemStackDataHelper.putBoolean(stack, "IsSummoned", true);
+                    ItemStackDataHelper.putString(stack, "DemonUUID", globalExisting.getStringUUID());
+                    serverLevel.sendParticles(ParticleTypes.PORTAL, spawnX, spawnY + 1.0D, spawnZ, 50, 0.5D, 0.8D, 0.5D, 0.15D);
+                    serverLevel.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
+                    player.displayClientMessage(Component.literal("§d§l[KHẾ ƯỚC] §eĐã hiệu triệu §a" + type.getColorName() + " §etới bên cạnh bạn!"), true);
+                    return InteractionResultHolder.consume(stack);
+                } else {
+                    player.displayClientMessage(Component.literal("§c[KHẾ ƯỚC] Thủy Tổ " + type.getColorName() + " đang hiện diện ở thế giới thực — mỗi Thủy Tổ chỉ được tồn tại 1 cá thể duy nhất!"), true);
+                    return InteractionResultHolder.fail(stack);
+                }
+            }
+
             PrimordialDemonEntity newDemon = ModEntities.PRIMORDIAL_DEMON.get().create(serverLevel);
             if (newDemon != null) {
-                double spawnX = player.getX() + player.getLookAngle().x * 2.5D;
-                double spawnY = player.getY();
-                double spawnZ = player.getZ() + player.getLookAngle().z * 2.5D;
 
                 newDemon.moveTo(spawnX, spawnY, spawnZ, player.getYRot() + 180.0F, 0.0F);
                 newDemon.setDemonType(type);
@@ -683,6 +727,23 @@ public class PrimordialPactItem extends Item {
         double spawnX = player.getX() + player.getLookAngle().x * 2.0D;
         double spawnY = player.getY();
         double spawnZ = player.getZ() + player.getLookAngle().z * 2.0D;
+
+        PrimordialDemonEntity existing = findActivePrimordial(serverLevel.getServer(), type, null);
+        if (existing != null) {
+            if (existing.isOwnedBy(player)) {
+                existing.teleportTo(serverLevel, spawnX, spawnY, spawnZ, java.util.Set.of(), player.getYRot() + 180.0F, 0.0F);
+                existing.setOrderedToSit(false);
+                ItemStackDataHelper.putBoolean(stack, "IsSummoned", true);
+                ItemStackDataHelper.putString(stack, "DemonUUID", existing.getStringUUID());
+                serverLevel.sendParticles(ParticleTypes.PORTAL, spawnX, spawnY + 1.0D, spawnZ, 50, 0.5D, 0.8D, 0.5D, 0.15D);
+                serverLevel.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
+                String effName = ItemStackDataHelper.getString(stack, "CustomDemonName").isEmpty() ? type.getColorName() : ItemStackDataHelper.getString(stack, "CustomDemonName");
+                player.displayClientMessage(Component.literal("§d§l[HIỆU TRIỆU KHÔNG GIAN] §e" + effName + " §ađã dịch chuyển xuyên không gian đến bên bạn!"), true);
+                return existing;
+            }
+            player.displayClientMessage(Component.literal("§c[KHẾ ƯỚC] Không thể triệu hồi bản sao — Thủy Tổ " + type.getColorName() + " đang tồn tại ở nơi khác!"), true);
+            return null;
+        }
 
         PrimordialDemonEntity remoteDemon = ModEntities.PRIMORDIAL_DEMON.get().create(serverLevel);
         if (remoteDemon != null) {

@@ -43,14 +43,14 @@ public class EvolvedSkillHelper {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.0F, 1.6F);
             player.displayClientMessage(
-                    Component.literal("§6§l[URIEL] §fPhòng Ngự Tuyệt Đối: §a§l[BẬT] 🛡️ §7(Miễn nhiễm 100% sát thương thông thường)"),
-                    true
+                    Component.literal("§6§l« THỆ ƯỚC CHI VƯƠNG URIEL - PHÒNG NGỰ TUYỆT ĐỐI »\n§eThiết lập Bức Tường Chiều Không Gian Bất Khả Xâm Phạm. Toàn bộ tổn hại vật lý và ma thuật thông thường đã bị phân tán vào hư vô!"),
+                    false
             );
         } else {
             player.level().playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 2.0F, 1.2F);
             player.displayClientMessage(
-                    Component.literal("§6§l[URIEL] §fPhòng Ngự Tuyệt Đối: §c§l[TẮT] ✕ §7(Hủy trạng thái bất tử 100%)"),
+                    Component.literal("§6§l« THỆ ƯỚC CHI VƯƠNG URIEL » §7Đã giải phóng Bức Tường Chiều Không Gian."),
                     true
             );
         }

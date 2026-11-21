@@ -119,6 +119,11 @@ public class CuuTheCurseManager {
                     playerVictim.playNotifySound(SoundEvents.WITHER_DEATH, SoundSource.PLAYERS, 1.2F, 0.5F);
                 }
             }
+
+            // Kích hoạt ngay đề xuất chiến thuật 1-chạm cứu sinh từ Thông Tuệ Vương Raphael
+            com.minhphuc.weapons.content.tensura.SageManager.sendCornerAlert(playerVictim,
+                    "« NGUY CẤP »: Phát hiện nhục thân bị tước đoạt Tim/Não bởi Cửu Thế Quyền Hiện! Đề xuất: Sử dụng [Nhãn Cầu Thị Thực] để tái tạo 100% thể xác?",
+                    0xFFE11D48, 12000, false, com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_SEER_FLESH_REGEN);
         }
     }
 

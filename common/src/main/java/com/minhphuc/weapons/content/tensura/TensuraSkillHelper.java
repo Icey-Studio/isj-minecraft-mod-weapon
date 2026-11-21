@@ -2,6 +2,7 @@ package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.data.EntityDataHelper;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.VelgryndEntity;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
@@ -46,8 +47,9 @@ public class TensuraSkillHelper {
         if (entity instanceof Player p) {
             return EntityDataHelper.getCustomData(p).getBoolean(NBT_SAFE_MODE);
         }
-        if (entity instanceof PrimordialDemonEntity demon) {
-            LivingEntity owner = demon.getOwner();
+        UUID ownerUuid = resolveOwnerUuid(entity);
+        if (ownerUuid != null && entity != null && entity.level() != null) {
+            Player owner = entity.level().getPlayerByUUID(ownerUuid);
             if (owner != null) {
                 return EntityDataHelper.getCustomData(owner).getBoolean(NBT_SAFE_MODE);
             }
@@ -105,55 +107,26 @@ public class TensuraSkillHelper {
     private static UUID resolveOwnerUuid(Entity entity) {
         if (entity instanceof Player p) return p.getUUID();
         if (entity instanceof OwnableEntity ownable) return ownable.getOwnerUUID();
+        if (entity instanceof VelgryndEntity vg && vg.isAllied()) return vg.getParsedOwnerUUID();
         return null;
     }
 
     // =========================================================================
-    // 3. QUẢN LÝ COOLDOWN KỸ NĂNG
+    // 3. QUẢN LÝ COOLDOWN KỸ NĂNG (ĐẶC QUYỀN NGƯỜI CHƠI: KHÔNG CẦN COOLDOWN)
     // =========================================================================
     public static boolean checkAndStartCooldown(ServerPlayer player, String skillKey, int cooldownTicks, String displayName) {
         if (player == null) return false;
-        if (player.isCreative() || cooldownTicks <= 0) {
-            return true;
-        }
-        long now = player.level().getGameTime();
-        Map<String, Long> map = COOLDOWNS.computeIfAbsent(player.getUUID(), k -> new ConcurrentHashMap<>());
-        long readyAt = map.getOrDefault(skillKey, 0L);
-        if (now < readyAt) {
-            double remainingSec = (readyAt - now) / 20.0D;
-            player.displayClientMessage(
-                    Component.literal(String.format("§c⏳ [%s] §fĐang hồi chiêu: §e%.1fs§f!", displayName, remainingSec)),
-                    true
-            );
-            return false;
-        }
-        map.put(skillKey, now + cooldownTicks);
+        // Đặc quyền người chơi: Miễn toàn bộ Cooldown ở cả Sinh Tồn lẫn Sáng Tạo
+        MagiculesManager.onSkillCastPulse(player, Math.max(1_000L, cooldownTicks * 1_500L));
         return true;
     }
 
     public static int getRemainingCooldownTicks(ServerPlayer player, String skillKey) {
-        if (player == null || player.isCreative()) return 0;
-        Map<String, Long> map = COOLDOWNS.get(player.getUUID());
-        if (map == null) return 0;
-        long now = player.level().getGameTime();
-        long readyAt = map.getOrDefault(skillKey, 0L);
-        return (int) Math.max(0L, readyAt - now);
+        return 0;
     }
 
     public static Map<String, Integer> getActiveCooldownTicks(ServerPlayer player) {
-        Map<String, Integer> result = new HashMap<>();
-        if (player == null || player.isCreative()) return result;
-        Map<String, Long> map = COOLDOWNS.get(player.getUUID());
-        if (map == null || map.isEmpty()) return result;
-        long now = player.level().getGameTime();
-        map.entrySet().removeIf(entry -> entry.getValue() <= now);
-        for (Map.Entry<String, Long> entry : map.entrySet()) {
-            int rem = (int) (entry.getValue() - now);
-            if (rem > 0) {
-                result.put(entry.getKey(), rem);
-            }
-        }
-        return result;
+        return Collections.emptyMap();
     }
 
     // =========================================================================
@@ -252,7 +225,10 @@ public class TensuraSkillHelper {
         boolean hasAnchor = SpatialTeleportAbility.hasAnchorMark(player);
         boolean isTrueDemonLord = root.getBoolean("TensuraTrueDemonLord");
         boolean hasCreation = root.getBoolean("TensuraMaterialCreation");
+        boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
         boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
+        boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+        boolean hasLordSkills = isTrueDemonLord || isWearingDivine || isInnatePrimordial || player.isCreative();
         com.minhphuc.weapons.entity.tensura.DemonType type = possessing
                 ? PrimordialPossessionManager.getPossessedType(player)
                 : PrimordialPlayerDataHelper.getPrimordialType(player);
@@ -262,8 +238,8 @@ public class TensuraSkillHelper {
         String currentName = "";
         if (possessing) {
             currentName = PrimordialPossessionManager.getSkillDisplayName(player, PrimordialPossessionManager.getSelectedSkillIndex(player));
-        } else if (isTrueDemonLord || isPrimordial || com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player) || player.isCreative()) {
-            int lordCount = TensuraSkillDispatcher.getSkillCount(hasCreation);
+        } else if (hasLordSkills || isPrimordial) {
+            int lordCount = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
             if (lordIdx < lordCount) {
                 currentName = TensuraSkillDispatcher.getSkillName(player, lordIdx, hasCreation);
             } else if (isPrimordial) {
@@ -276,11 +252,16 @@ public class TensuraSkillHelper {
         List<Integer> favorites = getFavoriteSkills(player, possessing);
         Map<String, Integer> cooldowns = getActiveCooldownTicks(player);
         boolean raphaelAuto = root.getBoolean("TensuraRaphaelAutoBattle");
+        long magicules = MagiculesManager.getCurrentMagicules(player);
+        long maxMagicules = MagiculesManager.getMaxMagicules(player);
+        long ep = MagiculesManager.getTotalEp(player);
+        boolean azathothAutoLoot = AzathothStomachData.isAutoLootEnabled(player);
 
         com.minhphuc.weapons.network.ModMessages.sendToPlayer(
                 new com.minhphuc.weapons.network.ClientboundSyncSkillStatePacket(
                         safeMode, hasTactical, hasAnchor, isTrueDemonLord, hasCreation, isPrimordial,
-                        demonOrd, lordIdx, currentName, selectedAnchor, anchorLabels, favorites, cooldowns, raphaelAuto
+                        demonOrd, lordIdx, currentName, selectedAnchor, anchorLabels, favorites, cooldowns, raphaelAuto,
+                        magicules, maxMagicules, ep, azathothAutoLoot
                 ),
                 player
         );

@@ -45,8 +45,8 @@ public class VeldoraRenderer extends MobRenderer<VeldoraEntity, EntityModel<Veld
             // Kích thước vừa khít bên trong Lồng Giam Vô Hạn R=15m, H=16m
             poseStack.scale(3.8F, 3.8F, 3.8F);
         } else {
-            // Sải cánh >45 block, thân rồng thon dài oai vệ thay cho khối mập
-            poseStack.scale(7.8F, 7.8F, 7.8F);
+            // Sải cánh khổng lồ gấp 5 lần nguyên bản, thân rồng đồ sộ như ngọn núi
+            poseStack.scale(14.0F, 14.0F, 14.0F);
         }
     }
 

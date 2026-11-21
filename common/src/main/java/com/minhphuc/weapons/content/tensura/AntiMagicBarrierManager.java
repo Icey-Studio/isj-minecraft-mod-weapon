@@ -720,7 +720,31 @@ public class AntiMagicBarrierManager {
      * Người chơi đập tay không hoặc đánh vào khối kết giới để hóa giải.
      * Nhận diện chuẩn xác kết giới gần nhất khi có nhiều kết giới chồng đè.
      */
+    public static boolean shatterBarrierAt(net.minecraft.world.level.Level level, BlockPos pos) {
+        if (level == null || pos == null || level.isClientSide()) return false;
+        ActiveBarrier found = null;
+        synchronized (ACTIVE_BARRIERS) {
+            Vec3 hitPos = Vec3.atCenterOf(pos);
+            for (ActiveBarrier b : ACTIVE_BARRIERS) {
+                if (b.level == level && (b.replacedBlocks.containsKey(pos) || b.center.distanceTo(hitPos) <= b.radius + 3.0D)) {
+                    found = b;
+                    break;
+                }
+            }
+            if (found != null) {
+                ACTIVE_BARRIERS.remove(found);
+                cleanBarrier(found);
+            }
+        }
+        if (found != null) {
+            level.playSound(null, pos.getX(), pos.getY(), pos.getZ(), SoundEvents.GLASS_BREAK, SoundSource.BLOCKS, 2.0F, 1.2F);
+            return true;
+        }
+        return false;
+    }
+
     public static boolean dispelByPunch(ServerPlayer player, BlockPos pos) {
+        if (player == null) return false;
         ActiveBarrier found = null;
         boolean isBarrierBlock = player.level().getBlockState(pos).is(ModBlocks.ANTI_MAGIC_BARRIER.get());
 

@@ -89,7 +89,7 @@ public class SanctuaryGateDialScreen extends Screen {
         }
 
         String rightHint = this.insideSanctuary
-                ? "§b🏡 Đang ở Đảo Biệt Thự"
+                ? "§6♛ Thành Trì Jura"
                 : "§7Click ô trống = §aLưu";
         graphics.drawString(this.font, rightHint, left + 298, top + 36, 0xCCCCCC);
 
@@ -191,12 +191,12 @@ public class SanctuaryGateDialScreen extends Screen {
         if (slot == 0) {
             if (this.insideSanctuary) {
                 graphics.drawString(this.font, "§b§lQuay Lại Chỗ Vừa Vào", textX, y + 5, 0xFFFFFF);
-                graphics.drawString(this.font, "§7Trở về tọa độ trước khi vào đảo", textX, y + 16, 0xAAAAAA);
-                return cardHover ? "§b§l[Cổng #0] §fXoay cổng sân vườn về vị trí bạn vừa bước vào Biệt Thự." : null;
+                graphics.drawString(this.font, "§7Trở về tọa độ trước khi vào Thành Trì", textX, y + 16, 0xAAAAAA);
+                return cardHover ? "§b§l[Cổng #0] §fXoay cổng Quảng Trường về vị trí bạn vừa bước vào Thành Trì Jura Tempest." : null;
             } else {
-                graphics.drawString(this.font, "§b§lBiệt Thự Gỗ Sân Vườn", textX, y + 5, 0xFFFFFF);
-                graphics.drawString(this.font, "§7Đảo Anh Đào • Suối Nóng • Kho", textX, y + 16, 0xAAAAAA);
-                return cardHover ? "§b§l[Cổng #0] §fMở lối vào Đảo Nổi Biệt Thự Gỗ Sân Vườn cá nhân (An toàn 100%, đưa cả thú cưng vào)." : null;
+                graphics.drawString(this.font, "§6§lThành Trì Jura Tempest", textX, y + 5, 0xFFFFFF);
+                graphics.drawString(this.font, "§7Cung Điện • Onsen • Đấu Trường", textX, y + 16, 0xAAAAAA);
+                return cardHover ? "§b§l[Cổng #0] §fMở lối vào Không Gian Riêng Thành Trì Jura Tempest (đưa cả thú cưng & cứu hộ đồ rương cũ)." : null;
             }
         }
 

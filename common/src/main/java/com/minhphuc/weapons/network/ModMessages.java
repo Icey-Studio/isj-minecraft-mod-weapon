@@ -183,6 +183,16 @@ public class ModMessages {
                 ServerboundRaphaelSkillPacket::encode,
                 ServerboundRaphaelSkillPacket::new,
                 ServerboundRaphaelSkillPacket::handle);
+
+        CHANNEL.register(ClientboundOpenTempestCitadelPacket.class,
+                ClientboundOpenTempestCitadelPacket::encode,
+                ClientboundOpenTempestCitadelPacket::new,
+                ClientboundOpenTempestCitadelPacket::handle);
+
+        CHANNEL.register(ServerboundTempestCitadelActionPacket.class,
+                ServerboundTempestCitadelActionPacket::encode,
+                ServerboundTempestCitadelActionPacket::new,
+                ServerboundTempestCitadelActionPacket::handle);
     }
 
     public static <MSG> void sendToServer(MSG message) {

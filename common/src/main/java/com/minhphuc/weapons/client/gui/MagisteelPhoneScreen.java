@@ -202,8 +202,14 @@ public class MagisteelPhoneScreen extends Screen {
         String regenInfo = "§7Bình thường (0.1 HP/s)";
         if (target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity veldora) {
             regenInfo = veldora.isHumanForm() ? "§bLong Chủng (Dạng Người: +20 HP/s)" : "§3Long Chủng Siêu Tốc (Dạng Rồng: +60 HP/s)";
-        } else if (target instanceof VelgryndEntity) {
-            regenInfo = "§6Long Chủng Siêu Tốc (+50 ~ 100 HP/s)";
+        } else if (target instanceof VelgryndEntity || target instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            regenInfo = "§6Long Chủng Siêu Tốc (+60 ~ 120 HP/s)";
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            regenInfo = "§dMa Vương Vĩnh Cửu (+80 HP/s)";
+        } else if (target instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            regenInfo = "§5Tà Thần Ma Vương (+32 HP/s)";
+        } else if (target instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            regenInfo = kubo.isComplete() ? "§eKhông Vong Hoàn Chỉnh (+56 HP/s)" : (kubo.isUltimate() ? "§4Không Vong Tối Thượng (+28 HP/s)" : "§8Phôi Thai Hắc Nhật (+8 HP/s)");
         } else if (target instanceof PrimordialDemonEntity demon) {
             if (demon.hasPhysicalBody() && demon.isNamed()) {
                 regenInfo = "§5Ma Thần Tối Thượng (+6% HP/s)";
@@ -223,6 +229,8 @@ public class MagisteelPhoneScreen extends Screen {
             guiGraphics.drawString(font, "§b✦ Thể Xác: " + bodyInfo, x, y, 0xFFFFFFFF, false);
             y += 14;
         } else if (target instanceof UnderworldDemonEntity uDemon) {
+            guiGraphics.drawString(font, "§d✦ Dòng Dõi: §eThuộc dòng dõi của " + uDemon.getDemonType().getTitleVi(), x, y, 0xFFFFFFFF, false);
+            y += 12;
             guiGraphics.drawString(font, "§4✦ Cấp/Dạng: §c" + uDemon.getRank().title + " §7[" + uDemon.getMorph().label + "]", x, y, 0xFFFFFFFF, false);
             y += 12;
             String bodyInfo = uDemon.hasPhysicalBody() ? "§a✔ Đã Nhập Xác (" + uDemon.getBodyOrigin() + ")" : "§7✖ Chưa Có (Dùng Xương / Hấp thụ)";
@@ -289,6 +297,21 @@ public class MagisteelPhoneScreen extends Screen {
             y += 12;
             guiGraphics.drawString(font, "§4☠ Điểm Yếu: §eBị Diệt Ngay Bởi Long Tinh Bộc Viêm Bá", x, y, 0xFFFFAA00, false);
             y += 12;
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            guiGraphics.drawString(font, "§b❄ Cố Định Hư Vô: §fMiễn nhiễm đóng băng, giảm mạnh sát thương vật lý", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            guiGraphics.drawString(font, "§3🛡 Hào Quang Tuyệt Đối: §fKháng mọi hiệu ứng khống chế & cháy nổ", x, y, 0xFFFFFFFF, false);
+            y += 12;
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            guiGraphics.drawString(font, "§d🔥 Tinh Ma Lò Phản Ứng: §fHấp thụ ma tố tăng sức mạnh vô hạn", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            guiGraphics.drawString(font, "§6🛡 Giáp Long Ma: §fMiễn nhiễm lửa, rơi tự do & đòn ma thuật yếu", x, y, 0xFFFFFFFF, false);
+            y += 12;
+        } else if (target instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            guiGraphics.drawString(font, "§5🌀 Trường Lực Nhật Thực: §fMiễn nhiễm lửa, đẩy lùi & trọng lực", x, y, 0xFFFFFFFF, false);
+            y += 12;
+            guiGraphics.drawString(font, "§c⚡ Đòn Đánh Hư Vô: §fXuyên giáp ma pháp & gây Héo Mòn cấp IV", x, y, 0xFFFFFFFF, false);
+            y += 12;
         } else if (target instanceof PrimordialDemonEntity demon) {
             guiGraphics.drawString(font, "§5🌀 Linh Tử Kháng Tính: §fMiễn nhiễm Nguyền Rủa & Độc Tố", x, y, 0xFFFFFFFF, false);
             y += 12;
@@ -313,6 +336,18 @@ public class MagisteelPhoneScreen extends Screen {
     private String getEntityFormattedName(LivingEntity entity) {
         if (entity instanceof VelgryndEntity velgrynd) {
             return velgrynd.isAllied() ? "§6§lCHƯỚC NHIỆT LONG VELGRYND (ĐỒNG MINH)" : "§c§lCHƯỚC NHIỆT LONG VELGRYND (BOSS)";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            return "§b§lBẠCH BĂNG LONG VELZARD [TRUE DRAGON]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            return "§d§lMA VƯƠNG HỦY DIỆT MILIM NAVA [CỔ ĐẠI]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            return "§5§lMA VƯƠNG KHÔNG VONG [NHẬT THỰC TỐI CAO]";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            return kubo.isComplete() ? "§e§lKHÔNG VONG HOÀN CHỈNH [BẠCH NHẬT]" : (kubo.isUltimate() ? "§4§lKHÔNG VONG TỐI THƯỢNG" : "§8§lKHÔNG VONG [TÀ THẦN]");
         }
         if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
             return v.isAllied() ? "§b§lBẠO PHONG LONG VELDORA (ĐỒNG MINH)" : "§3§lBẠO PHONG LONG VELDORA TEMPEST";
@@ -345,6 +380,19 @@ public class MagisteelPhoneScreen extends Screen {
         if (entity instanceof VelgryndEntity) {
             return "§eLong Chủng Tối Thượng (True Dragon - Đệ Tam Long)";
         }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            return "§bLong Chủng Tối Thượng (Bạch Băng Long - Đệ Nhị Long)";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            return "§dLong Ma Nhân (Dragonoid - Bát Tinh Ma Vương)";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            return "§5Ma Vương Hư Vô (Thức Tỉnh Tà Thần Nhật Thực)";
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            return kubo.isComplete() ? "§eTà Thần Bạch Nhật (Không Vong Hoàn Chỉnh)"
+                    : (kubo.isUltimate() ? "§4Tà Thần Hư Vô (Không Vong Tối Thượng)" : "§8Tà Thần Hư Vô (Không Vong)");
+        }
         if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v) {
             return v.isHumanForm()
                     ? "§bBạo Phong Long (Dạng Người - Linh Hoạt | Có Thể Ban Tên)"
@@ -358,7 +406,7 @@ public class MagisteelPhoneScreen extends Screen {
         }
         if (entity instanceof UnderworldDemonEntity uDemon) {
             String bodyStr = uDemon.hasPhysicalBody() ? "Thể Xác: " + uDemon.getBodyOrigin() : "Linh Thể";
-            return "§c" + uDemon.getRank().title + " §7(" + uDemon.getMorph().label + " - " + uDemon.getDemonType().getColorName() + " | " + bodyStr + ")";
+            return "§c" + uDemon.getRank().title + " §7| Dòng dõi " + uDemon.getDemonType().getTitleVi() + " (" + bodyStr + ")";
         }
         if (entity instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity) {
             return "§3Thảm Họa Ma Tố (Leviathan Bay Kháng Phép)";
@@ -385,11 +433,13 @@ public class MagisteelPhoneScreen extends Screen {
     }
 
     private long calculateEP(LivingEntity entity) {
-        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity) {
-            return com.minhphuc.weapons.entity.tensura.VeldoraEntity.VELDORA_EP;
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity
+                || entity instanceof VelgryndEntity
+                || entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            return com.minhphuc.weapons.content.tensura.MagiculesManager.getTrueDragonEp(entity);
         }
-        if (entity instanceof VelgryndEntity) {
-            return 74350000L;
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            return 145_000_000L;
         }
         if (entity instanceof PrimordialDemonEntity demon) {
             return demon.getCalculatedEP();
@@ -402,8 +452,9 @@ public class MagisteelPhoneScreen extends Screen {
         if (entity instanceof com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity) return 1800000L;
         if (entity instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity ch) return ch.isCorrupted() ? 18500000L : 85000L;
         if (entity instanceof com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity) return 6500000L;
-        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) {
-            return 12500000L;
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) return 85_000_000L;
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            return kubo.isComplete() ? 160_000_000L : (kubo.isUltimate() ? 95_000_000L : 25_000_000L);
         }
         if (entity instanceof Player) {
             return 1250000L; // Player with advanced armaments
@@ -477,6 +528,24 @@ public class MagisteelPhoneScreen extends Screen {
             list.add("§aKhắc Chế: §fDùng Nút Bịt Tai Trấn Ám / Hình Nhân Bồ Đề");
             return list;
         }
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            list.add("§5§lNhật Thực Quang Trụ: §dPhóng tia hư vô 280 DMG xuyên giáp ma pháp");
+            list.add("§8Tinh Vân Lực Trường: §cHút mọi thực thể 22m & gây 180 DMG + Héo Mòn");
+            list.add("§aTái Sinh Bóng Tối: §fLiên tục hồi phục sinh lực trong chiến đấu");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            list.add("§bUltimate Skill - Ái Dục & Nhẫn Nại Chi Vương Gabriel");
+            list.add("§3Cố Định Tuyệt Đối (Whiteout): §fĐóng băng vĩnh cửu diện rộng");
+            list.add("§fPhong Ấn Bão Băng: §bTriệt tiêu chuyển động & ma tố kẻ địch");
+            return list;
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            list.add("§dUltimate Skill - Phẫn Nộ Chi Vương Satanael");
+            list.add("§6Long Tinh Bộc Viêm Bá (Drago Nova): §cSức công phá hủy diệt");
+            list.add("§eCơn Thịnh Nộ Cổ Đại: §fCàng chiến đấu sát thương càng tăng");
+            return list;
+        }
         if (entity instanceof VelgryndEntity) {
             list.add("§cThao Túng Thời Không: §eĐóng băng 3s & chém thứ nguyên");
             list.add("§6Gia Tốc Cardinal: §eMach 5 Hỏa Long đục thủng địa hình");
@@ -495,7 +564,8 @@ public class MagisteelPhoneScreen extends Screen {
             return list;
         }
         if (entity instanceof UnderworldDemonEntity uDemon) {
-            list.add("§dHình Thái Ma Giới: §f" + uDemon.getMorph().label + " (" + uDemon.getDemonType().getColorName() + ")");
+            list.add("§dDòng Dõi Thủy Tổ: §eThuộc dòng dõi của " + uDemon.getDemonType().getTitleVi() + " (" + uDemon.getDemonType().getColorName() + ")");
+            list.add("§dHình Thái Ma Giới: §f" + uDemon.getMorph().label);
             list.add("§bKhả Năng Bay & Ma Pháp: §f" + (uDemon.isWinged() ? "Có cánh bay tự do" : "Chưa mọc cánh") + (uDemon.getRank().canCastMagic ? " | Phóng Ma Pháp Nguyên Tố" : " | Cận chiến"));
             list.add("§aThể Xác Vật Lý: §f" + (uDemon.hasPhysicalBody() ? uDemon.getBodyOrigin() : "Chưa có (Click Xương / Hấp thụ Dân Làng)"));
             list.add("§6Mệnh Lệnh Thuộc Hạ: §f" + (uDemon.isTame() ? uDemon.getCommandModeLabel() : "Chưa ký khế ước"));

@@ -119,14 +119,14 @@ public class MilimEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 5000.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.45D)
-                .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.ATTACK_DAMAGE, 60.0D)
-                .add(Attributes.ARMOR, 30.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.MAX_HEALTH, 30000.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.47D)
+                .add(Attributes.FLYING_SPEED, 0.60D)
+                .add(Attributes.ATTACK_DAMAGE, 645.0D)
+                .add(Attributes.ARMOR, 46.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 34.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.FOLLOW_RANGE, 64.0D);
+                .add(Attributes.FOLLOW_RANGE, 68.0D);
     }
 
     @Override
@@ -589,7 +589,7 @@ public class MilimEntity extends Monster {
                 v.removeEffect(MobEffects.REGENERATION);
                 v.removeEffect(MobEffects.DAMAGE_RESISTANCE);
                 v.removeEffect(MobEffects.FIRE_RESISTANCE);
-                v.hurt(this.damageSources().magic(), isSatanelStampede() ? 2600.0F : 1800.0F);
+                v.hurt(this.damageSources().magic(), isSatanelStampede() ? 7800.0F : 5400.0F);
                 v.setRemainingFireTicks(400); // Thiêu đốt 20s
                 Vec3 knockback = dir.scale(2.5D).add(0, 0.4D, 0);
                 v.setDeltaMovement(knockback);
@@ -718,7 +718,7 @@ public class MilimEntity extends Monster {
                         cur.x + 1.2, cur.y + 1.2, cur.z + 1.2);
 
                 for (LivingEntity v : sl.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive())) {
-                    v.hurt(this.damageSources().mobAttack(this), 75.0F);
+                    v.hurt(this.damageSources().mobAttack(this), 225.0F);
                     v.setRemainingFireTicks(120);
                 }
             }
@@ -761,9 +761,9 @@ public class MilimEntity extends Monster {
 
         double distSq = this.distanceToSqr(phantomDashTarget);
         if (distSq <= 12.0D) {
-            float dmg = 65.0F;
+            float dmg = 195.0F;
             if (phantomDashTarget.isBlocking()) {
-                dmg = 30.0F;
+                dmg = 90.0F;
                 if (phantomDashTarget instanceof Player p) {
                     p.disableShield();
                 }
@@ -796,7 +796,7 @@ public class MilimEntity extends Monster {
         for (LivingEntity v : list) {
             // Cơ chế né: nếu người chơi bấm Nhảy (Y > Milim.getY() + 0.7D), né hoàn toàn sóng xung kích!
             if (v.getY() <= this.getY() + 0.7D) {
-                v.hurt(this.damageSources().mobAttack(this), 50.0F);
+                v.hurt(this.damageSources().mobAttack(this), 150.0F);
                 v.setDeltaMovement(0, 0.85D, 0);
                 if (v instanceof ServerPlayer sp) {
                     sp.displayClientMessage(Component.literal("§d§l[ĐỊA CHẤN MA VƯƠNG] §cBạn trúng sóng xung kích do không kịp Nhảy né!"), true);
@@ -857,8 +857,8 @@ public class MilimEntity extends Monster {
             player.disableShield();
         }
 
-        // 2. Gây sát thương uy lực cực đại (60.0F = 30 tim)
-        boolean hurt = target.hurt(this.damageSources().mobAttack(this), 60.0F);
+        // 2. Gây sát thương uy lực cực đại (180.0F)
+        boolean hurt = target.hurt(this.damageSources().mobAttack(this), 180.0F);
 
         // 3. Đấm mục tiêu bay cực xa (Knockback siêu mạnh)
         Vec3 knockback = new Vec3(dir.x * 4.2D, 1.35D, dir.z * 4.2D);
@@ -903,7 +903,7 @@ public class MilimEntity extends Monster {
                 if (nearby instanceof ServerPlayer nsp) {
                     nsp.connection.send(new ClientboundSetEntityMotionPacket(nearby));
                 }
-                nearby.hurt(this.damageSources().mobAttack(this), 25.0F);
+                nearby.hurt(this.damageSources().mobAttack(this), 75.0F);
             }
         }
 

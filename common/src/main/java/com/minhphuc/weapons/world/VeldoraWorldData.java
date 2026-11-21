@@ -1,17 +1,24 @@
 package com.minhphuc.weapons.world;
 
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
+import com.minhphuc.weapons.content.tensura.SageManager;
 import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.entity.tensura.VeldoraEntity;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.saveddata.SavedData;
 import net.minecraft.world.phys.Vec3;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.UUID;
 
@@ -215,34 +222,7 @@ public class VeldoraWorldData extends SavedData {
         BlockPos center = getOrRollCavePos(level);
         boolean needsCarve = !caveGenerated || (!veldoraUnsealed && level.getBlockState(center.above(16)).isSolid());
         if (needsCarve) {
-            // Nạp chunk tại vị trí Hang Động Phong Ấn & chạm rỗng không gian đá ma thuật khổng lồ đủ chứa Lồng Giam 15m
-            level.getChunk(center);
-            int rx = 26;
-            int ry = 22;
-            BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
-            for (int dx = -rx; dx <= rx; dx++) {
-                for (int dz = -rx; dz <= rx; dz++) {
-                    double horiz = Math.hypot(dx, dz);
-                    if (horiz > rx) continue;
-                    for (int dy = -2; dy <= ry; dy++) {
-                        mPos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
-                        if (dy == -2) {
-                            level.setBlock(mPos, Blocks.DEEPSLATE_BRICKS.defaultBlockState(), 2);
-                        } else if (horiz >= rx - 1.5 || dy == ry) {
-                            level.setBlock(mPos, (dx + dy + dz) % 7 == 0 ? Blocks.AMETHYST_BLOCK.defaultBlockState() : Blocks.CHISELED_DEEPSLATE.defaultBlockState(), 2);
-                        } else {
-                            level.setBlock(mPos, Blocks.AIR.defaultBlockState(), 2);
-                        }
-                    }
-                }
-            }
-            // Đặt bệ phong ấn vàng ở chính giữa & đèn biển chiếu sáng vòng ngoài Lồng Giam 15m
-            level.setBlock(center.below(), Blocks.GOLD_BLOCK.defaultBlockState(), 2);
-            level.setBlock(center.offset(18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(-18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(0, 0, 18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-            level.setBlock(center.offset(0, 0, -18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
-
+            carveCaveStructure(level, center);
             caveGenerated = true;
             setDirty();
         }
@@ -263,5 +243,85 @@ public class VeldoraWorldData extends SavedData {
             // Đặt & duy trì vòm Lồng Giam Vô Hạn 3D cỡ đại (R=15m, H=16m)
             InfiniteDragonPrisonAbility.castForVeldoraCave(level, Vec3.atBottomCenterOf(center.below()));
         }
+    }
+
+    /**
+     * Tái tạo hoàn chỉnh Hang Động Phong Ấn Bạo Phong Long Veldora (nếu người chơi lỡ tay phá hỏng).
+     */
+    public static BlockPos rebuildCaveForPlayer(MinecraftServer server, @Nullable ServerPlayer player) {
+        ServerLevel ow = server.overworld();
+        VeldoraWorldData vd = get(ow);
+        BlockPos center = vd.getOrRollCavePos(ow);
+        vd.carveCaveStructure(ow, center);
+        vd.caveGenerated = true;
+        vd.setDirty();
+
+        // Nếu Veldora vẫn chưa được giải phong ấn thì phục hồi luôn kết giới & Veldora bị phong ấn
+        if (!vd.veldoraUnsealed && !vd.veldoraDead && !vd.veldoraStoredInStomach) {
+            vd.ensureCaveGenerated(ow);
+        }
+
+        ow.sendParticles(ParticleTypes.ENCHANTED_HIT, center.getX() + 0.5, center.getY() + 3.0, center.getZ() + 0.5, 80, 8.0, 4.0, 8.0, 0.08);
+        ow.playSound(null, center.getX(), center.getY(), center.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 2.5F, 1.05F);
+
+        if (player != null) {
+            String coords = "(" + center.getX() + ", " + center.getY() + ", " + center.getZ() + ")";
+            SageManager.sendCornerAlert(player, "Đã Tái Tạo Hang Động Veldora tại Overworld " + coords + "!", 0xFF38BDF8, 6500, false);
+            player.displayClientMessage(Component.literal("§b§l[KHÔNG GIAN ẢO] §aĐã tái tạo hoàn chỉnh Hang Động Bạo Phong Long Veldora tại §e" + coords + "§a! (Dùng §b[V] §ađể dịch chuyển tới ngay)"), false);
+            if (player.level() instanceof ServerLevel pLevel) {
+                pLevel.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.1F, 1.25F);
+            }
+        }
+        return center;
+    }
+
+    private void carveCaveStructure(ServerLevel level, BlockPos center) {
+        int rx = 26;
+        int ry = 22;
+        int minChunkX = (center.getX() - rx) >> 4;
+        int maxChunkX = (center.getX() + rx) >> 4;
+        int minChunkZ = (center.getZ() - rx) >> 4;
+        int maxChunkZ = (center.getZ() + rx) >> 4;
+        for (int cx = minChunkX; cx <= maxChunkX; cx++) {
+            for (int cz = minChunkZ; cz <= maxChunkZ; cz++) {
+                level.getChunk(cx, cz);
+            }
+        }
+
+        BlockPos.MutableBlockPos mPos = new BlockPos.MutableBlockPos();
+        for (int dx = -rx; dx <= rx; dx++) {
+            for (int dz = -rx; dz <= rx; dz++) {
+                double horiz = Math.hypot(dx, dz);
+                if (horiz > rx) continue;
+                for (int dy = -2; dy <= ry; dy++) {
+                    mPos.set(center.getX() + dx, center.getY() + dy, center.getZ() + dz);
+                    if (dy == -2) {
+                        level.setBlock(mPos, Blocks.DEEPSLATE_BRICKS.defaultBlockState(), 2);
+                    } else if (dy == -1) {
+                        boolean ringTile = ((Math.abs((int) Math.round(horiz))) % 5 == 0);
+                        level.setBlock(mPos, ringTile ? Blocks.POLISHED_DEEPSLATE.defaultBlockState() : Blocks.DEEPSLATE_TILES.defaultBlockState(), 2);
+                    } else if (horiz >= rx - 1.5 || dy == ry) {
+                        level.setBlock(mPos, (dx + dy + dz) % 7 == 0 ? Blocks.AMETHYST_BLOCK.defaultBlockState() : Blocks.CHISELED_DEEPSLATE.defaultBlockState(), 2);
+                    } else {
+                        level.setBlock(mPos, Blocks.AIR.defaultBlockState(), 2);
+                    }
+                }
+            }
+        }
+
+        // Bốn trụ đá thạch anh ma thuật ở 4 góc ngoài ranh giới Lồng Giam 15m
+        int[][] pillars = {{17, 17}, {-17, 17}, {17, -17}, {-17, -17}};
+        for (int[] p : pillars) {
+            for (int dy = 0; dy <= 16; dy++) {
+                level.setBlock(center.offset(p[0], dy, p[1]), (dy % 4 == 0) ? Blocks.SEA_LANTERN.defaultBlockState() : Blocks.DEEPSLATE_BRICKS.defaultBlockState(), 2);
+            }
+        }
+
+        // Bệ phong ấn hoàng kim ở chính giữa & đèn biển chiếu sáng vòng ngoài Lồng Giam 15m
+        level.setBlock(center.below(), Blocks.GOLD_BLOCK.defaultBlockState(), 2);
+        level.setBlock(center.offset(18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        level.setBlock(center.offset(-18, 0, 0), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        level.setBlock(center.offset(0, 0, 18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
+        level.setBlock(center.offset(0, 0, -18), Blocks.SEA_LANTERN.defaultBlockState(), 2);
     }
 }

@@ -115,62 +115,28 @@ public class TensuraNamingAbility {
                 || (target instanceof PrimordialDemonEntity)
                 || (target instanceof UnderworldDemonEntity);
 
-        // 2. Tính toán tiêu hao tài nguyên & Kiểm tra điều kiện người dùng
-        if (isDemonLord) {
-            // Trường hợp A: Ma Vương Đã Thức Tỉnh -> Tiêu hao 80% MÁU TỐI ĐA
-            float costHp = player.getMaxHealth() * 0.80F;
-            if (player.getHealth() <= costHp) {
-                player.displayClientMessage(
-                        Component.literal("§c[GIỌNG NÓI THẾ GIỚI] Cảnh báo: Ban danh xưng cho Ma Vương yêu cầu tiêu hao 80% sinh mệnh! Lượng máu hiện tại không đủ!"),
-                        true
-                );
-                VoiceOfTheWorld.announce(player, "Cảnh báo khẩn cấp: Sinh mệnh hiện tại không đủ 80% để chịu tải ma tố khi ban tên cho Ma Vương!");
-                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 0.7F);
-                return false;
-            }
-
-            // Trừ 80% máu
-            player.setHealth(Math.max(1.0F, player.getHealth() - costHp));
-            player.hurtMarked = true;
-
-            // Hiệu ứng mệt mỏi ma tố (Slumber weakness)
-            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 400, 1, false, false, true));
-            player.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 400, 1, false, false, true));
-            player.addEffect(new MobEffectInstance(MobEffects.CONFUSION, 100, 0, false, false, true));
-
-        } else if (isBoss) {
-            // Trường hợp B: Boss hoặc Ác Ma -> Tiêu hao 35% MÁU TỐI ĐA
-            float costHp = player.getMaxHealth() * 0.35F;
-            if (player.getHealth() <= costHp) {
-                player.displayClientMessage(
-                        Component.literal("§c[BAN DANH XƯNG] Sinh mệnh hiện tại không đủ 35% để ban danh xưng cho Ác Ma / Đại Boss!"),
-                        true
-                );
-                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 0.8F);
-                return false;
-            }
-
-            player.setHealth(Math.max(1.0F, player.getHealth() - costHp));
-            player.hurtMarked = true;
-            player.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 0, false, false, true));
-
-        } else {
-            // Trường hợp C: Sinh vật thường -> Tiêu hao Thanh Đói (Hunger)
-            boolean isBaby = (target instanceof AgeableMob ageable && ageable.isBaby());
-            int costHunger = isBaby ? 4 : 8; // 2 đùi gà nếu là con nhỏ, 4 đùi gà nếu là con lớn
-
-            if (player.getFoodData().getFoodLevel() < costHunger) {
-                player.displayClientMessage(
-                        Component.literal("§c[BAN DANH XƯNG] Cơ thể quá đói (" + player.getFoodData().getFoodLevel() + "/" + costHunger + " điểm đói), không đủ thể lực để ban danh xưng!"),
-                        true
-                );
-                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 0.9F);
-                return false;
-            }
-
-            player.getFoodData().setFoodLevel(player.getFoodData().getFoodLevel() - costHunger);
-            player.getFoodData().setSaturation(0.0F);
+        // 2. Tính toán tiêu hao Ma Tố (Magicules) & Hỗ trợ từ Veldora trong người
+        if (!MagiculesManager.canAttemptMagiculeSpend(player)) {
+            player.displayClientMessage(
+                    Component.literal("§c[GIỌNG NÓI THẾ GIỚI] Ma Tố bản thân đang ở mức 0! Vui lòng chờ Ma Tố hồi phục trước khi Ban Danh Xưng!"),
+                    true
+            );
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 0.8F);
+            return false;
         }
+
+        long maxMp = MagiculesManager.getMaxMagicules(player);
+        boolean isBaby = (target instanceof AgeableMob ageable && ageable.isBaby());
+        long mpCost;
+        if (isDemonLord) {
+            mpCost = Math.max(40_000L, Math.round(maxMp * 0.80D));
+        } else if (isBoss) {
+            mpCost = Math.max(20_000L, Math.round(maxMp * 0.35D));
+        } else {
+            mpCost = isBaby ? Math.max(5_000L, Math.round(maxMp * 0.05D)) : Math.max(10_000L, Math.round(maxMp * 0.10D));
+        }
+
+        boolean exhaustedDeath = MagiculesManager.consumeMagiculesWithExhaustion(player, mpCost, true, "Ban Danh Xưng");
 
         // 3. Ban Danh Xưng Ngẫu Nhiên
         String chosenName = FANTASY_NAMES[RANDOM.nextInt(FANTASY_NAMES.length)];
@@ -242,6 +208,10 @@ public class TensuraNamingAbility {
                 Component.literal("§6§l[BAN DANH XƯNG THÀNH CÔNG] §e" + oldName + " §fđã trở thành §6§l✦ " + chosenName + " ✦§f! (Máu & Sức mạnh x30 lần) ✨⚡"),
                 false
         );
+
+        if (exhaustedDeath) {
+            MagiculesManager.triggerMagiculeExhaustionDeath(player, "Ban Danh Xưng");
+        }
 
         return true;
     }

@@ -36,15 +36,22 @@ public class ServerboundCastBeelzebuthPacket {
             }
 
             boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
+            boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
             boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
             boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(player);
             boolean isCreative = player.isCreative();
+            boolean hasLordSkills = isTrueDemonLord || isWearingDivineArmor || isInnatePrimordial || isCreative;
 
-            if (isTrueDemonLord || isPrimordial || isWearingDivineArmor || isCreative) {
+            if (hasLordSkills || isPrimordial) {
                 int selectedSkill = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
                 ServerLevel serverLevel = (ServerLevel) player.level();
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
-                int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
+                int lordSkills = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
+                int totalSkills = lordSkills + (isPrimordial ? PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS : 0);
+                if (selectedSkill < 0 || selectedSkill >= totalSkills) {
+                    selectedSkill = 0;
+                    EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", 0);
+                }
 
                 if (selectedSkill < lordSkills) {
                     TensuraSkillDispatcher.executeSkill(serverLevel, player, selectedSkill, hasCreation);

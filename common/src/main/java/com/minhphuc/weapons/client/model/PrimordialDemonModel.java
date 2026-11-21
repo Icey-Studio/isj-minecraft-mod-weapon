@@ -388,7 +388,6 @@ public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEnt
         this.noirBangs.visible = isNoir;
         this.noirTails.visible = isNoir;
         this.noirSashKnot.visible = isNoir;
-        this.wings.visible = isNoir;
         this.noirClawsRight.visible = isNoir;
         this.noirClawsLeft.visible = false;
 
@@ -429,17 +428,8 @@ public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEnt
         this.vertMaidBand.visible = isVert;
         this.vertSkirt.visible = isVert;
 
-        // --- ANIMATIONS ---
-        if (this.wings.visible) {
-            boolean isMovingInAir = entity.isFallFlying() || !entity.onGround();
-            float speed = isMovingInAir ? 0.30F : 0.16F;
-            float flap = Mth.sin(ageInTicks * speed) * (isMovingInAir ? 0.32F : 0.18F);
-            float flapZ = Mth.cos(ageInTicks * speed) * (isMovingInAir ? 0.18F : 0.08F);
-            this.leftWing.yRot = 0.32F + flap;
-            this.leftWing.zRot = 0.08F + flapZ;
-            this.rightWing.yRot = -0.32F - flap;
-            this.rightWing.zRot = -0.08F - flapZ;
-        }
+        // --- ANIMATIONS (Cánh chỉ hiện cho Noir khi bay, giang ra -> đáp thu vào -> chạm đất mất cánh) ---
+        updateNoirWingFlightAnimation(entity, isNoir, ageInTicks);
 
         // Jaune side bob hair & pleated skirt natural movement
         if (isJaune) {
@@ -511,7 +501,6 @@ public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEnt
         this.noirBangs.visible = isNoir;
         this.noirTails.visible = isNoir;
         this.noirSashKnot.visible = isNoir;
-        this.wings.visible = isWinged || isNoir;
         this.noirClawsRight.visible = isNoir;
         this.noirClawsLeft.visible = isNoir;
 
@@ -552,17 +541,8 @@ public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEnt
         this.vertMaidBand.visible = isVert;
         this.vertSkirt.visible = isVert;
 
-        // --- ANIMATIONS ---
-        if (this.wings.visible) {
-            boolean isMovingInAir = player.isFallFlying() || !player.onGround();
-            float speed = isMovingInAir ? 0.30F : 0.16F;
-            float flap = Mth.sin(ageInTicks * speed) * (isMovingInAir ? 0.32F : 0.18F);
-            float flapZ = Mth.cos(ageInTicks * speed) * (isMovingInAir ? 0.18F : 0.08F);
-            this.leftWing.yRot = 0.32F + flap;
-            this.leftWing.zRot = 0.08F + flapZ;
-            this.rightWing.yRot = -0.32F - flap;
-            this.rightWing.zRot = -0.08F - flapZ;
-        }
+        // --- ANIMATIONS (Cánh chỉ hiện cho Noir khi bay, giang ra -> đáp thu vào -> chạm đất mất cánh) ---
+        updateNoirWingFlightAnimation(player, isNoir, ageInTicks);
 
         if (isJaune) {
             float sway = Mth.sin(limbSwing * 0.6662F) * 0.06F * limbSwingAmount;
@@ -592,6 +572,183 @@ public class PrimordialDemonModel<T extends net.minecraft.world.entity.LivingEnt
             this.vertSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
         } else if (isViolet) {
             this.violetSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+    }
+
+    private static final java.util.Map<java.util.UUID, Float> WING_DEPLOY_MAP = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Cơ chế Cánh Động độc quyền cho Noir (Diablo):
+     * - Chỉ Noir mới hiện cánh khi bay; 6 Thủy Tổ còn lại khi bay không hiện cánh.
+     * - Khi bay (flying / fallFlying): Cánh hiện ra và giang rộng hết cỡ (deploy -> 1.0F).
+     * - Khi đang đáp xuống (!flying && !onGround hoặc đang hạ thấp gần mặt đất): Cánh thu khép dần vào lưng.
+     * - Khi chạm đất (onGround): Cánh thu hẳn và biến mất hoàn toàn (wings.visible = false).
+     */
+    public void updateNoirWingFlightAnimation(net.minecraft.world.entity.LivingEntity entity, boolean isNoir, float ageInTicks) {
+        if (!isNoir || entity == null) {
+            this.wings.visible = false;
+            return;
+        }
+
+        boolean isFlying = (entity instanceof net.minecraft.world.entity.player.Player p && p.getAbilities().flying)
+                || entity.isFallFlying()
+                || (entity instanceof PrimordialDemonEntity && !entity.onGround());
+        boolean onGround = entity.onGround() && !isFlying;
+        boolean nearGroundDescending = !onGround && entity.getDeltaMovement().y < -0.04D && isCloseToGround(entity);
+        boolean isLanding = !onGround && (!isFlying || nearGroundDescending);
+
+        float targetDeploy;
+        if (onGround) {
+            targetDeploy = 0.0F;
+        } else if (isLanding) {
+            targetDeploy = 0.25F;
+        } else {
+            targetDeploy = 1.0F;
+        }
+
+        float prev = WING_DEPLOY_MAP.getOrDefault(entity.getUUID(), 0.0F);
+        float lerpSpeed = onGround ? 0.28F : (isLanding ? 0.14F : 0.16F);
+        float deploy = Mth.lerp(lerpSpeed, prev, targetDeploy);
+        if (onGround && deploy < 0.08F) {
+            deploy = 0.0F;
+        }
+        WING_DEPLOY_MAP.put(entity.getUUID(), deploy);
+
+        if (deploy <= 0.02F) {
+            this.wings.visible = false;
+            return;
+        }
+
+        this.wings.visible = true;
+        this.wings.xScale = 0.22F + 0.78F * deploy;
+        this.wings.yScale = 0.38F + 0.62F * deploy;
+        this.wings.zScale = 0.38F + 0.62F * deploy;
+
+        float speed = 0.30F;
+        float flap = Mth.sin(ageInTicks * speed) * (0.32F * deploy);
+        float flapZ = Mth.cos(ageInTicks * speed) * (0.18F * deploy);
+
+        // Khi deploy = 1.0F: Cánh giang rộng (yRot ~ 0.24F, zRot ~ 0.14F)
+        // Khi deploy -> 0.0F (đang đáp): Cánh thu khép sát vào lưng (yRot ~ 0.88F, zRot ~ -0.32F)
+        float baseY = Mth.lerp(deploy, 0.88F, 0.24F);
+        float baseZ = Mth.lerp(deploy, -0.32F, 0.14F);
+
+        this.leftWing.yRot = baseY + flap;
+        this.leftWing.zRot = baseZ + flapZ;
+        this.rightWing.yRot = -baseY - flap;
+        this.rightWing.zRot = -baseZ - flapZ;
+    }
+
+    private static boolean isCloseToGround(net.minecraft.world.entity.LivingEntity entity) {
+        if (entity == null || entity.level() == null) return false;
+        net.minecraft.core.BlockPos pos = entity.blockPosition();
+        for (int i = 1; i <= 3; i++) {
+            if (!entity.level().getBlockState(pos.below(i)).isAir()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Thiết lập hoạt ảnh và ẩn/hiện từng bộ phận 3D khi Người chơi mặc Bộ Trang Bị Ác Ma Thủy Tổ (Đầu, Áo, Quần, Giày).
+     */
+    public void setupAnimForArmor(T player, DemonType type, boolean wearHead, boolean wearChest, boolean wearLegs, boolean wearFeet,
+                                  boolean noirClawsActive, float limbSwing, float limbSwingAmount, float ageInTicks, float netHeadYaw, float headPitch) {
+        super.setupAnim(player, limbSwing, limbSwingAmount, ageInTicks, netHeadYaw, headPitch);
+
+        if (type == null) type = DemonType.NOIR;
+
+        boolean isNoir = (type == DemonType.NOIR);
+        boolean isRouge = (type == DemonType.ROUGE);
+        boolean isBlanc = (type == DemonType.BLANC);
+        boolean isJaune = (type == DemonType.JAUNE);
+        boolean isViolet = (type == DemonType.VIOLET);
+        boolean isBleu = (type == DemonType.BLEU);
+        boolean isVert = (type == DemonType.VERT);
+
+        // 1. Phần Đầu (Mũ 3D + Khuôn mặt + Tóc + Sừng + Phụ kiện đầu)
+        this.head.visible = wearHead;
+        this.hat.visible = wearHead;
+        this.noirBangs.visible = wearHead && isNoir;
+        this.rougeHorns.visible = wearHead && isRouge;
+        this.rougeMane.visible = wearHead && isRouge;
+        this.blancLongHair.visible = wearHead && isBlanc;
+        this.blancRibbon.visible = wearHead && isBlanc;
+        this.jauneBangs.visible = wearHead && isJaune;
+        this.jauneTwintailLeft.visible = wearHead && isJaune;
+        this.jauneTwintailRight.visible = wearHead && isJaune;
+        this.violetBuns.visible = wearHead && isViolet;
+        this.bleuMaidBand.visible = wearHead && isBleu;
+        this.vertHair.visible = wearHead && isVert;
+        this.vertMaidBand.visible = wearHead && isVert;
+
+        // 2. Phần Áo & Tay (Thân áo + Tay áo + Áo choàng + Vuốt Noir + Cánh Noir)
+        this.body.visible = wearChest || wearLegs;
+        this.rightArm.visible = wearChest;
+        this.leftArm.visible = wearChest;
+        this.femaleBust.visible = wearChest && type.isFemale();
+
+        this.noirTails.visible = wearChest && isNoir;
+        this.noirSashKnot.visible = (wearChest || wearLegs) && isNoir;
+        this.noirClawsRight.visible = wearChest && isNoir && noirClawsActive;
+        this.noirClawsLeft.visible = wearChest && isNoir && noirClawsActive;
+
+        this.rougeCollar.visible = wearChest && isRouge;
+        this.rougeCloak.visible = wearChest && isRouge;
+
+        this.blancPuffRight.visible = wearChest && isBlanc;
+        this.blancPuffLeft.visible = wearChest && isBlanc;
+
+        this.jauneEpaulets.visible = wearChest && isJaune;
+
+        this.violetSleeveRight.visible = wearChest && isViolet;
+        this.violetSleeveLeft.visible = wearChest && isViolet;
+
+        this.bleuFrillRight.visible = wearChest && isBleu;
+        this.bleuFrillLeft.visible = wearChest && isBleu;
+
+        // 3. Phần Quần / Váy & Giày
+        this.blancCoat.visible = (wearLegs || wearChest) && isBlanc;
+        this.jauneSkirt.visible = wearLegs && isJaune;
+        this.violetSkirt.visible = wearLegs && isViolet;
+        this.bleuSkirt.visible = wearLegs && isBleu;
+        this.vertSkirt.visible = (wearLegs || wearChest) && isVert;
+
+        this.rightLeg.visible = wearLegs || wearFeet;
+        this.leftLeg.visible = wearLegs || wearFeet;
+
+        // 4. Cánh động cho Noir khi mặc Áo Noir và đang bay
+        updateNoirWingFlightAnimation(player, wearChest && isNoir, ageInTicks);
+
+        // 5. Chuyển động mềm mại của tóc & tà áo/váy
+        if (isJaune) {
+            float sway = Mth.sin(limbSwing * 0.6662F) * 0.06F * limbSwingAmount;
+            this.jauneTwintailLeft.zRot = -0.04F - sway;
+            this.jauneTwintailRight.zRot = 0.04F + sway;
+            this.jauneSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+        if (isBlanc) {
+            this.blancLongHair.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+            this.blancCoat.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        }
+        if (isVert) {
+            this.vertHair.xRot = 0.06F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+            this.vertSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        }
+        if (isViolet) {
+            this.violetBuns.zRot = 0.05F + Mth.sin(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+            this.violetSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
+        }
+        if (isNoir) {
+            this.noirTails.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.2F * limbSwingAmount;
+        }
+        if (isRouge) {
+            this.rougeCloak.xRot = 0.08F + Mth.cos(limbSwing * 0.6662F) * 0.2F * limbSwingAmount;
+            this.rougeMane.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.1F * limbSwingAmount;
+        }
+        if (isBleu) {
+            this.bleuSkirt.xRot = 0.05F + Mth.cos(limbSwing * 0.6662F) * 0.12F * limbSwingAmount;
         }
     }
 }

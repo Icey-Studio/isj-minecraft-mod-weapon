@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DOD",
+    "OBO",
+    "DOD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:yellow_dye"
+    },
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "B": {
+      "item": "minecraft:netherite_boots"
+    }
+  },
+  "result": {
+    "id": "weapons:jaune_boots",
+    "count": 1
+  }
+}

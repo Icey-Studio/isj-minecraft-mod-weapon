@@ -20,8 +20,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/rouge.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_rouge.png"),
             1.16F,
-            3600.0D,
-            160.0D,
+            10800.0D,
+            480.0D,
             0.90F
     ),
     NOIR(
@@ -36,8 +36,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/noir.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_noir.png"),
             1.08F,
-            3600.0D,
-            160.0D,
+            10800.0D,
+            480.0D,
             0.90F
     ),
     BLANC(
@@ -52,8 +52,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/blanc.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_blanc.png"),
             1.02F,
-            1800.0D,
-            80.0D,
+            5400.0D,
+            240.0D,
             0.75F
     ),
     JAUNE(
@@ -68,8 +68,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/jaune.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_jaune.png"),
             1.00F,
-            1500.0D,
-            70.0D,
+            4500.0D,
+            210.0D,
             0.65F
     ),
     VIOLET(
@@ -84,8 +84,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/violet.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_violet.png"),
             0.88F,
-            950.0D,
-            40.0D,
+            2850.0D,
+            120.0D,
             0.33F
     ),
     BLEU(
@@ -100,8 +100,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/bleu.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_bleu.png"),
             0.96F,
-            800.0D,
-            30.0D,
+            2400.0D,
+            90.0D,
             0.20F
     ),
     VERT(
@@ -116,8 +116,8 @@ public enum DemonType {
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/vert.png"),
             ResourceLocation.fromNamespaceAndPath("weapons", "textures/entity/demon/eyes_vert.png"),
             1.00F,
-            900.0D,
-            36.0D,
+            2700.0D,
+            108.0D,
             0.30F
     );
 

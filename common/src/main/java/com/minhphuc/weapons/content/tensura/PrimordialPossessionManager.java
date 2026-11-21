@@ -54,8 +54,16 @@ public class PrimordialPossessionManager {
         if (!isPossessing(player)) return null;
         String typeName = EntityDataHelper.getCustomData(player).getString(NBT_DEMON_TYPE);
         try {
+            if (typeName == null || typeName.isBlank()) {
+                throw new IllegalArgumentException("PossessedDemonType rỗng");
+            }
             return DemonType.valueOf(typeName);
         } catch (Exception e) {
+            if (player instanceof ServerPlayer sp) {
+                SageManager.pushAlert(sp, "POSSESS_TYPE_FALLBACK",
+                        "Cảnh báo: Dữ liệu hệ Ác Ma đang nhập xác bị thiếu/lỗi ('" + typeName + "'), tạm chuyển về Noir!",
+                        "", 200);
+            }
             return DemonType.NOIR;
         }
     }
@@ -352,8 +360,8 @@ public class PrimordialPossessionManager {
         boolean hasBody = hasPhysicalBody(player);
         boolean isNamed = isNamed(player);
 
-        // 1. Kỹ năng bản năng & Độc bản (0..8)
-        for (int i = 0; i <= 8; i++) {
+        // 1. Kỹ năng bản năng, Độc bản & Tầm Soát (0..13)
+        for (int i = 0; i < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS; i++) {
             list.add(i);
         }
 
@@ -380,7 +388,7 @@ public class PrimordialPossessionManager {
         DemonType type = getPossessedType(player);
         if (type == null) type = DemonType.NOIR;
 
-        if (skillId >= 0 && skillId <= 6) {
+        if (skillId >= 0 && skillId < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS) {
             return PrimordialPlayerDataHelper.getSkillName(type, skillId);
         }
 
@@ -428,18 +436,22 @@ public class PrimordialPossessionManager {
      */
     public static void cycleSkill(ServerPlayer player, boolean reverse) {
         if (!isPossessing(player)) return;
-        List<Integer> available = getAvailableSkills(player);
-        if (available.isEmpty()) return;
+        try {
+            List<Integer> available = getAvailableSkills(player);
+            if (available.isEmpty()) return;
 
-        int currentSkill = getSelectedSkillIndex(player);
-        int currentPos = available.indexOf(currentSkill);
-        if (currentPos < 0) currentPos = 0;
-        int nextPos = reverse
-                ? (currentPos - 1 + available.size()) % available.size()
-                : (currentPos + 1) % available.size();
-        int nextSkill = available.get(nextPos);
+            int currentSkill = getSelectedSkillIndex(player);
+            int currentPos = available.indexOf(currentSkill);
+            if (currentPos < 0) currentPos = 0;
+            int nextPos = reverse
+                    ? (currentPos - 1 + available.size()) % available.size()
+                    : (currentPos + 1) % available.size();
+            int nextSkill = available.get(nextPos);
 
-        selectSkillAtPos(player, available, nextSkill, nextPos);
+            selectSkillAtPos(player, available, nextSkill, nextPos);
+        } catch (Throwable t) {
+            SageManager.reportSystemAnomaly(player, "Đổi kỹ năng Nhập Xác", t);
+        }
     }
 
     public static void selectSkillById(ServerPlayer player, int skillId) {
@@ -540,46 +552,50 @@ public class PrimordialPossessionManager {
             return;
         }
 
-        // Kỹ năng Bản năng (0..6)
-        if (skill >= 0 && skill <= 6) {
-            PrimordialSkillDispatcher.castSkill(level, player, skill);
-            return;
-        }
+        try {
+            // Kỹ năng Bản năng, Độc bản & Tầm soát (0..13)
+            if (skill >= 0 && skill < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS) {
+                PrimordialSkillDispatcher.castSkill(level, player, skill);
+                return;
+            }
 
-        switch (skill) {
-            case 7 -> com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
-            case 8 -> castPossessedDomainExpansion(level, player);
-            case 100 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
-            case 101 -> HorizontalHolyBeamAbility.cast(level, player);
-            case 102 -> ZoneTrackAbility.cast(level, player);
-            case 103 -> com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(level, player);
-            case 104 -> com.minhphuc.weapons.content.divine.PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
-            case 105 -> com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(level, player);
-            case 106 -> com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.cast(level, player, 3);
-            case 107 -> com.minhphuc.weapons.content.tensura.HellflareAbility.cast(level, player);
-            case 108 -> com.minhphuc.weapons.content.tensura.DarkFlameShotAbility.cast(level, player);
-            case 109 -> com.minhphuc.weapons.content.tensura.NihilityCollapseAbility.cast(level, player);
-            case 110 -> com.minhphuc.weapons.content.tensura.SupernovaAbility.cast(level, player);
-            case 111 -> com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.cast(level, player);
-            case 112 -> com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(level, player);
-            case 113 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castMark(level, player);
-            case 114 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castTeleport(level, player);
-            case 115 -> com.minhphuc.weapons.content.evolution.UniversalSenseAbility.cast(level, player, 3);
-            case 116 -> com.minhphuc.weapons.content.tensura.ApocalypseAbility.cast(level, player);
-            default -> {
-                // Kỹ năng ngẫu nhiên thức tỉnh (20..29)
-                if (skill >= 20 && skill < 30) {
-                    int rIdx = skill - 20;
-                    String skillsStr = EntityDataHelper.getCustomData(player).getString(NBT_SKILLS);
-                    String[] rSkills = skillsStr.split(",");
-                    if (rIdx < rSkills.length) {
-                        var entry = PrimordialSkillPool.getSkillById(rSkills[rIdx].trim());
-                        if (entry != null) {
-                            executeAwakenedRandomSkill(level, player, entry);
+            switch (skill) {
+                case 7 -> com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
+                case 8 -> castPossessedDomainExpansion(level, player);
+                case 100 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
+                case 101 -> HorizontalHolyBeamAbility.cast(level, player);
+                case 102 -> ZoneTrackAbility.cast(level, player);
+                case 103 -> com.minhphuc.weapons.content.darkgathering.SeerFleshAbility.cast(level, player);
+                case 104 -> com.minhphuc.weapons.content.divine.PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
+                case 105 -> com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.cast(level, player);
+                case 106 -> com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.cast(level, player, 3);
+                case 107 -> com.minhphuc.weapons.content.tensura.HellflareAbility.cast(level, player);
+                case 108 -> com.minhphuc.weapons.content.tensura.DarkFlameShotAbility.cast(level, player);
+                case 109 -> com.minhphuc.weapons.content.tensura.NihilityCollapseAbility.cast(level, player);
+                case 110 -> com.minhphuc.weapons.content.tensura.SupernovaAbility.cast(level, player);
+                case 111 -> com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility.cast(level, player);
+                case 112 -> com.minhphuc.weapons.content.tensura.DragonNovaAbility.cast(level, player);
+                case 113 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castMark(level, player);
+                case 114 -> com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.castTeleport(level, player);
+                case 115 -> com.minhphuc.weapons.content.evolution.UniversalSenseAbility.cast(level, player, 3);
+                case 116 -> com.minhphuc.weapons.content.tensura.ApocalypseAbility.cast(level, player);
+                default -> {
+                    // Kỹ năng ngẫu nhiên thức tỉnh (20..29)
+                    if (skill >= 20 && skill < 30) {
+                        int rIdx = skill - 20;
+                        String skillsStr = EntityDataHelper.getCustomData(player).getString(NBT_SKILLS);
+                        String[] rSkills = skillsStr.split(",");
+                        if (rIdx < rSkills.length) {
+                            var entry = PrimordialSkillPool.getSkillById(rSkills[rIdx].trim());
+                            if (entry != null) {
+                                executeAwakenedRandomSkill(level, player, entry);
+                            }
                         }
                     }
                 }
             }
+        } catch (Throwable t) {
+            SageManager.reportSystemAnomaly(player, "Thi triển chiêu Nhập Xác #" + skill, t);
         }
     }
 

@@ -199,12 +199,49 @@ public class WeaponsModClient {
         );
 
         dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.INNER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createInnerArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.HinataModel.OUTER_ARMOR,
+                com.minhphuc.weapons.entity.tensura.HinataModel::createOuterArmorLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.HINATA,
+                com.minhphuc.weapons.entity.tensura.HinataRenderer::new
+        );
+
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolModel.LAYER_LOCATION,
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolModel::createBodyLayer
         );
         dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
                 com.minhphuc.weapons.entity.ModEntities.CURSED_IDOL,
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolRenderer::new
+        );
+
+        // Tiểu Thư Mariabell Rosso (Slime Isekai)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.MariabellModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.MariabellModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.MARIABELL,
+                com.minhphuc.weapons.entity.tensura.MariabellRenderer::new
+        );
+
+        // Hỗn Độn Long (Chaos Dragon)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.ChaosDragonModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.ChaosDragonModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CHAOS_DRAGON,
+                com.minhphuc.weapons.client.renderer.ChaosDragonRenderer::new
         );
 
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");

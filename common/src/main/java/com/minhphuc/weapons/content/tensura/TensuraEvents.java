@@ -88,6 +88,9 @@ public class TensuraEvents {
         });
         InteractionEvent.INTERACT_ENTITY.register(TensuraEvents::onInteractEntity);
         dev.architectury.event.events.common.PlayerEvent.PLAYER_JOIN.register(TensuraEvents::onPlayerJoin);
+        dev.architectury.event.events.common.PlayerEvent.PLAYER_CLONE.register((oldPlayer, newPlayer, wonGame) -> {
+            MagiculesManager.onPlayerRespawn(oldPlayer, newPlayer);
+        });
         dev.architectury.event.events.common.PlayerEvent.PLAYER_QUIT.register(player -> DEMON_GREETING_TIMESTAMPS.remove(player.getUUID()));
         dev.architectury.event.events.common.TickEvent.PLAYER_POST.register(TensuraEvents::onPlayerTick);
         dev.architectury.event.events.common.TickEvent.SERVER_LEVEL_POST.register(level -> {
@@ -113,8 +116,11 @@ public class TensuraEvents {
             com.minhphuc.weapons.content.tensura.SpatialTeleportAbility.tick(level);
             com.minhphuc.weapons.content.tensura.PrimordialPossessionManager.tickDomains(level);
             com.minhphuc.weapons.content.tensura.ApocalypseAbility.tickApocalypses(level);
+            com.minhphuc.weapons.content.tensura.DemonicGateManager.tick(level);
             tickEvokerWitchDemonSummons(level);
             tickAutonomousSpiritAndTempest(level);
+            MobMeleeSkillSystem.tickWorldMobs(level);
+            com.minhphuc.weapons.content.tensura.GreedAbility.tickPuppets(level);
         });
     }
 
@@ -139,6 +145,7 @@ public class TensuraEvents {
                 sp.heal(10.0F);
             }
         }
+        com.minhphuc.weapons.content.divine.HinataArmorItem.cleanupDetachedModifiers(sp);
 
         // 1. CƠ CHẾ BAY (FLIGHT) CHO NGƯỜI CHƠI LÀ ÁC MA HOẶC MA VƯƠNG
         boolean canFlyTensura = PrimordialPlayerDataHelper.isPrimordial(sp) || PrimordialPlayerDataHelper.isDemonLord(sp);
@@ -188,6 +195,9 @@ public class TensuraEvents {
 
         // 3. Đại Hiền Giả / Raphael: Quét Hang Động Phong Ấn, vũ khí phẩm cấp & Auto-Battle
         SageManager.tickPlayer(sp);
+        MagiculesManager.tickPlayer(sp);
+        AzathothStomachData.tickAutoLoot(sp);
+        JuraTempestManager.tickBackgroundProduction(sp);
     }
 
     public static void onPlayerJoin(ServerPlayer player) {
@@ -224,10 +234,11 @@ public class TensuraEvents {
             com.minhphuc.weapons.world.VeldoraWorldData.get(ow).ensurePrisonRegisteredIfSealed(ow);
         }
 
-        // Đồng bộ kết giới, lồng giam bảo hộ thời tiết và các Ấn Ký Không Gian
+        // Đồng bộ kết giới, lồng giam bảo hộ thời tiết, Ấn Ký Không Gian và trạng thái Nhập Xác
         AntiMagicBarrierManager.syncBarriersToPlayer(player);
         com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(player);
         SpatialTeleportAbility.syncVisualMarksToPlayer(player);
+        PrimordialPossessionManager.syncToClient(player);
     }
 
     public static boolean hasSeedItemInInventory(ServerPlayer player) {
@@ -347,6 +358,8 @@ public class TensuraEvents {
         net.minecraft.world.item.Item soulItem = null;
         if (victim instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
             soulItem = ModItems.MILIM_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.MariabellEntity) {
+            soulItem = ModItems.MARIABELL_SOUL.get();
         } else if (victim instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity) {
             soulItem = ModItems.VELGRYND_SOUL.get();
         } else if (victim instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity) {
@@ -410,11 +423,19 @@ public class TensuraEvents {
         // Nếu người chơi chết: Xử lý Thủy Tổ Ác Ma theo luật chơi (Giữ lại căn nguyên Ma Vương vĩnh cửu)
         if (victim instanceof ServerPlayer deadPlayer) {
             com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.resetOnDeath(deadPlayer);
-            if (PrimordialPlayerDataHelper.isPrimordial(deadPlayer)) {
+            if (PrimordialPlayerDataHelper.isInnatePrimordial(deadPlayer)) {
                 PrimordialPlayerDataHelper.resetOnDeath(deadPlayer);
                 VoiceOfTheWorld.announce(deadPlayer, "§c§l[TỬ TRẬN] §4Báo cáo. Thân xác Thủy Tổ Ác Ma tạm thời tiêu biến!");
             }
             return EventResult.pass();
+        }
+
+        // Tụ Linh Đoạt Phách của Mariabell Rosso
+        List<com.minhphuc.weapons.entity.tensura.MariabellEntity> nearbyMariabells = victim.level().getEntitiesOfClass(
+                com.minhphuc.weapons.entity.tensura.MariabellEntity.class, victim.getBoundingBox().inflate(25.0D),
+                com.minhphuc.weapons.entity.tensura.MariabellEntity::isAlive);
+        for (com.minhphuc.weapons.entity.tensura.MariabellEntity m : nearbyMariabells) {
+            m.onNearbyEntityDeath(victim);
         }
 
         ServerPlayer player = null;
@@ -438,6 +459,14 @@ public class TensuraEvents {
             WeaponGradeHelper.WeaponGrade upgraded = WeaponGradeHelper.recordWeaponKill(mainWeapon, victim);
             if (upgraded != null) {
                 SageManager.sendCornerAlert(player, "Vũ khí [" + mainWeapon.getHoverName().getString() + "] vừa đột phá phẩm cấp " + upgraded.colorPrefix + upgraded.title + "§f!", 0xFFFACC15, 5500, false);
+            }
+
+            // Quyền năng Bị Động [Kẻ Tham Lam]: Thưởng EXP gấp đôi & cướp đoạt trang bị vào Dạ Dày Azathoth
+            if (GreedAbility.isUnlocked(player)) {
+                player.giveExperiencePoints(Math.max(5, (int)(victim.getExperienceReward(player.serverLevel(), player) * 1.5F)));
+                if (victim instanceof net.minecraft.world.entity.Mob m && !m.getMainHandItem().isEmpty() && player.getRandom().nextFloat() < 0.35F) {
+                    AzathothStomachData.storeItemStackIntoStomach(player, m.getMainHandItem().copy(), false);
+                }
             }
 
             // Ghi nhận hiến tế Dân Làng (Villager Sacrifice) cho Ác Ma Thủy Tổ
@@ -653,7 +682,19 @@ public class TensuraEvents {
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
         if (victim == null || victim.level().isClientSide()) return EventResult.pass();
 
+        // Con rối của Kẻ Tham Lam không bao giờ gây sát thương lên người chơi
+        if (victim instanceof ServerPlayer && source.getEntity() instanceof net.minecraft.world.entity.Mob puppet
+                && puppet.getTags().contains(com.minhphuc.weapons.content.tensura.GreedAbility.TAG_GREED_CONTROLLED)) {
+            puppet.setTarget(null);
+            return EventResult.interruptFalse();
+        }
+
         // Chặn nếu bị Thần Hư Không Azathoth xóa sổ
+        if (victim.getTags().contains(JuraTempestManager.TAG_TRAINING_DUMMY)) {
+            JuraTempestManager.handleTrainingDummyHurt(victim, amount, source.getEntity());
+            return EventResult.interruptFalse();
+        }
+
         if (victim.getTags().contains("AzathothErased")) {
             return EventResult.interruptFalse();
         }
@@ -670,6 +711,233 @@ public class TensuraEvents {
         // Chặn hoàn toàn nếu đòn đánh trúng Đa Trùng Kết Giới (Multilayer Barrier)
         if (com.minhphuc.weapons.content.tensura.MultilayerBarrierAbility.isDamageBlockedByBarrier(victim, source)) {
             return EventResult.interruptFalse();
+        }
+
+        // Tương tác nhận diện và hóa giải cá thể bị Kẻ Tham Lam chi phối
+        if (source.getEntity() instanceof ServerPlayer sp && victim.getTags().contains("GreedControlled")) {
+            boolean emptyHand = sp.getMainHandItem().isEmpty();
+            if (emptyHand) {
+                sp.displayClientMessage(
+                        Component.literal("§d« Báo Cáo Raphael »: Phát hiện cá thể [" + victim.getName().getString() + "] đang chịu tác động chi phối từ ma tố [Kẻ Tham Lam] của Mariabell Rosso!"),
+                        true
+                );
+            }
+            if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(sp)
+                    || sp.getTags().contains("CastingSkillNullification")
+                    || sp.getTags().contains("BeelzebuthAbsorbing")) {
+                if (victim instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity veldora) {
+                    veldora.tryPurifyFromGreed(sp);
+                } else {
+                    victim.removeTag("GreedControlled");
+                    victim.removeTag("MariabellEnchanted");
+                    if (victim.level() instanceof ServerLevel sl) {
+                        sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, victim.getX(), victim.getY() + 1.0D, victim.getZ(), 15, 0.4, 0.5, 0.4, 0.05);
+                    }
+                    sp.displayClientMessage(
+                            Component.literal("§a« Báo Cáo Raphael »: Đã dùng Phong Sát Kỹ Năng cắt đứt mạch ma tố Tham Lam, giải phóng [" + victim.getName().getString() + "]!"),
+                            true
+                    );
+                }
+            }
+        }
+
+        // CÂN BẰNG SINH TỒN: BẢO HIỂM SINH MỆNH (ONE-SHOT PROTECTION) & DAMAGE CAP CHO NGƯỜI CHƠI
+        if (victim instanceof ServerPlayer playerVictim
+                && !playerVictim.getTags().contains("OneShotHandled")
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && !source.is(DamageTypes.FELL_OUT_OF_WORLD)
+                && amount > 0.0F) {
+            float maxHp = playerVictim.getMaxHealth();
+            float curHp = playerVictim.getHealth();
+
+            // Giới hạn sát thương tối đa trong 1 hit của Boss: 65% Max HP
+            float cappedAmount = Math.min(amount, Math.max(10.0F, maxHp * 0.65F));
+
+            // Bảo hiểm sinh mệnh: Nếu trên 50% máu mà nhận đòn chí mạng chết luôn
+            if (curHp >= maxHp * 0.50F && cappedAmount >= curHp) {
+                float survivableDamage = Math.max(0.0F, curHp - 1.0F); // Giữ lại đúng 1 HP (nửa tim)
+                playerVictim.addTag("OneShotHandled");
+                try {
+                    playerVictim.hurt(source, survivableDamage);
+                } finally {
+                    playerVictim.removeTag("OneShotHandled");
+                }
+                playerVictim.invulnerableTime = 25; // 1.25s bất tử (I-Frames)
+                playerVictim.level().playSound(null, playerVictim.getX(), playerVictim.getY(), playerVictim.getZ(),
+                        SoundEvents.GLASS_BREAK, SoundSource.PLAYERS, 2.0F, 0.6F);
+                playerVictim.level().playSound(null, playerVictim.getX(), playerVictim.getY(), playerVictim.getZ(),
+                        SoundEvents.BELL_RESONATE, SoundSource.PLAYERS, 1.8F, 1.2F);
+                if (playerVictim.level() instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, playerVictim.getX(), playerVictim.getY() + 1.0D, playerVictim.getZ(), 35, 0.5D, 0.8D, 0.5D, 0.1D);
+                }
+                SageManager.sendCornerAlert(playerVictim, "« Báo cáo »: Đã kích hoạt Bảo Hiểm Sinh Mệnh! Đòn đánh cực hạn đã bị triệt tiêu ở 1 HP!", 0xFFEF4444, 4500, false);
+                return EventResult.interruptFalse();
+            } else if (cappedAmount < amount) {
+                playerVictim.addTag("OneShotHandled");
+                try {
+                    playerVictim.hurt(source, cappedAmount);
+                } finally {
+                    playerVictim.removeTag("OneShotHandled");
+                }
+                return EventResult.interruptFalse();
+            }
+        }
+
+        // Phản xạ đánh tay (Sidestep / Counter) khi Mob/Boss bị tấn công
+        if (victim instanceof net.minecraft.world.entity.Mob defenderMob
+                && source.getEntity() instanceof LivingEntity attackerLiving
+                && !attackerLiving.getTags().contains(MobMeleeSkillSystem.TAG_CQC_ACTIVE)) {
+            MobMeleeSkillSystem.onMobAttackedBy(defenderMob, attackerLiving);
+        }
+
+        // Phản Kiếm Thánh Quang & Bộ Thánh Giáp Hinata (Huyền Thoại)
+        if (victim instanceof ServerPlayer hinataSp
+                && !hinataSp.getTags().contains("HinataArmorMitigated")
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && amount > 0.0F) {
+            long parryUntil = EntityDataHelper.getCustomData(hinataSp).getLong(com.minhphuc.weapons.content.divine.HinataSwordItem.KEY_PARRY_UNTIL);
+            if (hinataSp.serverLevel().getGameTime() <= parryUntil
+                    && hinataSp.getMainHandItem().getItem() instanceof com.minhphuc.weapons.content.divine.HinataSwordItem) {
+                EntityDataHelper.getCustomData(hinataSp).putLong(com.minhphuc.weapons.content.divine.HinataSwordItem.KEY_PARRY_UNTIL, 0L);
+                MobMeleeSkillSystem.sendCqc3d(hinataSp.serverLevel(), hinataSp, hinataSp.position(), hinataSp.getLookAngle(), 6, 1, 1.8F, 18);
+                hinataSp.serverLevel().playSound(null, hinataSp.getX(), hinataSp.getY(), hinataSp.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.6F, 1.4F);
+                if (source.getEntity() instanceof LivingEntity parryTarget && parryTarget != hinataSp) {
+                    Vec3 pDir = parryTarget.position().subtract(hinataSp.position()).normalize();
+                    MobMeleeSkillSystem.sendCqc3d(hinataSp.serverLevel(), hinataSp, parryTarget.position(), pDir, 0, 1, 1.8F, 16);
+                    parryTarget.invulnerableTime = 0;
+                    parryTarget.addTag("DisintegrationDamage");
+                    try {
+                        parryTarget.hurt(hinataSp.damageSources().indirectMagic(hinataSp, hinataSp), 120.0F);
+                    } finally {
+                        parryTarget.removeTag("DisintegrationDamage");
+                    }
+                }
+                hinataSp.displayClientMessage(Component.literal("§6§l[PHẢN KIẾM THÁNH QUANG] §fVô hiệu hóa đòn & phản chém §c120 DMG§f!"), true);
+                return EventResult.interruptFalse();
+            }
+
+            float mult = 1.0F;
+            boolean isMelee = source.getDirectEntity() instanceof LivingEntity;
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.hasHelmet(hinataSp) && isMelee) {
+                mult *= 0.75F; // #1 Mắt Dự Đoán: -25% cận chiến
+            }
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.hasChestplate(hinataSp)) {
+                mult *= 0.45F; // #2 Thánh Y Bất Hoại: -55% sát thương
+            }
+            if (com.minhphuc.weapons.content.divine.HinataArmorItem.isWearingFullSet(hinataSp)
+                    && hinataSp.isBlocking()
+                    && hinataSp.getMainHandItem().getItem() instanceof com.minhphuc.weapons.content.divine.HinataSwordItem) {
+                mult *= 0.25F; // #5 Đủ bộ 4 món đỡ kiếm: -75%
+            }
+            if (mult < 0.99F) {
+                hinataSp.addTag("HinataArmorMitigated");
+                try {
+                    hinataSp.hurt(source, amount * mult);
+                } finally {
+                    hinataSp.removeTag("HinataArmorMitigated");
+                }
+                return EventResult.interruptFalse();
+            }
+        }
+
+        // Bộ Trang Bị Huyền Thoại Ác Ma Thủy Tổ (Primordial Armor):
+        // - Kháng lửa, dung nham & miễn sát thương rơi.
+        // - Phòng thủ yếu hơn Giáp Thần Thoại (Divine Armor ~100%) đúng 2 lần -> Đủ bộ 4 món giảm 50% sát thương!
+        if (victim instanceof ServerPlayer primArmorSp
+                && PrimordialArmorItem.isWearingAnyPiece(primArmorSp)
+                && !primArmorSp.getTags().contains("PrimordialArmorMitigated")
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && !source.is(DamageTypes.FELL_OUT_OF_WORLD)
+                && amount > 0.0F) {
+            if (source.is(DamageTypes.FALL) || source.is(DamageTypes.IN_FIRE)
+                    || source.is(DamageTypes.ON_FIRE) || source.is(DamageTypes.LAVA)
+                    || source.is(DamageTypes.HOT_FLOOR)) {
+                primArmorSp.clearFire();
+                return EventResult.interruptFalse();
+            }
+            float reduction = PrimordialArmorItem.getDamageReductionFraction(primArmorSp);
+            if (reduction > 0.01F) {
+                primArmorSp.addTag("PrimordialArmorMitigated");
+                try {
+                    primArmorSp.hurt(source, amount * (1.0F - reduction));
+                } finally {
+                    primArmorSp.removeTag("PrimordialArmorMitigated");
+                }
+                return EventResult.interruptFalse();
+            }
+        }
+
+        // Ma Tố Quá Tải: +50% sát thương phép xuyên giáp cho người chơi
+        if (source.getEntity() instanceof ServerPlayer overdriveSp
+                && overdriveSp != victim
+                && MagiculesManager.isMagiculeOverdriveActive(overdriveSp)
+                && !victim.getTags().contains("MagiculeOverdriveHit")
+                && amount > 0.5F) {
+            victim.addTag("MagiculeOverdriveHit");
+            try {
+                victim.invulnerableTime = 0;
+                victim.hurt(overdriveSp.damageSources().indirectMagic(overdriveSp, overdriveSp), amount * 0.50F);
+            } finally {
+                victim.removeTag("MagiculeOverdriveHit");
+            }
+        }
+
+        // Hành Lang Linh Hồn: Thuộc hạ đồng minh được chia sẻ Quá Tải gây +40% sát thương phép
+        if (source.getEntity() instanceof LivingEntity allyAttacker
+                && allyAttacker != victim
+                && allyAttacker.getTags().contains(MagiculesManager.TAG_SOUL_CORRIDOR_OVERDRIVE)
+                && !victim.getTags().contains("SoulCorridorHit")
+                && amount > 0.5F) {
+            victim.addTag("SoulCorridorHit");
+            try {
+                victim.invulnerableTime = 0;
+                victim.hurt(allyAttacker.damageSources().magic(), amount * 0.40F);
+            } finally {
+                victim.removeTag("SoulCorridorHit");
+            }
+        }
+
+        // Khiên Ma Tố Chuyển Hóa: Hấp thụ sát thương vào thanh Ma Tố (100 MP = 1 DMG)
+        if (victim instanceof ServerPlayer aegisSp
+                && !aegisSp.getTags().contains("MagiculeAegisPartial")
+                && MagiculesManager.isMagiculeAegisActive(aegisSp)
+                && !source.is(DamageTypes.GENERIC_KILL)
+                && amount > 0.0F) {
+            boolean urielBypassed = aegisSp.getTags().contains("KuboPenetrationDamage")
+                    || aegisSp.getTags().contains("ChronoaPenetrationDamage")
+                    || aegisSp.getTags().contains("DisintegrationDamage")
+                    || aegisSp.getTags().contains("VelgryndPenetrationDamage")
+                    || aegisSp.getTags().contains("VelzardPenetrationDamage")
+                    || aegisSp.getTags().contains("UrielBypassDamage")
+                    || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChaosDragonEntity
+                    || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChaosDragonEntity
+                    || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                    || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                    || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                    || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity;
+            if ((source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChaosDragonEntity || aegisSp.getTags().contains("UrielBypassDamage")) && aegisSp.tickCount % 20 == 0) {
+                aegisSp.displayClientMessage(
+                        Component.literal("§c§l« CẢNH BÁO KHẨN CẤP RAPHAEL »\n§cNăng lượng Hỗn Độn phá hủy quy luật chiều không gian! Phòng Ngự Tuyệt Đối Uriel đã bị xuyên thủng!"),
+                        true
+                );
+            }
+            boolean urielBlocks = com.minhphuc.weapons.content.evolution.EvolvedSkillHelper.isUrielDefenseActive(aegisSp)
+                    && !urielBypassed
+                    && !source.is(DamageTypes.FELL_OUT_OF_WORLD);
+            if (!urielBlocks) {
+                float remaining = MagiculesManager.absorbDamageWithMagiculeAegis(aegisSp, amount);
+                if (remaining <= 0.01F) {
+                    return EventResult.interruptFalse();
+                } else if (remaining < amount - 0.01F) {
+                    aegisSp.addTag("MagiculeAegisPartial");
+                    try {
+                        aegisSp.hurt(source, remaining);
+                    } finally {
+                        aegisSp.removeTag("MagiculeAegisPartial");
+                    }
+                    return EventResult.interruptFalse();
+                }
+            }
         }
 
         boolean isVictimNamed = victim.getTags().contains("TensuraNamedMob") || (victim instanceof PrimordialDemonEntity pde && pde.isNamed());
@@ -724,6 +992,8 @@ public class TensuraEvents {
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.MilimEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                        || livingAttacker instanceof com.minhphuc.weapons.entity.tensura.HinataEntity
                         || livingAttacker instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity
                         || livingAttacker instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon
                         || livingAttacker instanceof net.minecraft.world.entity.boss.wither.WitherBoss
@@ -744,6 +1014,7 @@ public class TensuraEvents {
                     || source.is(DamageTypes.LIGHTNING_BOLT)
                     || victim.getTags().contains("DisintegrationDamage")
                     || victim.getTags().contains("KuboPenetrationDamage")
+                    || victim.getTags().contains("ChronoaPenetrationDamage")
                     || victim.getTags().contains("VelgryndPenetrationDamage")
                     || victim.getTags().contains("AzathothErased");
 
@@ -861,7 +1132,7 @@ public class TensuraEvents {
             }
         }
 
-        if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isPrimordial(player)) {
+        if (victim instanceof ServerPlayer player && PrimordialPlayerDataHelper.isInnatePrimordial(player)) {
             // Miễn nhiễm hoàn toàn sát thương ngã (Fall damage)
             if (source.is(net.minecraft.world.damagesource.DamageTypes.FALL)) {
                 return EventResult.interruptFalse();
@@ -882,7 +1153,10 @@ public class TensuraEvents {
                 boolean isFromKubo = (source.getEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
-                if (!isFromVelgrynd && !isFromVelzard && !isFromVeldora && !isFromKubo) {
+                boolean isFromChronoa = (source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || (source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || player.getTags().contains("ChronoaPenetrationDamage");
+                if (!isFromVelgrynd && !isFromVelzard && !isFromVeldora && !isFromKubo && !isFromChronoa) {
                     return EventResult.interruptFalse();
                 }
             } else if (!hasBody) {
@@ -912,8 +1186,11 @@ public class TensuraEvents {
                 boolean isKubo = (attacker instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || (direct instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity)
                         || player.getTags().contains("KuboPenetrationDamage");
+                boolean isChronoa = (attacker instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || (direct instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity)
+                        || player.getTags().contains("ChronoaPenetrationDamage");
 
-                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd && !isKubo) {
+                if (!isCreeper && !isSelf && !isRavager && !isDemon && !isBoss && !isVelgrynd && !isKubo && !isChronoa) {
                     // Chặn triệt để sát thương từ quái vật/sinh vật thường
                     return EventResult.interruptFalse();
                 }
@@ -954,11 +1231,51 @@ public class TensuraEvents {
         }
 
         // =========================================================================
-        // 3. CƠ CHẾ SÁT THƯƠNG CỦA NGƯỜI CHƠI THỦY TỔ ÁC MA KHI TẤN CÔNG (ATTACKER)
+        // 3A. CƠ CHẾ VUỐT TUYỆT VỌNG CỦA BỘ ĐỒ NOIR (DIABLO - PHÍM X): ĐÁNH TAY KHÔNG X2 SÁT THƯƠNG
+        // =========================================================================
+        if (!HANDLING_PRIMORDIAL_HURT.get()
+                && source.getEntity() instanceof ServerPlayer clawAttacker
+                && !PrimordialPossessionManager.isPossessing(clawAttacker)
+                && PrimordialArmorItem.isWearingAnyNoirArmor(clawAttacker)
+                && clawAttacker.getMainHandItem().isEmpty()
+                && source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)) {
+            boolean clawsActive = PrimordialArmorItem.isNoirClawsActive(clawAttacker);
+            boolean fullNoirSet = PrimordialArmorItem.isWearingFullSet(clawAttacker, DemonType.NOIR);
+
+            if (clawsActive || fullNoirSet) {
+                if (clawsActive && victim.level() instanceof ServerLevel sl) {
+                    sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(),
+                            SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.PLAYERS, 2.0F, 0.7F);
+                    sl.sendParticles(ParticleTypes.SWEEP_ATTACK, victim.getX(), victim.getY() + 1.0D, victim.getZ(),
+                            4, 0.3D, 0.3D, 0.3D, 0.0D);
+                    sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, victim.getX(), victim.getY() + 1.0D, victim.getZ(),
+                            12, 0.35D, 0.4D, 0.35D, 0.05D);
+                }
+
+                // Sát thương cơ bản tay không của Giáp Thủy Tổ Huyền Thoại = 80.0F (yếu hơn Nhập Xác 160.0F đúng 2 lần).
+                // Khi bật Vuốt Noir bằng phím [X]: Sát thương đánh tay không bằng vuốt mạnh hơn gấp 2 lần (x2.0 -> 160.0F)!
+                float baseUnarmed = fullNoirSet ? 80.0F : 40.0F;
+                float clawMult = clawsActive ? 2.0F : 1.0F;
+                float targetDmg = Math.max(amount * clawMult, baseUnarmed * clawMult);
+
+                if (amount < targetDmg) {
+                    try {
+                        HANDLING_PRIMORDIAL_HURT.set(true);
+                        victim.hurt(clawAttacker.damageSources().mobAttack(clawAttacker), targetDmg);
+                    } finally {
+                        HANDLING_PRIMORDIAL_HURT.set(false);
+                    }
+                    return EventResult.interruptFalse();
+                }
+            }
+        }
+
+        // =========================================================================
+        // 3B. CƠ CHẾ SÁT THƯƠNG CỦA NGƯỜI CHƠI THỦY TỔ ÁC MA KHI TẤN CÔNG (ATTACKER)
         // =========================================================================
         if (!HANDLING_PRIMORDIAL_HURT.get()
                 && source.getEntity() instanceof ServerPlayer attackerPlayer
-                && PrimordialPlayerDataHelper.isPrimordial(attackerPlayer)
+                && PrimordialPlayerDataHelper.isInnatePrimordial(attackerPlayer)
                 && !PrimordialPossessionManager.isPossessing(attackerPlayer)
                 && source.is(net.minecraft.world.damagesource.DamageTypes.PLAYER_ATTACK)) {
             boolean isDemonLord = PrimordialPlayerDataHelper.isDemonLord(attackerPlayer);
@@ -1082,9 +1399,23 @@ public class TensuraEvents {
             // Kiểm tra rương tự nhiên để chèn Sách Cổ Khởi Nguyên Thủy Tổ
             TomeLootManager.onOpenContainer(sp, pos);
 
-            // 0. Tương tác La Bàn Thần Môn (Chuột phải đổi số cổng / Shift+Chuột phải mở GUI 0-9) khi đứng ngay cạnh Cổng 3D
+            // 0. Tương tác Bệ Quản Trị Thành Trì Jura Tempest (Ngai Vàng hoặc Đấu Trường)
+            if (hand == InteractionHand.MAIN_HAND
+                    && JuraTempestCitadelBuilder.isInsideCitadelOrDimension(sp.level(), sp.position())
+                    && JuraTempestCitadelBuilder.isPodiumBlock(
+                            JuraTempestCitadelBuilder.getCitadelCenter(sp.serverLevel(), sp.getUUID()), pos)) {
+                JuraTempestManager.openCitadelGui(sp);
+                return EventResult.interruptFalse();
+            }
+
+            // 0.1. Tương tác La Bàn Thần Môn (Chuột phải đổi số cổng / Shift+Chuột phải mở GUI 0-9) khi đứng ngay cạnh Cổng 3D
             if (hand == InteractionHand.MAIN_HAND
                     && DimensionalSanctuaryAbility.tryInteractWithGateBlockClick(sp, pos, sp.isShiftKeyDown())) {
+                return EventResult.interruptFalse();
+            }
+
+            // 0.2. Kích hoạt Cổng Ác Ma Giới Khổng Lồ (Gothic Demonic Gate)
+            if (DemonicGateManager.onRightClickBlock(sp, hand, pos, direction)) {
                 return EventResult.interruptFalse();
             }
 
@@ -1357,6 +1688,10 @@ public class TensuraEvents {
     }
 
     public static void spawnGuyCrimsonOnVillagerDeath(ServerLevel sl, LivingEntity victim) {
+        if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.ROUGE)
+                || PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.ROUGE, null) != null) {
+            return;
+        }
         PrimordialDemonEntity guy = new PrimordialDemonEntity(com.minhphuc.weapons.entity.ModEntities.PRIMORDIAL_DEMON.get(), sl);
         guy.setDemonType(DemonType.ROUGE);
         guy.setCustomDemonName("Guy Crimson");

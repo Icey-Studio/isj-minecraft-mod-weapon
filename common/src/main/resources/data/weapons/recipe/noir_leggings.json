@@ -1,0 +1,23 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "DOD",
+    "OLO",
+    "DOD"
+  ],
+  "key": {
+    "D": {
+      "item": "minecraft:black_dye"
+    },
+    "O": {
+      "item": "minecraft:crying_obsidian"
+    },
+    "L": {
+      "item": "minecraft:netherite_leggings"
+    }
+  },
+  "result": {
+    "id": "weapons:noir_leggings",
+    "count": 1
+  }
+}

@@ -88,15 +88,7 @@ public class StellarRemoteItem extends Item {
 
             int mode = getMode(stack);
             OrbitalStrikeManager.triggerStrike(serverLevel, serverPlayer, targetPos, mode);
-
-            // Thời gian hồi chiêu
-            int cooldown = switch (mode) {
-                case ClientOrbitalStrikeRenderer.MODE_RAILGUN -> 160; // 8s
-                case ClientOrbitalStrikeRenderer.MODE_GUNGNIR -> 200; // 10s
-                case ClientOrbitalStrikeRenderer.MODE_SEVEN_STARS -> 260; // 13s
-                default -> 160;
-            };
-            player.getCooldowns().addCooldown(this, cooldown);
+            // Đặc quyền người chơi: 0s Cooldown khi gọi Pháo Quỹ Đạo Vệ Tinh
         }
 
         return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());

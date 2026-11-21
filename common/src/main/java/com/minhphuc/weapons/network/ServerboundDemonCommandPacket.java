@@ -50,6 +50,22 @@ public class ServerboundDemonCommandPacket {
             if (player == null) return;
             ServerLevel level = player.serverLevel();
 
+            // Hỗ trợ 5 Kỹ Năng Tầm Soát & Cổng Di Tích (117..121) cho cả 7 Thủy Tổ ngay lập tức
+            if (actionType == ACTION_CAST_SKILL && skillIndex >= 117 && skillIndex <= 121) {
+                ItemStack heldPact = player.getMainHandItem().getItem() instanceof PrimordialPactItem ? player.getMainHandItem()
+                        : (player.getOffhandItem().getItem() instanceof PrimordialPactItem ? player.getOffhandItem() : ItemStack.EMPTY);
+                var dType = !heldPact.isEmpty() ? PrimordialPactItem.getDemonType(heldPact) : com.minhphuc.weapons.entity.tensura.DemonType.NOIR;
+                boolean teleportOrExtract = player.isShiftKeyDown();
+                switch (skillIndex) {
+                    case 117 -> com.minhphuc.weapons.content.tensura.AbyssalGovernanceManager.executePlayerFindVillage(level, player, dType, teleportOrExtract);
+                    case 118 -> com.minhphuc.weapons.content.tensura.AbyssalGovernanceManager.executePlayerFindWarden(level, player, dType, teleportOrExtract);
+                    case 119 -> com.minhphuc.weapons.content.tensura.AbyssalGovernanceManager.executePlayerFindStructure(level, player, dType, teleportOrExtract);
+                    case 120 -> com.minhphuc.weapons.content.tensura.AbyssalGovernanceManager.executePlayerFindOresAndChests(level, player, dType, teleportOrExtract);
+                    case 121 -> com.minhphuc.weapons.content.tensura.AbyssalGovernanceManager.executePlayerFindBosses(level, player, dType);
+                }
+                return;
+            }
+
             // Tìm ác ma thuộc quyền sở hữu của người chơi trong phạm vi lân cận
             List<PrimordialDemonEntity> demons = level.getEntitiesOfClass(
                     PrimordialDemonEntity.class,

@@ -13,13 +13,19 @@ public class ClientboundSageAlertPacket {
     private final int accentColor;
     private final int durationMs;
     private final boolean offerVeldoraWarp;
+    private final int actionId;
 
     public ClientboundSageAlertPacket(String speaker, String message, int accentColor, int durationMs, boolean offerVeldoraWarp) {
+        this(speaker, message, accentColor, durationMs, offerVeldoraWarp, offerVeldoraWarp ? ServerboundSageActionPacket.ACTION_WARP_VELDORA : 0);
+    }
+
+    public ClientboundSageAlertPacket(String speaker, String message, int accentColor, int durationMs, boolean offerVeldoraWarp, int actionId) {
         this.speaker = speaker;
         this.message = message;
         this.accentColor = accentColor;
         this.durationMs = durationMs;
         this.offerVeldoraWarp = offerVeldoraWarp;
+        this.actionId = actionId;
     }
 
     public ClientboundSageAlertPacket(FriendlyByteBuf buf) {
@@ -28,6 +34,7 @@ public class ClientboundSageAlertPacket {
         this.accentColor = buf.readInt();
         this.durationMs = buf.readInt();
         this.offerVeldoraWarp = buf.readBoolean();
+        this.actionId = buf.readableBytes() >= 4 ? buf.readInt() : (offerVeldoraWarp ? ServerboundSageActionPacket.ACTION_WARP_VELDORA : 0);
     }
 
     public void encode(FriendlyByteBuf buf) {
@@ -36,9 +43,10 @@ public class ClientboundSageAlertPacket {
         buf.writeInt(accentColor);
         buf.writeInt(durationMs);
         buf.writeBoolean(offerVeldoraWarp);
+        buf.writeInt(actionId);
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> ctx) {
-        ctx.get().queue(() -> SageHudManager.pushAlert(speaker, message, accentColor, durationMs, offerVeldoraWarp));
+        ctx.get().queue(() -> SageHudManager.pushAlert(speaker, message, accentColor, durationMs, offerVeldoraWarp, actionId));
     }
 }

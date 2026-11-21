@@ -92,6 +92,15 @@ public class VeldoraHumanModel extends EntityModel<VeldoraEntity> {
             this.leftArm.xRot = -1.45F;
             this.rightArm.yRot = 0.35F;
             this.leftArm.yRot = -0.35F;
+        } else if (entity.isFlyingNow()) {
+            this.rightArm.yRot = 0.0F;
+            this.leftArm.yRot = 0.0F;
+            this.rightArm.xRot = 0.28F + 0.08F * Mth.sin(ageInTicks * 0.16F);
+            this.leftArm.xRot = 0.28F - 0.08F * Mth.sin(ageInTicks * 0.16F);
+            this.rightLeg.xRot = 0.22F + 0.08F * Mth.sin(ageInTicks * 0.14F);
+            this.leftLeg.xRot = 0.30F - 0.08F * Mth.sin(ageInTicks * 0.14F);
+            this.cape.xRot = 0.38F + 0.14F * Mth.sin(ageInTicks * 0.22F);
+            return;
         } else {
             this.rightArm.yRot = 0.0F;
             this.leftArm.yRot = 0.0F;

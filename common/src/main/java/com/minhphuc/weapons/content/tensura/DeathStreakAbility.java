@@ -562,6 +562,7 @@ public class DeathStreakAbility {
 
         boolean hasBody = PrimordialPlayerDataHelper.hasPhysicalBody(s.caster);
         boolean isDemonLord = s.isDemonLord;
+        float mult = PrimordialArmorItem.getSkillPowerMultiplier(s.caster);
 
         for (LivingEntity victim : targets) {
             victim.removeEffect(MobEffects.REGENERATION);
@@ -578,30 +579,30 @@ public class DeathStreakAbility {
                 // Đòn đầu tiên
                 if (hasBody || isDemonLord) {
                     if (isBoss) {
-                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 0.55F);
+                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 0.55F * mult);
                     } else if (!(victim instanceof VelgryndEntity)) {
-                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 4.0F);
+                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 4.0F * mult);
                     }
                 } else {
-                    victim.hurt(s.caster.damageSources().magic(), isBoss ? 80.0F : 180.0F);
+                    victim.hurt(s.caster.damageSources().magic(), (isBoss ? 80.0F : 180.0F) * mult);
                 }
             } else if (elapsed == 75) {
                 // Đòn bồi thứ hai (tất sát kết liễu Boss nếu là Ma Vương hoặc có thể xác)
                 if (hasBody || isDemonLord) {
                     if (isBoss) {
-                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 0.60F);
+                        victim.hurt(s.caster.damageSources().magic(), victim.getMaxHealth() * 0.60F * mult);
                         if (victim.isAlive() && !(victim instanceof VelgryndEntity)) {
-                            victim.hurt(s.caster.damageSources().magic(), 100000.0F);
+                            victim.hurt(s.caster.damageSources().magic(), 100000.0F * mult);
                         }
                     } else if (!(victim instanceof VelgryndEntity)) {
-                        victim.hurt(s.caster.damageSources().magic(), 100000.0F);
+                        victim.hurt(s.caster.damageSources().magic(), 100000.0F * mult);
                     }
                 } else {
-                    victim.hurt(s.caster.damageSources().magic(), isBoss ? 80.0F : 180.0F);
+                    victim.hurt(s.caster.damageSources().magic(), (isBoss ? 80.0F : 180.0F) * mult);
                 }
             } else if (elapsed % 4 == 0) {
                 // Sát thương phân rã liên tục mỗi 4 ticks
-                victim.hurt(s.caster.damageSources().magic(), (hasBody || isDemonLord) ? 40.0F : 15.0F);
+                victim.hurt(s.caster.damageSources().magic(), ((hasBody || isDemonLord) ? 40.0F : 15.0F) * mult);
             }
         }
     }

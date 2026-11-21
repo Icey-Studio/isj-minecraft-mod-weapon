@@ -24,6 +24,10 @@ public class ClientSkillStateHandler {
     private static final Map<String, Long> cooldownEndsMs = new HashMap<>();
     private static boolean raphaelAutoBattle = false;
     private static long raphaelTakeoverFlashMs = 0L;
+    private static long magicules = 100_000L;
+    private static long maxMagicules = 100_000L;
+    private static long ep = 100_000L;
+    private static boolean azathothAutoLoot = false;
 
     public static void handleSync(
             boolean safeModeIn,
@@ -39,7 +43,11 @@ public class ClientSkillStateHandler {
             List<String> anchorLabelsIn,
             List<Integer> favoritesIn,
             Map<String, Integer> activeCooldownTicksIn,
-            boolean raphaelAutoBattleIn
+            boolean raphaelAutoBattleIn,
+            long magiculesIn,
+            long maxMagiculesIn,
+            long epIn,
+            boolean azathothAutoLootIn
     ) {
         if (raphaelAutoBattle != raphaelAutoBattleIn) {
             raphaelTakeoverFlashMs = System.currentTimeMillis();
@@ -53,6 +61,10 @@ public class ClientSkillStateHandler {
             }
         }
         raphaelAutoBattle = raphaelAutoBattleIn;
+        magicules = Math.max(0L, magiculesIn);
+        maxMagicules = Math.max(1L, maxMagiculesIn);
+        ep = Math.max(0L, epIn);
+        azathothAutoLoot = azathothAutoLootIn;
         safeMode = safeModeIn;
         hasTacticalMark = hasTacticalIn;
         hasAnchorMark = hasAnchorIn;
@@ -132,19 +144,27 @@ public class ClientSkillStateHandler {
     }
 
     public static int getRemainingCooldownTicks(String key) {
-        if (key == null) return 0;
-        Long end = cooldownEndsMs.get(key);
-        if (end == null) return 0;
-        long remMs = end - System.currentTimeMillis();
-        if (remMs <= 0) {
-            cooldownEndsMs.remove(key);
-            return 0;
-        }
-        return (int) Math.ceil(remMs / 50.0D);
+        return 0;
     }
 
     public static boolean isRaphaelAutoBattle() {
         return raphaelAutoBattle;
+    }
+
+    public static long getMagicules() {
+        return magicules;
+    }
+
+    public static long getMaxMagicules() {
+        return maxMagicules;
+    }
+
+    public static long getEp() {
+        return ep;
+    }
+
+    public static boolean isAzathothAutoLoot() {
+        return azathothAutoLoot;
     }
 
     public static float getRaphaelTakeoverFlashProgress() {

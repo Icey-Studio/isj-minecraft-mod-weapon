@@ -55,6 +55,7 @@ public class ServerboundSkillActionPacket {
             switch (this.action) {
                 case ACTION_REQUEST_SYNC -> {
                     SpatialTeleportAbility.syncVisualMarksToPlayer(player);
+                    PrimordialPossessionManager.syncToClient(player);
                     TensuraSkillHelper.syncSkillStateToClient(player);
                 }
                 case ACTION_TOGGLE_SAFE_MODE -> {
@@ -117,11 +118,13 @@ public class ServerboundSkillActionPacket {
         boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
         boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
         boolean isWearingDivine = DivineArmorItem.isWearingAnyPiece(player);
+        boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
         boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
-        if (!(isTrueDemonLord || isWearingDivine || isPrimordial || player.isCreative())) return;
+        boolean hasLordSkills = isTrueDemonLord || isWearingDivine || isInnatePrimordial || player.isCreative();
+        if (!(hasLordSkills || isPrimordial)) return;
 
-        int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
-        int totalSkills = lordSkills + (isPrimordial ? 7 : 0);
+        int lordSkills = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
+        int totalSkills = lordSkills + (isPrimordial ? PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS : 0);
         if (skillId < 0 || skillId >= totalSkills) return;
 
         EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", skillId);
@@ -139,11 +142,18 @@ public class ServerboundSkillActionPacket {
         boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
         boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
         boolean isWearingDivine = DivineArmorItem.isWearingAnyPiece(player);
+        boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
         boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
-        if (!(isTrueDemonLord || isWearingDivine || isPrimordial || player.isCreative())) return;
+        boolean hasLordSkills = isTrueDemonLord || isWearingDivine || isInnatePrimordial || player.isCreative();
+        if (!(hasLordSkills || isPrimordial)) return;
 
         int selected = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
-        int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
+        int lordSkills = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
+        int totalSkills = lordSkills + (isPrimordial ? PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS : 0);
+        if (selected < 0 || selected >= totalSkills) {
+            selected = 0;
+            EntityDataHelper.getCustomData(player).putInt("TensuraDemonLordSkill", 0);
+        }
         if (selected < lordSkills) {
             TensuraSkillDispatcher.executeSkill(level, player, selected, hasCreation);
         } else if (isPrimordial) {

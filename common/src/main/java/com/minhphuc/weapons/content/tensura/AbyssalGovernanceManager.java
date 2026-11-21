@@ -283,6 +283,46 @@ public class AbyssalGovernanceManager {
             }
         }
 
+        // Bổ sung: Mọi Thủy Tổ đều có đầy đủ cảm tri đa năng (nếu mục tiêu chuyên biệt chưa thấy thì quét Quặng Quý -> Warden/Boss -> Dân Làng -> Làng)
+        if (nearestPos == null) {
+            for (int x = -28; x <= 28; x += 2) {
+                for (int y = Math.max(level.getMinBuildHeight(), center.getY() - 20); y <= Math.min(level.getMaxBuildHeight(), center.getY() + 14); y += 2) {
+                    for (int z = -28; z <= 28; z += 2) {
+                        BlockPos checkPos = new BlockPos(center.getX() + x, y, center.getZ() + z);
+                        BlockState st = level.getBlockState(checkPos);
+                        if (st.is(Blocks.ANCIENT_DEBRIS) || st.is(Blocks.DIAMOND_ORE) || st.is(Blocks.DEEPSLATE_DIAMOND_ORE)
+                                || st.is(Blocks.EMERALD_ORE) || st.is(Blocks.DEEPSLATE_EMERALD_ORE)) {
+                            double dSq = center.distSqr(checkPos);
+                            if (dSq < nearestDistSq) {
+                                nearestDistSq = dSq;
+                                nearestPos = checkPos;
+                                detectedName = st.getBlock().getName().getString();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (nearestPos == null) {
+            List<net.minecraft.world.entity.monster.warden.Warden> wardens = level.getEntitiesOfClass(
+                    net.minecraft.world.entity.monster.warden.Warden.class, player.getBoundingBox().inflate(160.0D), LivingEntity::isAlive);
+            if (!wardens.isEmpty()) {
+                var w = wardens.get(0);
+                w.addEffect(new MobEffectInstance(MobEffects.GLOWING, 400, 0, false, false));
+                nearestPos = w.blockPosition();
+                nearestDistSq = center.distSqr(nearestPos);
+                detectedName = "Thực Thể Warden [HP: " + (int) w.getHealth() + "]";
+            }
+        }
+        if (nearestPos == null) {
+            BlockPos villagePos = level.findNearestMapStructure(net.minecraft.tags.StructureTags.VILLAGE, center, 80, false);
+            if (villagePos != null) {
+                nearestPos = villagePos;
+                nearestDistSq = center.distSqr(nearestPos);
+                detectedName = "Thôn Làng Dân Cư";
+            }
+        }
+
         if (nearestPos != null) {
             ItemStackDataHelper.putLong(pactStack, "Sensory_TargetPos", nearestPos.asLong());
             ItemStackDataHelper.putString(pactStack, "Sensory_TargetName", detectedName);
@@ -908,5 +948,343 @@ public class AbyssalGovernanceManager {
             if (!player.getInventory().add(netheriteReward)) player.drop(netheriteReward, false);
             player.sendSystemMessage(Component.literal("§4§l[Ván Cờ Ma Giới] §eGuy Crimson: §f\"Đây là 4 Thỏi Netherite ma hỏa dành riêng cho ngươi.\""));
         }
+    }
+
+    // =========================================================================
+    // 7. BỘ 5 KỸ NĂNG TẦM SOÁT & THÁM HIỂM TOÀN DIỆN CHO CẢ 7 THỦY TỔ & BỘ GIÁP THỦY TỔ
+    // (Tìm Làng, Tìm Warden/Ancient City, Tìm Di Tích, Tìm Quặng/Rương, Tìm Boss)
+    // =========================================================================
+
+    private static void spawnGuidanceTrail(ServerLevel level, ServerPlayer player, BlockPos targetPos) {
+        double dx = targetPos.getX() - player.getX();
+        double dy = targetPos.getY() - player.getY();
+        double dz = targetPos.getZ() - player.getZ();
+        double dist = Math.max(1.0D, Math.sqrt(dx * dx + dy * dy + dz * dz));
+        for (double t = 1.0D; t <= Math.min(dist, 20.0D); t += 0.9D) {
+            double px = player.getX() + (dx / dist) * t;
+            double py = player.getY() + 1.25D + (dy / dist) * t;
+            double pz = player.getZ() + (dz / dist) * t;
+            level.sendParticles(ParticleTypes.END_ROD, px, py, pz, 1, 0, 0, 0, 0);
+            level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, px, py, pz, 1, 0.02D, 0.02D, 0.02D, 0.0D);
+        }
+    }
+
+    /**
+     * Kỹ năng 9: Tầm Soát Thôn Làng & Cổng Dịch Chuyển Làng (Find Village)
+     * - Chuột Phải: Quét tìm Thôn Làng & Dân Làng gần nhất, phát sáng Dân Làng, báo tọa độ & bắn tia dẫn đường.
+     * - Shift + Chuột Phải: Mở cổng không gian dịch chuyển thẳng tới Thôn Làng an toàn!
+     */
+    public static void executePlayerFindVillage(ServerLevel level, ServerPlayer player, DemonType type, boolean teleport) {
+        String dName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        BlockPos foundPos = null;
+        String foundTitle = "Thôn Làng Dân Cư";
+
+        List<Villager> nearbyVillagers = level.getEntitiesOfClass(Villager.class, player.getBoundingBox().inflate(128.0D), LivingEntity::isAlive);
+        if (!nearbyVillagers.isEmpty()) {
+            for (Villager v : nearbyVillagers) {
+                v.addEffect(new MobEffectInstance(MobEffects.GLOWING, 300, 0, false, false));
+            }
+            Villager closest = nearbyVillagers.get(0);
+            foundPos = closest.blockPosition();
+            foundTitle = "Thôn Làng & Dân Làng (" + nearbyVillagers.size() + " cư dân)";
+        } else {
+            foundPos = level.findNearestMapStructure(net.minecraft.tags.StructureTags.VILLAGE, player.blockPosition(), 100, false);
+        }
+
+        if (foundPos != null) {
+            double dist = Math.hypot(foundPos.getX() - player.getX(), foundPos.getZ() - player.getZ());
+            spawnGuidanceTrail(level, player, foundPos);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.5F, 1.6F);
+
+            if (teleport) {
+                BlockPos safePos = findSafeTeleportPos(level, foundPos, level.dimension() == Level.NETHER, false);
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 200, 4, false, false));
+                SpatialTeleportAbility.executeCinematicDemonTeleport(level, player, safePos, "Thôn Làng Dân Cư");
+                player.displayClientMessage(
+                        Component.literal("§a§l[" + dName + " • TÌM LÀNG] §eĐã mở Cổng Thứ Nguyên dịch chuyển tới Thôn Làng tại [" + safePos.getX() + ", " + safePos.getY() + ", " + safePos.getZ() + "]!"),
+                        true
+                );
+            } else {
+                player.sendSystemMessage(Component.literal("§a§l[" + dName + " • TẦM SOÁT THÔN LÀNG] §fĐã phát hiện §e" + foundTitle
+                        + " §ftại tọa độ §b[" + foundPos.getX() + ", " + foundPos.getY() + ", " + foundPos.getZ() + "] §7(Cách ~" + (int) dist + "m)! §e(Giữ Shift + Chuột Phải để dịch chuyển tới Làng)"));
+                player.displayClientMessage(
+                        Component.literal("§a§l[" + dName + "] §fThôn Làng: §e[" + foundPos.getX() + ", " + foundPos.getZ() + "] §7(Cách " + (int) dist + "m | Shift+Click=Dịch chuyển)"),
+                        true
+                );
+            }
+        } else {
+            player.displayClientMessage(
+                    Component.literal("§c§l[" + dName + "] §7Không tìm thấy Thôn Làng nào trong phạm vi quét của chiều không gian này!"),
+                    true
+            );
+        }
+    }
+
+    /**
+     * Kỹ năng 10: Tầm Soát Warden & Thành Cổ Cổ Đại (Find Warden & Ancient City)
+     * - Chuột Phải: Quét tìm thực thể Warden đang sống hoặc Thành Cổ Cổ Đại (Ancient City), làm phát sáng Warden xuyên tường & dẫn đường.
+     * - Shift + Chuột Phải: Mở cổng dịch chuyển an toàn tới vị trí Warden / Ancient City!
+     */
+    public static void executePlayerFindWarden(ServerLevel level, ServerPlayer player, DemonType type, boolean teleport) {
+        String dName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        BlockPos foundPos = null;
+        String foundTitle = "Thành Cổ Cổ Đại (Ancient City - Sào Huyệt Warden)";
+
+        List<net.minecraft.world.entity.monster.warden.Warden> wardens = level.getEntitiesOfClass(
+                net.minecraft.world.entity.monster.warden.Warden.class,
+                player.getBoundingBox().inflate(256.0D),
+                LivingEntity::isAlive
+        );
+        if (!wardens.isEmpty()) {
+            for (var w : wardens) {
+                w.addEffect(new MobEffectInstance(MobEffects.GLOWING, 600, 0, false, false));
+            }
+            var closest = wardens.get(0);
+            foundPos = closest.blockPosition();
+            foundTitle = "Thực Thể WARDEN [HP: " + (int) closest.getHealth() + "/" + (int) closest.getMaxHealth() + "]";
+        } else {
+            var holderOpt = level.registryAccess().registryOrThrow(Registries.STRUCTURE).getHolder(BuiltinStructures.ANCIENT_CITY);
+            if (holderOpt.isPresent()) {
+                var pair = level.getChunkSource().getGenerator().findNearestMapStructure(
+                        level, net.minecraft.core.HolderSet.direct(holderOpt.get()), player.blockPosition(), 100, false);
+                if (pair != null) {
+                    BlockPos raw = pair.getFirst();
+                    foundPos = new BlockPos(raw.getX(), -51, raw.getZ());
+                }
+            }
+        }
+
+        if (foundPos != null) {
+            double dist = Math.hypot(foundPos.getX() - player.getX(), foundPos.getZ() - player.getZ());
+            spawnGuidanceTrail(level, player, foundPos);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.WARDEN_HEARTBEAT, SoundSource.PLAYERS, 2.0F, 1.0F);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.SCULK_SHRIEKER_SHRIEK, SoundSource.PLAYERS, 1.2F, 1.2F);
+
+            if (teleport) {
+                BlockPos safePos = findSafeTeleportPos(level, foundPos, level.dimension() == Level.NETHER, true);
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 4, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 600, 0, false, false));
+                SpatialTeleportAbility.executeCinematicDemonTeleport(level, player, safePos, foundTitle);
+                player.displayClientMessage(
+                        Component.literal("§3§l[" + dName + " • TÌM WARDEN] §bĐã mở Cổng Thứ Nguyên dịch chuyển tới " + foundTitle + "!"),
+                        true
+                );
+            } else {
+                player.sendSystemMessage(Component.literal("§3§l[" + dName + " • TẦM SOÁT WARDEN] §fĐã khóa vị trí §b" + foundTitle
+                        + " §ftại §e[" + foundPos.getX() + ", " + foundPos.getY() + ", " + foundPos.getZ() + "] §7(Cách ~" + (int) dist + "m)! §b(Giữ Shift + Chuột Phải để dịch chuyển tới)"));
+                player.displayClientMessage(
+                        Component.literal("§3§l[" + dName + "] §b" + foundTitle + ": §e[" + foundPos.getX() + ", " + foundPos.getY() + ", " + foundPos.getZ() + "] §7(Cách " + (int) dist + "m)"),
+                        true
+                );
+            }
+        } else {
+            player.displayClientMessage(
+                    Component.literal("§c§l[" + dName + "] §7Không phát hiện Warden hay Thành Cổ Cổ Đại trong bán kính 10,000m tại chiều không gian này!"),
+                    true
+            );
+        }
+    }
+
+    /**
+     * Kỹ năng 11: Tầm Soát Di Tích & Mở Cổng Thứ Nguyên (Find Stronghold / Fortress / Bastion / Trial Chambers / Monument)
+     */
+    public static void executePlayerFindStructure(ServerLevel level, ServerPlayer player, DemonType type, boolean teleport) {
+        String dName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        boolean isNether = level.dimension() == Level.NETHER;
+        boolean isUnderground = true;
+        String destTitle = "Pháo Đài Cổ Đại";
+        BlockPos foundPos = null;
+
+        if (isNether) {
+            ResourceKey<Structure> key = (type == DemonType.ROUGE) ? BuiltinStructures.BASTION_REMNANT : BuiltinStructures.FORTRESS;
+            destTitle = (type == DemonType.ROUGE) ? "Pháo Đài Bastion Remnant" : "Pháo Đài Địa Ngục (Nether Fortress)";
+            var holderOpt = level.registryAccess().registryOrThrow(Registries.STRUCTURE).getHolder(key);
+            if (holderOpt.isPresent()) {
+                var pair = level.getChunkSource().getGenerator().findNearestMapStructure(
+                        level, net.minecraft.core.HolderSet.direct(holderOpt.get()), player.blockPosition(), 100, false);
+                if (pair != null) foundPos = pair.getFirst();
+            }
+        } else {
+            ResourceKey<Structure> key = switch (type != null ? type : DemonType.NOIR) {
+                case JAUNE -> BuiltinStructures.TRIAL_CHAMBERS;
+                case BLEU -> BuiltinStructures.OCEAN_MONUMENT;
+                default -> null;
+            };
+            if (key != null) {
+                destTitle = (key == BuiltinStructures.TRIAL_CHAMBERS) ? "Mật Viện Thử Thách (Trial Chambers)" : "Thần Điện Đại Dương (Ocean Monument)";
+                isUnderground = (key == BuiltinStructures.TRIAL_CHAMBERS);
+                var holderOpt = level.registryAccess().registryOrThrow(Registries.STRUCTURE).getHolder(key);
+                if (holderOpt.isPresent()) {
+                    var pair = level.getChunkSource().getGenerator().findNearestMapStructure(
+                            level, net.minecraft.core.HolderSet.direct(holderOpt.get()), player.blockPosition(), 100, false);
+                    if (pair != null) foundPos = pair.getFirst();
+                }
+            }
+            if (foundPos == null) {
+                foundPos = level.findNearestMapStructure(net.minecraft.tags.StructureTags.EYE_OF_ENDER_LOCATED, player.blockPosition(), 120, false);
+                destTitle = "Pháo Đài Thư Viện Stronghold (Cổng End)";
+                isUnderground = true;
+            }
+        }
+
+        if (foundPos != null) {
+            double dist = Math.hypot(foundPos.getX() - player.getX(), foundPos.getZ() - player.getZ());
+            spawnGuidanceTrail(level, player, foundPos);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.ENDER_EYE_DEATH, SoundSource.PLAYERS, 1.6F, 1.2F);
+
+            if (teleport) {
+                BlockPos safePos = findSafeTeleportPos(level, foundPos, isNether, isUnderground);
+                player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 4, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 300, 0, false, false));
+                player.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 400, 0, false, false));
+                SpatialTeleportAbility.executeCinematicDemonTeleport(level, player, safePos, destTitle);
+                player.displayClientMessage(
+                        Component.literal("§5§l[" + dName + " • CỔNG DI TÍCH] §dĐã dịch chuyển tới " + destTitle + " tại [" + safePos.getX() + ", " + safePos.getY() + ", " + safePos.getZ() + "]!"),
+                        true
+                );
+            } else {
+                player.sendSystemMessage(Component.literal("§5§l[" + dName + " • TẦM SOÁT DI TÍCH] §fPhát hiện §e" + destTitle
+                        + " §ftại §b[" + foundPos.getX() + ", " + foundPos.getY() + ", " + foundPos.getZ() + "] §7(Cách ~" + (int) dist + "m)! §d(Giữ Shift + Chuột Phải để mở cổng dịch chuyển)"));
+                player.displayClientMessage(
+                        Component.literal("§5§l[" + dName + "] §e" + destTitle + ": §b[" + foundPos.getX() + ", " + foundPos.getZ() + "] §7(Cách " + (int) dist + "m | Shift+Click=Dịch chuyển)"),
+                        true
+                );
+            }
+        } else {
+            player.displayClientMessage(
+                    Component.literal("§c§l[" + dName + "] §7Không tìm thấy di tích khả dụng trong bán kính quét!"),
+                    true
+            );
+        }
+    }
+
+    /**
+     * Kỹ năng 12: Thấu Thị Khoáng Mạch Quý & Rương Kho Báu (Find Rare Ores & Treasure Chests)
+     * - Chuột Phải: Quét tìm Kim Cương, Ancient Debris, Ngọc Lục Bảo, Vàng Thô & Rương Kho Báu trong 36m.
+     * - Shift + Chuột Phải: Bộc phá và thu hồi ngay mạch quặng quý gần nhất vào thẳng túi đồ!
+     */
+    public static void executePlayerFindOresAndChests(ServerLevel level, ServerPlayer player, DemonType type, boolean extractNow) {
+        String dName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        BlockPos center = player.blockPosition();
+        BlockPos nearestOrePos = null;
+        String nearestOreName = "";
+        double nearestOreDistSq = Double.MAX_VALUE;
+
+        BlockPos nearestChestPos = null;
+        double nearestChestDistSq = Double.MAX_VALUE;
+
+        int radius = 32;
+        int minY = Math.max(level.getMinBuildHeight(), center.getY() - 24);
+        int maxY = Math.min(level.getMaxBuildHeight(), center.getY() + 18);
+
+        for (int x = -radius; x <= radius; x++) {
+            for (int y = minY; y <= maxY; y++) {
+                for (int z = -radius; z <= radius; z++) {
+                    BlockPos checkPos = new BlockPos(center.getX() + x, y, center.getZ() + z);
+                    BlockState st = level.getBlockState(checkPos);
+                    if (st.isAir()) continue;
+
+                    double dSq = center.distSqr(checkPos);
+                    if (st.is(Blocks.ANCIENT_DEBRIS) || st.is(Blocks.DIAMOND_ORE) || st.is(Blocks.DEEPSLATE_DIAMOND_ORE)
+                            || st.is(Blocks.EMERALD_ORE) || st.is(Blocks.DEEPSLATE_EMERALD_ORE)
+                            || st.is(Blocks.RAW_GOLD_BLOCK) || st.is(Blocks.AMETHYST_CLUSTER)) {
+                        if (dSq < nearestOreDistSq) {
+                            nearestOreDistSq = dSq;
+                            nearestOrePos = checkPos;
+                            nearestOreName = st.getBlock().getName().getString();
+                        }
+                    } else if (st.is(Blocks.CHEST) || st.is(Blocks.TRAPPED_CHEST) || st.is(Blocks.BARREL) || st.is(Blocks.SHULKER_BOX)) {
+                        if (dSq < nearestChestDistSq && dSq > 4.0D) {
+                            nearestChestDistSq = dSq;
+                            nearestChestPos = checkPos;
+                        }
+                    }
+                }
+            }
+        }
+
+        if (nearestOrePos != null && extractNow) {
+            BlockState state = level.getBlockState(nearestOrePos);
+            List<ItemStack> drops = Block.getDrops(state, level, nearestOrePos, level.getBlockEntity(nearestOrePos), player, new ItemStack(Items.NETHERITE_PICKAXE));
+            level.destroyBlock(nearestOrePos, false);
+            for (ItemStack drop : drops) {
+                if (!player.getInventory().add(drop)) {
+                    player.drop(drop, false);
+                }
+            }
+            level.sendParticles(ParticleTypes.EXPLOSION, nearestOrePos.getX() + 0.5D, nearestOrePos.getY() + 0.5D, nearestOrePos.getZ() + 0.5D, 2, 0.2D, 0.2D, 0.2D, 0.05D);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.4F, 1.3F);
+            player.displayClientMessage(
+                    Component.literal("§6§l[" + dName + " • BỘC PHÁ KHOÁNG MẠCH] §aĐã khai thác từ xa và thu hồi §e" + nearestOreName + " §avào túi đồ!"),
+                    true
+            );
+            return;
+        }
+
+        if (nearestOrePos != null || nearestChestPos != null) {
+            BlockPos primaryTarget = nearestOrePos != null ? nearestOrePos : nearestChestPos;
+            spawnGuidanceTrail(level, player, primaryTarget);
+            level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.PLAYERS, 1.8F, 1.4F);
+
+            StringBuilder msg = new StringBuilder("§6§l[" + dName + " • THẤU THỊ KHOÁNG MẠCH & KHO BÁU] ");
+            if (nearestOrePos != null) {
+                msg.append("§eQuặng quý: §f").append(nearestOreName)
+                        .append(" §b[").append(nearestOrePos.getX()).append(", ").append(nearestOrePos.getY()).append(", ").append(nearestOrePos.getZ())
+                        .append("] §7(").append((int) Math.sqrt(nearestOreDistSq)).append("m) ");
+            }
+            if (nearestChestPos != null) {
+                msg.append("§6| Rương kho báu: §b[").append(nearestChestPos.getX()).append(", ").append(nearestChestPos.getY()).append(", ").append(nearestChestPos.getZ())
+                        .append("] §7(").append((int) Math.sqrt(nearestChestDistSq)).append("m)");
+            }
+            msg.append(" §a(Shift+Click để thu hồi quặng từ xa)");
+            player.sendSystemMessage(Component.literal(msg.toString()));
+            player.displayClientMessage(Component.literal(msg.toString()), true);
+        } else {
+            player.displayClientMessage(
+                    Component.literal("§c§l[" + dName + "] §7Chưa phát hiện quặng quý hay rương kho báu nào trong bán kính 32m!"),
+                    true
+            );
+        }
+    }
+
+    /**
+     * Kỹ năng 13: Cảm Tri Boss & Quái Tinh Anh (Find Bosses & Elites)
+     */
+    public static void executePlayerFindBosses(ServerLevel level, ServerPlayer player, DemonType type) {
+        String dName = type != null ? type.getColorName().toUpperCase() : "THỦY TỔ";
+        List<LivingEntity> threats = level.getEntitiesOfClass(
+                LivingEntity.class,
+                player.getBoundingBox().inflate(128.0D),
+                e -> e != player && e.isAlive() && (e instanceof Enemy || e.getMaxHealth() >= 50.0F)
+        );
+
+        if (threats.isEmpty()) {
+            player.displayClientMessage(
+                    Component.literal("§a§l[" + dName + " • CẢM TRI MA LỰC] §fKhông có Boss hay quái tinh anh nguy hiểm nào trong bán kính 128m!"),
+                    true
+            );
+            return;
+        }
+
+        threats.sort((a, b) -> Double.compare(b.getMaxHealth(), a.getMaxHealth()));
+        for (LivingEntity e : threats) {
+            e.addEffect(new MobEffectInstance(MobEffects.GLOWING, 400, 0, false, false));
+        }
+
+        LivingEntity strongest = threats.get(0);
+        BlockPos tPos = strongest.blockPosition();
+        double dist = Math.sqrt(player.distanceToSqr(strongest));
+        spawnGuidanceTrail(level, player, tPos);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.5F, 1.4F);
+
+        player.sendSystemMessage(Component.literal("§c§l[" + dName + " • CẢM TRI BOSS & TINH ANH] §fĐã phát sáng §e" + threats.size()
+                + " §fmục tiêu! Mạnh nhất: §c§l" + strongest.getName().getString()
+                + " §e[HP: " + (int) strongest.getHealth() + "/" + (int) strongest.getMaxHealth() + "] §ftại §b["
+                + tPos.getX() + ", " + tPos.getY() + ", " + tPos.getZ() + "] §7(Cách " + (int) dist + "m)!"));
+        player.displayClientMessage(
+                Component.literal("§c§l[" + dName + "] §fMục tiêu mạnh nhất: §e" + strongest.getName().getString()
+                        + " §c(" + (int) strongest.getHealth() + " HP) §7- Cách " + (int) dist + "m (+" + threats.size() + " mục tiêu đã phát sáng)"),
+                true
+        );
     }
 }

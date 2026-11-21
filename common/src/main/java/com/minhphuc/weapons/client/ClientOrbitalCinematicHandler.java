@@ -109,85 +109,22 @@ public class ClientOrbitalCinematicHandler {
             return null;
         }
 
-        Vec3 camPos;
-        Vec3 lookTarget;
-
-        // === HỒI 1 & 2: NGOÀI KHÔNG GIAN QUỸ ĐẠO (0 -> 28 ticks) ===
-        if (age < 28.0f) {
-            float progress = age / 28.0f;
-            // Camera ở quỹ đạo nhìn chếch ngang đường chân trời Trái Đất (ISS Horizon View)
-            double orbitAngle = Math.toRadians(35.0 + progress * 10.0);
-            double dist = 44.0;
-            double offsetX = Math.cos(orbitAngle) * dist - 8.0;
-            double offsetZ = Math.sin(orbitAngle) * dist - 14.0;
-
-            // Rung chấn khi vũ khí khai hỏa (ticks 23 -> 27.5)
-            double recoilShake = 0.0;
-            if (age >= 23.0f && age <= 27.5f) {
-                recoilShake = Math.sin((age - 23.0f) * 4.5) * 1.8;
-            }
-
-            camPos = new Vec3(targetPos.x + 18.0 + offsetX, targetPos.y + 446.0 + recoilShake, targetPos.z + 26.0 + offsetZ);
-            // Hướng nhìn chếch về phía vệ tinh và đường chân trời cong vút phát quang của Trái Đất
-            lookTarget = new Vec3(targetPos.x + 18.0 + Math.cos(orbitAngle + 0.4) * 85.0, targetPos.y + 360.0, targetPos.z + 26.0 + Math.sin(orbitAngle + 0.4) * 85.0);
-        }
-        // === HỒI 3: LAO DỐC SIÊU THANH XUYÊN TẦNG MÂY (28 -> 45 ticks) ===
-        else if (age < 45.0f) {
-            float t = (age - 28.0f) / 17.0f;
-            // Gia tốc rơi tự do mạnh dần đều (Cubic Ease In)
-            float ease = t * t * t;
-
-            double startY = targetPos.y + 420.0;
-            double endY = targetPos.y + 24.0;
-            double curY = startY + (endY - startY) * ease;
-
-            // Góc nhìn thu hẹp dần bám sát tia vũ khí
-            double offsetX = 25.0 * (1.0 - ease);
-            double offsetZ = 35.0 * (1.0 - ease);
-
-            camPos = new Vec3(targetPos.x + offsetX, curY, targetPos.z + offsetZ);
-            lookTarget = targetPos.add(0, 0, 0);
-        }
-        // === HỒI 4: BAO QUÁT VỤ NỔ MẶT ĐẤT & RUNG CHẤN (45 -> 58 ticks) ===
-        else if (age < 58.0f) {
+        // Bỏ góc quay phóng ra ngoài không gian vũ trụ - Giữ nguyên góc nhìn người chơi (First/Third person)
+        // Chỉ tạo rung chấn nhẹ khi vũ khí va chạm mặt đất (Ticks 45 -> 58)
+        if (age >= 45.0f && age < 58.0f) {
             if (!impactTriggered) {
                 impactTriggered = true;
                 CustomImpactFrameOverlay.trigger();
             }
             float blastAge = age - 45.0f;
             float shakeStrength = (float) Math.max(0.0, 1.0 - blastAge / 13.0);
-            double shakeX = Math.sin(blastAge * 4.2) * 0.8 * shakeStrength;
-            double shakeY = Math.cos(blastAge * 3.7) * 0.6 * shakeStrength;
-
-            // Camera ở khoảng cách an toàn 32m nhìn xuống hố nổ
-            camPos = new Vec3(targetPos.x + 22.0 + shakeX, targetPos.y + 16.0 + shakeY, targetPos.z - 26.0);
-            lookTarget = targetPos.add(0, 1.5, 0);
-        }
-        // === HỒI 5: TRẢ GÓC NHÌN MƯỢT MÀ VỀ NGƯỜI CHƠI (58 -> 75 ticks) ===
-        else {
-            float blend = Math.clamp((age - 58.0f) / 17.0f, 0.0f, 1.0f);
-            float ease = blend * blend * (3.0f - 2.0f * blend); // Smoothstep
-
-            Vec3 shot4Pos = new Vec3(targetPos.x + 22.0, targetPos.y + 16.0, targetPos.z - 26.0);
-            camPos = shot4Pos.lerp(vanillaPos, ease);
-            lookTarget = targetPos.add(0, 1.0, 0);
+            double shakeX = Math.sin(blastAge * 4.2) * 0.15 * shakeStrength;
+            double shakeY = Math.cos(blastAge * 3.7) * 0.18 * shakeStrength;
+            double shakeZ = Math.sin(blastAge * 3.1) * 0.15 * shakeStrength;
+            return new Pose(vanillaPos.add(shakeX, shakeY, shakeZ), vanillaYaw, vanillaPitch);
         }
 
-        // Tính toán Yaw và Pitch hướng máy quay về lookTarget
-        Vec3 dir = lookTarget.subtract(camPos);
-        float targetYaw = (float) Math.toDegrees(Math.atan2(-dir.x, dir.z));
-        float targetPitch = (float) -Math.toDegrees(Math.atan2(dir.y, Math.hypot(dir.x, dir.z)));
-
-        // Giai đoạn trả góc nhìn: Lerp cả Yaw và Pitch về mắt người chơi
-        if (age >= 58.0f) {
-            float blend = Math.clamp((age - 58.0f) / 17.0f, 0.0f, 1.0f);
-            float ease = blend * blend * (3.0f - 2.0f * blend);
-            float finalYaw = net.minecraft.util.Mth.rotLerp(ease, targetYaw, vanillaYaw);
-            float finalPitch = net.minecraft.util.Mth.lerp(ease, targetPitch, vanillaPitch);
-            return new Pose(camPos, finalYaw, finalPitch);
-        }
-
-        return new Pose(camPos, targetYaw, targetPitch);
+        return null;
     }
 
     /**
