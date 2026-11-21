@@ -164,12 +164,20 @@ public class PrimordialSummonRitual {
      */
     public static void startWaitingRitual(ServerLevel level, ServerPlayer caster, Vec3 groundPos, DemonType demonType, boolean isWinged) {
         if (PrimordialPactItem.isDemonContractedInAnyPlayerInventory(level, demonType)
-                || PrimordialPactItem.findActivePrimordial(level.getServer(), demonType, null) != null) {
+                || PrimordialPactItem.findActivePrimordial(level.getServer(), demonType, null) != null
+                || PrimordialArmorItem.isAnyPlayerWearingFullDemonSet(level.getServer(), demonType)) {
             if (caster != null) {
-                caster.displayClientMessage(
-                        Component.literal("§c⚠️ Không thể triệu hồi! Thủy Tổ " + demonType.getColorName() + " đã có Khế Ước trong tay người chơi hoặc đang hiện diện (chỉ 1 cá thể duy nhất)!"),
-                        false
-                );
+                if (PrimordialArmorItem.isAnyPlayerWearingFullDemonSet(level.getServer(), demonType)) {
+                    caster.displayClientMessage(
+                            Component.literal("§c§l« QUY TẮC ĐỘC TÔN: Người chơi đang hiện thân là Ác Ma Thủy Tổ " + demonType.getColorName() + "! Không thể triệu hồi bản thể thứ hai! »"),
+                            false
+                    );
+                } else {
+                    caster.displayClientMessage(
+                            Component.literal("§c⚠️ Không thể triệu hồi! Thủy Tổ " + demonType.getColorName() + " đã có Khế Ước trong tay người chơi hoặc đang hiện diện (chỉ 1 cá thể duy nhất)!"),
+                            false
+                    );
+                }
             }
             return;
         }

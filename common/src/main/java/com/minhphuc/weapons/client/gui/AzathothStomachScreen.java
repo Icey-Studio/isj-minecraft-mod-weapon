@@ -22,7 +22,7 @@ import java.util.List;
 public class AzathothStomachScreen extends Screen {
 
     private static final int PANEL_W = 424;
-    private static final int PANEL_H = 266;
+    private static final int PANEL_H = 286;
     private static final int ROWS_PER_PAGE = 7;
 
     private static int savedPage = 0;
@@ -98,13 +98,9 @@ public class AzathothStomachScreen extends Screen {
                 b -> ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_CONVERT_MAGICULES, selectedIndex)))
                 .bounds(bx, top + 86, bw, 18).build());
 
-        addRenderableWidget(Button.builder(Component.literal("§6Craft: Táo Vàng"),
-                b -> ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_AUTO_CRAFT, 0)))
-                .bounds(bx, top + 106, 91, 18).build());
-
-        addRenderableWidget(Button.builder(Component.literal("§5Craft: Netherite"),
-                b -> ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_AUTO_CRAFT, 1)))
-                .bounds(bx + 95, top + 106, 91, 18).build());
+        addRenderableWidget(Button.builder(Component.literal("§6✨ Tái Tạo Bản Thể (Sinh Vật Sống)"),
+                b -> ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_RECONSTITUTE_ENTITY, selectedIndex)))
+                .bounds(bx, top + 106, bw, 18).build());
 
         String autoLootLabel = autoLoot ? "§dAuto-Loot Hư Không: §aBẬT" : "§7Auto-Loot Hư Không: §cTẮT";
         addRenderableWidget(Button.builder(Component.literal(autoLootLabel),
@@ -128,6 +124,12 @@ public class AzathothStomachScreen extends Screen {
                     onClose();
                     ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_RECALL_OR_REVIVE_VELDORA, 0));
                 }).bounds(bx, top + 168, bw, 18).build());
+
+        addRenderableWidget(Button.builder(Component.literal("§e⚒ Tái Tạo Hang Động Veldora"),
+                b -> {
+                    onClose();
+                    ModMessages.sendToServer(new ServerboundAzathothActionPacket(ServerboundAzathothActionPacket.ACTION_REBUILD_VELDORA_CAVE, 0));
+                }).bounds(bx, top + 188, bw, 18).build());
 
         addRenderableWidget(Button.builder(Component.literal("§6♛ Thành Trì"),
                 b -> ModMessages.sendToServer(new ServerboundTempestCitadelActionPacket(ServerboundTempestCitadelActionPacket.ACTION_OPEN_GUI, 0)))
@@ -245,7 +247,7 @@ public class AzathothStomachScreen extends Screen {
 
         // Bảng Thông Tin Chi Tiết Ô Đang Chọn & Veldora ở góc phải dưới
         int infoX = left + 186;
-        int infoY = top + 190;
+        int infoY = top + 210;
         g.fill(infoX, infoY, left + PANEL_W - 10, top + PANEL_H - 10, 0xAA111626);
         g.renderOutline(infoX, infoY, (left + PANEL_W - 10) - infoX, (top + PANEL_H - 10) - infoY, 0x5538BDF8);
         if (!entries.isEmpty() && selectedIndex >= 0 && selectedIndex < entries.size()) {

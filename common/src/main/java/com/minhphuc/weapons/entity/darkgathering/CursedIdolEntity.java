@@ -64,10 +64,10 @@ public class CursedIdolEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 1500.0D)
+                .add(Attributes.MAX_HEALTH, 4500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
-                .add(Attributes.ARMOR, 18.0D)
+                .add(Attributes.ARMOR, 28.0D)
                 .add(Attributes.FOLLOW_RANGE, 28.0D);
     }
 
@@ -126,7 +126,7 @@ public class CursedIdolEntity extends Monster {
                     curseGauge.put(sp.getUUID(), 0);
                     sp.addEffect(new MobEffectInstance(MobEffects.WITHER, 120, 2));
                     sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0));
-                    sp.hurt(this.damageSources().wither(), hasBodhi ? 10.0F : 28.0F);
+                    sp.hurt(this.damageSources().wither(), hasBodhi ? 30.0F : 84.0F);
                     sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ELDER_GUARDIAN_CURSE, SoundSource.HOSTILE, 2.0F, 0.5F);
                     SageManager.pushAlert(sp, "S_RANK_CURSE_MAX",
                             "Cảnh báo! Lời Nguyền Di Tích Cấp S đã bùng phát 100%! Hãy phá hủy Tà Thần Tượng ngay!", "", 120);

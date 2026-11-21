@@ -16,13 +16,14 @@ public class ServerboundAzathothActionPacket {
     public static final int ACTION_ANALYZE_UNSEAL_VELDORA = 2;
     public static final int ACTION_RELEASE = 3;
     public static final int ACTION_CONVERT_MAGICULES = 4;
-    public static final int ACTION_AUTO_CRAFT = 5;
+    public static final int ACTION_RECONSTITUTE_ENTITY = 5;
     public static final int ACTION_SUMMON_VELDORA_DRAGON = 6;
     public static final int ACTION_SUMMON_VELDORA_HUMAN = 7;
     public static final int ACTION_RECALL_OR_REVIVE_VELDORA = 8;
     public static final int ACTION_DEPOSIT_SLOT = 9;
     public static final int ACTION_DEPOSIT_BACKPACK = 10;
     public static final int ACTION_TOGGLE_AUTOLOOT = 11;
+    public static final int ACTION_REBUILD_VELDORA_CAVE = 12;
 
     private final int action;
     private final int index;
@@ -70,8 +71,8 @@ public class ServerboundAzathothActionPacket {
                     AzathothStomachData.convertToMagicules(level, sp, index);
                     sendOpenGui(sp);
                 }
-                case ACTION_AUTO_CRAFT -> {
-                    AzathothStomachData.autoCraftItem(level, sp, index);
+                case ACTION_RECONSTITUTE_ENTITY -> {
+                    AzathothStomachData.reconstituteEntity(level, sp, index);
                     sendOpenGui(sp);
                 }
                 case ACTION_SUMMON_VELDORA_DRAGON -> SummonVeldoraAbility.summon(level, sp, false);
@@ -89,6 +90,7 @@ public class ServerboundAzathothActionPacket {
                     AzathothStomachData.toggleAutoLoot(sp);
                     sendOpenGui(sp);
                 }
+                case ACTION_REBUILD_VELDORA_CAVE -> com.minhphuc.weapons.world.VeldoraWorldData.rebuildCaveForPlayer(level.getServer(), sp);
             }
         });
     }

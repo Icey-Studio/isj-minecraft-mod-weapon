@@ -2,6 +2,8 @@ package com.minhphuc.weapons.mixin;
 
 import com.minhphuc.weapons.client.ClientPossessionHandler;
 import com.minhphuc.weapons.client.renderer.ClientPossessionRenderer;
+import com.minhphuc.weapons.client.renderer.ClientPrimordialArmorRenderer;
+import com.minhphuc.weapons.content.tensura.PrimordialArmorItem;
 import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.player.AbstractClientPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -26,6 +28,14 @@ public abstract class PlayerRendererMixin {
         }
     }
 
+    @Inject(method = "setModelProperties", at = @At("TAIL"))
+    private void weapons$hideCoveredPartsForPrimordialArmor(AbstractClientPlayer player, CallbackInfo ci) {
+        if (!ClientPossessionHandler.isPossessing(player) && PrimordialArmorItem.isWearingAnyPiece(player)) {
+            PlayerRenderer self = (PlayerRenderer) (Object) this;
+            ClientPrimordialArmorRenderer.hideCoveredPlayerParts(player, self.getModel());
+        }
+    }
+
     @Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("HEAD"), cancellable = true)
     private void weapons$renderPossessedDemonF5(AbstractClientPlayer player, float entityYaw, float partialTicks,
                                                PoseStack poseStack, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
@@ -39,10 +49,22 @@ public abstract class PlayerRendererMixin {
         }
     }
 
+    @Inject(method = "render(Lnet/minecraft/client/player/AbstractClientPlayer;FFLcom/mojang/blaze3d/vertex/PoseStack;Lnet/minecraft/client/renderer/MultiBufferSource;I)V", at = @At("TAIL"))
+    private void weapons$renderPrimordialArmorF5(AbstractClientPlayer player, float entityYaw, float partialTicks,
+                                                 PoseStack poseStack, MultiBufferSource buffer, int packedLight, CallbackInfo ci) {
+        if (!ClientPossessionHandler.isPossessing(player) && PrimordialArmorItem.isWearingAnyPiece(player)) {
+            ClientPrimordialArmorRenderer.renderEquippedPrimordialArmor((PlayerRenderer) (Object) this, player, entityYaw, partialTicks, poseStack, buffer, packedLight);
+        }
+    }
+
     @Inject(method = "renderRightHand", at = @At("HEAD"), cancellable = true)
     private void weapons$renderPossessedRightHand(PoseStack poseStack, MultiBufferSource buffer, int packedLight, AbstractClientPlayer player, CallbackInfo ci) {
         if (ClientPossessionHandler.isPossessing(player)) {
             ClientPossessionRenderer.renderFirstPersonDemonHand(poseStack, buffer, packedLight, player, true);
+            ci.cancel();
+            return;
+        }
+        if (ClientPrimordialArmorRenderer.renderFirstPersonArmorHand(poseStack, buffer, packedLight, player, true)) {
             ci.cancel();
         }
     }
@@ -51,6 +73,10 @@ public abstract class PlayerRendererMixin {
     private void weapons$renderPossessedLeftHand(PoseStack poseStack, MultiBufferSource buffer, int packedLight, AbstractClientPlayer player, CallbackInfo ci) {
         if (ClientPossessionHandler.isPossessing(player)) {
             ClientPossessionRenderer.renderFirstPersonDemonHand(poseStack, buffer, packedLight, player, false);
+            ci.cancel();
+            return;
+        }
+        if (ClientPrimordialArmorRenderer.renderFirstPersonArmorHand(poseStack, buffer, packedLight, player, false)) {
             ci.cancel();
         }
     }

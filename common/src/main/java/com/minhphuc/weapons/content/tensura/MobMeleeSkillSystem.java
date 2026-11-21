@@ -312,7 +312,8 @@ public final class MobMeleeSkillSystem {
     }
 
     private static float resolveScale(Mob mob) {
-        if (mob instanceof VeldoraEntity || mob instanceof VelzardEntity || mob instanceof VelgryndEntity) return 2.2F;
+        if (mob instanceof VeldoraEntity vd) return vd.isHumanForm() ? 1.85F : 4.2F;
+        if (mob instanceof VelzardEntity || mob instanceof VelgryndEntity) return 2.2F;
         if (mob instanceof OrcDisasterGeldEntity) return 2.0F;
         if (mob instanceof MilimEntity || mob instanceof DemonLordKuboEntity) return 1.8F;
         if (mob instanceof PrimordialDemonEntity || mob instanceof ChronoaEntity) return 1.55F;

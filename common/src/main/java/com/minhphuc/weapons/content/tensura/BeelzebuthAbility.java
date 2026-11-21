@@ -226,6 +226,8 @@ public class BeelzebuthAbility {
                             }
                         }
                     } else if (entity instanceof ItemEntity itemEntity) {
+                        ItemStack swallowedStack = itemEntity.getItem().copy();
+                        AzathothStomachData.storeItemStackIntoStomach(player, swallowedStack, false);
                         itemEntity.discard();
                         devouredItems++;
                     } else if (entity instanceof PrimedTnt tnt) {
@@ -298,11 +300,21 @@ public class BeelzebuthAbility {
                 ));
             }
 
-            // 3. Hạt rồng hư không tím cuốn theo phía sau đầu rồng
-            d.level.sendParticles(ParticleTypes.DRAGON_BREATH, currentPos.x, currentPos.y, currentPos.z, 3, 0.4D, 0.4D, 0.4D, 0.03D);
-            d.level.sendParticles(ParticleTypes.PORTAL, currentPos.x, currentPos.y, currentPos.z, 2, 0.3D, 0.3D, 0.3D, 0.02D);
-            if (elapsed % 4 == 0) {
-                d.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, currentPos.x, currentPos.y, currentPos.z, 2, 0.2D, 0.2D, 0.2D, 0.02D);
+            // 3. Vòng Xoáy Hắc Hố Thâm Uyên (Abyssal Swirling Singularity) & Sương Đen Nuốt Chửng
+            d.level.sendParticles(ParticleTypes.DRAGON_BREATH, currentPos.x, currentPos.y, currentPos.z, 6, 0.4D, 0.4D, 0.4D, 0.05D);
+            d.level.sendParticles(ParticleTypes.PORTAL, currentPos.x, currentPos.y, currentPos.z, 5, 0.3D, 0.3D, 0.3D, 0.04D);
+            for (int pIdx = 0; pIdx < 6; pIdx++) {
+                double angle = (elapsed * 0.45D) + (pIdx * (Math.PI / 3.0D));
+                double r = 1.8D;
+                double px = currentPos.x + Math.cos(angle) * r;
+                double py = currentPos.y + (Math.sin(elapsed * 0.35D + pIdx) * 0.45D);
+                double pz = currentPos.z + Math.sin(angle) * r;
+                d.level.sendParticles(ParticleTypes.SQUID_INK, px, py, pz, 1, 0, 0, 0, 0.02D);
+                d.level.sendParticles(ParticleTypes.REVERSE_PORTAL, px, py, pz, 1, 0, 0, 0, 0.05D);
+            }
+            if (elapsed % 3 == 0) {
+                d.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, currentPos.x, currentPos.y, currentPos.z, 4, 0.3D, 0.3D, 0.3D, 0.03D);
+                d.level.sendParticles(ParticleTypes.WITCH, currentPos.x, currentPos.y, currentPos.z, 3, 0.25D, 0.25D, 0.25D, 0.02D);
             }
 
             // 4. Lực hút chân không ma vương kéo sinh vật vào miệng rồng
@@ -353,7 +365,12 @@ public class BeelzebuthAbility {
                                 living.hurt(dmgSource, 50.0F * (roll != null ? roll.multiplier : 0.35F));
                             }
                         }
-                    } else if (e instanceof ItemEntity || e instanceof PrimedTnt || e instanceof Creeper) {
+                    } else if (e instanceof ItemEntity itemEntity) {
+                        if (d.caster != null) {
+                            AzathothStomachData.storeItemStackIntoStomach(d.caster, itemEntity.getItem().copy(), false);
+                        }
+                        itemEntity.discard();
+                    } else if (e instanceof PrimedTnt || e instanceof Creeper) {
                         e.discard();
                     }
                 }

@@ -51,11 +51,11 @@ public class PrimordialSkillDispatcher {
         }
 
         // 2. Kiểm tra Kháng Ma Kết Giới (Anti-Magic Barrier)
-        // Ma Tố bị triệt tiêu hoàn toàn. Duy nhất kỹ năng Spiritrons (Skill 7: Linh Tử Bộc Phát) có thể xuyên thấu!
+        // Ma Tố bị triệt tiêu hoàn toàn. Kỹ năng Spiritrons (Linh Tử Bộc Phát / Disintegration) và Cảm Tri Tầm Soát có thể xuyên thấu!
         if (AntiMagicBarrierManager.isInBarrier(level, player.position())) {
-            if (skillIndex != 6) {
+            if (skillIndex != 6 && skillIndex != 7 && skillIndex < 9) {
                 player.displayClientMessage(
-                        Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Ma Tố bị triệt tiêu! Kỹ năng Ác Ma bị phong ấn (Ngoại trừ: Linh Tử Bộc Phát)!"),
+                        Component.literal("§c⚠️ [KHÁNG MA KẾT GIỚI] Ma Tố bị triệt tiêu! Kỹ năng Ác Ma bị phong ấn (Ngoại trừ: Linh Tử Bộc Phát, Disintegration & Kỹ Năng Tầm Soát)!"),
                         true
                 );
                 level.playSound(null, player.getX(), player.getY(), player.getZ(),
@@ -65,8 +65,9 @@ public class PrimordialSkillDispatcher {
             }
         }
 
-        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PRIMORDIAL_DEMON)) {
-            float demonCode = (float) (type.ordinal() * 10 + skillIndex);
+        // Các kỹ năng tầm soát & thám hiểm (9..13) không cần bật camera điện ảnh chiến đấu
+        if (skillIndex <= 8 && SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_PRIMORDIAL_DEMON)) {
+            float demonCode = (float) (type.ordinal() * 10 + Math.min(skillIndex, 6));
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                     SkillVisualConfig.SKILL_PRIMORDIAL_DEMON, player.getUUID(), player.position(), player.getLookAngle(), 60, ClientboundCinematicSkillPacket.ACTION_START, demonCode
             ));
@@ -98,6 +99,40 @@ public class PrimordialSkillDispatcher {
         // Skill 6 (Skill 7): Linh Tử Bộc Phát (Spiritron Outburst - Granite Blast theo màu Thủy Tổ)
         if (skillIndex == 6) {
             castSpiritronOutburst(level, player, type, hasBody, isDemonLord);
+            return;
+        }
+
+        // Skill 7: Tam Trọng Thánh Giới: Linh Tử Băng Hoại (Disintegration)
+        if (skillIndex == 7) {
+            com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
+            return;
+        }
+
+        // Skill 8: Bành Trướng Lãnh Địa Thủy Tổ (Domain Expansion)
+        if (skillIndex == 8) {
+            PrimordialPossessionManager.castPossessedDomainExpansion(level, player);
+            return;
+        }
+
+        // Skill 9..13: Bộ 5 Kỹ Năng Tầm Soát & Thám Hiểm Toàn Diện (Tìm Làng, Tìm Warden, Tìm Di Tích, Tìm Quặng/Rương, Tìm Boss)
+        if (skillIndex == 9) {
+            AbyssalGovernanceManager.executePlayerFindVillage(level, player, type, player.isShiftKeyDown());
+            return;
+        }
+        if (skillIndex == 10) {
+            AbyssalGovernanceManager.executePlayerFindWarden(level, player, type, player.isShiftKeyDown());
+            return;
+        }
+        if (skillIndex == 11) {
+            AbyssalGovernanceManager.executePlayerFindStructure(level, player, type, player.isShiftKeyDown());
+            return;
+        }
+        if (skillIndex == 12) {
+            AbyssalGovernanceManager.executePlayerFindOresAndChests(level, player, type, player.isShiftKeyDown());
+            return;
+        }
+        if (skillIndex == 13) {
+            AbyssalGovernanceManager.executePlayerFindBosses(level, player, type);
             return;
         }
 
@@ -137,13 +172,15 @@ public class PrimordialSkillDispatcher {
         player.setDeltaMovement(player.getDeltaMovement().add(recoil.x, 0.12D, recoil.z));
         player.hurtMarked = true;
 
-        float damage = (hasBody || isDemonLord) ? 2200.0F : 1300.0F;
+        float mult = PrimordialArmorItem.getSkillPowerMultiplier(player);
+        float damage = ((hasBody || isDemonLord) ? 2200.0F : 1300.0F) * mult;
         HorizontalHolyBeamAbility.fireSpiritronOutburst(level, player, eyePos, look, type, 64.0D, damage);
     }
 
     private static void dealDamage(ServerPlayer player, LivingEntity victim, float baseDmg, boolean hasBody, boolean isDemonLord) {
         if (victim == null || !victim.isAlive() || victim == player) return;
         if (com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), victim)) return;
+        float mult = PrimordialArmorItem.getSkillPowerMultiplier(player);
         boolean isBoss = (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss)
                 || (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)
                 || (victim instanceof net.minecraft.world.entity.monster.warden.Warden)
@@ -152,15 +189,15 @@ public class PrimordialSkillDispatcher {
 
         if (hasBody || isDemonLord) {
             if (isBoss) {
-                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 0.52F);
+                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 0.52F * mult);
             } else if (!(victim instanceof VelgryndEntity)) {
-                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 3.0F);
+                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 3.0F * mult);
             }
         } else {
             if (isBoss) {
-                victim.hurt(player.damageSources().magic(), baseDmg * 0.7F);
+                victim.hurt(player.damageSources().magic(), baseDmg * 0.7F * mult);
             } else {
-                victim.hurt(player.damageSources().magic(), baseDmg);
+                victim.hurt(player.damageSources().magic(), baseDmg * mult);
             }
         }
     }

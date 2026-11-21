@@ -155,12 +155,12 @@ public class VelzardEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 16500.0D)
+                .add(Attributes.MAX_HEALTH, 49500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.44D)
                 .add(Attributes.FLYING_SPEED, 0.62D)
-                .add(Attributes.ATTACK_DAMAGE, 215.0D)
-                .add(Attributes.ARMOR, 45.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 35.0D)
+                .add(Attributes.ATTACK_DAMAGE, 645.0D)
+                .add(Attributes.ARMOR, 55.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 42.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 72.0D);
     }
@@ -199,6 +199,7 @@ public class VelzardEntity extends Monster {
         this.goalSelector.addGoal(8, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false, v -> v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, PrimordialDemonEntity.class, true));
     }
@@ -441,7 +442,7 @@ public class VelzardEntity extends Monster {
         if (victim instanceof PrimordialDemonEntity demon) {
             boolean isGuyCrimsonAwakened = (demon.getDemonType() == DemonType.ROUGE && demon.hasPhysicalBody() && demon.isNamed());
             if (isGuyCrimsonAwakened) {
-                float guyDamage = 135.0F + this.random.nextFloat() * 45.0F; // 3x Velgrynd's 45-60
+                float guyDamage = 405.0F + this.random.nextFloat() * 135.0F;
                 demon.hurt(this.level().damageSources().mobAttack(this), guyDamage);
                 demon.setTicksFrozen(demon.getTicksFrozen() + 120);
                 this.broadcastDialogue("Guy... Ngay cả ngươi cũng phải dè chừng trước Băng Giá Vĩnh Cửu của ta đấy!");
@@ -449,7 +450,7 @@ public class VelzardEntity extends Monster {
             } else {
                 // Toàn bộ các ác ma khác: Bị Velzard đóng băng và nghiền nát với 9,000 sát thương (3x Velgrynd)!
                 demon.setTicksFrozen(demon.getTicksRequiredToFreeze() + 240);
-                demon.hurt(this.level().damageSources().mobAttack(this), 9000.0F);
+                demon.hurt(this.level().damageSources().mobAttack(this), 27000.0F);
                 this.broadcastDialogue("Ác ma nguyên thủy sao? Trước mặt Bạch Băng Long, tất cả chỉ là những bức tượng băng dễ vỡ!");
                 return;
             }
@@ -524,7 +525,7 @@ public class VelzardEntity extends Monster {
                 if (nearby instanceof ServerPlayer nsp) {
                     nsp.connection.send(new ClientboundSetEntityMotionPacket(nearby));
                 }
-                applyDamageToTarget(nearby, 75.0F);
+                applyDamageToTarget(nearby, 225.0F);
             }
         }
 
@@ -552,7 +553,7 @@ public class VelzardEntity extends Monster {
             boolean isDisintegration = source.is(DamageTypes.MAGIC) && amount >= 500.0F;
             if (!isDisintegration) {
                 if (source.getEntity() instanceof LivingEntity livAttacker && this.distanceToSqr(livAttacker) <= 25.0D) {
-                    applyDamageToTarget(livAttacker, Math.max(60.0F, amount * 0.40F));
+                    applyDamageToTarget(livAttacker, Math.max(180.0F, amount * 0.40F));
                 }
 
                 ServerLevel sl = (ServerLevel) this.level();
@@ -599,7 +600,7 @@ public class VelzardEntity extends Monster {
                 this.setDragonLayers(0);
                 this.broadcastDialogue("Không thể nào... Băng giá vĩnh hằng của ta... lại bị phá vỡ sao?! Guy...!");
                 this.bossEvent.removeAllPlayers();
-                return super.hurt(source, 30000.0F);
+                return super.hurt(source, 90000.0F);
             }
         }
 
@@ -609,7 +610,7 @@ public class VelzardEntity extends Monster {
         float finalAmount = amount * (1.0F - damageReduction);
 
         this.damageTakenForSigil += finalAmount;
-        if (this.damageTakenForSigil >= 3600.0F && sigils > 0) {
+        if (this.damageTakenForSigil >= 10800.0F && sigils > 0) {
             this.damageTakenForSigil = 0.0F;
             setSigilCount(sigils - 1);
             ServerLevel sl = (ServerLevel) this.level();
@@ -654,7 +655,7 @@ public class VelzardEntity extends Monster {
                     curPos.x + 5.0D, curPos.y + 4.0D, curPos.z + 5.0D);
             List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, decoyBox, e -> e != this && e.isAlive());
             for (LivingEntity v : victims) {
-                applyDamageToTarget(v, 105.0F); // 3x 35
+                applyDamageToTarget(v, 315.0F); // 3x 105
             }
         }));
 
@@ -1172,7 +1173,7 @@ public class VelzardEntity extends Monster {
                     sl,
                     this,
                     target,
-                    280.0D,
+                    840.0D,
                     isDragonForm() ? 2.60F : 2.00F,
                     this::applyDamageToTarget
             );
@@ -1246,7 +1247,7 @@ public class VelzardEntity extends Monster {
         }
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 3.0F, 1.3F);
         target.setTicksFrozen(Math.min(target.getTicksRequiredToFreeze() + 180, target.getTicksFrozen() + 120));
-        target.hurt(this.damageSources().freeze(), 68.0F);
+        target.hurt(this.damageSources().freeze(), 204.0F);
     }
 
     private void startSkill(int skillType, int durationTicks, Vec3 targetPos) {
@@ -1328,7 +1329,7 @@ public class VelzardEntity extends Monster {
                         e.setDeltaMovement(Vec3.ZERO);
                         e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 255, false, false));
                         e.setTicksFrozen(e.getTicksRequiredToFreeze() + 200);
-                        applyDamageToTarget(e, 195.0F); // Gấp 3 lần sát thương Time Collapse của Velgrynd (65 * 3 = 195)
+                        applyDamageToTarget(e, 585.0F); // Gấp 3 lần sát thương Time Collapse của Velgrynd (65 * 3 = 195)
                     }
                 }
             }
@@ -1352,7 +1353,7 @@ public class VelzardEntity extends Monster {
                             List<LivingEntity> victims = sl.getEntitiesOfClass(LivingEntity.class, hitBox, e -> e != this && e.isAlive());
                             if (!victims.isEmpty()) {
                                 for (LivingEntity v : victims) {
-                                    applyDamageToTarget(v, 84.0F); // Gấp 3 lần Heat Blades của Velgrynd (28 * 3 = 84)
+                                    applyDamageToTarget(v, 252.0F); // Gấp 3 lần Heat Blades của Velgrynd (28 * 3 = 84)
                                 }
                                 break;
                             }
@@ -1378,7 +1379,7 @@ public class VelzardEntity extends Monster {
                             castingTargetPos.x + 4.5D, castingTargetPos.y + 4.5D, castingTargetPos.z + 4.5D);
                     List<LivingEntity> list = sl.getEntitiesOfClass(LivingEntity.class, trapBox, e -> e != this && e.isAlive());
                     for (LivingEntity e : list) {
-                        applyDamageToTarget(e, 135.0F); // Gấp 3 lần Meteor Rain của Velgrynd (45 * 3 = 135)
+                        applyDamageToTarget(e, 405.0F); // Gấp 3 lần Meteor Rain của Velgrynd (45 * 3 = 135)
                         e.setTicksFrozen(e.getTicksRequiredToFreeze() + 160);
                     }
                 }

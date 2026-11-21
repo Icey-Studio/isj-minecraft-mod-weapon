@@ -197,6 +197,24 @@ public class ModEntities {
                             .build("cursed_idol")
             );
 
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.MariabellEntity>> MARIABELL =
+            ENTITY_TYPES.register("mariabell", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.MariabellEntity::new, MobCategory.MONSTER)
+                            .sized(0.6F, 1.48F)
+                            .clientTrackingRange(16)
+                            .fireImmune()
+                            .build("mariabell")
+            );
+
+    public static final RegistrySupplier<EntityType<com.minhphuc.weapons.entity.tensura.ChaosDragonEntity>> CHAOS_DRAGON =
+            ENTITY_TYPES.register("chaos_dragon", () ->
+                    EntityType.Builder.of(com.minhphuc.weapons.entity.tensura.ChaosDragonEntity::new, MobCategory.MONSTER)
+                            .sized(12.0F, 14.0F)
+                            .clientTrackingRange(32)
+                            .fireImmune()
+                            .build("chaos_dragon")
+            );
+
     public static boolean checkBossSpawnRules(EntityType<? extends Mob> type, LevelAccessor level, MobSpawnType spawnType, BlockPos pos, RandomSource random) {
         if (level.getDifficulty() == Difficulty.PEACEFUL) return false;
         if (!Mob.checkMobSpawnRules(type, level, spawnType, pos, random)) return false;
@@ -231,11 +249,15 @@ public class ModEntities {
         EntityAttributeRegistry.register(CHRONOA, com.minhphuc.weapons.entity.tensura.ChronoaEntity::createAttributes);
         EntityAttributeRegistry.register(HINATA, com.minhphuc.weapons.entity.tensura.HinataEntity::createAttributes);
         EntityAttributeRegistry.register(CURSED_IDOL, com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity::createAttributes);
+        EntityAttributeRegistry.register(MARIABELL, com.minhphuc.weapons.entity.tensura.MariabellEntity::createAttributes);
+        EntityAttributeRegistry.register(CHAOS_DRAGON, com.minhphuc.weapons.entity.tensura.ChaosDragonEntity::createAttributes);
 
         // Đăng ký quy tắc Spawn Placement cho các thực thể thù địch xuất hiện tự nhiên (Kèm bộ lọc chống trùng cụm)
         SpawnPlacementsRegistry.register(CHRONOA, SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
         SpawnPlacementsRegistry.register(HINATA, SpawnPlacementTypes.ON_GROUND,
+                Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
+        SpawnPlacementsRegistry.register(MARIABELL, SpawnPlacementTypes.ON_GROUND,
                 Heightmap.Types.MOTION_BLOCKING_NO_LEAVES, ModEntities::checkBossSpawnRules);
 
         SpawnPlacementsRegistry.register(CURSED_IDOL, SpawnPlacementTypes.ON_GROUND,

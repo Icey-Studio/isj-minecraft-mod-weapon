@@ -79,11 +79,11 @@ public class HinataEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 6200.0D)
+                .add(Attributes.MAX_HEALTH, 18600.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.45D)
-                .add(Attributes.ATTACK_DAMAGE, 145.0D)
-                .add(Attributes.ARMOR, 32.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.ATTACK_DAMAGE, 435.0D)
+                .add(Attributes.ARMOR, 42.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 28.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.90D)
                 .add(Attributes.FOLLOW_RANGE, 56.0D);
     }
@@ -97,6 +97,7 @@ public class HinataEntity extends PathfinderMob {
         this.goalSelector.addGoal(7, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false, v -> v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
@@ -334,7 +335,7 @@ public class HinataEntity extends PathfinderMob {
         sl.playSound(null, victim.getX(), victim.getY(), victim.getZ(), SoundEvents.TRIDENT_THUNDER.value(), SoundSource.HOSTILE, 2.2F, 1.45F);
         // Xóa 1 buff tích cực & chém xuyên giáp/Uriel
         victim.removeEffect(MobEffects.DAMAGE_RESISTANCE);
-        strike(sl, victim, 260.0F, dir.scale(0.9D), 0.45D, true);
+        strike(sl, victim, 780.0F, dir.scale(0.9D), 0.45D, true);
         if (victim instanceof ServerPlayer sp) {
             sp.displayClientMessage(Component.literal("§d§l[DEAD END RAINBOW] §fHinata đã tích đủ 7 Sắc Cầu Vồng — Đòn kết liễu xuyên linh hồn!"), true);
         }
@@ -351,7 +352,7 @@ public class HinataEntity extends PathfinderMob {
         for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, new AABB(pos, pos).inflate(7.5D), x -> TensuraSkillHelper.isValidSkillTarget(this, x))) {
             e.addTag("DisintegrationDamage");
             try {
-                e.hurt(this.damageSources().indirectMagic(this, this), 220.0F);
+                e.hurt(this.damageSources().indirectMagic(this, this), 660.0F);
             } finally {
                 e.removeTag("DisintegrationDamage");
             }

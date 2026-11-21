@@ -118,6 +118,14 @@ public class UniversalSenseAbility {
             e.addEffect(new MobEffectInstance(MobEffects.GLOWING, hostile ? 400 : 300, 0, false, false));
             level.sendParticles(hostile ? ParticleTypes.SOUL_FIRE_FLAME : ParticleTypes.END_ROD,
                     e.getX(), e.getY() + e.getBbHeight() + 0.5, e.getZ(), 10, 0.2, 0.2, 0.2, 0.02);
+
+            if (e.getTags().contains("GreedControlled")) {
+                level.sendParticles(ParticleTypes.ASH, e.getX(), e.getY() + 1.0D, e.getZ(), 20, 0.4, 0.8, 0.4, 0.05);
+                player.displayClientMessage(
+                        Component.literal("§d« Báo Cáo Raphael »: Phát hiện cá thể [" + e.getName().getString() + "] đang chịu tác động chi phối từ ma tố [Kẻ Tham Lam] của Mariabell Rosso!"),
+                        false
+                );
+            }
             detectedCount++;
         }
 

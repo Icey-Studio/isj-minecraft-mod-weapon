@@ -2,6 +2,7 @@ package com.minhphuc.weapons.content.tensura;
 
 import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.entity.tensura.ChaosDragonEntity;
 import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
 import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ModMessages;
@@ -477,14 +478,73 @@ public class SpatialTeleportAbility {
     }
 
     /**
+     * Dịch chuyển xuyên chiều không gian đến Ác Ma Giới (The Underworld / Nether) hoặc trở về Overworld
+     */
+    public static void castTeleportToUnderworld(ServerLevel level, ServerPlayer player) {
+        if (player == null || level == null) return;
+
+        List<ChaosDragonEntity> dragons = level.getEntitiesOfClass(ChaosDragonEntity.class, player.getBoundingBox().inflate(100.0D), ChaosDragonEntity::isAlive);
+        if (!dragons.isEmpty()) {
+            player.displayClientMessage(Component.literal("§c« BÁO CÁO RAPHAEL: KHÔNG GIAN BỊ KHÓA »\n§eTrường nhiễu loạn của Hỗn Độn Long đã phong tỏa toàn bộ không gian trong 100m! Mọi kỹ năng dịch chuyển đều bị vô hiệu hóa!"), false);
+            player.playNotifySound(SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 0.8F);
+            return;
+        }
+
+        net.minecraft.server.MinecraftServer server = level.getServer();
+        ResourceKey<Level> targetDim = (level.dimension() == Level.NETHER) ? Level.OVERWORLD : Level.NETHER;
+        ServerLevel targetLevel = server.getLevel(targetDim);
+        if (targetLevel == null) return;
+
+        BlockPos targetPos;
+        if (targetDim == Level.NETHER) {
+            targetPos = new BlockPos(0, 70, 0);
+            for (int y = 90; y >= 40; y--) {
+                BlockPos test = new BlockPos(0, y, 0);
+                if (targetLevel.getBlockState(test).isAir() && targetLevel.getBlockState(test.above()).isAir() && !targetLevel.getBlockState(test.below()).isAir()) {
+                    targetPos = test;
+                    break;
+                }
+            }
+        } else {
+            targetPos = targetLevel.getSharedSpawnPos();
+        }
+
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, player.getX(), player.getY() + 1.0D, player.getZ(), 40, 0.5D, 0.8D, 0.5D, 0.1D);
+        level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.PORTAL_TRAVEL, SoundSource.PLAYERS, 1.5F, 1.2F);
+
+        player.teleportTo(targetLevel, targetPos.getX() + 0.5D, targetPos.getY() + 0.2D, targetPos.getZ() + 0.5D, player.getYRot(), player.getXRot());
+        targetLevel.sendParticles(ParticleTypes.PORTAL, targetPos.getX() + 0.5D, targetPos.getY() + 1.0D, targetPos.getZ() + 0.5D, 50, 0.5D, 0.8D, 0.5D, 0.15D);
+        targetLevel.playSound(null, targetPos.getX(), targetPos.getY(), targetPos.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 2.0F, 1.0F);
+
+        for (PrimordialDemonEntity demon : level.getEntitiesOfClass(PrimordialDemonEntity.class, player.getBoundingBox().inflate(32.0D), d -> d.isTame() && d.getOwner() == player)) {
+            demon.teleportTo(targetLevel, targetPos.getX() + 1.5D, targetPos.getY() + 0.2D, targetPos.getZ() + 1.5D, java.util.Set.of(), demon.getYRot(), 0.0F);
+        }
+
+        String dimName = (targetDim == Level.NETHER) ? "§cÁc Ma Giới (The Underworld)" : "§aThế Giới Thực (Overworld)";
+        player.displayClientMessage(Component.literal("§5§l[DỊCH CHUYỂN KHÔNG GIAN] §dĐã mở cổng xuyên giới dịch chuyển đến " + dimName + "!"), true);
+    }
+
+    /**
      * slot: -1 = Kỹ năng Dịch Chuyển (CHỈ đi tới Ấn Ký Chiến Thuật nếu có; nếu không có thì dịch chuyển tới nơi/không gian ngẫu nhiên — KHÔNG tự nhảy vào Ấn Ký Vĩnh Viễn),
      *       0 = Ấn Ký Chiến Thuật, 1 = Ấn Ký Vĩnh Viễn (slot đang chọn), 2 = Combat Blink, 3 = Ngẫu Nhiên,
      *       10..14 = Ấn Ký Vĩnh Viễn #1..#5
      */
     public static void castTeleportToSlot(ServerLevel level, ServerPlayer player, int slot) {
         if (player == null || level == null) return;
+
+        List<ChaosDragonEntity> dragons = level.getEntitiesOfClass(ChaosDragonEntity.class, player.getBoundingBox().inflate(100.0D), ChaosDragonEntity::isAlive);
+        if (!dragons.isEmpty()) {
+            player.displayClientMessage(Component.literal("§c« BÁO CÁO RAPHAEL: KHÔNG GIAN BỊ KHÓA »\n§eTrường nhiễu loạn của Hỗn Độn Long đã phong tỏa toàn bộ không gian trong 100m! Mọi kỹ năng dịch chuyển đều bị vô hiệu hóa!"), false);
+            player.playNotifySound(SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 0.8F);
+            return;
+        }
+
         if (slot == 2) {
             castCombatBlink(level, player);
+            return;
+        }
+        if (slot == 4) {
+            castTeleportToUnderworld(level, player);
             return;
         }
 

@@ -66,10 +66,10 @@ public class DemonLordKuboEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 8500.0D)
-                .add(Attributes.ATTACK_DAMAGE, 220.0D)
-                .add(Attributes.ARMOR, 36.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.MAX_HEALTH, 25500.0D)
+                .add(Attributes.ATTACK_DAMAGE, 660.0D)
+                .add(Attributes.ARMOR, 46.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 28.0D)
                 .add(Attributes.FLYING_SPEED, 0.55D)
                 .add(Attributes.MOVEMENT_SPEED, 0.42D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.98D)
@@ -91,6 +91,8 @@ public class DemonLordKuboEntity extends Monster {
         this.goalSelector.addGoal(3, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, com.minhphuc.weapons.entity.tensura.VeldoraEntity.class, 5, false, false,
+                e -> e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
                 e -> !(e instanceof DemonLordKuboEntity) && !(e instanceof KuboEntity)));
@@ -130,7 +132,7 @@ public class DemonLordKuboEntity extends Monster {
 
         ServerLevel serverLevel = (ServerLevel) this.level();
         if (this.tickCount % 10 == 0 && this.getHealth() < this.getMaxHealth()) {
-            this.heal(16.0F);
+            this.heal(48.0F);
         }
 
         // 1. Tuyệt chiêu: Tinh Vân Lực Trường (Cosmic Gravity Pulse)
@@ -171,7 +173,7 @@ public class DemonLordKuboEntity extends Monster {
                 v.setDeltaMovement(v.getDeltaMovement().add(toCenter.normalize().scale(0.55D)).add(0, 0.15D, 0));
                 v.hurtMarked = true;
             }
-            v.hurt(serverLevel.damageSources().mobAttack(this), 180.0F);
+            v.hurt(serverLevel.damageSources().mobAttack(this), 540.0F);
             v.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.WITHER, 100, 3));
         }
 
@@ -200,7 +202,7 @@ public class DemonLordKuboEntity extends Monster {
             serverLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, point.x, point.y, point.z, 3, 0.2, 0.2, 0.2, 0.05);
         }
 
-        target.hurt(serverLevel.damageSources().indirectMagic(this, this), 280.0F);
+        target.hurt(serverLevel.damageSources().indirectMagic(this, this), 840.0F);
         target.addEffect(new net.minecraft.world.effect.MobEffectInstance(net.minecraft.world.effect.MobEffects.BLINDNESS, 60, 0));
     }
 

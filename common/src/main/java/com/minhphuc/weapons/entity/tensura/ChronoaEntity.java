@@ -85,11 +85,11 @@ public class ChronoaEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 8500.0D)
+                .add(Attributes.MAX_HEALTH, 25500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.44D)
-                .add(Attributes.ATTACK_DAMAGE, 180.0D)
-                .add(Attributes.ARMOR, 36.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 22.0D)
+                .add(Attributes.ATTACK_DAMAGE, 540.0D)
+                .add(Attributes.ARMOR, 46.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 30.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
@@ -110,6 +110,8 @@ public class ChronoaEntity extends PathfinderMob {
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false,
+                v -> this.isCorrupted() && v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         // Khi hắc hóa -> Tấn công MỌI Mob & Player trong tầm nhìn!
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Mob.class, 5, true, false,
                 m -> this.isCorrupted() && m != this && m.isAlive()));
@@ -307,7 +309,7 @@ public class ChronoaEntity extends PathfinderMob {
             e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 75, 6));
             e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 75, 1));
             e.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 75, 2));
-            applyArmorPiercingHit(sl, e, 40.0F);
+            applyArmorPiercingHit(sl, e, 120.0F);
         }
     }
 
@@ -320,7 +322,7 @@ public class ChronoaEntity extends PathfinderMob {
             sl.sendParticles(CHRONO_VIOLET, p.x, p.y, p.z, 3, 0.25, 0.25, 0.25, 0.02);
             sl.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
         }
-        applyArmorPiercingHit(sl, target, 125.0F);
+        applyArmorPiercingHit(sl, target, 375.0F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2.0F, 1.15F);
     }
 
@@ -336,7 +338,7 @@ public class ChronoaEntity extends PathfinderMob {
             sl.sendParticles(ParticleTypes.DRAGON_BREATH, p.x, p.y, p.z, 2, 0.15, 0.15, 0.15, 0.01);
         }
         for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(3.2D), x -> x != this && x.isAlive())) {
-            applyArmorPiercingHit(sl, e, 78.0F);
+            applyArmorPiercingHit(sl, e, 234.0F);
         }
     }
 
@@ -350,7 +352,7 @@ public class ChronoaEntity extends PathfinderMob {
             sl.sendParticles(ParticleTypes.END_ROD, px, this.getY() + 1.2, pz, 1, 0.1, 0.1, 0.1, 0.02);
         }
         for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(10.0D), x -> x != this && x.isAlive())) {
-            applyArmorPiercingHit(sl, e, 145.0F);
+            applyArmorPiercingHit(sl, e, 435.0F);
             Vec3 knock = e.position().subtract(this.position()).normalize().scale(0.85D);
             e.push(knock.x, 0.35D, knock.z);
         }

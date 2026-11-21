@@ -92,6 +92,11 @@ public class DemonCommandScreen extends Screen {
         innateSkills.add(new SkillEntry(8, PrimordialDemonEntity.getSignatureTwoName(demonType), "Bí thuật Thủy Tổ độc bản cấp 2", 0x9932CC));
         innateSkills.add(new SkillEntry(9, PrimordialDemonEntity.getSignatureThreeName(demonType), "Bí thuật hủy diệt độc bản cấp 3", 0x8A2BE2));
         innateSkills.add(new SkillEntry(10, "Bành Trướng Lãnh Địa", "Triển khai kết giới lãnh địa 16m", 0x4B0082));
+        innateSkills.add(new SkillEntry(117, "Tầm Soát Thôn Làng & Cổng Làng", "Dò tìm Làng & Dân Làng gần nhất (Shift=Dịch chuyển)", 0x22C55E));
+        innateSkills.add(new SkillEntry(118, "Tầm Soát Warden & Thành Cổ", "Quét tìm Warden & Ancient City (Shift=Dịch chuyển)", 0x06B6D4));
+        innateSkills.add(new SkillEntry(119, "Tầm Soát Di Tích & Pháo Đài", "Dò tìm Stronghold/Fortress/Bastion (Shift=Dịch chuyển)", 0xA855F7));
+        innateSkills.add(new SkillEntry(120, "Thấu Thị Quặng Quý & Rương", "Quét Kim Cương, Debris, Rương ẩn (Shift=Thu hồi)", 0xF59E0B));
+        innateSkills.add(new SkillEntry(121, "Cảm Tri Boss & Quái Tinh Anh", "Phát sáng toàn bộ Boss & Quái mạnh trong 128m", 0xEF4444));
 
         // Nạp kỹ năng ngẫu nhiên đã thức tỉnh
         String savedSkills = ItemStackDataHelper.getString(pactStack, "PrimordialSkills");

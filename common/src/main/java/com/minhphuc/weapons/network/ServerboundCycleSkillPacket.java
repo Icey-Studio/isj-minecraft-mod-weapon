@@ -69,20 +69,24 @@ public class ServerboundCycleSkillPacket {
                 // 1. Chuyển đổi skill cho Nguyệt Quang Thần Tế Kiếm (Chỉ có 2 skill)
                 MoonlightSwordItem.cycleSkill(player, swordStack);
             } else {
-                // 2. Chuyển đổi skill cho Chân Ma Vương & Thần Linh Vũ Trang & Thủy Tổ Ác Ma
+                // 2. Chuyển đổi skill cho Chân Ma Vương & Thần Linh Vũ Trang & Thủy Tổ Ác Ma / Bộ Giáp Thủy Tổ
                 boolean isTrueDemonLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");
                 boolean hasCreation = EntityDataHelper.getCustomData(player).getBoolean("TensuraMaterialCreation");
                 boolean isWearingDivine = DivineArmorItem.isWearingAnyPiece(player);
+                boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
                 boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
                 com.minhphuc.weapons.entity.tensura.DemonType demonType = PrimordialPlayerDataHelper.getPrimordialType(player);
 
                 boolean isCreative = player.isCreative();
+                boolean hasLordSkills = isTrueDemonLord || isWearingDivine || isInnatePrimordial || isCreative;
 
-                if (isTrueDemonLord || isWearingDivine || isPrimordial || isCreative) {
-                    int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
-                    int totalSkills = lordSkills + (isPrimordial ? 7 : 0);
+                if (hasLordSkills || isPrimordial) {
+                    int lordSkills = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
+                    int totalSkills = lordSkills + (isPrimordial ? PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS : 0);
+                    if (totalSkills <= 0) return;
 
                     int current = EntityDataHelper.getCustomData(player).getInt("TensuraDemonLordSkill");
+                    if (current < 0 || current >= totalSkills) current = 0;
                     int next = this.reverse
                             ? (current - 1 + totalSkills) % totalSkills
                             : (current + 1) % totalSkills;
@@ -97,7 +101,19 @@ public class ServerboundCycleSkillPacket {
                         skillName = "§6§l" + (next + 1) + ". " + PrimordialPlayerDataHelper.getSkillName(demonType, primordialIdx);
                     }
 
-                    String roleTag = isTrueDemonLord ? "§d§l[CHÂN MA VƯƠNG]" : (isWearingDivine ? "§6§l[THẦN LINH VŨ TRANG]" : (isPrimordial ? "§5§l[THỦY TỔ ÁC MA]" : "§b§l[KỸ NĂNG NGƯỜI CHƠI]"));
+                    String roleTag;
+                    if (isTrueDemonLord) {
+                        roleTag = "§d§l[CHÂN MA VƯƠNG]";
+                    } else if (isWearingDivine) {
+                        roleTag = "§6§l[THẦN LINH VŨ TRANG]";
+                    } else if (isInnatePrimordial) {
+                        roleTag = "§5§l[THỦY TỔ ÁC MA]";
+                    } else if (com.minhphuc.weapons.content.tensura.PrimordialArmorItem.isWearingFullSetOfAnyDemon(player)) {
+                        String dName = demonType != null ? demonType.getColorName().toUpperCase() : "THỦY TỔ";
+                        roleTag = "§6§l[GIÁP HUYỀN THOẠI • " + dName + "]";
+                    } else {
+                        roleTag = "§b§l[KỸ NĂNG NGƯỜI CHƠI]";
+                    }
 
                     player.displayClientMessage(
                         Component.literal(roleTag + " §fKỹ năng: " + skillName + " §7(Chuột Phải để thi triển)"),
@@ -109,7 +125,7 @@ public class ServerboundCycleSkillPacket {
                             SoundEvents.EXPERIENCE_ORB_PICKUP, SoundSource.PLAYERS, 1.0F, pitch);
                 } else {
                     player.displayClientMessage(
-                        Component.literal("§c§l[THÔNG BÁO] §fBáo cáo: Cá thể chưa thức tỉnh thành Chân Ma Vương hoặc chưa trang bị Giáp Thần Linh!"),
+                        Component.literal("§c§l[THÔNG BÁO] §fBáo cáo: Bạn cần mặc đủ 4 món Giáp Thủy Tổ, Giáp Thần Linh hoặc thức tỉnh Chân Ma Vương để dùng kỹ năng!"),
                         true
                     );
                 }

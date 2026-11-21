@@ -121,12 +121,12 @@ public class VelgryndEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 15500.0D)
+                .add(Attributes.MAX_HEALTH, 46500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.45D)
                 .add(Attributes.FLYING_SPEED, 0.62D)
-                .add(Attributes.ATTACK_DAMAGE, 205.0D)
-                .add(Attributes.ARMOR, 42.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 30.0D)
+                .add(Attributes.ATTACK_DAMAGE, 615.0D)
+                .add(Attributes.ARMOR, 52.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 38.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 72.0D);
     }
@@ -203,6 +203,7 @@ public class VelgryndEntity extends Monster {
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false, e -> !this.isAllied() && e instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false, e -> !this.isAllied()));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, PrimordialDemonEntity.class, 10, true, false, e -> !this.isAllied()));
     }
@@ -598,7 +599,7 @@ public class VelgryndEntity extends Monster {
                     sLevel,
                     this,
                     curCombatTarget,
-                    240.0D,
+                    720.0D,
                     isDragonForm() ? 2.30F : 1.70F,
                     this::applyDamageToTarget
             );
@@ -692,7 +693,7 @@ public class VelgryndEntity extends Monster {
                 AABB blastBox = this.getBoundingBox().inflate(18.0D);
                 List<LivingEntity> blastVictims = sLevel.getEntitiesOfClass(LivingEntity.class, blastBox, e -> e != this && e.isAlive());
                 for (LivingEntity v : blastVictims) {
-                    v.hurt(sLevel.damageSources().mobAttack(this), 65.0F);
+                    v.hurt(sLevel.damageSources().mobAttack(this), 195.0F);
                     v.setDeltaMovement(new Vec3(0, 1.2D, 0));
                 }
                 this.setCastingState(0);
@@ -723,7 +724,7 @@ public class VelgryndEntity extends Monster {
                     AABB box = new AABB(pt.x - 1.2D, pt.y - 1.2D, pt.z - 1.2D, pt.x + 1.2D, pt.y + 1.2D, pt.z + 1.2D);
                     List<LivingEntity> hit = sLevel.getEntitiesOfClass(LivingEntity.class, box, e -> e != this && e.isAlive());
                     for (LivingEntity victim : hit) {
-                        applyDamageToTarget(victim, 28.0F);
+                        applyDamageToTarget(victim, 84.0F);
                         victim.setRemainingFireTicks(80);
                     }
                 }
@@ -857,7 +858,7 @@ public class VelgryndEntity extends Monster {
                     AABB hitBox = this.getBoundingBox().inflate(3.0D);
                     List<LivingEntity> enemies = sLevel.getEntitiesOfClass(LivingEntity.class, hitBox, e -> e != this && e.isAlive());
                     for (LivingEntity v : enemies) {
-                        applyDamageToTarget(v, 100.0F);
+                        applyDamageToTarget(v, 300.0F);
                         v.setDeltaMovement(accelDirection.scale(3.0D).add(0, 1.0D, 0));
                         v.setRemainingFireTicks(160);
                         if (v instanceof ServerPlayer sp) {
@@ -900,7 +901,7 @@ public class VelgryndEntity extends Monster {
                             pos.x + 3.5D, pos.y + 3.0D, pos.z + 3.5D);
                     List<LivingEntity> list = sLevel.getEntitiesOfClass(LivingEntity.class, blastBox, e -> e != this && e.isAlive());
                     for (LivingEntity v : list) {
-                        applyDamageToTarget(v, 45.0F);
+                        applyDamageToTarget(v, 135.0F);
                         v.setRemainingFireTicks(120);
                     }
                 }
@@ -999,7 +1000,7 @@ public class VelgryndEntity extends Monster {
         List<LivingEntity> victims = sLevel.getEntitiesOfClass(LivingEntity.class, damageArea, e -> e != this && e.isAlive() && !(e instanceof Player));
         for (LivingEntity v : victims) {
             if (v instanceof PrimordialDemonEntity demon && demon.isTame()) continue;
-            v.hurt(sLevel.damageSources().mobAttack(this), 220.0F);
+            v.hurt(sLevel.damageSources().mobAttack(this), 660.0F);
             v.setRemainingFireTicks(120);
         }
     }
@@ -1024,7 +1025,7 @@ public class VelgryndEntity extends Monster {
             if (v instanceof PrimordialDemonEntity demon && demon.isTame()) continue;
             Vec3 pull = center.subtract(v.position()).normalize().scale(1.2D);
             v.setDeltaMovement(pull.add(0, 0.3D, 0));
-            v.hurt(sLevel.damageSources().mobAttack(this), 150.0F);
+            v.hurt(sLevel.damageSources().mobAttack(this), 450.0F);
             sLevel.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, v.getX(), v.getY() + 1.0D, v.getZ(), 8, 0.3D, 0.5D, 0.3D, 0.05D);
             sLevel.sendParticles(ParticleTypes.DRAGON_BREATH, v.getX(), v.getY() + 1.0D, v.getZ(), 8, 0.3D, 0.5D, 0.3D, 0.05D);
         }
@@ -1056,7 +1057,7 @@ public class VelgryndEntity extends Monster {
         List<LivingEntity> hit = sLevel.getEntitiesOfClass(LivingEntity.class, blastArea, e -> e != this && e.isAlive() && !(e instanceof Player));
         for (LivingEntity v : hit) {
             if (v instanceof PrimordialDemonEntity demon && demon.isTame()) continue;
-            v.hurt(sLevel.damageSources().mobAttack(this), 180.0F);
+            v.hurt(sLevel.damageSources().mobAttack(this), 540.0F);
             v.setDeltaMovement(new Vec3(0, 1.1D, 0));
         }
     }
@@ -1113,13 +1114,13 @@ public class VelgryndEntity extends Monster {
             boolean isGuyCrimsonAwakened = (demon.getDemonType() == DemonType.ROUGE && demon.hasPhysicalBody() && demon.isNamed());
             if (isGuyCrimsonAwakened) {
                 // Guy Crimson thức tỉnh: Tỉ lệ 50/50, đánh nhau cân tài cân sức!
-                float balancedDamage = 45.0F + this.random.nextFloat() * 15.0F;
+                float balancedDamage = 135.0F + this.random.nextFloat() * 45.0F;
                 demon.hurt(this.level().damageSources().mobAttack(this), balancedDamage);
                 this.broadcastDialogue("Guy! Lâu lắm rồi mới có kẻ khiến ta hưng phấn như thế này!");
                 return;
             } else {
                 // Toàn bộ các ác ma khác: Bị Velgrynd nghiền nát lập tức!
-                demon.hurt(this.level().damageSources().mobAttack(this), 3000.0F);
+                demon.hurt(this.level().damageSources().mobAttack(this), 9000.0F);
                 this.broadcastDialogue("Thứ ác ma hạ đẳng chưa đủ tư cách đứng trước mặt ta!");
                 return;
             }
@@ -1212,7 +1213,7 @@ public class VelgryndEntity extends Monster {
                 if (nearby instanceof ServerPlayer nsp) {
                     nsp.connection.send(new ClientboundSetEntityMotionPacket(nearby));
                 }
-                nearby.hurt(this.damageSources().mobAttack(this), 25.0F);
+                nearby.hurt(this.damageSources().mobAttack(this), 75.0F);
                 nearby.setRemainingFireTicks(60);
             }
         }
@@ -1389,7 +1390,7 @@ public class VelgryndEntity extends Monster {
         }
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ENDER_DRAGON_SHOOT, SoundSource.HOSTILE, 3.0F, 0.9F);
         target.igniteForSeconds(6);
-        target.hurt(this.damageSources().inFire(), 48.0F);
+        target.hurt(this.damageSources().inFire(), 144.0F);
     }
 
     public void castSkillSeal() {

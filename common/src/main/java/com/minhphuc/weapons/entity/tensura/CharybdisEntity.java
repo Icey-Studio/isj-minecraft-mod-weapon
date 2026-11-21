@@ -86,12 +86,12 @@ public class CharybdisEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 6200.0D)
+                .add(Attributes.MAX_HEALTH, 18600.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.44D)
                 .add(Attributes.FLYING_SPEED, 0.64D)
-                .add(Attributes.ATTACK_DAMAGE, 145.0D)
-                .add(Attributes.ARMOR, 30.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
+                .add(Attributes.ATTACK_DAMAGE, 435.0D)
+                .add(Attributes.ARMOR, 40.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 28.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 84.0D);
     }
@@ -120,6 +120,7 @@ public class CharybdisEntity extends Monster {
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false, v -> v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
     }
 
@@ -250,7 +251,7 @@ public class CharybdisEntity extends Monster {
         }
         for (LivingEntity hit : sl.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(3.5D),
                 e -> e != this && !e.getTags().contains("CharybdisEscort") && e.isAlive())) {
-            hit.hurt(this.damageSources().mobProjectile(this, this), 32.0F);
+            hit.hurt(this.damageSources().mobProjectile(this, this), 96.0F);
         }
     }
 
@@ -258,7 +259,7 @@ public class CharybdisEntity extends Monster {
         Vec3 pullDir = this.position().subtract(target.position()).normalize();
         target.setDeltaMovement(pullDir.scale(1.1D).add(0, 0.75D, 0));
         target.hasImpulse = true;
-        target.hurt(this.damageSources().mobAttack(this), 26.0F);
+        target.hurt(this.damageSources().mobAttack(this), 78.0F);
         sl.sendParticles(ParticleTypes.CLOUD, target.getX(), target.getY() + 1.0, target.getZ(), 28, 1.5, 1.2, 1.5, 0.12);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BREEZE_WIND_CHARGE_BURST.value(), SoundSource.HOSTILE, 2.5F, 0.6F);
     }

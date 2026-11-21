@@ -355,6 +355,8 @@ public final class ClientCinematicSkillRenderer {
                 case SkillVisualConfig.SKILL_DEAD_END_RAINBOW -> renderDeadEndRainbow(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_HINATA_THOUGHT_ACCEL -> renderHinataThoughtAccel(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_DEMON_LORD_HAKI -> renderDemonLordHaki(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> renderVeldoraTempestCannon(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> renderChaosStarBuster(mesh, mat, skill, age);
             }
 
             var built = mesh.build();
@@ -793,6 +795,178 @@ public final class ClientCinematicSkillRenderer {
                     p0 = pNext;
                 }
             }
+        }
+    }
+
+    // =========================================================================
+    // 6B. ĐẠI PHÁO PLASMA BẠO PHONG 3D (VELDORA TEMPEST CANNON)
+    // =========================================================================
+    private static void renderVeldoraTempestCannon(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float maxRange = 80.0f * skill.powerMultiplier();
+        Vec3 dir = skill.direction();
+        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        Vec3 d = dir.normalize();
+
+        if (age < 35.0f) {
+            float beamFade = (age < 26.0f) ? 1.0f : (float) Math.max(0.0, 1.0 - (age - 26.0f) / 9.0f);
+            Vec3 origin = Vec3.ZERO;
+
+            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 u = d.cross(up).normalize();
+            Vec3 w = d.cross(u).normalize();
+
+            // 1. CỘT PLASMA 3D ĐA TẦNG VOLUMETRIC CYLINDERS CHUẨN ĐIỆN ẢNH BẠO PHONG LONG (CYAN & GOLD)
+            // Lớp 1: Lõi Plasma Trắng Sấm Sét Siêu Sáng (1.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 1.6f, 0xFFFFFF, beamFade * 0.98f, age, 0.0f);
+            // Lớp 2: Thân Chùm Plasma Lam Ngọc Bạo Phong Chân Long (3.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 3.6f, 0x00E5FF, beamFade * 0.88f, age, 2.0f);
+            // Lớp 3: Sấm Sét Hoàng Kim Cực Đại (6.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 6.0f, 0xFFD700, beamFade * 0.65f, age, 4.0f);
+            // Lớp 4: Lốc Xoáy Khí Quyển Bão Tố Điện Từ (9.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 9.0f, 0x00B0FF, beamFade * 0.40f, age, 6.0f);
+            // Lớp 5: Trường Lực Bạo Phong Long Khổng Lồ (12.5m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 12.5f, 0x0D47A1, beamFade * 0.20f, age, 8.0f);
+
+            // 2. 36 NHÁNH LÔI ĐIỆN HOÀNG KIM & CYAN XOẮN ỐC 3D
+            int numTendrils = 36;
+            int tendrilNodes = 14;
+            for (int i = 0; i < numTendrils; i++) {
+                double baseAngle = i * (Math.PI * 2.0 / numTendrils) + age * 0.10;
+                Vec3 last = null;
+                for (int j = 0; j <= tendrilNodes; j++) {
+                    double dist = j * (maxRange / (double) tendrilNodes);
+                    double angle = baseAngle + (j * 0.60);
+                    double jitter = Math.sin(i * 15.3 + j * 7.5 + age * 0.32) * 0.6;
+                    double r = 4.5 + (j % 3) * 1.6 + jitter;
+                    Vec3 curr = origin.add(d.scale(dist))
+                            .add(u.scale(Math.cos(angle) * r))
+                            .add(w.scale(Math.sin(angle) * r));
+                    if (last != null) {
+                        int tendrilCol = (i % 3 == 0) ? 0xFFFFFF : ((i % 3 == 1) ? 0xFFD700 : 0x00E5FF);
+                        float strokeW = (i % 3 == 0) ? 0.24f : 0.18f;
+                        stroke(v, m, last, curr, strokeW, beamFade * (i % 2 == 0 ? 0.95f : 0.75f), tendrilCol);
+                    }
+                    last = curr;
+                }
+            }
+
+            // 3. 8 VÒNG SÓNG NỔ MACH RINGS CYAN & GOLD PHÓNG DỌC THÂN PHÁO
+            for (int k = 1; k <= 8; k++) {
+                double machDist = ((age * 6.5 + k * 10.0) % maxRange);
+                Vec3 ringCenter = origin.add(d.scale(machDist));
+                float ringR = 5.5f + (float) (Math.sin(machDist * 0.25 + age * 0.2) * 1.8f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR, 0.45f, 0x00E5FF, beamFade * 0.88f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR * 0.65f, 0.28f, 0xFFD700, beamFade * 0.95f);
+            }
+
+            // 4. HỌNG PHÁO ĐẦU NÒNG KHAI HỎA TẠI MIỆNG RỒNG
+            Vec3 muzzle1 = origin.add(d.scale(1.2));
+            renderDirectionalRing(v, m, muzzle1, u, w, 9.0f, 0.60f, 0x00E5FF, beamFade * 0.95f);
+            renderDirectionalRing(v, m, muzzle1, u, w, 6.0f, 0.40f, 0xFFD700, beamFade * 0.98f);
+            billboardDisc(v, m, muzzle1, 7.0f, 0x00E5FF, beamFade * 0.92f);
+            billboardDisc(v, m, muzzle1, 4.0f, 0xFFFFFF, beamFade * 0.98f);
+
+            // 5. ĐIỂM VA CHẠM BÙNG NỔ TRỰC DIỆN (IMPACT BLAST)
+            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            billboardDisc(v, m, impactCenter, 15.0f, 0x00E5FF, beamFade * 0.92f);
+            billboardDisc(v, m, impactCenter, 9.0f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 16.0f, 1.0f, 0xFFD700, beamFade * 0.88f);
+        } else {
+            // VỤ NỔ SIÊU TÂN TINH BÃO TỐ (Ticks 35 -> 48)
+            float blastAge = age - 35.0f;
+            float progress = Math.min(1.0f, blastAge / 13.0f);
+            float curR = 75.0f * progress;
+            float fade = (float) Math.max(0.0, 1.0 - progress);
+
+            ring(v, m, 1.5f, curR, 0.90f, 0x00E5FF, fade * 0.95f);
+            ring(v, m, 1.5f, curR * 0.70f, 0.70f, 0xFFD700, fade * 0.90f);
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 9.0f * (1.0f - progress * 0.5f), 130.0f, fade * 0.92f, 0x00E5FF);
+        }
+    }
+
+    // =========================================================================
+    // 6C. ĐẠI PHÁO PLASMA HỖN ĐỘN DIỆT TINH TỨC 3D (CHAOS STAR BUSTER)
+    // =========================================================================
+    private static void renderChaosStarBuster(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float maxRange = 80.0f * skill.powerMultiplier();
+        Vec3 dir = skill.direction();
+        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        Vec3 d = dir.normalize();
+
+        if (age < 35.0f) {
+            float beamFade = (age < 26.0f) ? 1.0f : (float) Math.max(0.0, 1.0 - (age - 26.0f) / 9.0f);
+            Vec3 origin = Vec3.ZERO;
+
+            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 u = d.cross(up).normalize();
+            Vec3 w = d.cross(u).normalize();
+
+            // 1. CỘT PLASMA 3D ĐA TẦNG HỖN ĐỘN HƯ KHÔNG (MAGENTA & DEEP PURPLE)
+            // Lớp 1: Lõi Plasma Trắng Hồng Tinh Tú (1.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 1.6f, 0xFFFFFF, beamFade * 0.98f, age, 0.0f);
+            // Lớp 2: Plasma Hồng Tím Neon Hỗn Mang (3.8m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 3.8f, 0xFF00FF, beamFade * 0.88f, age, 2.0f);
+            // Lớp 3: Hư Không Tím Ma Pháp Cực Đại (6.2m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 6.2f, 0x8A2BE2, beamFade * 0.65f, age, 4.0f);
+            // Lớp 4: Vực Thẳm Tối Tăm Ma Tố (9.5m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 9.5f, 0x4B0082, beamFade * 0.40f, age, 6.0f);
+            // Lớp 5: Quầng Hỗn Độn Long Vô Biên (13.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 13.0f, 0x2E0854, beamFade * 0.20f, age, 8.0f);
+
+            // 2. 36 NHÁNH MA TỐ HẮC LÔI TÍM HỒNG XOẮN ỐC 3D
+            int numTendrils = 36;
+            int tendrilNodes = 14;
+            for (int i = 0; i < numTendrils; i++) {
+                double baseAngle = i * (Math.PI * 2.0 / numTendrils) + age * 0.10;
+                Vec3 last = null;
+                for (int j = 0; j <= tendrilNodes; j++) {
+                    double dist = j * (maxRange / (double) tendrilNodes);
+                    double angle = baseAngle + (j * 0.60);
+                    double jitter = Math.sin(i * 14.7 + j * 7.8 + age * 0.30) * 0.6;
+                    double r = 4.8 + (j % 3) * 1.6 + jitter;
+                    Vec3 curr = origin.add(d.scale(dist))
+                            .add(u.scale(Math.cos(angle) * r))
+                            .add(w.scale(Math.sin(angle) * r));
+                    if (last != null) {
+                        int tendrilCol = (i % 3 == 0) ? 0xFFFFFF : ((i % 3 == 1) ? 0xFF00FF : 0x8A2BE2);
+                        float strokeW = (i % 3 == 0) ? 0.24f : 0.18f;
+                        stroke(v, m, last, curr, strokeW, beamFade * (i % 2 == 0 ? 0.95f : 0.75f), tendrilCol);
+                    }
+                    last = curr;
+                }
+            }
+
+            // 3. 8 VÒNG SÓNG NỔ MACH RINGS HỖN ĐỘN
+            for (int k = 1; k <= 8; k++) {
+                double machDist = ((age * 6.5 + k * 10.0) % maxRange);
+                Vec3 ringCenter = origin.add(d.scale(machDist));
+                float ringR = 5.6f + (float) (Math.sin(machDist * 0.25 + age * 0.2) * 1.8f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR, 0.45f, 0xFF00FF, beamFade * 0.88f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR * 0.65f, 0.28f, 0x8A2BE2, beamFade * 0.95f);
+            }
+
+            // 4. HỌNG PHÁO ĐẦU NÒNG KHAI HỎA
+            Vec3 muzzle1 = origin.add(d.scale(1.2));
+            renderDirectionalRing(v, m, muzzle1, u, w, 9.2f, 0.60f, 0xFF00FF, beamFade * 0.95f);
+            renderDirectionalRing(v, m, muzzle1, u, w, 6.0f, 0.40f, 0x8A2BE2, beamFade * 0.98f);
+            billboardDisc(v, m, muzzle1, 7.2f, 0xFF00FF, beamFade * 0.92f);
+            billboardDisc(v, m, muzzle1, 4.0f, 0xFFFFFF, beamFade * 0.98f);
+
+            // 5. ĐIỂM VA CHẠM BÙNG NỔ TRỰC DIỆN
+            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            billboardDisc(v, m, impactCenter, 15.0f, 0xFF00FF, beamFade * 0.92f);
+            billboardDisc(v, m, impactCenter, 9.0f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 16.0f, 1.0f, 0x8A2BE2, beamFade * 0.88f);
+        } else {
+            // VỤ NỔ SIÊU TÂN TINH HƯ KHÔNG (Ticks 35 -> 48)
+            float blastAge = age - 35.0f;
+            float progress = Math.min(1.0f, blastAge / 13.0f);
+            float curR = 75.0f * progress;
+            float fade = (float) Math.max(0.0, 1.0 - progress);
+
+            ring(v, m, 1.5f, curR, 0.90f, 0xFF00FF, fade * 0.95f);
+            ring(v, m, 1.5f, curR * 0.70f, 0.70f, 0x4B0082, fade * 0.90f);
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 9.0f * (1.0f - progress * 0.5f), 130.0f, fade * 0.92f, 0xFF00FF);
         }
     }
 

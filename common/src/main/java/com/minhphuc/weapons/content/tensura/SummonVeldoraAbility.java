@@ -133,9 +133,9 @@ public final class SummonVeldoraAbility {
         VeldoraEntity existing = VeldoraWorldData.findSingletonVeldora(level.getServer());
         if (existing == null || !existing.isAlive()) {
             if (vd.isVeldoraStoredInStomach()) {
-                SageManager.sendCornerAlert(player, "Veldora hiện đang nghỉ ngơi trong Không Gian Ảo Azathoth — có thể bấm Gọi (Rồng) hoặc Gọi (Người) ngay!", 0xFF38BDF8, 4500, false);
+                SageManager.sendCornerAlert(player, "Veldora hiện đang ở trong Không Gian Ảo có thể dùng triệu hồi Bạo Phong Long!", 0xFF38BDF8, 4500, false);
             } else {
-                SageManager.sendCornerAlert(player, "Không thấy Veldora đang hoạt động ngoài thế giới để thu hồi!", 0xFFF59E0B, 4500, false);
+                SageManager.sendCornerAlert(player, "Không tìm thấy cá thể veldora!", 0xFFF59E0B, 4500, false);
             }
             return;
         }
@@ -170,12 +170,17 @@ public final class SummonVeldoraAbility {
 
     private static boolean rollBusyExcuse(ServerLevel level, ServerPlayer player) {
         if (level.random.nextFloat() < 0.30F) {
-            String excuse = switch (level.random.nextInt(3)) {
+            String excuse = switch (level.random.nextInt(7)) {
                 case 0 -> "Kuahaha... Chờ chút đi bạn hiền, ta đang đọc dở tập Manga!";
-                case 1 -> "Xin lỗi nha, Ifrit vừa thách đấu cờ Shogi với ta trong dạ dày!";
+                case 1 -> "Xin lỗi nha, Ifrit vừa thách đấu cờ Shogi với ta!";
+                case 2 -> "Xin lỗi nha bạn hiền, ta đang rất bận";
+                case 3 -> "Gọi lại sau đi";
+                case 4 -> "....";
+                case 5 -> "Ai vậy?";
+                case 6 -> "không";
                 default -> "Bạo Phong Long hiện đang bận tập chiêu mới, lát nữa gọi lại nhé!";
             };
-            SageManager.sendCornerAlert(player, "Triệu Hồi Veldora Thất Bại (30% Đang Bận): \"" + excuse + "\"", 0xFFFB7185, 6500, false);
+            SageManager.sendCornerAlert(player, "Triệu Hồi Veldora Thất Bại vì cá thể không đồng ý: \"" + excuse + "\"", 0xFFFB7185, 6500, false);
             level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.0F, 1.0F);
             return true;
         }

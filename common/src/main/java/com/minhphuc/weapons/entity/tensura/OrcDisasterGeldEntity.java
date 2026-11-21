@@ -81,11 +81,11 @@ public class OrcDisasterGeldEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 5500.0D)
+                .add(Attributes.MAX_HEALTH, 16500.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.36D)
-                .add(Attributes.ATTACK_DAMAGE, 120.0D)
-                .add(Attributes.ARMOR, 28.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 18.0D)
+                .add(Attributes.ATTACK_DAMAGE, 360.0D)
+                .add(Attributes.ARMOR, 38.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 26.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
                 .add(Attributes.FOLLOW_RANGE, 52.0D);
     }
@@ -106,6 +106,7 @@ public class OrcDisasterGeldEntity extends Monster {
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false, v -> v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Villager.class, true));
     }
@@ -221,11 +222,11 @@ public class OrcDisasterGeldEntity extends Monster {
             sl.sendParticles(CHAOS_PURPLE, pt.x, pt.y, pt.z, 3, 0.25, 0.25, 0.25, 0.03);
             sl.sendParticles(ParticleTypes.SCULK_SOUL, pt.x, pt.y, pt.z, 1, 0.15, 0.15, 0.15, 0.02);
         }
-        float chaosDmg = 36.0F + getStarvedStacks() * 3.5F;
+        float chaosDmg = 108.0F + getStarvedStacks() * 10.5F;
         target.hurt(this.damageSources().wither(), chaosDmg);
         target.addEffect(new MobEffectInstance(MobEffects.WITHER, 100, 1));
         target.addEffect(new MobEffectInstance(MobEffects.HUNGER, 120, 2));
-        this.heal(18.0F);
+        this.heal(54.0F);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_SHOOT, SoundSource.HOSTILE, 1.8F, 0.65F);
     }
 

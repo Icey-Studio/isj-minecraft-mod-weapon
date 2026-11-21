@@ -347,6 +347,16 @@ public class PrimordialPactItem extends Item {
 
         ServerLevel serverLevel = (ServerLevel) level;
 
+        // Quy Tắc Bản Thể Độc Tôn: Nếu người chơi đang mặc đủ bộ đồ Thủy Tổ này -> Chặn triệu hồi từ Khế Ước
+        if (PrimordialArmorItem.isAnyPlayerWearingFullDemonSet(serverLevel.getServer(), type)) {
+            player.displayClientMessage(
+                    Component.literal("§c§l« QUY TẮC BẢN THỂ ĐỘC TÔN: Người chơi đang hiện thân là Ác Ma Thủy Tổ " + (type != null ? type.getColorName() : "") + "! Không thể triệu hồi bản thể thứ hai! »"),
+                    true
+            );
+            player.playNotifySound(SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.2F, 0.8F);
+            return InteractionResultHolder.fail(stack);
+        }
+
         // Tìm ác ma đã được triệu hồi trước đó nếu có
         String demonUuidStr = ItemStackDataHelper.getString(stack, "DemonUUID");
         PrimordialDemonEntity targetDemon = null;

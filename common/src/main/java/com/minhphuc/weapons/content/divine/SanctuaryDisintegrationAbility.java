@@ -368,13 +368,13 @@ public class SanctuaryDisintegrationAbility {
                 float groundScale = Math.min(1.0F, elapsed / 16.0F) * 12.0F;
                 updateFlatDisplayTransformation(s.groundDisplay, groundScale, s.currentAngleDegrees);
 
-                // Nhẫn Vương Miện Lồng Trong (Y+3.80m): Xuất hiện từ tick 6 (Scale 7.5m), xoay NGƯỢC chiều
+                // Nhẫn Vương Miện Lồng Trong (Y+3.80m): Nghiêng thiên thể 35 độ
                 float crownScale = elapsed < 6 ? 0.01F : Math.min(1.0F, (elapsed - 6) / 14.0F) * 7.5F;
-                updateFlatDisplayTransformation(s.crownRingDisplay, crownScale, -s.currentAngleDegrees * 1.2F);
+                updateTiltedOrbitalDisplayTransformation(s.crownRingDisplay, crownScale, -s.currentAngleDegrees * 1.2F, 35.0F);
 
-                // Nhẫn Cổ Ngữ Hồng Ngọc (Y+4.20m): Xuất hiện từ tick 8 (Scale 9.0m), xoay THUẬN chiều
+                // Nhẫn Cổ Ngữ Hồng Ngọc (Y+4.20m): Nghiêng đối xứng -35 độ
                 float runeScale = elapsed < 8 ? 0.01F : Math.min(1.0F, (elapsed - 8) / 14.0F) * 9.0F;
-                updateFlatDisplayTransformation(s.runeRingDisplay, runeScale, s.currentAngleDegrees * 1.5F);
+                updateTiltedOrbitalDisplayTransformation(s.runeRingDisplay, runeScale, s.currentAngleDegrees * 1.5F, -35.0F);
 
                 // Đại Pháp Luân Thánh Tích Thẳng Đứng (Y+7.50m): Xuất hiện từ tick 14 (Scale 7.5m)
                 float crestScale = elapsed < 14 ? 0.01F : Math.min(1.0F, (elapsed - 14) / 16.0F) * 7.5F;
@@ -503,8 +503,8 @@ public class SanctuaryDisintegrationAbility {
 
                 // DUY TRÌ: Các tầng ma pháp trận tiếp tục xoay siêu tốc quanh cột sáng 11.5m
                 updateFlatDisplayTransformation(s.groundDisplay, 12.0F, s.currentAngleDegrees);
-                updateFlatDisplayTransformation(s.crownRingDisplay, 7.5F, -s.currentAngleDegrees * 1.2F);
-                updateFlatDisplayTransformation(s.runeRingDisplay, 9.0F, s.currentAngleDegrees * 1.5F);
+                updateTiltedOrbitalDisplayTransformation(s.crownRingDisplay, 7.5F, -s.currentAngleDegrees * 1.2F, 40.0F);
+                updateTiltedOrbitalDisplayTransformation(s.runeRingDisplay, 9.0F, s.currentAngleDegrees * 1.5F, -40.0F);
                 updateVerticalDisplayTransformation(s.verticalCrestDisplay, 7.5F);
 
                 // Cập nhật hoạt ảnh gợn sóng của 2 Vòng Sóng Xung Kích linh tử (descending shockwaves)
@@ -606,8 +606,8 @@ public class SanctuaryDisintegrationAbility {
                 // B. Nhẫn Cổ Ngữ & Nhẫn Vương Miện: Tiêu biến kế tiếp trong Tick 95..108 (13 ticks)
                 if (elapsed >= 95 && elapsed < 108) {
                     float ringMult = Math.max(0.01F, 1.0F - (elapsed - 95) / 13.0F);
-                    updateFlatDisplayTransformation(s.crownRingDisplay, 7.5F * ringMult, -s.currentAngleDegrees * 1.2F);
-                    updateFlatDisplayTransformation(s.runeRingDisplay, 9.0F * ringMult, s.currentAngleDegrees * 1.5F);
+                    updateTiltedOrbitalDisplayTransformation(s.crownRingDisplay, 7.5F * ringMult, -s.currentAngleDegrees * 1.2F, 40.0F);
+                    updateTiltedOrbitalDisplayTransformation(s.runeRingDisplay, 9.0F * ringMult, s.currentAngleDegrees * 1.5F, -40.0F);
                 } else if (elapsed >= 108) {
                     if (s.crownRingDisplay != null && s.crownRingDisplay.isAlive()) {
                         s.crownRingDisplay.discard();
@@ -883,6 +883,25 @@ public class SanctuaryDisintegrationAbility {
                 level.playSound(null, center.x, groundY + 0.5D, center.z,
                         SoundEvents.AMETHYST_BLOCK_HIT, SoundSource.PLAYERS, 1.8F, 1.6F);
             }
+        }
+    }
+
+    /**
+     * Cập nhật kích thước và góc nghiêng thiên thể (Celestial Tilted Rings)
+     */
+    private static void updateTiltedOrbitalDisplayTransformation(Display.ItemDisplay display, float scale, float angleDeg, float tiltDeg) {
+        if (display != null && display.isAlive()) {
+            Quaternionf rotation = new Quaternionf()
+                    .rotateX((float) Math.toRadians(tiltDeg))
+                    .rotateY((float) Math.toRadians(angleDeg * 0.4F))
+                    .rotateZ((float) Math.toRadians(angleDeg));
+
+            ((DisplayAccessor) display).weapons$setTransformation(new Transformation(
+                    new Vector3f(0.0F, 0.0F, 0.0F),
+                    rotation,
+                    new Vector3f(scale, scale, 0.01F),
+                    null
+            ));
         }
     }
 

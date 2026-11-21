@@ -360,8 +360,8 @@ public class PrimordialPossessionManager {
         boolean hasBody = hasPhysicalBody(player);
         boolean isNamed = isNamed(player);
 
-        // 1. Kỹ năng bản năng & Độc bản (0..8)
-        for (int i = 0; i <= 8; i++) {
+        // 1. Kỹ năng bản năng, Độc bản & Tầm Soát (0..13)
+        for (int i = 0; i < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS; i++) {
             list.add(i);
         }
 
@@ -388,7 +388,7 @@ public class PrimordialPossessionManager {
         DemonType type = getPossessedType(player);
         if (type == null) type = DemonType.NOIR;
 
-        if (skillId >= 0 && skillId <= 6) {
+        if (skillId >= 0 && skillId < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS) {
             return PrimordialPlayerDataHelper.getSkillName(type, skillId);
         }
 
@@ -553,8 +553,8 @@ public class PrimordialPossessionManager {
         }
 
         try {
-            // Kỹ năng Bản năng (0..6)
-            if (skill >= 0 && skill <= 6) {
+            // Kỹ năng Bản năng, Độc bản & Tầm soát (0..13)
+            if (skill >= 0 && skill < PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS) {
                 PrimordialSkillDispatcher.castSkill(level, player, skill);
                 return;
             }

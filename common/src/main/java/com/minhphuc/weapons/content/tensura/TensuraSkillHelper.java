@@ -225,7 +225,10 @@ public class TensuraSkillHelper {
         boolean hasAnchor = SpatialTeleportAbility.hasAnchorMark(player);
         boolean isTrueDemonLord = root.getBoolean("TensuraTrueDemonLord");
         boolean hasCreation = root.getBoolean("TensuraMaterialCreation");
+        boolean isInnatePrimordial = PrimordialPlayerDataHelper.isInnatePrimordial(player);
         boolean isPrimordial = PrimordialPlayerDataHelper.isPrimordial(player);
+        boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+        boolean hasLordSkills = isTrueDemonLord || isWearingDivine || isInnatePrimordial || player.isCreative();
         com.minhphuc.weapons.entity.tensura.DemonType type = possessing
                 ? PrimordialPossessionManager.getPossessedType(player)
                 : PrimordialPlayerDataHelper.getPrimordialType(player);
@@ -235,8 +238,8 @@ public class TensuraSkillHelper {
         String currentName = "";
         if (possessing) {
             currentName = PrimordialPossessionManager.getSkillDisplayName(player, PrimordialPossessionManager.getSelectedSkillIndex(player));
-        } else if (isTrueDemonLord || isPrimordial || com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player) || player.isCreative()) {
-            int lordCount = TensuraSkillDispatcher.getSkillCount(hasCreation);
+        } else if (hasLordSkills || isPrimordial) {
+            int lordCount = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
             if (lordIdx < lordCount) {
                 currentName = TensuraSkillDispatcher.getSkillName(player, lordIdx, hasCreation);
             } else if (isPrimordial) {

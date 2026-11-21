@@ -38,6 +38,8 @@ public final class SkillVisualConfig {
     public static final int SKILL_DEAD_END_RAINBOW = 27;
     public static final int SKILL_HINATA_THOUGHT_ACCEL = 28;
     public static final int SKILL_DEMON_LORD_HAKI = 29;
+    public static final int SKILL_VELDORA_TEMPEST_CANNON = 30;
+    public static final int SKILL_CHAOS_STAR_BUSTER = 31;
 
     private static boolean globalCinematicEnabled = true;
     private static final BitSet disabledSkills = new BitSet(64);

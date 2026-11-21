@@ -11,12 +11,10 @@ public class PrimordialPlayerDataHelper {
     public static final String NBT_PRIMORDIAL_TYPE = "PrimordialDemonType";
     public static final String NBT_PHYSICAL_BODY = "PrimordialHasPhysicalBody";
     public static final String NBT_SELECTED_SKILL = "PrimordialSelectedSkillIndex";
+    public static final int TOTAL_PRIMORDIAL_SKILLS = 14;
 
-    public static DemonType getPrimordialType(Player player) {
+    public static DemonType getInnatePrimordialType(Player player) {
         if (player == null) return null;
-        if (PrimordialPossessionManager.isPossessing(player)) {
-            return PrimordialPossessionManager.getPossessedType(player);
-        }
         CompoundTag tag = EntityDataHelper.getCustomData(player);
         if (!tag.contains(NBT_PRIMORDIAL_TYPE)) return null;
         String typeName = tag.getString(NBT_PRIMORDIAL_TYPE);
@@ -26,6 +24,22 @@ public class PrimordialPlayerDataHelper {
         } catch (IllegalArgumentException e) {
             return null;
         }
+    }
+
+    public static boolean isInnatePrimordial(Player player) {
+        return getInnatePrimordialType(player) != null;
+    }
+
+    public static DemonType getPrimordialType(Player player) {
+        if (player == null) return null;
+        if (PrimordialPossessionManager.isPossessing(player)) {
+            return PrimordialPossessionManager.getPossessedType(player);
+        }
+        DemonType armorSetType = PrimordialArmorItem.getFullSetDemonType(player);
+        if (armorSetType != null) {
+            return armorSetType;
+        }
+        return getInnatePrimordialType(player);
     }
 
     public static void setPrimordialType(Player player, DemonType type) {
@@ -84,17 +98,17 @@ public class PrimordialPlayerDataHelper {
     public static int getSelectedSkillIndex(Player player) {
         if (player == null) return 0;
         CompoundTag tag = EntityDataHelper.getCustomData(player);
-        return Math.max(0, Math.min(6, tag.getInt(NBT_SELECTED_SKILL)));
+        return Math.max(0, Math.min(TOTAL_PRIMORDIAL_SKILLS - 1, tag.getInt(NBT_SELECTED_SKILL)));
     }
 
     public static void setSelectedSkillIndex(Player player, int skillIndex) {
         if (player == null) return;
-        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, Math.max(0, Math.min(6, skillIndex)));
+        EntityDataHelper.getCustomData(player).putInt(NBT_SELECTED_SKILL, Math.max(0, Math.min(TOTAL_PRIMORDIAL_SKILLS - 1, skillIndex)));
     }
 
     public static int cycleSkill(Player player) {
         int current = getSelectedSkillIndex(player);
-        int next = (current + 1) % 7;
+        int next = (current + 1) % TOTAL_PRIMORDIAL_SKILLS;
         setSelectedSkillIndex(player, next);
         return next;
     }
@@ -147,6 +161,27 @@ public class PrimordialPlayerDataHelper {
         }
         if (skillIndex == 6) {
             return "Linh Tử Bộc Phát (Spiritron Outburst)";
+        }
+        if (skillIndex == 7) {
+            return "Tam Trọng Thánh Giới: Linh Tử Băng Hoại (Disintegration)";
+        }
+        if (skillIndex == 8) {
+            return "Bành Trướng Lãnh Địa Thủy Tổ (Domain Expansion)";
+        }
+        if (skillIndex == 9) {
+            return "Tầm Soát Thôn Làng & Cổng Làng (Find Village - Shift=Dịch Chuyển)";
+        }
+        if (skillIndex == 10) {
+            return "Tầm Soát Warden & Thành Cổ Cổ Đại (Find Warden - Shift=Dịch Chuyển)";
+        }
+        if (skillIndex == 11) {
+            return "Tầm Soát Di Tích & Cổng Thứ Nguyên (Find Structure - Shift=Dịch Chuyển)";
+        }
+        if (skillIndex == 12) {
+            return "Thấu Thị Khoáng Mạch Quý & Rương Kho Báu (Find Ores/Chests - Shift=Thu Hồi)";
+        }
+        if (skillIndex == 13) {
+            return "Cảm Tri Boss & Quái Tinh Anh (Find Bosses & Elites)";
         }
         if (type == null) return "Chưa thức tỉnh";
         if (type == DemonType.NOIR) {

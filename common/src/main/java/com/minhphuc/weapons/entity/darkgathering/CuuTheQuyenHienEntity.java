@@ -126,11 +126,11 @@ public class CuuTheQuyenHienEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 2400.0D)
+                .add(Attributes.MAX_HEALTH, 7200.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.34D)
-                .add(Attributes.ATTACK_DAMAGE, 85.0D)
-                .add(Attributes.ARMOR, 24.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 14.0D)
+                .add(Attributes.ATTACK_DAMAGE, 255.0D)
+                .add(Attributes.ARMOR, 34.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 22.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
@@ -168,7 +168,7 @@ public class CuuTheQuyenHienEntity extends Monster {
         if (bareHanded) {
             this.setItemSlot(EquipmentSlot.MAINHAND, ItemStack.EMPTY);
             var dmgAttr = this.getAttribute(Attributes.ATTACK_DAMAGE);
-            if (dmgAttr != null) dmgAttr.setBaseValue(50.0D);
+            if (dmgAttr != null) dmgAttr.setBaseValue(285.0D);
             var spdAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (spdAttr != null) spdAttr.setBaseValue(0.35D);
 
@@ -181,7 +181,7 @@ public class CuuTheQuyenHienEntity extends Monster {
         } else {
             this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.THIEN_MA_KATANA.get()));
             var dmgAttr = this.getAttribute(Attributes.ATTACK_DAMAGE);
-            if (dmgAttr != null) dmgAttr.setBaseValue(35.0D);
+            if (dmgAttr != null) dmgAttr.setBaseValue(255.0D);
             var spdAttr = this.getAttribute(Attributes.MOVEMENT_SPEED);
             if (spdAttr != null) spdAttr.setBaseValue(0.30D);
         }
@@ -244,6 +244,11 @@ public class CuuTheQuyenHienEntity extends Monster {
         this.goalSelector.addGoal(5, new LookAtPlayerGoal(this, LivingEntity.class, 12.0F));
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(
+                this, com.minhphuc.weapons.entity.tensura.VeldoraEntity.class, 5, false, false,
+                e -> e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity vd && vd.isAlive() && !vd.isSealed()
+                        && !isCalmControlledBy(vd.getOwnerUUID())
+        ));
         // Căm thù tất cả sinh vật sống (quét mỗi 20 ticks = 1s để giảm tải CPU)
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(
                 this, LivingEntity.class, 20, true, false,
@@ -259,6 +264,10 @@ public class CuuTheQuyenHienEntity extends Monster {
                     return true;
                 }
         ));
+    }
+
+    public boolean isCalmControlledBy(@Nullable UUID uuid) {
+        return uuid != null && this.ownerUuid != null && !this.isRampaging && this.ownerUuid.equals(uuid);
     }
 
     @Override
@@ -367,14 +376,14 @@ public class CuuTheQuyenHienEntity extends Monster {
                     sl.sendParticles(ParticleTypes.EXPLOSION, slamVictim.getX(), slamVictim.getY() + 0.5D, slamVictim.getZ(), 2, 0, 0, 0, 0);
 
                     // Sát thương đúng 20% Máu tối đa!
-                    float slamDamage = Math.max(35.0F, slamVictim.getMaxHealth() * 0.20F);
+                    float slamDamage = Math.max(105.0F, slamVictim.getMaxHealth() * 0.20F);
                     slamVictim.hurt(this.damageSources().mobAttack(this), slamDamage);
 
                     // Chấn động lan xung quanh 3.5m
                     AABB shockArea = slamVictim.getBoundingBox().inflate(3.5D);
                     for (LivingEntity nearby : sl.getEntitiesOfClass(LivingEntity.class, shockArea)) {
                         if (nearby != this && nearby != slamVictim && nearby.isAlive()) {
-                            nearby.hurt(this.damageSources().mobAttack(this), 25.0F);
+                            nearby.hurt(this.damageSources().mobAttack(this), 75.0F);
                             Vec3 push = nearby.position().subtract(slamVictim.position()).normalize().scale(0.8D).add(0, 0.25D, 0);
                             nearby.setDeltaMovement(push);
                             nearby.hasImpulse = true;
@@ -571,7 +580,7 @@ public class CuuTheQuyenHienEntity extends Monster {
             if (victim == this || victim instanceof CuuTheSoulEntity || !victim.isAlive()) continue;
             if (this.ownerUuid != null && !this.isRampaging && victim.getUUID().equals(this.ownerUuid)) continue;
 
-            victim.hurt(this.damageSources().mobAttack(this), 40.0F);
+            victim.hurt(this.damageSources().mobAttack(this), 120.0F);
             // Kéo ép rạp xuống đất, không thể nhảy
             victim.setDeltaMovement(victim.getDeltaMovement().x * 0.1D, -1.2D, victim.getDeltaMovement().z * 0.1D);
             victim.hasImpulse = true;
@@ -611,7 +620,7 @@ public class CuuTheQuyenHienEntity extends Monster {
             if (this.ownerUuid != null && !this.isRampaging && hit.getUUID().equals(this.ownerUuid)) continue;
             if (!hitIds.add(hit.getUUID())) continue;
 
-            hit.hurt(this.damageSources().mobAttack(this), 55.0F);
+            hit.hurt(this.damageSources().mobAttack(this), 165.0F);
             // Hất tung lên trời
             hit.setDeltaMovement(dir.x * 0.15D, 0.65D, dir.z * 0.15D);
             hit.hasImpulse = true;
@@ -635,7 +644,7 @@ public class CuuTheQuyenHienEntity extends Monster {
             sl.sendParticles(ParticleTypes.SONIC_BOOM, p.x, p.y, p.z, 1, 0, 0, 0, 0);
         }
 
-        float dmg = isBareHanded() ? 50.0F : 38.0F;
+        float dmg = isBareHanded() ? 150.0F : 114.0F;
         target.hurt(this.damageSources().mobAttack(this), dmg);
 
         target.setDeltaMovement(target.getDeltaMovement().x * 0.2D, -1.35D, target.getDeltaMovement().z * 0.2D);
@@ -688,8 +697,8 @@ public class CuuTheQuyenHienEntity extends Monster {
         sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.ANVIL_LAND, SoundSource.HOSTILE, 2.2F, 1.1F);
         sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.STONE_BREAK, SoundSource.HOSTILE, 2.5F, 0.7F);
 
-        // Sát thương 70.0 physical
-        float dmg = isBareHanded() ? 85.0F : 70.0F;
+        // Sát thương 210.0 physical (3x)
+        float dmg = isBareHanded() ? 255.0F : 210.0F;
         target.hurt(this.damageSources().mobAttack(this), dmg);
 
         // Gây choáng 1.5s và làm chậm 3s
@@ -983,7 +992,7 @@ public class CuuTheQuyenHienEntity extends Monster {
                 demonDamage = 85.0F + (this.random.nextFloat() * 20.0F); // 85-105 dmg
             } else {
                 // Thắng 80%: Violet, Vert, Bleu
-                demonDamage = 115.0F + (this.random.nextFloat() * 25.0F); // 115-140 dmg
+                demonDamage = 345.0F + (this.random.nextFloat() * 75.0F); // 3x
             }
             this.heal(demonDamage * 0.15F); // Hút 15% sinh lực
             if (this.level() instanceof ServerLevel sl) {
@@ -993,8 +1002,8 @@ public class CuuTheQuyenHienEntity extends Monster {
             return demon.hurt(this.damageSources().mobAttack(this), demonDamage);
         }
 
-        // Hồi phục 10% sinh lực khi tấn công trúng mục tiêu
-        this.heal(3.5F);
+        // Hồi phục sinh lực khi tấn công trúng mục tiêu
+        this.heal(10.5F);
 
         // Tương tác với Đa Trùng Kết Giới (Multilayer Barrier):
         if (target instanceof LivingEntity livingTarget && this.level() instanceof ServerLevel sl) {
@@ -1012,7 +1021,7 @@ public class CuuTheQuyenHienEntity extends Monster {
                         if (target instanceof ServerPlayer sp) {
                             sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fCứu Thế Quyền Hiện đã rút kiếm và một đao chém vỡ Đa Trùng Kết Giới!"));
                         }
-                        return livingTarget.hurt(this.damageSources().mobAttack(this), 55.0F);
+                        return livingTarget.hurt(this.damageSources().mobAttack(this), 165.0F);
                     }
                     return false;
                 } else {
@@ -1021,7 +1030,7 @@ public class CuuTheQuyenHienEntity extends Monster {
                     if (target instanceof ServerPlayer sp) {
                         sp.sendSystemMessage(Component.literal("§c§l[CẢNH BÁO] §fCứu Thế Quyền Hiện đã một đao chém vỡ Đa Trùng Kết Giới!"));
                     }
-                    return livingTarget.hurt(this.damageSources().mobAttack(this), 45.0F);
+                    return livingTarget.hurt(this.damageSources().mobAttack(this), 135.0F);
                 }
             }
         }

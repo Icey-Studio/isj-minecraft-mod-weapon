@@ -60,9 +60,9 @@ import java.util.List;
 public class UnderworldDemonEntity extends TamableAnimal {
 
     public enum DemonRank {
-        LESSER("Hạ Cấp Ác Ma", 0.90F, 90.0D, 9.0D, 4.0D, 15_000L, false, false),
-        GREATER("Thượng Cấp Ác Ma", 1.10F, 240.0D, 19.0D, 8.0D, 65_000L, true, true),
-        ARCHDEMON("Đại Ác Ma", 1.35F, 680.0D, 38.0D, 14.0D, 240_000L, true, true);
+        LESSER("Hạ Cấp Ác Ma", 0.90F, 270.0D, 27.0D, 10.0D, 15_000L, false, false),
+        GREATER("Thượng Cấp Ác Ma", 1.10F, 720.0D, 57.0D, 16.0D, 65_000L, true, true),
+        ARCHDEMON("Đại Ác Ma", 1.35F, 2040.0D, 114.0D, 24.0D, 240_000L, true, true);
 
         public final String title;
         public final float baseScale;
@@ -145,11 +145,11 @@ public class UnderworldDemonEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 450.0D)
+                .add(Attributes.MAX_HEALTH, 1350.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.36D)
                 .add(Attributes.FLYING_SPEED, 0.52D)
-                .add(Attributes.ATTACK_DAMAGE, 28.0D)
-                .add(Attributes.ARMOR, 12.0D)
+                .add(Attributes.ATTACK_DAMAGE, 84.0D)
+                .add(Attributes.ARMOR, 22.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.55D)
                 .add(Attributes.FOLLOW_RANGE, 44.0D);
     }
@@ -185,6 +185,10 @@ public class UnderworldDemonEntity extends TamableAnimal {
         this.targetSelector.addGoal(1, new OwnerHurtByTargetGoal(this));
         this.targetSelector.addGoal(2, new OwnerHurtTargetGoal(this));
         this.targetSelector.addGoal(3, new HurtByTargetGoal(this).setAlertOthers());
+
+        // Ác ma hoang dã hoặc Ma Vương Cuồng Nộ luôn ưu tiên ngăn chặn Veldora
+        this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, true, false,
+                e -> e instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed() && (!this.isTame() || this.isBerserkDemonLord())));
 
         // Khi hoang dã hoặc Ma Vương Cuồng Nộ: tấn công sinh vật & dân làng (để hấp thụ thể xác nếu chưa có)
         this.targetSelector.addGoal(4, new NearestAttackableTargetGoal<>(this, Player.class, 10, true, false,
@@ -283,10 +287,10 @@ public class UnderworldDemonEntity extends TamableAnimal {
             armor += 8.0D;
         }
 
-        // Khóa trần: Tuyệt đối không vượt qua Thủy Tổ (PrimordialDemonEntity tối thiểu 950-3600 base x nhiều tầng)
-        hp = Math.min(hp, 2400.0D);
-        atk = Math.min(atk, 125.0D);
-        armor = Math.min(armor, 28.0D);
+        // Khóa trần x3: Tuyệt đối không vượt qua Thủy Tổ x3
+        hp = Math.min(hp, 7200.0D);
+        atk = Math.min(atk, 375.0D);
+        armor = Math.min(armor, 36.0D);
 
         var maxHpAttr = this.getAttribute(Attributes.MAX_HEALTH);
         if (maxHpAttr != null) maxHpAttr.setBaseValue(hp);
@@ -435,7 +439,7 @@ public class UnderworldDemonEntity extends TamableAnimal {
         sl.sendParticles(ParticleTypes.EXPLOSION, end.x, end.y, end.z, 1, 0.1, 0.1, 0.1, 0.0);
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.BLAZE_SHOOT, SoundSource.HOSTILE, 1.2F, 0.9F);
 
-        float magicDmg = (float) Math.max(8.0D, this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.85D);
+        float magicDmg = (float) Math.max(24.0D, this.getAttributeValue(Attributes.ATTACK_DAMAGE) * 0.85D);
         if (target.hurt(this.damageSources().indirectMagic(this, this), magicDmg)) {
             if (type == DemonType.ROUGE) target.igniteForSeconds(4);
             else if (type == DemonType.BLEU || type == DemonType.BLANC) target.setTicksFrozen(100);

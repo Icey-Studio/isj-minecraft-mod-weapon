@@ -224,6 +224,26 @@ public class WeaponsModClient {
                 com.minhphuc.weapons.entity.darkgathering.CursedIdolRenderer::new
         );
 
+        // Tiểu Thư Mariabell Rosso (Slime Isekai)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.entity.tensura.MariabellModel.LAYER_LOCATION,
+                com.minhphuc.weapons.entity.tensura.MariabellModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.MARIABELL,
+                com.minhphuc.weapons.entity.tensura.MariabellRenderer::new
+        );
+
+        // Hỗn Độn Long (Chaos Dragon)
+        dev.architectury.registry.client.level.entity.EntityModelLayerRegistry.register(
+                com.minhphuc.weapons.client.model.ChaosDragonModel.LAYER_LOCATION,
+                com.minhphuc.weapons.client.model.ChaosDragonModel::createBodyLayer
+        );
+        dev.architectury.registry.client.level.entity.EntityRendererRegistry.register(
+                com.minhphuc.weapons.entity.ModEntities.CHAOS_DRAGON,
+                com.minhphuc.weapons.client.renderer.ChaosDragonRenderer::new
+        );
+
         WeaponsMod.LOGGER.info("Weapons Mod Client Setup complete!");
     }
 }

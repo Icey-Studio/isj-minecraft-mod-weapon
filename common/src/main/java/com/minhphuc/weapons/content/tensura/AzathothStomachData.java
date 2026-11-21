@@ -5,6 +5,7 @@ import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.entity.tensura.VeldoraEntity;
 import com.minhphuc.weapons.world.VeldoraWorldData;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
@@ -84,6 +85,10 @@ public final class AzathothStomachData {
 
         if (!liveVeldoras.isEmpty()) {
             VeldoraEntity targetV = liveVeldoras.get(0);
+            if (targetV.isGreedControlled()) {
+                player.displayClientMessage(Component.literal("§c« BÁO CÁO RAPHAEL: THẤT BẠI »\n§eMạch linh hồn của Veldora đang phản nghịch do bị Kẻ Tham Lam chi phối! Không thể thu nạp vào Không Gian Ảo mà không làm rách vỡ kết cấu linh hồn!"), false);
+                return false;
+            }
             removeVeldoraStomachEntries(list);
             CompoundTag slot = new CompoundTag();
             slot.putString("Name", "§bBạo Phong Long Veldora (" + (targetV.isHumanForm() ? "Dạng Người" : "Dạng Rồng") + ")");
@@ -313,27 +318,196 @@ public final class AzathothStomachData {
         player.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 200, 1));
         MagiculesManager.addAzathothConversion(player, Math.max(20_000L, ep));
 
+        String slotName = slot.getString("Name");
+        String itemKind = slot.getString("Kind");
+        if (slotName.contains("Mariabell") || itemKind.contains("mariabell")) {
+            if (!player.getTags().contains("GreedSkillUnlocked")) {
+                player.addTag("GreedSkillUnlocked");
+                data.putBoolean("GreedSkillUnlocked", true);
+                VoiceOfTheWorld.announce(player, "§d§lTHỨC TỈNH KỸ NĂNG ĐỘC NHẤT THÀNH CÔNG!\n" +
+                        "§fSau khi chuyển hóa hoàn toàn Bản Thể Linh Hồn của Mariabell Rosso vào Không Gian Ảo Azathoth,\n" +
+                        "§fCá thể đã giác ngộ Kỹ Năng Độc Nhất: §d§l[KẺ THAM LAM - GREEDY ONE]§f!\n" +
+                        "§eQuyền năng chi phối dục vọng, thao túng vạn vật đã được khắc sâu vào linh hồn vĩnh cửu!");
+                level.playSound(null, player.getX(), player.getY(), player.getZ(), SoundEvents.UI_TOAST_CHALLENGE_COMPLETE, SoundSource.PLAYERS, 2.0F, 1.2F);
+            } else {
+                player.displayClientMessage(Component.literal("§d[Kẻ Tham Lam] §fBạn đã sở hữu Kỹ Năng Độc Nhất này rồi! Linh hồn chỉ gia tăng lượng lớn Ma Tố dự trữ."), true);
+            }
+        }
+
         list.remove(index);
         data.put(KEY_STOMACH, list);
         TensuraSkillHelper.syncSkillStateToClient(player);
         SageManager.sendCornerAlert(player, "Chuyển Hóa Ma Tố: Đã phân rã [" + slot.getString("Name") + "] -> Hồi +" + (int) heal + " HP & Tăng Ma Tố/EP vĩnh viễn!", 0xFF34D399, 4500, false);
     }
 
-    public static void autoCraftItem(ServerLevel level, ServerPlayer player, int craftKind) {
+    public static void reconstituteEntity(ServerLevel level, ServerPlayer player, int index) {
         CompoundTag data = EntityDataHelper.getCustomData(player);
         ListTag list = data.getList(KEY_STOMACH, Tag.TAG_COMPOUND);
-        if (list.isEmpty()) {
-            player.displayClientMessage(Component.literal("§c⚠ Dạ Dày Vô Hạn cần ít nhất 1 vật phẩm/linh thể làm nguyên liệu Ma Tố!"), true);
+        if (index < 0 || index >= list.size()) {
+            player.displayClientMessage(Component.literal("§c⚠ Vui lòng chọn một ô vật phẩm hoặc linh hồn trong Không Gian Ảo để tái tạo!"), true);
+            player.playNotifySound(SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.0F);
             return;
         }
-        list.remove(0);
+
+        CompoundTag slot = list.getCompound(index);
+        String kind = slot.getString("Kind");
+
+        // Ràng buộc 1: Nếu trong không gian ảo đã là MOB thực thể sống
+        if ("MOB".equals(kind)) {
+            player.displayClientMessage(Component.literal("§c§l« BÁO CÁO RAPHAEL: Không thể tái tạo vì đây là thực thể nguyên vẹn trong Không Gian Ảo! Hãy dùng chức năng [Giải Phóng] để đưa ra thế giới! »"), false);
+            player.playNotifySound(SoundEvents.VILLAGER_NO, SoundSource.PLAYERS, 1.2F, 0.9F);
+            return;
+        }
+
+        var registryAccess = player.level().registryAccess();
+        ItemStack stack = ItemStack.parseOptional(registryAccess, slot.getCompound("ItemTag"));
+        if (stack.isEmpty()) {
+            player.displayClientMessage(Component.literal("§c⚠ Vật phẩm không hợp lệ hoặc dữ liệu trống!"), true);
+            return;
+        }
+
+        // Ràng buộc 2: Tuyệt đối không thể tái tạo Veldora từ linh hồn
+        String itemNameLower = stack.getHoverName().getString().toLowerCase();
+        String itemId = net.minecraft.core.registries.BuiltInRegistries.ITEM.getKey(stack.getItem()).toString().toLowerCase();
+        if (itemNameLower.contains("veldora") || itemId.contains("veldora")) {
+            player.displayClientMessage(Component.literal("§c§l« CẢNH BÁO RAPHAEL: BẢO MẬT CHÂN LONG TỐI THƯỢNG! »\n§eKhông thể tái tạo Bạo Phong Long Veldora từ linh hồn! Cá thể Chân Long độc nhất chỉ có thể triệu hồi hoặc hồi sinh qua Kỹ Năng [Triệu Hồi Bạo Phong Long]!"), false);
+            player.playNotifySound(SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.0F, 0.5F);
+            return;
+        }
+
+        // Xác định EntityType dựa trên vật phẩm và Biome
+        EntityType<?> targetType = null;
+        boolean customRestored = false;
+        CompoundTag customEntityTag = null;
+
+        // Nếu là vật phẩm chứa NBT linh hồn thực thể cụ thể
+        net.minecraft.world.item.component.CustomData customData = stack.get(net.minecraft.core.component.DataComponents.CUSTOM_DATA);
+        if (customData != null && customData.contains("TensuraEntityData")) {
+            customEntityTag = customData.copyTag().getCompound("TensuraEntityData");
+            String storedType = customEntityTag.getString("id");
+            if (!storedType.isEmpty()) {
+                var optType = EntityType.byString(storedType);
+                if (optType.isPresent()) {
+                    targetType = optType.get();
+                    customRestored = true;
+                }
+            }
+        }
+
+        if (targetType == null) {
+            net.minecraft.core.Holder<net.minecraft.world.level.biome.Biome> biomeHolder = level.getBiome(player.blockPosition());
+            boolean isFrozenBiome = biomeHolder.unwrapKey().map(k -> {
+                String p = k.location().getPath().toLowerCase();
+                return p.contains("frozen") || p.contains("snow") || p.contains("ice") || p.contains("cold");
+            }).orElse(false);
+
+            if (stack.is(Items.COD) || stack.is(Items.SALMON) || stack.is(Items.COOKED_COD) || stack.is(Items.COOKED_SALMON)) {
+                if (isFrozenBiome) {
+                    targetType = EntityType.POLAR_BEAR; // Ở vùng tuyết băng -> Tái tạo ra Gấu Bắc Cực!
+                } else {
+                    targetType = stack.is(Items.SALMON) || stack.is(Items.COOKED_SALMON) ? EntityType.SALMON : EntityType.COD;
+                }
+            } else if (stack.is(Items.ROTTEN_FLESH)) {
+                targetType = EntityType.ZOMBIE;
+            } else if (stack.is(Items.BONE)) {
+                targetType = EntityType.SKELETON;
+            } else if (stack.is(Items.STRING) || stack.is(Items.SPIDER_EYE) || stack.is(Items.FERMENTED_SPIDER_EYE)) {
+                targetType = (player.getY() < 0) ? EntityType.CAVE_SPIDER : EntityType.SPIDER;
+            } else if (stack.is(Items.GUNPOWDER)) {
+                targetType = EntityType.CREEPER;
+            } else if (stack.is(Items.ENDER_PEARL) || stack.is(Items.ENDER_EYE)) {
+                targetType = EntityType.ENDERMAN;
+            } else if (stack.is(Items.BLAZE_ROD) || stack.is(Items.BLAZE_POWDER)) {
+                targetType = EntityType.BLAZE;
+            } else if (stack.is(Items.GHAST_TEAR)) {
+                targetType = EntityType.GHAST;
+            } else if (stack.is(Items.SLIME_BALL)) {
+                targetType = EntityType.SLIME;
+            } else if (stack.is(Items.MAGMA_CREAM)) {
+                targetType = EntityType.MAGMA_CUBE;
+            } else if (stack.is(Items.BEEF) || stack.is(Items.COOKED_BEEF) || stack.is(Items.LEATHER)) {
+                targetType = EntityType.COW;
+            } else if (stack.is(Items.PORKCHOP) || stack.is(Items.COOKED_PORKCHOP)) {
+                targetType = EntityType.PIG;
+            } else if (stack.is(Items.CHICKEN) || stack.is(Items.COOKED_CHICKEN) || stack.is(Items.FEATHER) || stack.is(Items.EGG)) {
+                targetType = EntityType.CHICKEN;
+            } else if (stack.is(Items.MUTTON) || stack.is(Items.COOKED_MUTTON) || stack.is(net.minecraft.tags.ItemTags.WOOL)) {
+                targetType = EntityType.SHEEP;
+            } else if (stack.is(Items.RABBIT) || stack.is(Items.COOKED_RABBIT) || stack.is(Items.RABBIT_FOOT) || stack.is(Items.RABBIT_HIDE)) {
+                targetType = EntityType.RABBIT;
+            } else if (stack.is(Items.WITHER_SKELETON_SKULL)) {
+                targetType = EntityType.WITHER_SKELETON;
+            } else if (stack.is(Items.PHANTOM_MEMBRANE)) {
+                targetType = EntityType.PHANTOM;
+            } else if (stack.is(Items.SHULKER_SHELL)) {
+                targetType = EntityType.SHULKER;
+            } else if (stack.is(Items.ECHO_SHARD) || stack.is(Items.SCULK)) {
+                targetType = EntityType.WARDEN;
+            } else if (stack.is(Items.HONEYCOMB) || stack.is(Items.HONEY_BOTTLE)) {
+                targetType = EntityType.BEE;
+            } else if (stack.is(Items.TURTLE_SCUTE)) {
+                targetType = EntityType.TURTLE;
+            } else if (stack.is(Items.INK_SAC)) {
+                targetType = EntityType.SQUID;
+            } else if (stack.is(Items.GLOW_INK_SAC)) {
+                targetType = EntityType.GLOW_SQUID;
+            } else if (stack.is(Items.GOAT_HORN)) {
+                targetType = EntityType.GOAT;
+            } else if (stack.is(Items.FROGSPAWN)) {
+                targetType = EntityType.FROG;
+            } else if (stack.is(Items.ARMADILLO_SCUTE)) {
+                targetType = EntityType.ARMADILLO;
+            } else if (stack.is(Items.SNIFFER_EGG)) {
+                targetType = EntityType.SNIFFER;
+            } else if (stack.is(com.minhphuc.weapons.init.ModItems.DEMON_LORD_SOUL.get())) {
+                targetType = com.minhphuc.weapons.entity.ModEntities.UNDERWORLD_DEMON.get();
+            }
+        }
+
+        if (targetType == null) {
+            player.displayClientMessage(Component.literal("§c[Báo Cáo Raphael] Vật phẩm [" + stack.getHoverName().getString() + "] không chứa đủ thông tin ma tố/tế bào sinh học để tái tạo thành sinh vật sống!"), true);
+            player.playNotifySound(SoundEvents.DISPENSER_FAIL, SoundSource.PLAYERS, 1.0F, 1.0F);
+            return;
+        }
+
+        // Vị trí triệu hồi trước mặt người chơi 2.5m
+        Vec3 look = player.getLookAngle();
+        double spawnX = player.getX() + look.x * 2.5D;
+        double spawnY = player.getY() + 0.2D;
+        double spawnZ = player.getZ() + look.z * 2.5D;
+
+        Entity entity = targetType.create(level);
+        if (entity == null) {
+            player.displayClientMessage(Component.literal("§c⚠ Không thể khởi tạo bản thể sinh vật trong thế giới!"), true);
+            return;
+        }
+
+        if (customRestored && customEntityTag != null) {
+            entity.load(customEntityTag);
+        }
+        entity.moveTo(spawnX, spawnY, spawnZ, player.getYRot(), 0.0F);
+
+        // Hiệu ứng Ma Tố Tái Tạo Sinh Mệnh
+        level.sendParticles(ParticleTypes.REVERSE_PORTAL, spawnX, spawnY + 1.0D, spawnZ, 45, 0.5D, 0.8D, 0.5D, 0.1D);
+        level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, spawnX, spawnY + 0.8D, spawnZ, 30, 0.4D, 0.6D, 0.4D, 0.15D);
+        level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, spawnX, spawnY + 0.5D, spawnZ, 20, 0.3D, 0.4D, 0.3D, 0.05D);
+        level.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.EVOKER_CAST_SPELL, SoundSource.PLAYERS, 1.5F, 1.1F);
+        level.playSound(null, spawnX, spawnY, spawnZ, SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 0.8F, 1.4F);
+
+        level.addFreshEntity(entity);
+
+        // Tiêu hao 1 vật phẩm
+        if (stack.getCount() > 1) {
+            stack.shrink(1);
+            slot.putString("Name", stack.getHoverName().getString() + " x" + stack.getCount());
+            slot.putLong("Ep", 25000L * stack.getCount());
+            slot.put("ItemTag", stack.save(registryAccess));
+        } else {
+            list.remove(index);
+        }
         data.put(KEY_STOMACH, list);
 
-        ItemStack crafted = (craftKind == 0)
-                ? new ItemStack(Items.GOLDEN_APPLE, 2)
-                : new ItemStack(Items.NETHERITE_INGOT, 1);
-        player.getInventory().placeItemBackInInventory(crafted);
-        SageManager.sendCornerAlert(player, "Auto-Craft Hoàn Tất: Đã tổng hợp " + crafted.getHoverName().getString() + " x" + crafted.getCount() + " trong Không Gian Ảo!", 0xFF38BDF8, 4500, false);
+        SageManager.sendCornerAlert(player, "« Báo cáo »: Đã phân tích ma tố từ [" + stack.getHoverName().getString() + "] -> Tái tạo thành công " + SageManager.formatIndividual(entity) + "!", 0xFF38BDF8, 5500, false);
     }
 
     public static boolean storeItemStackIntoStomach(ServerPlayer player, ItemStack stack, boolean notify) {

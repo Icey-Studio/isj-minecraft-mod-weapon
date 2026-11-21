@@ -87,11 +87,11 @@ public class TaKinhDaiTangEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 2000.0D)
+                .add(Attributes.MAX_HEALTH, 6000.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.28D)
-                .add(Attributes.ATTACK_DAMAGE, 72.0D)
-                .add(Attributes.ARMOR, 24.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 12.0D)
+                .add(Attributes.ATTACK_DAMAGE, 216.0D)
+                .add(Attributes.ARMOR, 34.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 20.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D)
                 .add(Attributes.FOLLOW_RANGE, 44.0D);
     }
@@ -156,6 +156,11 @@ public class TaKinhDaiTangEntity extends Monster {
         this.goalSelector.addGoal(4, new LookAtPlayerGoal(this, LivingEntity.class, 12.0F));
         this.goalSelector.addGoal(5, new RandomLookAroundGoal(this));
 
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(
+                this, com.minhphuc.weapons.entity.tensura.VeldoraEntity.class, 5, false, false,
+                e -> e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity vd && vd.isAlive() && !vd.isSealed()
+                        && !isCalmControlledBy(vd.getOwnerUUID())
+        ));
         // Tự động tìm diệt mọi sinh vật sống xung quanh (quét mỗi 20 ticks = 1s để giảm tải CPU)
         this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(
                 this, LivingEntity.class, 20, true, false,
@@ -168,6 +173,10 @@ public class TaKinhDaiTangEntity extends Monster {
                     return true;
                 }
         ));
+    }
+
+    public boolean isCalmControlledBy(@Nullable java.util.UUID uuid) {
+        return uuid != null && this.ownerUuid != null && !this.isRampaging && this.ownerUuid.equals(uuid);
     }
 
     @Override
@@ -330,7 +339,7 @@ public class TaKinhDaiTangEntity extends Monster {
             this.sutraExposureMap.put(victim.getUUID(), exposure);
 
             // Sát thương tăng tiến theo thời gian tiếp xúc
-            float baseDmg = 4.0F + (exposure / 40.0F) * 3.5F;
+            float baseDmg = 12.0F + (exposure / 40.0F) * 10.5F;
 
             // Warden có thính giác siêu nhạy -> chịu gấp 2.5 lần sát thương!
             if (victim instanceof Warden) {
@@ -394,7 +403,7 @@ public class TaKinhDaiTangEntity extends Monster {
         }
 
         // Tác động trực tiếp lên mục tiêu
-        target.hurt(this.damageSources().mobAttack(this), 45.0F);
+        target.hurt(this.damageSources().mobAttack(this), 135.0F);
         target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 3, false, false, true));
         target.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 2, false, false, true));
         target.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, false, false, true));
@@ -433,7 +442,7 @@ public class TaKinhDaiTangEntity extends Monster {
             if (victim == this || !victim.isAlive() || victim instanceof TaKinhDaiTangEntity) continue;
             if (this.ownerUuid != null && !this.isRampaging && victim.getUUID().equals(this.ownerUuid)) continue;
 
-            victim.hurt(this.damageSources().magic(), 35.0F);
+            victim.hurt(this.damageSources().magic(), 105.0F);
             victim.addEffect(new MobEffectInstance(MobEffects.WITHER, 100, 1, false, false, true));
         }
     }

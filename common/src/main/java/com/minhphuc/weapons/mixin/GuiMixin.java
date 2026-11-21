@@ -218,7 +218,7 @@ public class GuiMixin {
         guiGraphics.fill(barX, barY, barX + fillW, barY + 4, barColor);
         guiGraphics.drawString(font, subTags, mpX + 6, mpY + 18, 0xFF94A3B8, false);
 
-        // Hiệu ứng HUD & Đổi Quyền Điều Khiển khi Trí Tuệ Vương Raphael tiếp quản cơ thể
+        // Hiệu ứng HUD & Đổi Quyền Điều Khiển khi Thông Tuệ Vương Raphael tiếp quản cơ thể
         boolean raphaelAuto = ClientSkillStateHandler.isRaphaelAutoBattle();
         float flash = ClientSkillStateHandler.getRaphaelTakeoverFlashProgress();
         int sw = mc.getWindow().getGuiScaledWidth();
@@ -241,7 +241,7 @@ public class GuiMixin {
             guiGraphics.fill(0, 0, 2, sh, borderColor);
             guiGraphics.fill(sw - 2, 0, sw, sh, borderColor);
 
-            String banner = "§b§l≪ TRÍ TUỆ VƯƠNG RAPHAEL ĐANG TIẾP QUẢN CƠ THỂ — NHẤN [X] / [SHIFT] ĐỂ TRẢ QUYỀN ≫";
+            String banner = "§b§l≪ THÔNG TUỆ VƯƠNG RAPHAEL ĐANG TIẾP QUẢN CƠ THỂ — NHẤN [X] / [SHIFT] ĐỂ TRẢ QUYỀN ≫";
             int bw = font.width(banner) + 18;
             int bx = (sw - bw) / 2;
             int by = 6;

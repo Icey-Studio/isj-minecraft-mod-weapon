@@ -198,9 +198,9 @@ public final class ClientCinematicSkillHandler {
         float age = (float) (mc.level.getGameTime() - startWorldTick) + partialTicks;
         if (age < 0 || age >= totalTicks) return null;
 
-        // Tính toán vị trí máy quay theo kịch bản của từng kỹ năng
+        // Tính toán vị trí máy quay theo kịch bản của từng kỹ năng (Linh Tử Băng Hoại giữ nguyên góc nhìn tự do)
         return switch (activeSkillId) {
-            case SkillVisualConfig.SKILL_DISINTEGRATION -> getDisintegrationPose(age, vanillaPos, vanillaYaw, vanillaPitch);
+            case SkillVisualConfig.SKILL_DISINTEGRATION -> null;
             case SkillVisualConfig.SKILL_JACOBS_LADDER -> getJacobsLadderPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_PURIFICATION_PILLAR -> getPurificationPillarPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_FAITH_AND_GRACE -> getFaithAndGracePose(age, vanillaPos, vanillaYaw, vanillaPitch);
@@ -1005,6 +1005,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> "DỊ GIỚI THẦN MÔN: THÁNH VỰC KHÔNG GIAN";
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> "LINH TỬ BỘC PHÁT: ĐẠI PHÁO NĂNG LƯỢNG THỦY TỔ";
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> "THẤT SẮC THẦN TRỤ: CỘT SÁNG CỰC ĐẠI";
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> "BẠO PHONG LONG: ĐẠI PHÁO PLASMA CHÂN LONG";
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> "HỖN ĐỘN LONG: DIỆT TINH TỨC HỖN MANG";
             default -> "TUYỆT KỸ MA VƯƠNG TENSURA";
         };
     }
@@ -1034,6 +1036,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> "次元神門 - DIMENSIONAL SANCTUARY";
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> "霊子暴発 - SPIRITRON OUTBURST";
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> "七色神柱 - CHROMATIC LIGHT PILLAR";
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> "暴風竜 - TEMPEST PLASMA CANNON";
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> "混沌竜 - CHAOS STAR BUSTER";
             default -> "ULTIMATE SKILL";
         };
     }
@@ -1063,6 +1067,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> 0x00E5FF; // Xanh lam dị giới
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> 0xFFD600; // Hoàng kim linh tử
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> 0xFF1744;   // Thất sắc quang trụ
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> 0x00E5FF; // Lam ngọc bão tố
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> 0xFF00FF;      // Hồng tím hỗn mang
             default -> 0xFFFFFF;
         };
     }

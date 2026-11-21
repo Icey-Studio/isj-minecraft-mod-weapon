@@ -165,7 +165,7 @@ public class AllOfCreationAbility {
         player.displayClientMessage(Component.literal("§b§l╔════════════════════════════════════════════════╗"), false);
         player.displayClientMessage(Component.literal("§b§l║   §e§l✦ THẨM ĐỊNH VẠN VẬT: SINH MỆNH THỰC THỂ ✦   §b§l║"), false);
         player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
-        player.displayClientMessage(Component.literal("§f  Danh Tính: §e" + name), false);
+        player.displayClientMessage(Component.literal("§f  Danh Tính: §e" + SageManager.formatIndividual(target)), false);
         player.displayClientMessage(Component.literal("§7  Chủng Tộc: §f" + species), false);
         player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a" + String.format("%.1f / %.1f (%.0f%%)", hp, maxHp, hpPct)), false);
         player.displayClientMessage(Component.literal("§d  Ma Tố Lượng (EP): §b" + NUM_FORMAT.format(ep) + " EP"), false);

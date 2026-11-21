@@ -452,6 +452,7 @@ public class JaunePlayerSkillManager {
 
     public static void dealDemonicDamage(ServerPlayer player, LivingEntity victim, float baseDmg, boolean hasBody, boolean isDemonLord) {
         if (victim == null || !victim.isAlive() || victim == player) return;
+        float mult = PrimordialArmorItem.getSkillPowerMultiplier(player);
         boolean isBoss = (victim instanceof net.minecraft.world.entity.boss.wither.WitherBoss)
                 || (victim instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon)
                 || (victim instanceof net.minecraft.world.entity.monster.warden.Warden)
@@ -460,15 +461,15 @@ public class JaunePlayerSkillManager {
 
         if (hasBody || isDemonLord) {
             if (isBoss) {
-                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 0.52F);
+                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 0.52F * mult);
             } else if (!(victim instanceof VelgryndEntity)) {
-                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 3.0F);
+                victim.hurt(player.damageSources().magic(), victim.getMaxHealth() * 3.0F * mult);
             }
         } else {
             if (isBoss) {
-                victim.hurt(player.damageSources().magic(), baseDmg * 0.7F);
+                victim.hurt(player.damageSources().magic(), baseDmg * 0.7F * mult);
             } else {
-                victim.hurt(player.damageSources().magic(), baseDmg);
+                victim.hurt(player.damageSources().magic(), baseDmg * mult);
             }
         }
     }
