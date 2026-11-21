@@ -69,7 +69,7 @@ Bảo kiếm hộ vệ thánh điện được tinh gọn thành 2 chiêu thức
   2. *Tà Khứ Vũ Thê Tử (Jacob's Ladder)*
   3. *Phép Màu Của Thần Linh (Miracle of the Gods)* — Cải tà quy chính mob thù địch thành dân làng / thú cưng, hồi sinh từ linh hồn
   4. *Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)* — Cột sáng thánh 40x40m giáng từ trời, đại phục hưng làng hoang phế
-  5. *Bạo Thực Vương (Beelzebuth)* — Triệu hồi Cột Lốc Xoáy Hư Không Tím Đen cao 42m chuẩn Anime quấn 4 dải nước lam ngọc; hút sạch chất lỏng (nước/dung nham) & sinh vật an toàn 100% không phá vỡ địa hình hay gây lag biển; tích hợp Thủy Khí Trảm (Water Blade) và Giải Phóng Thủy Triều 360° dập lửa hóa đá lava.
+  5. *Bạo Thực Vương (Beelzebuth)* — Luân chuyển 2 hình thái Anime: *Vực Toàn Hư Không* (cột lốc 42m hút nước) ⇄ *Hắc Động Thôn Phệ* (phễu hư không ngang 38m nuốt quân đoàn); gặp Long Chủng (Veldora/Hỗn Độn Long) tự bành trướng Mega Titan 105m; tích hợp Thủy Khí Trảm (Water Blade), Giải Phóng Thủy Triều 360°, và 5 tương tác Cố Vấn Tác Chiến Raphael 1-chạm [Y]/[N] (hoàn trả nước tinh khiết không lag, tái cấu trúc Dân Làng, hóa giải cuồng nộ Ma Vương, phục hồi Người Sắt và xoa dịu Đàn Ong).
   6. *Long Tinh Bộc Viêm Bá (Dragon Nova)*
   7. *Thần Nộ: Tuyệt Diệt Tinh Tú (Taisui Extinction Stars)*
   8. *Thị Thực (Seer Flesh)*

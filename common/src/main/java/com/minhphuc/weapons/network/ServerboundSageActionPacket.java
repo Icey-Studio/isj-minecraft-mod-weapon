@@ -27,6 +27,11 @@ public class ServerboundSageActionPacket {
     public static final int ACTION_WATER_BREATHING = 16;
     public static final int ACTION_DISARM_TARGET = 17;
     public static final int ACTION_SEER_FLESH_REGEN = 18;
+    public static final int ACTION_PURIFY_RESTORE_WATER = 19;
+    public static final int ACTION_RECONSTRUCT_ZOMBIES = 20;
+    public static final int ACTION_PACIFY_BERSERK_DEMON = 21;
+    public static final int ACTION_REPAIR_IRON_GOLEM = 22;
+    public static final int ACTION_PACIFY_ANGRY_BEES = 23;
 
     private final int action;
 

@@ -37,9 +37,12 @@ import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.IronGolem;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
@@ -410,6 +413,39 @@ public final class SageManager {
             sendCornerAlert(sp,
                     "« Báo cáo »: Ba-lô cá nhân gần đầy (" + usedSlots + "/36 ô)! Đề xuất: Kích hoạt [Quản Gia Hư Không] chuyển toàn bộ khoáng/đất vào Dạ Dày Azathoth.",
                     0xFFA855F7, 7500, false, ServerboundSageActionPacket.ACTION_HOOVER_TRASH);
+        }
+
+        // Tác chiến Raphael 1-Chạm: Người Sắt bị tổn hại
+        if (now - data.getLong("SageGolemRepairTick") >= 300L) {
+            for (net.minecraft.world.entity.animal.IronGolem golem : sl.getEntitiesOfClass(net.minecraft.world.entity.animal.IronGolem.class, sp.getBoundingBox().inflate(16.0D), g -> g.isAlive() && g.getHealth() < g.getMaxHealth() * 0.75F)) {
+                data.putLong("SageGolemRepairTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện Người Sắt bị tổn hại (" + (int) golem.getHealth() + "/" + (int) golem.getMaxHealth() + " HP). Ngài có muốn tiêu hao Thép Ma Thuật trong Dạ Dày để phục hồi 100% thể trạng không? [Y] Sửa Chữa / [N] Bỏ Qua",
+                        0xFF38BDF8, 8000, true, ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM);
+                break;
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Đàn Ong Cuồng Nộ do mất tổ
+        if (now - data.getLong("SageAngryBeesTick") >= 300L) {
+            for (net.minecraft.world.entity.animal.Bee bee : sl.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, sp.getBoundingBox().inflate(16.0D), b -> b.isAlive() && b.isAngry())) {
+                data.putLong("SageAngryBeesTick", now);
+                sendCornerAlert(sp,
+                        "« Cảnh báo »: Đàn ong đang cuồng nộ do mất tổ! Ngài có muốn dùng Mật Hoa Tinh Khiết trong Dạ Dày để xoa dịu và tái lập tổ ong mật không? [Y] Xoa Dịu / [N] Bỏ Qua",
+                        0xFFF59E0B, 8000, true, ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES);
+                break;
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Ma Vương Thức Tỉnh hoặc Boss rơi vào trạng thái Cuồng Nộ (Berserk)
+        if (now - data.getLong("SageBerserkPacifyTick") >= 400L) {
+            for (LivingEntity boss : sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(24.0D), e -> e != sp && e.isAlive() && (e instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity || e instanceof com.minhphuc.weapons.entity.tensura.MilimEntity || (e.hasEffect(MobEffects.DAMAGE_BOOST) && e.getEffect(MobEffects.DAMAGE_BOOST).getAmplifier() >= 2)))) {
+                data.putLong("SageBerserkPacifyTick", now);
+                sendCornerAlert(sp,
+                        "« Cảnh báo »: Phát hiện thực thể Ma Vương đang trong trạng thái Cuồng Nộ (Berserk)! Ngài có muốn dùng Hư Không Tâm Linh để hóa giải cơn thịnh nộ không? [Y] Hóa Giải / [N] Bỏ Qua",
+                        0xFFEF4444, 8500, true, ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON);
+                break;
+            }
         }
 
         // N38..N48
@@ -824,6 +860,99 @@ public final class SageManager {
                 sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.4F, 1.5F);
                 sp.displayClientMessage(Component.literal("§6§l[THỊ THỰC TÁI SINH] §fThông Tuệ Vương Raphael đã kích hoạt Nhãn Cầu Thị Thực: Tái cấu trúc thành công 100% Tim và Não!"), false);
                 sendCornerAlert(sp, "« Xác nhận »: Nhục thân đã tái cấu trúc hoàn tất! Lời nguyền tử vong bị thanh tẩy tuyệt đối!", 0xFF22C55E, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PURIFY_RESTORE_WATER -> {
+                int pendingWater = data.getInt("BeelzebuthPendingPurifyWater");
+                long centerLong = data.getLong("BeelzebuthPendingCenterPos");
+                BlockPos center = centerLong != 0 ? BlockPos.of(centerLong) : sp.blockPosition();
+                int radius = 8;
+                int restored = 0;
+                int limit = Math.max(32, Math.min(pendingWater, 256));
+                for (int y = center.getY(); y >= center.getY() - 6 && restored < limit; y--) {
+                    for (int x = -radius; x <= radius && restored < limit; x++) {
+                        for (int z = -radius; z <= radius && restored < limit; z++) {
+                            if (x * x + z * z > radius * radius) continue;
+                            BlockPos p = new BlockPos(center.getX() + x, y, center.getZ() + z);
+                            if (sl.getBlockState(p).isAir() && !sl.getBlockState(p.below()).isAir()) {
+                                sl.setBlock(p, Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
+                                restored++;
+                            }
+                        }
+                    }
+                }
+                data.putInt("BeelzebuthPendingPurifyWater", 0);
+                sl.sendParticles(ParticleTypes.SPLASH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 35, 1.0, 0.5, 1.0, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.SPLASH_POTION_BREAK, SoundSource.PLAYERS, 1.5F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.2F, 1.4F);
+                sp.displayClientMessage(Component.literal("§b§l[THANH TẨY NGUỒN NƯỚC] §fĐã thanh tẩy thành công và hoàn trả nguồn nước tinh khiết!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã thanh tẩy thành công! Hoàn trả nguồn nước tinh khiết vào môi trường (không gây giật lag)!", 0xFF00E5FF, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES -> {
+                int count = Math.max(1, data.getInt("BeelzebuthPendingZombieVillagers"));
+                data.putInt("BeelzebuthPendingZombieVillagers", 0);
+                for (int i = 0; i < Math.min(count, 8); i++) {
+                    Villager villager = EntityType.VILLAGER.create(sl);
+                    if (villager != null) {
+                        double ox = (i % 3 - 1) * 1.5D;
+                        double oz = (i / 3 - 1) * 1.5D;
+                        villager.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                        villager.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                        villager.setCustomName(Component.literal("§aDân Làng Phục Hưng"));
+                        sl.addFreshEntity(villager);
+                    }
+                }
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 1.2, 0.8, 1.2, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.PLAYERS, 1.4F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.3F);
+                sp.displayClientMessage(Component.literal("§a§l[TÁI CẤU TRÚC DÂN LÀNG] §fThông Tuệ Vương Raphael đã giải trừ tà khí, tái sinh thành công Dân Làng!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Tái cấu trúc thành công! " + count + " cá thể đã được giải trừ tà khí, hoàn nguyên thành Dân Làng khỏe mạnh!", 0xFF22C55E, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON -> {
+                List<LivingEntity> enraged = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(24.0D),
+                        e -> e != sp && e.isAlive() && (e instanceof OrcDisasterGeldEntity || e instanceof MilimEntity || e.hasEffect(MobEffects.DAMAGE_BOOST)));
+                int count = 0;
+                for (LivingEntity le : enraged) {
+                    le.removeEffect(MobEffects.DAMAGE_BOOST);
+                    le.removeEffect(MobEffects.MOVEMENT_SPEED);
+                    if (le instanceof Mob mob) {
+                        mob.setTarget(null);
+                    }
+                    le.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 2));
+                    le.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 1));
+                    sl.sendParticles(ParticleTypes.HEART, le.getX(), le.getY() + 1.5, le.getZ(), 15, 0.6, 0.6, 0.6, 0.05);
+                    count++;
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.5F, 1.8F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.5F);
+                sp.displayClientMessage(Component.literal("§d§l[HÓA GIẢI CUỒNG NỘ] §fHư Không Tâm Linh đã thanh tẩy tâm trí Ma Vương/Boss cuồng bạo!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Hư Không Tâm Linh đã thanh tẩy thành công trạng thái Cuồng Nộ! " + count + " thực thể đã lấy lại lý trí hoàn toàn!", 0xFF38BDF8, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM -> {
+                List<IronGolem> golems = sl.getEntitiesOfClass(IronGolem.class, sp.getBoundingBox().inflate(16.0D), g -> g.isAlive());
+                for (IronGolem g : golems) {
+                    g.setHealth(g.getMaxHealth());
+                    g.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 1));
+                    g.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 1200, 2));
+                    sl.sendParticles(ParticleTypes.ENCHANTED_HIT, g.getX(), g.getY() + 1.2, g.getZ(), 30, 0.6, 0.8, 0.6, 0.1);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.4F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, 1.6F, 1.0F);
+                sp.displayClientMessage(Component.literal("§b§l[SỬA CHỮA NGƯỜI SẮT] §fĐã dùng Thép Ma Thuật gia cố và phục hồi 100% thể trạng Người Sắt!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã tiêu hao Thép Ma Thuật phục hồi 100% thể trạng Người Sắt! Lớp giáp bảo vệ đã được gia cố tối đa!", 0xFF38BDF8, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES -> {
+                List<Bee> bees = sl.getEntitiesOfClass(Bee.class, sp.getBoundingBox().inflate(20.0D), b -> b.isAlive());
+                for (Bee b : bees) {
+                    b.stopBeingAngry();
+                    b.setTarget(null);
+                    b.setRemainingPersistentAngerTime(0);
+                    b.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                    sl.sendParticles(ParticleTypes.HEART, b.getX(), b.getY() + 0.3, b.getZ(), 3, 0.2, 0.2, 0.2, 0.02);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEE_POLLINATE, SoundSource.PLAYERS, 1.5F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.HONEYCOMB_WAX_ON, SoundSource.PLAYERS, 1.2F, 1.2F);
+                sp.displayClientMessage(Component.literal("§e§l[XOA DỊU ĐÀN ONG] §fĐã xoa dịu đàn ong cuồng nộ và tái lập tổ ấm hòa hoãn!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã dùng Mật Hoa Tinh Khiết xoa dịu thành công đàn ong! Đàn ong đã hòa hoãn và lấy lại tổ ấm!", 0xFFF59E0B, 6000, false);
             }
         }
     }

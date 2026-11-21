@@ -1011,9 +1011,10 @@ public class GuideBookScreen extends Screen {
         y += 2;
         y = drawWrapped(g, " §b2. Thông Tuệ Vương Raphael ([G] & Auto-Battle [X]):", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §f• §e50 Kỹ Năng Chủ Động§f + §bAuto-Battle [X]§f tự bay né đòn, bật Uriel khi nguy cấp & xả chiêu 0.6s/lần ([X] / [Shift] trả quyền).", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, " §53. Bạo Thực Vương Beelzebuth (Lốc Xoáy Hư Không Anime):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §5Cột Lốc Tím Đen cao 42m§f quấn quanh bởi §b4 dải ruy băng nước lam ngọc§f; hút & thanh lọc nước/lava an toàn §aZero-Lag ở biển§f, nuốt sinh vật vào Dạ Dày.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §b[Shift + Nhìn Thẳng]: §fPhóng §bThủy Khí Trảm (Water Blade)§f 36m (140 DMG) cắt ngọt kẻ thù; §3[Shift + Nhìn Xuống]: §fXả §3Thủy Triều 360°§f dập lửa & hóa đá dung nham.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §53. Bạo Thực Vương Beelzebuth (2 Hình Thái Anime & Thôn Phệ Long Chủng):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §dLuân chuyển 2 Hình Thái: §5Vực Toàn Hư Không§f (Lốc bão tố 42m) ⇄ §5Hắc Động Thôn Phệ§f (Phễu ngang 38m nuốt quân đoàn). Gặp Long Chủng (Veldora/Hỗn Độn Long) tự bành trướng §6Mega Titan 105m§f bao trọn long thể!", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §bCố vấn Raphael [Y]/[N]: §fThanh tẩy hoàn trả nước không lag, tái cấu trúc Zombie thành Dân Làng, hóa giải Cuồng Nộ Ma Vương, sửa Người Sắt & xoa dịu Đàn Ong.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §b[Shift + Nhìn Thẳng]: §fPhóng §bThủy Khí Trảm (Water Blade)§f 36m (140 DMG); §3[Shift + Nhìn Xuống]: §fXả §3Thủy Triều 360°§f dập lửa & hóa đá dung nham.", left + 16, y, fullW, maxY);
         drawWrapped(g, " §d4. Dạ Dày Vô Hạn Azathoth ([B]): §f120 ô chứa, §eClick Túi Đồ cất trực tiếp§f, §dAuto-Loot Hư Không§f & Tích lũy Ma Tố/EP (+80,000 MP khi lọc nước)!", left + 16, y, fullW, maxY);
     }
 

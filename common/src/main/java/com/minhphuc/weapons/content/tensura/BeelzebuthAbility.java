@@ -8,6 +8,7 @@ import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
 import com.minhphuc.weapons.network.ClientboundCinematicSkillPacket;
 import com.minhphuc.weapons.network.ModMessages;
+import com.minhphuc.weapons.network.ServerboundSageActionPacket;
 import com.mojang.math.Transformation;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleTypes;
@@ -27,6 +28,8 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.item.PrimedTnt;
 import net.minecraft.world.entity.monster.Creeper;
+import net.minecraft.world.entity.monster.Zombie;
+import net.minecraft.world.entity.monster.ZombieVillager;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ClipContext;
@@ -50,12 +53,15 @@ import java.util.Set;
 /**
  * Kỹ Năng Tối Thượng: Bạo Thực Vương Beelzebuth (Gluttonous King Beelzebuth - 暴食之王)
  * Lấy cảm hứng từ anime Chuyển Sinh Thành Slime:
- * - Triệu hồi Lốc Xoáy Hư Không Tím Đen khổng lồ cao 42m với 4 dải nước xoáy lam ngọc quấn quanh.
- * - Hút và nuốt chửng chất lỏng (nước biển, hồ, dung nham) và sinh vật vào Dạ Dày Vô Hạn Azathoth.
- * - An toàn tuyệt đối với địa hình khối cứng (không phá hỏng cát, đá, san hô, công trình).
- * - Chống lag tối ưu cho đại dương (Safe Draining, không tạo chuỗi cập nhật khối gây sụt giảm TPS).
- * - Tự động lọc sạch nước, phân tích hóa học tách muối/tạp chất và tích lũy ma tố.
- * - Cho phép xuất ngược chất lỏng đã lọc thành [Thủy Khí Trảm - Water Blade] hoặc [Giải Phóng Thủy Triều].
+ * - Luân phiên 2 Hình Thái tác chiến:
+ *   + Hình Thái 1: Vực Toàn Hư Không (Cột Lốc Xoáy Bão Tố 42m thẳng đứng hút nước/biển).
+ *   + Hình Thái 2: Hắc Động Thôn Phệ (Phễu Hư Không khổng lồ vươn ngang 38m nuốt trọn không gian & quân đoàn).
+ * - Tự động nhận diện Long Chủng (Veldora, Hỗn Độn Long, Velgrynd, Velzard) để bành trướng quy mô Cực Đại (Mega Titan Scale 105m).
+ * - Chống lag đại dương tuyệt đối (Safe Draining), giữ 100% block rắn nguyên vẹn.
+ * - Tích hợp Cố Vấn Tác Chiến Raphael 1-Chạm [Y]/[N]:
+ *   + Thanh tẩy và hoàn trả nguồn nước tinh khiết vào môi trường.
+ *   + Tái cấu trúc Zombie Dân Làng thành Dân Làng khỏe mạnh.
+ * - Hỗ trợ Thủy Khí Trảm (Water Blade) và Giải Phóng Thủy Triều 360°.
  */
 public class BeelzebuthAbility {
 
@@ -63,21 +69,29 @@ public class BeelzebuthAbility {
         public final ServerLevel level;
         public final ServerPlayer caster;
         public final Vec3 centerPos;
+        public final Vec3 dir;
+        public final int form; // 0 = Vertical Tornado, 1 = Horizontal Funnel Maw
         public final int totalTicks;
         public int ticksRemaining;
         public final SkillPowerRoll powerRoll;
+        public final float scaleMultiplier;
         public int absorbedWaterBlocks = 0;
         public int absorbedLavaBlocks = 0;
         public int swallowedEntities = 0;
         public int swallowedItems = 0;
+        public int swallowedZombies = 0;
 
-        public ActiveBeelzebuthVortex(ServerLevel level, ServerPlayer caster, Vec3 centerPos, int totalTicks, SkillPowerRoll powerRoll) {
+        public ActiveBeelzebuthVortex(ServerLevel level, ServerPlayer caster, Vec3 centerPos, Vec3 dir, int form,
+                                     int totalTicks, SkillPowerRoll powerRoll, float scaleMultiplier) {
             this.level = level;
             this.caster = caster;
             this.centerPos = centerPos;
+            this.dir = dir;
+            this.form = form;
             this.totalTicks = totalTicks;
             this.ticksRemaining = totalTicks;
             this.powerRoll = powerRoll;
+            this.scaleMultiplier = scaleMultiplier;
         }
     }
 
@@ -114,22 +128,68 @@ public class BeelzebuthAbility {
     public static final List<ActiveBeelzebuthDragon> ACTIVE_DRAGONS = new ArrayList<>();
 
     /**
-     * Kích hoạt Bạo Thực Vương: Triệu hồi Cột Lốc Xoáy Hư Không Hút Nước & Nuốt Chửng Vạn Vật
+     * Kích hoạt Bạo Thực Vương: Luân phiên Hình Thái 1 (Lốc Xoáy Bão Tố) và Hình Thái 2 (Phễu Hư Không Ngang)
      */
     public static void executeBeelzebuth(ServerLevel level, ServerPlayer player) {
         SkillPowerRoll roll = SkillPowerRoll.roll();
         roll.announceAndPlayEffects(player, "Bạo Thực Vương: Thôn Phệ (Predator)");
 
+        CompoundTag data = EntityDataHelper.getCustomData(player);
+        int currentForm = data.getInt("BeelzebuthForm"); // 0 = Vertical Tornado, 1 = Horizontal Funnel
+        data.putInt("BeelzebuthForm", currentForm == 0 ? 1 : 0); // Đổi lượt kế tiếp
+
         Vec3 eye = player.getEyePosition(1.0F);
         Vec3 look = player.getLookAngle();
 
-        // Tìm vị trí tâm lốc xoáy (bề mặt nước/đất mà người chơi nhìn vào hoặc 10m phía trước)
-        HitResult hit = level.clip(new ClipContext(eye, eye.add(look.scale(36.0D)), ClipContext.Block.OUTLINE, ClipContext.Fluid.ANY, player));
+        // 1. Quét nhận diện Long Chủng xung quanh (Veldora, Hỗn Độn Long, Velgrynd, Velzard)
+        boolean dragonDetected = false;
+        AABB checkDragonBox = player.getBoundingBox().inflate(45.0D);
+        List<LivingEntity> dragons = level.getEntitiesOfClass(LivingEntity.class, checkDragonBox, e -> e.isAlive() && (
+                e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity ||
+                e instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity ||
+                e instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity ||
+                e instanceof com.minhphuc.weapons.entity.tensura.ChaosDragonEntity ||
+                e.getType().getDescriptionId().toLowerCase().contains("dragon")
+        ));
+        if (!dragons.isEmpty()) {
+            dragonDetected = true;
+        }
+        float scaleMult = dragonDetected ? 2.8F : roll.multiplier;
+
         Vec3 center;
-        if (hit.getType() != HitResult.Type.MISS) {
-            center = hit.getLocation();
+        Vec3 dir;
+        int durationTicks = 80; // 4.0 giây
+
+        if (currentForm == 0) {
+            // HÌNH THÁI 1: VỰC TOÀN HƯ KHÔNG (Cột lốc xoáy bão tố 42m thẳng đứng)
+            HitResult hit = level.clip(new ClipContext(eye, eye.add(look.scale(36.0D)), ClipContext.Block.OUTLINE, ClipContext.Fluid.ANY, player));
+            if (hit.getType() != HitResult.Type.MISS) {
+                center = hit.getLocation();
+            } else {
+                center = player.position().add(look.scale(10.0D));
+            }
+            dir = new Vec3(0, 1, 0);
+
+            player.displayClientMessage(
+                    Component.literal("§5§l[BẠO THỰC VƯƠNG] §dĐã giải phóng Vực Toàn Hư Không (Lốc Xoáy Bão Tố)! Đang hút chất lỏng và nuốt chửng sinh vật..."),
+                    true
+            );
         } else {
-            center = player.position().add(look.scale(10.0D));
+            // HÌNH THÁI 2: HẮC ĐỘNG THÔN PHỆ (Phễu Hư Không khổng lồ vươn ngang 38m từ bàn tay)
+            center = eye.add(look.scale(1.2D));
+            dir = look;
+
+            player.displayClientMessage(
+                    Component.literal("§5§l[BẠO THỰC VƯƠNG] §dĐã giải phóng Hắc Động Thôn Phệ (Phễu Hư Không Tiêu Hóa)! Đang nuốt trọn không gian và kẻ địch..."),
+                    true
+            );
+        }
+
+        if (dragonDetected) {
+            player.displayClientMessage(
+                    Component.literal("§6§l[BẠO THỰC VƯƠNG: ĐẠI LONG THÔN PHỆ] §ePhát hiện Long Chủng! Bành trướng quy mô Hư Không lên Cực Đại (Mega Titan Scale) để bao trọn Long Thể!"),
+                    false
+            );
         }
 
         // Âm thanh uy nghiêm của Bạo Thực Vương
@@ -137,25 +197,16 @@ public class BeelzebuthAbility {
         level.playSound(null, center.x, center.y, center.z, SoundEvents.WARDEN_ROAR, SoundSource.PLAYERS, 2.5F, 0.65F);
         level.playSound(null, center.x, center.y, center.z, SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 2.0F, 0.70F);
 
-        // Gửi gói hiệu ứng điện ảnh Anime Lốc Xoáy Hư Không cho tất cả người chơi lân cận
-        int durationTicks = 80; // 4.0 giây
+        // Gửi gói tin đồng bộ hiệu ứng điện ảnh đến Client
         ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
-                SkillVisualConfig.SKILL_BEELZEBUTH, player.getUUID(), center, new Vec3(0, 1, 0), durationTicks, ClientboundCinematicSkillPacket.ACTION_START, roll.multiplier
+                SkillVisualConfig.SKILL_BEELZEBUTH, player.getUUID(), center, dir, durationTicks, ClientboundCinematicSkillPacket.ACTION_START, scaleMult
         ));
 
-        ACTIVE_VORTICES.add(new ActiveBeelzebuthVortex(level, player, center, durationTicks, roll));
-
-        player.displayClientMessage(
-                Component.literal("§5§l[BẠO THỰC VƯƠNG] §dĐã giải phóng Lốc Xoáy Hư Không Beelzebuth! Đang hút chất lỏng và nuốt chửng sinh vật..."),
-                true
-        );
+        ACTIVE_VORTICES.add(new ActiveBeelzebuthVortex(level, player, center, dir, currentForm, durationTicks, roll, scaleMult));
     }
 
     /**
-     * Vận hành Cột Lốc Xoáy Bạo Thực Vương mỗi tick:
-     * - Hút xoắn ốc sinh vật lên cao và nuốt vào Dạ Dày Vô Hạn.
-     * - Rút chất lỏng (nước/dung nham) an toàn không giật lag.
-     * - Hoàn tất phân tích thanh lọc nước và cộng Ma Tố.
+     * Vận hành Cột Lốc Xoáy & Phễu Hư Không Bạo Thực Vương mỗi tick
      */
     public static void tickVortices(ServerLevel serverLevel) {
         if (ACTIVE_VORTICES.isEmpty()) return;
@@ -167,6 +218,7 @@ public class BeelzebuthAbility {
 
             v.ticksRemaining--;
             Vec3 c = v.centerPos;
+            boolean isTitan = v.scaleMultiplier > 1.5F;
 
             // Hiệu ứng hạt trung tâm
             v.level.sendParticles(ParticleTypes.PORTAL, c.x, c.y + 1.0D, c.z, 8, 1.2D, 1.0D, 1.2D, 0.05D);
@@ -177,27 +229,45 @@ public class BeelzebuthAbility {
             }
 
             // 1. LỰC HÚT XOẮN ỐC THỰC THỂ (Entity Suction Vortex)
-            AABB vacuumBox = new AABB(c.x - 16.0D, c.y - 4.0D, c.z - 16.0D, c.x + 16.0D, c.y + 42.0D, c.z + 16.0D);
+            double vacRadius = isTitan ? 36.0D : 16.0D;
+            double vacHeight = isTitan ? 100.0D : 42.0D;
+            AABB vacuumBox = new AABB(c.x - vacRadius, c.y - 6.0D, c.z - vacRadius, c.x + vacRadius, c.y + vacHeight, c.z + vacRadius);
+
+            if (v.form == 1) {
+                // Hình thái Phễu Ngang: Hộp quét theo hướng phóng
+                double reach = (isTitan ? 80.0D : 38.0D);
+                vacuumBox = new AABB(c, c.add(v.dir.scale(reach))).inflate(isTitan ? 28.0D : 14.0D);
+            }
+
             List<Entity> suctionTargets = v.level.getEntities((Entity) null, vacuumBox,
                     e -> e != v.caster && e.isAlive() && (v.caster == null || !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(v.caster.getUUID(), e)));
 
             for (Entity entity : suctionTargets) {
-                double dx = c.x - entity.getX();
-                double dz = c.z - entity.getZ();
-                double dist = Math.hypot(dx, dz);
+                double dist = entity.position().distanceTo(c);
 
-                // Lực hút vào trục tâm + lực xoay tròn tiếp tuyến + lực nâng bổng lên cột lốc xoáy
-                double pullStrength = Math.max(0.25D, 1.25D - (dist / 16.0D));
-                double angle = Math.atan2(dz, dx) + 0.55D; // Xoắn ốc tiếp tuyến
-                double vx = Math.cos(angle) * pullStrength;
-                double vz = Math.sin(angle) * pullStrength;
-                double vy = 0.32D + (dist < 4.0D ? 0.38D : 0.08D);
+                if (v.form == 0) {
+                    // Hình thái 1: Hút xoắn ốc bão tố thẳng đứng
+                    double dx = c.x - entity.getX();
+                    double dz = c.z - entity.getZ();
+                    double horizDist = Math.hypot(dx, dz);
+                    double pullStrength = Math.max(0.3D, 1.3D - (horizDist / vacRadius));
+                    double angle = Math.atan2(dz, dx) + 0.55D;
+                    double vx = Math.cos(angle) * pullStrength;
+                    double vz = Math.sin(angle) * pullStrength;
+                    double vy = 0.35D + (horizDist < 5.0D ? 0.40D : 0.08D);
 
-                entity.setDeltaMovement(vx, vy, vz);
-                entity.hasImpulse = true;
+                    entity.setDeltaMovement(vx, vy, vz);
+                    entity.hasImpulse = true;
+                } else {
+                    // Hình thái 2: Hút ngang theo phễu vào họng hư không
+                    Vec3 toMouth = c.subtract(entity.position()).normalize().scale(1.25D);
+                    entity.setDeltaMovement(toMouth.x, toMouth.y * 0.4D + 0.1D, toMouth.z);
+                    entity.hasImpulse = true;
+                }
 
-                // Nuốt chửng khi bị cuốn vào mắt bão (bán kính <= 4.2m)
-                if (dist <= 4.2D && entity.getY() >= c.y - 2.0D && entity.getY() <= c.y + 40.0D) {
+                // Nuốt chửng khi bị cuốn vào mắt bão (bán kính <= 4.5m hoặc <= 10m đối với Titan Long)
+                double swallowRadius = isTitan ? 10.0D : 4.5D;
+                if (dist <= swallowRadius) {
                     if (entity instanceof ItemEntity itemEntity) {
                         if (v.caster != null) {
                             AzathothStomachData.storeItemStackIntoStomach(v.caster, itemEntity.getItem().copy(), false);
@@ -206,6 +276,38 @@ public class BeelzebuthAbility {
                         v.swallowedItems++;
                     } else if (entity instanceof PrimedTnt || entity instanceof Creeper) {
                         entity.discard();
+                    } else if (entity instanceof ZombieVillager || entity instanceof Zombie) {
+                        // Ghi nhận cá thể Zombie có thể tái cấu trúc
+                        v.swallowedZombies++;
+                        v.swallowedEntities++;
+                        v.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, entity.getX(), entity.getY() + 1.0D, entity.getZ(), 5, 0.2, 0.2, 0.2, 0.05);
+                        entity.discard();
+                    } else if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity veldora) {
+                        // Thôn Phệ Bạo Phong Long Veldora vào Dạ Dày Vô Hạn
+                        if (v.caster != null) {
+                            EntityDataHelper.getCustomData(v.caster).putBoolean(AzathothStomachData.KEY_VELDORA_BEFRIENDED, true);
+                            com.minhphuc.weapons.world.VeldoraWorldData.get(v.level.getServer().overworld()).setVeldoraStoredInStomach(true, false);
+                            MagiculesManager.addAzathothConversion(v.caster, 500_000L);
+                            TensuraEvents.handleMobDeathDrop(v.caster, veldora);
+                        }
+                        veldora.discard();
+                        v.swallowedEntities++;
+                        v.level.sendParticles(ParticleTypes.FLASH, veldora.getX(), veldora.getY() + 2.0D, veldora.getZ(), 3, 0, 0, 0, 0);
+                        if (v.caster != null) {
+                            SageManager.sendCornerAlert(v.caster, "« Báo cáo »: Đã thôn phệ Bạo Phong Long Veldora vào Dạ Dày Vô Hạn Azathoth! Phong ấn đang được phân tích giải trừ.", 0xFF38BDF8, 8000, false);
+                        }
+                    } else if (entity instanceof com.minhphuc.weapons.entity.tensura.ChaosDragonEntity chaosDragon) {
+                        // Thôn Phệ & Thanh Tẩy Hỗn Độn Long
+                        if (v.caster != null) {
+                            TensuraEvents.handleMobDeathDrop(v.caster, chaosDragon);
+                            MagiculesManager.addAzathothConversion(v.caster, 350_000L);
+                        }
+                        chaosDragon.discard();
+                        v.swallowedEntities++;
+                        v.level.sendParticles(ParticleTypes.FLASH, chaosDragon.getX(), chaosDragon.getY() + 2.0D, chaosDragon.getZ(), 3, 0, 0, 0, 0);
+                        if (v.caster != null) {
+                            SageManager.sendCornerAlert(v.caster, "« Báo cáo »: Đã thanh tẩy và thôn phệ Hỗn Độn Long vào Dạ Dày Vô Hạn Azathoth! (+350,000 EP)", 0xFFA855F7, 8000, false);
+                        }
                     } else if (entity instanceof LivingEntity living) {
                         if (living.getHealth() <= 120.0F || living.getMaxHealth() <= 200.0F) {
                             v.level.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -216,7 +318,6 @@ public class BeelzebuthAbility {
                             living.discard();
                             v.swallowedEntities++;
                         } else {
-                            // Boss hoặc quái khủng: chịu 45 sát thương chuẩn mỗi giây và hiệu ứng hư vô
                             DamageSource dmg = (v.caster != null) ? v.level.damageSources().playerAttack(v.caster) : v.level.damageSources().magic();
                             living.hurt(dmg, 45.0F * v.powerRoll.multiplier);
                             living.addEffect(new MobEffectInstance(MobEffects.WITHER, 60, 2));
@@ -227,7 +328,6 @@ public class BeelzebuthAbility {
             }
 
             // 2. HẤP THỤ CHẤT LỎNG AN TOÀN - CHỐNG LAG ĐẠI DƯƠNG (Safe Fluid Absorption)
-            // Quét định kỳ mỗi 2 tick một đợt tối đa 32 khối chất lỏng xung quanh tâm
             if (v.ticksRemaining % 2 == 0) {
                 int drainedInPulse = 0;
                 int maxDrainPerPulse = 32;
@@ -241,30 +341,25 @@ public class BeelzebuthAbility {
                             BlockPos p = centerPos.offset(dx, dy, dz);
                             BlockState state = v.level.getBlockState(p);
 
-                            // Kiểm tra nước biển / hồ
                             if (state.is(Blocks.WATER) || state.getFluidState().is(net.minecraft.tags.FluidTags.WATER)) {
-                                // Sử dụng Flag 2 (Block.UPDATE_CLIENTS) để không kích hoạt chuỗi cập nhật lan truyền lag
                                 v.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
                                 v.absorbedWaterBlocks++;
                                 drainedInPulse++;
                             } else if (state.hasProperty(BlockStateProperties.WATERLOGGED) && state.getValue(BlockStateProperties.WATERLOGGED)) {
-                                // Khối bị ngập nước (san hô, phiến đá): chỉ rút nước, giữ nguyên khối rắn!
                                 v.level.setBlock(p, state.setValue(BlockStateProperties.WATERLOGGED, false), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
                                 v.absorbedWaterBlocks++;
                                 drainedInPulse++;
                             } else if (state.is(Blocks.LAVA) || state.getFluidState().is(net.minecraft.tags.FluidTags.LAVA)) {
-                                // Kiểm tra dung nham
                                 v.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
                                 v.absorbedLavaBlocks++;
                                 drainedInPulse++;
                             }
-                            // TUYỆT ĐỐI KHÔNG ẢNH HƯỞNG CÁC BLOCK RẮN (Đá, cát, sỏi, công trình đều nguyên vẹn)
                         }
                     }
                 }
             }
 
-            // 3. KẾT THÚC LỐC XOÁY: BÁO CÁO RAPHAEL & NẠP DỮ LIỆU
+            // 3. KẾT THÚC CHIÊU THỨC: KÍCH HOẠT ĐỀ XUẤT RAPHAEL 1-CHẠM [Y] / [N]
             if (v.ticksRemaining <= 0) {
                 v.level.playSound(null, c.x, c.y, c.z, SoundEvents.GENERIC_SPLASH, SoundSource.PLAYERS, 2.5F, 0.8F);
                 v.level.playSound(null, c.x, c.y, c.z, SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 2.0F, 0.7F);
@@ -276,15 +371,25 @@ public class BeelzebuthAbility {
                     data.putInt("BeelzebuthStoredWater", curWater + v.absorbedWaterBlocks);
                     data.putInt("BeelzebuthStoredLava", curLava + v.absorbedLavaBlocks);
 
-                    // Hồi phục Ma Tố & Thưởng EP từ quá trình phân tích
                     MagiculesManager.restoreMagicules(v.caster, 80_000L);
                     MagiculesManager.addAzathothConversion(v.caster, 80_000L);
 
-                    // Thông báo Cố vấn Tác chiến Raphael
-                    String report = String.format(Locale.ROOT,
-                            "« Báo cáo. Đã kích hoạt Bạo Thực Vương Beelzebuth: Đã phân tích và hấp thụ %d khối nước tinh khiết, %d khối dung nham và %d sinh vật vào Dạ Dày Vô Hạn Azathoth. Thanh lọc tách muối/tạp chất, tích trữ áp suất thủy lực và nhiệt năng (+80,000 Ma tố). »",
-                            v.absorbedWaterBlocks, v.absorbedLavaBlocks, v.swallowedEntities);
-                    SageManager.sendCornerAlert(v.caster, report, 0x00FFFF, 7500, false);
+                    // Đề xuất 1: Thanh tẩy và hoàn trả nguồn nước tinh khiết
+                    if (v.absorbedWaterBlocks > 0) {
+                        data.putInt("BeelzebuthPendingPurifyWater", v.absorbedWaterBlocks);
+                        data.putLong("BeelzebuthPendingCenterPos", BlockPos.containing(v.centerPos).asLong());
+                        SageManager.sendCornerAlert(v.caster,
+                                "« Báo cáo »: Đã hấp thụ " + v.absorbedWaterBlocks + " khối nước. Ngài có muốn Thông Tuệ Vương Raphael thanh tẩy và hoàn trả nguồn nước tinh khiết không? [Y] Đồng ý / [N] Giữ trong Dạ Dày",
+                                0xFF00E5FF, 9000, true, ServerboundSageActionPacket.ACTION_PURIFY_RESTORE_WATER);
+                    }
+
+                    // Đề xuất 2: Tái cấu trúc Zombie Dân Làng
+                    if (v.swallowedZombies > 0) {
+                        data.putInt("BeelzebuthPendingZombieVillagers", v.swallowedZombies);
+                        SageManager.sendCornerAlert(v.caster,
+                                "« Báo cáo »: Phát hiện " + v.swallowedZombies + " cá thể Zombie Dân Làng trong Dạ Dày. Ngài có muốn giải trừ virus và tái cấu trúc thành Dân Làng không? [Y] Tái Cấu Trúc / [N] Tiêu Hóa",
+                                0xFF22C55E, 9000, true, ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES);
+                    }
                 }
 
                 it.remove();
@@ -294,8 +399,6 @@ public class BeelzebuthAbility {
 
     /**
      * THỦY KHÍ TRẢM (Water Blade / High-Pressure Aqua Cutter)
-     * Kích hoạt khi Sneak + Click nhìn về phía trước:
-     * Tiêu hao nước tinh khiết đã lọc trong Dạ Dày Vô Hạn, phóng ra lưỡi dao nước áp suất cao chém ngọt mọi thứ phía trước.
      */
     public static void castWaterBlade(ServerLevel level, ServerPlayer player) {
         CompoundTag data = EntityDataHelper.getCustomData(player);
@@ -318,7 +421,6 @@ public class BeelzebuthAbility {
         Vec3 look = player.getLookAngle();
         double range = 36.0D;
 
-        // Bắn chùm hạt tia nước áp suất cao cực đẹp
         for (double d = 1.0D; d <= range; d += 1.2D) {
             Vec3 pos = eye.add(look.scale(d));
             level.sendParticles(ParticleTypes.SPLASH, pos.x, pos.y, pos.z, 4, 0.15D, 0.15D, 0.15D, 0.05D);
@@ -328,7 +430,6 @@ public class BeelzebuthAbility {
             }
         }
 
-        // Quét sát thương trảm xuyên thấu (140.0F true damage)
         AABB beamBox = new AABB(eye, eye.add(look.scale(range))).inflate(2.2D);
         List<LivingEntity> victims = level.getEntitiesOfClass(LivingEntity.class, beamBox,
                 e -> e != player && e.isAlive() && !com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity.isContractedAllyOfPlayer(player.getUUID(), e));
@@ -358,8 +459,6 @@ public class BeelzebuthAbility {
 
     /**
      * GIẢI PHÓNG THỦY TRIỀU (Purified Tidal Shockwave)
-     * Kích hoạt khi Sneak + Cúi nhìn xuống đất:
-     * Xả nước áp suất cao dạng sóng xung kích 360 độ dập tắt biển lửa, làm nguội dung nham thành Hắc Diệu Thạch và đẩy lùi kẻ thù.
      */
     public static void castTidalRelease(ServerLevel level, ServerPlayer player) {
         CompoundTag data = EntityDataHelper.getCustomData(player);
@@ -377,7 +476,6 @@ public class BeelzebuthAbility {
         BlockPos center = player.blockPosition();
         int radius = 12;
 
-        // Dập lửa và làm nguội dung nham xung quanh
         for (int x = -radius; x <= radius; x++) {
             for (int y = -3; y <= 4; y++) {
                 for (int z = -radius; z <= radius; z++) {
@@ -394,7 +492,6 @@ public class BeelzebuthAbility {
             }
         }
 
-        // Đẩy lùi kẻ thù xung quanh 360 độ
         AABB waveBox = new AABB(player.getX() - radius, player.getY() - 3, player.getZ() - radius,
                 player.getX() + radius, player.getY() + 4, player.getZ() + radius);
         List<LivingEntity> nearby = level.getEntitiesOfClass(LivingEntity.class, waveBox,
@@ -408,7 +505,6 @@ public class BeelzebuthAbility {
             e.clearFire();
         }
 
-        // Hạt sóng nước tung tóe tỏa rộng 360 độ
         for (int i = 0; i < 360; i += 15) {
             double rad = Math.toRadians(i);
             double px = player.getX() + Math.cos(rad) * 6.0D;

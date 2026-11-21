@@ -605,23 +605,120 @@ public final class ClientCinematicSkillRenderer {
     }
 
     // =========================================================================
-    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - ANIME WATER VOID TORNADO & CYAN WATER RIBBONS)
+    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - ANIME TORNADO & HORIZONTAL CONICAL VOID MAW)
     // =========================================================================
     private static void renderBeelzebuth(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
         float mult = skill.powerMultiplier() > 0.1f ? skill.powerMultiplier() : 1.0f;
-        float h = 42.0f * mult;
         float fade = (age < 8.0f) ? (age / 8.0f) : ((age < skill.totalTicks() - 12) ? 1.0f : Math.max(0.0f, (skill.totalTicks() - age) / 12.0f));
         int op = (int) (fade * 220.0f);
 
+        Vec3 dir = skill.direction();
+        boolean isHorizontalFunnel = (dir != null && Math.abs(dir.y) < 0.92D && dir.lengthSqr() > 1e-4);
+
+        if (isHorizontalFunnel) {
+            // HÌNH THÁI 2: HẮC ĐỘNG THÔN PHỆ (PHỄU HƯ KHÔNG VƯƠN NGANG TỪ TAY)
+            Vec3 f = dir.normalize();
+            Vec3 tempUp = Math.abs(f.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 r = f.cross(tempUp).normalize();
+            Vec3 u = r.cross(f).normalize();
+
+            float len = 38.0f * mult;
+            float rBase = 1.2f * mult;
+            float rMouth = 14.0f * mult;
+            int slices = 16;
+            int segments = 16;
+
+            // 1. Thân phễu xoắn ốc tím thẫm vươn dài theo hướng nhìn
+            for (int s = 0; s < slices; s++) {
+                float t0 = (float) s / slices;
+                float t1 = (float) (s + 1) / slices;
+                float d0 = t0 * len;
+                float d1 = t1 * len;
+
+                float rad0 = (rBase + t0 * (rMouth - rBase)) * (1.0f + 0.08f * (float) Math.sin(t0 * 10.0f + age * 0.25f));
+                float rad1 = (rBase + t1 * (rMouth - rBase)) * (1.0f + 0.08f * (float) Math.sin(t1 * 10.0f + age * 0.25f));
+
+                float rot0 = age * 0.18f + s * 0.12f;
+                float rot1 = age * 0.18f + (s + 1) * 0.12f;
+
+                for (int seg = 0; seg < segments; seg++) {
+                    double a00 = rot0 + (seg * 2.0 * Math.PI / segments);
+                    double a01 = rot0 + ((seg + 1) * 2.0 * Math.PI / segments);
+                    double a10 = rot1 + (seg * 2.0 * Math.PI / segments);
+                    double a11 = rot1 + ((seg + 1) * 2.0 * Math.PI / segments);
+
+                    Vec3 p00 = f.scale(d0).add(r.scale(Math.cos(a00) * rad0)).add(u.scale(Math.sin(a00) * rad0));
+                    Vec3 p01 = f.scale(d0).add(r.scale(Math.cos(a01) * rad0)).add(u.scale(Math.sin(a01) * rad0));
+                    Vec3 p10 = f.scale(d1).add(r.scale(Math.cos(a10) * rad1)).add(u.scale(Math.sin(a10) * rad1));
+                    Vec3 p11 = f.scale(d1).add(r.scale(Math.cos(a11) * rad1)).add(u.scale(Math.sin(a11) * rad1));
+
+                    int col = (seg % 2 == 0) ? 0x2A0845 : 0x4A148C;
+                    if ((s + seg) % 3 == 0) col = 0x6A1B9A;
+                    quad(v, m, p00, p01, p11, p10, col, op);
+                }
+            }
+
+            // 2. 4 Dải ruy băng xoắn ốc lam ngọc quấn quanh thân phễu
+            int ribbonSteps = 28;
+            for (int rIdx = 0; rIdx < 4; rIdx++) {
+                double startAngle = rIdx * (Math.PI / 2.0);
+                for (int step = 0; step < ribbonSteps; step++) {
+                    float ta = (float) step / ribbonSteps;
+                    float tb = (float) (step + 1) / ribbonSteps;
+                    float da = ta * len;
+                    float db = tb * len;
+
+                    double thetaA = startAngle + (ta * 2.2 * Math.PI * 2.0) - (age * 0.22);
+                    double thetaB = startAngle + (tb * 2.2 * Math.PI * 2.0) - (age * 0.22);
+
+                    float ra = (rBase + ta * (rMouth - rBase)) + 0.8f + 0.4f * (float) Math.sin(ta * 8.0f + age * 0.3f);
+                    float rb = (rBase + tb * (rMouth - rBase)) + 0.8f + 0.4f * (float) Math.sin(tb * 8.0f + age * 0.3f);
+
+                    Vec3 pa = f.scale(da).add(r.scale(Math.cos(thetaA) * ra)).add(u.scale(Math.sin(thetaA) * ra));
+                    Vec3 pb = f.scale(db).add(r.scale(Math.cos(thetaB) * rb)).add(u.scale(Math.sin(thetaB) * rb));
+
+                    stroke(v, m, pa, pb, 0.55f, fade * 0.95f, 0x00E5FF);
+                    stroke(v, m, pa.add(f.scale(0.2)), pb.add(f.scale(0.2)), 0.30f, fade * 0.98f, 0xE0F7FA);
+                }
+            }
+
+            // 3. Vành Miệng Phễu Hư Không Phát Quang Lam Sáng (Glowing Cyan Open Mouth Rim)
+            Vec3 mouthCenter = f.scale(len);
+            for (int seg = 0; seg < 24; seg++) {
+                double a0 = (seg * 2.0 * Math.PI / 24);
+                double a1 = ((seg + 1) * 2.0 * Math.PI / 24);
+
+                Vec3 ma0 = mouthCenter.add(r.scale(Math.cos(a0) * rMouth)).add(u.scale(Math.sin(a0) * rMouth));
+                Vec3 ma1 = mouthCenter.add(r.scale(Math.cos(a1) * rMouth)).add(u.scale(Math.sin(a1) * rMouth));
+                stroke(v, m, ma0, ma1, 0.75f, fade * 0.98f, 0x00E5FF);
+
+                Vec3 maOuter0 = mouthCenter.add(r.scale(Math.cos(a0) * (rMouth + 1.2f))).add(u.scale(Math.sin(a0) * (rMouth + 1.2f)));
+                Vec3 maOuter1 = mouthCenter.add(r.scale(Math.cos(a1) * (rMouth + 1.2f))).add(u.scale(Math.sin(a1) * (rMouth + 1.2f)));
+                stroke(v, m, maOuter0, maOuter1, 0.45f, fade * 0.90f, 0x80DEEA);
+            }
+
+            // 4. Các luồng tia hút thực thể bay thẳng vào miệng phễu
+            for (int k = 0; k < 12; k++) {
+                double a = k * (Math.PI / 6.0) + (age * 0.08);
+                float inDist = ((age * 1.5f + k * 2.5f) % 16.0f);
+                Vec3 startPt = mouthCenter.add(f.scale(16.0f - inDist)).add(r.scale(Math.cos(a) * (rMouth * 0.9f))).add(u.scale(Math.sin(a) * (rMouth * 0.9f)));
+                Vec3 endPt = startPt.add(f.scale(-2.5));
+                stroke(v, m, startPt, endPt, 0.35f, fade * 0.85f, 0x00FFFF);
+            }
+            return;
+        }
+
+        // HÌNH THÁI 1: VỰC TOÀN HƯ KHÔNG (CỘT LỐC XOÁY BÃO TỐ THẲNG ĐỨNG 42M)
+        float h = 42.0f * mult;
+
         // 1. Sóng gợn nước xoáy dưới mặt hồ / đại dương (Base Concentric Water Ripple Rings)
         for (int i = 0; i < 4; i++) {
-            float rippleR = ((age * 2.2f + i * 5.0f) % 20.0f);
-            float rippleAlpha = (1.0f - rippleR / 20.0f) * fade * 0.85f;
+            float rippleR = ((age * 2.2f + i * 5.0f) % (20.0f * mult));
+            float rippleAlpha = (1.0f - rippleR / (20.0f * mult)) * fade * 0.85f;
             ring(v, m, 0.10f + i * 0.04f, rippleR, 0.45f, 0x00E5FF, rippleAlpha);
         }
 
-        // 2. Lõi Lốc Xoáy Hư Không Tím Đen Khổng Lồ (Towering Dark Purple Void Tornado Funnel)
-        // Chiều cao H = 42m, nở dần từ đáy R_base = 3.8m lên đỉnh R_top = 13.5m, xoay tít tốc độ cao
+        // 2. Lõi Lốc Xoáy Hư Không Tím Đen Khổng Lồ
         int slices = 16;
         int segments = 16;
         float baseR = 3.8f * mult;
@@ -633,7 +730,6 @@ public final class ClientCinematicSkillRenderer {
             float y0 = t0 * h;
             float y1 = t1 * h;
 
-            // Bán kính lốc xoáy lượn sóng nhẹ tạo độ rung động tự nhiên như anime
             float r0 = (baseR + t0 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t0 * 10.0f + age * 0.25f));
             float r1 = (baseR + t1 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t1 * 10.0f + age * 0.25f));
 
@@ -656,28 +752,24 @@ public final class ClientCinematicSkillRenderer {
                 float x11 = (float) Math.cos(a11) * r1;
                 float z11 = (float) Math.sin(a11) * r1;
 
-                // Màu tím thẫm đan xen tím đen ma vương
                 int col = (seg % 2 == 0) ? 0x2A0845 : 0x4A148C;
                 if ((s + seg) % 3 == 0) col = 0x6A1B9A;
                 quad(v, m, x00, y0, z00, x01, y0, z01, x11, y1, z11, x10, y1, z10, col, op);
             }
         }
 
-        // Lõi đen hư vô đậm đặc ở trung tâm
         cylinder(v, m, baseR * 0.6f, h, 0.95f * fade, 0x0E0018, age);
 
-        // 3. 4 Dải Ruy Băng Nước Xoáy Màu Lam Ngọc (4 Spiraling Cyan Water Ribbons wrapping the column)
+        // 3. 4 Dải Ruy Băng Nước Xoáy Màu Lam Ngọc
         int ribbonSteps = 32;
         for (int rIdx = 0; rIdx < 4; rIdx++) {
             double startAngle = rIdx * (Math.PI / 2.0);
-
             for (int step = 0; step < ribbonSteps; step++) {
                 float ta = (float) step / ribbonSteps;
                 float tb = (float) (step + 1) / ribbonSteps;
                 float ya = ta * h;
                 float yb = tb * h;
 
-                // Xoắn 2.4 vòng từ gốc lên đỉnh
                 double thetaA = startAngle + (ta * 2.4 * Math.PI * 2.0) - (age * 0.22);
                 double thetaB = startAngle + (tb * 2.4 * Math.PI * 2.0) - (age * 0.22);
 
@@ -687,13 +779,12 @@ public final class ClientCinematicSkillRenderer {
                 Vec3 pa = new Vec3(Math.cos(thetaA) * ra, ya, Math.sin(thetaA) * ra);
                 Vec3 pb = new Vec3(Math.cos(thetaB) * rb, yb, Math.sin(thetaB) * rb);
 
-                // Dải ruy băng nước rộng 0.65m màu lam ngọc phát sáng
                 stroke(v, m, pa, pb, 0.65f, fade * 0.95f, 0x00E5FF);
-                stroke(v, m, pa.add(0, 0.25, 0), pb.add(0, 0.25, 0), 0.35f, fade * 0.98f, 0xE0F7FA); // Bọt nước trắng sáng viền dải ruy băng
+                stroke(v, m, pa.add(0, 0.25, 0), pb.add(0, 0.25, 0), 0.35f, fade * 0.98f, 0xE0F7FA);
             }
         }
 
-        // 4. Các Đĩa Phẳng Cộng Hưởng Hư Không Cắt Ngang (Horizontal Resonance Discs)
+        // 4. Các Đĩa Phẳng Cộng Hưởng Hư Không Cắt Ngang
         float[] discHeights = { 0.22f * h, 0.46f * h, 0.70f * h, 0.88f * h };
         for (int d = 0; d < discHeights.length; d++) {
             float dy = discHeights[d];
@@ -701,11 +792,9 @@ public final class ClientCinematicSkillRenderer {
             float discInnerR = (baseR + frac * (topR - baseR));
             float discOuterR = discInnerR * 1.55f;
 
-            // Đĩa phẳng hình lục giác/bát giác với viền tím neon
             ring(v, m, dy, discOuterR, 0.55f, 0x80DEEA, fade * 0.85f);
             ring(v, m, dy + 0.15f, discInnerR, 0.40f, 0xBA68C8, fade * 0.90f);
 
-            // Mặt phẳng đĩa cắt ngang
             int discSegments = 16;
             for (int seg = 0; seg < discSegments; seg++) {
                 double a0 = (seg * 2.0 * Math.PI / discSegments) + (age * 0.05f * (d % 2 == 0 ? 1 : -1));
@@ -725,7 +814,7 @@ public final class ClientCinematicSkillRenderer {
             }
         }
 
-        // 5. Đỉnh Hư Không Chân Trời Sự Kiện (Summit Void Singularity)
+        // 5. Đỉnh Hư Không Chân Trời Sự Kiện
         billboardDisc(v, m, new Vec3(0, h, 0), topR * 1.4f, 0x0A0012, fade * 0.98f);
         ring(v, m, h, topR * 1.45f, 0.6f, 0x9C27B0, fade * 0.90f);
 

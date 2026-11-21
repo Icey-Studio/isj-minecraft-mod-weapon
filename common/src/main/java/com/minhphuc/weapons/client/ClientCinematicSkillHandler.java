@@ -347,11 +347,13 @@ public final class ClientCinematicSkillHandler {
     // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - STABLE MAJESTIC SHOULDER CAM XUYÊN SUỐT CHIÊU)
     // =========================================================================
     private static Pose getBeelzebuthPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
-        // Giữ cố định góc máy điện ảnh lệch vai phải ổn định ngắm nhìn tâm lốc xoáy (Giai đoạn 1)
+        // Giữ cố định góc máy điện ảnh lệch vai phải ổn định ngắm nhìn tâm lốc xoáy / phễu hư không
         Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
         double subtleShake = Math.sin(age * 1.2) * 0.08; // Rung siêu nhẹ
-        Vec3 camPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2 + subtleShake, 0);
-        Vec3 lookTarget = centerPos.add(0, 1.0, 0);
+        Vec3 camPos = vanillaPos.add(right.scale(2.4)).add(aimDir.scale(-4.5)).add(0, 1.3 + subtleShake, 0);
+        Vec3 lookTarget = (Math.abs(aimDir.y) < 0.92D && aimDir.lengthSqr() > 1e-4)
+                ? centerPos.add(aimDir.scale(20.0D))
+                : centerPos.add(0, 1.0D, 0);
 
         // Giữ nguyên góc nhìn cho đến những tick cuối cùng của chiêu thức
         return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 76.0f, 80.0f);

@@ -76,9 +76,17 @@ Toàn bộ các kỹ năng cổ xưa, kỹ năng tiến hóa từ sách cũ đã
 3. **Phép Màu Của Thần Linh**: Vùng hào quang thần thánh hồi phục sinh lực và giải trừ bùa hại.
 4. **Bí Ẩn Của Đức Tin Và Ân Sủng**: Tuyệt kỹ giáng lâm ngay sau Phép Màu Thần Linh; tồn tại trong 5 giây, quét rộng 40x40 blocks, cột sáng khổng lồ hạ từ trên trời xuống ban phước và thanh tẩy tà ác.
 5. **Bạo Thực Vương** (Beelzebuth):
-   - **Lốc Xoáy Hư Không Anime**: Cột lốc xoáy màu tím đen cao 42m kết hợp 4 dải nước xoắn ốc lam ngọc quấn quanh và các đĩa cộng hưởng hư không nằm ngang.
+   - **Luân Chuyển 2 Hình Thái Anime**:
+     + *Hình Thái 1 (Vực Toàn Hư Không)*: Cột lốc xoáy màu tím đen cao 42m kết hợp 4 dải nước xoắn ốc lam ngọc quấn quanh và các đĩa cộng hưởng hư không nằm ngang.
+     + *Hình Thái 2 (Hắc Động Thôn Phệ)*: Phễu Hư Không khổng lồ vươn ngang 38m từ bàn tay, miệng phễu phát quang lam sáng nuốt trọn không gian và hàng đoàn kẻ địch.
+   - **Thôn Phệ Long Chủng & Bành Trướng Cực Đại (Mega Titan Scale)**: Tự động phát hiện Veldora, Hỗn Độn Long, Velgrynd, Velzard trong 45m để phóng to quy mô lên 105m bao trọn thân thể rồng, nuốt vào Dạ Dày Azathoth.
    - **Hút Chất Lỏng & Sinh Vật Không Lag Biển (Ocean Safe)**: Hút nước biển, nước hồ, dung nham và sinh vật vào Dạ Dày Vô Hạn Azathoth. Cơ chế cấm kích hoạt chuỗi block update lan truyền giúp 100% không drop TPS khi dùng giữa đại dương. Tuyệt đối không làm tổn hại block rắn (cát, đá, san hô, công trình).
-   - **Tự Động Thanh Lọc & Phân Tích**: Tách muối, tạp chất, chuyển hóa áp suất thủy lực và nhiệt năng tích lũy +80,000 Ma tố qua Cố Vấn Tác Chiến Raphael.
+   - **Cố Vấn Tác Chiến Raphael 1-Chạm [Y]/[N]**:
+     + *Thanh Tẩy Nước*: Cho phép chọn [Y] để thanh tẩy và hoàn trả nguồn nước tinh khiết (không lag).
+     + *Tái Cấu Trúc Dân Làng*: [Y] giải trừ tà khí của Zombie Dân Làng trong dạ dày, tái sinh thành Dân Làng khỏe mạnh.
+     + *Hóa Giải Cuồng Nộ*: [Y] tịnh hóa tâm trí Ma Vương Thức Tỉnh / Boss cuồng bạo (Milim, Geld).
+     + *Gia Cố Người Sắt*: [Y] dùng Thép Ma Thuật phục hồi 100% HP Người Sắt.
+     + *Xoa Dịu Đàn Ong*: [Y] dùng Mật Hoa Tinh Khiết giải trừ cuồng nộ và tái lập tổ ong mật.
    - **Thủy Khí Trảm (Water Blade)**: [Shift + Nhìn Thẳng] tiêu hao nước trong Dạ Dày, chém sóng nước áp suất cao 36m (140 True DMG) xuyên thấu.
    - **Giải Phóng Thủy Triều (Tidal Release)**: [Shift + Nhìn Xuống] xả lũ áp suất cao 360° bán kính 12m, dập tắt biển lửa và làm nguội dung nham thành Hắc Diệu Thạch.
 6. **Long Tinh Bộc Viêm Bá** (Drago-Nova): Đòn hủy diệt tinh cầu của Milim.
