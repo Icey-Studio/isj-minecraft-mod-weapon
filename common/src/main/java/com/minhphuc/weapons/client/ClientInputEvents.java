@@ -32,8 +32,10 @@ public class ClientInputEvents {
                         com.minhphuc.weapons.network.ServerboundSkillActionPacket.ACTION_REQUEST_SYNC, 0));
             }
 
-            // Khi Trí Tuệ Vương Raphael tiếp quản Auto-Battle: xoay nhanh & chính xác bám theo boss/mục tiêu thù địch gần nhất
-            if (ClientSkillStateHandler.isRaphaelAutoBattle() && mc.screen == null && !mc.player.isShiftKeyDown()) {
+            // Khi Thông Tuệ Vương Raphael tiếp quản Auto-Battle: xoay nhanh & chính xác bám theo boss/mục tiêu thù địch gần nhất
+            if (ClientSkillStateHandler.isRaphaelAutoBattle()
+                    && !com.minhphuc.weapons.content.tensura.PrimordialArmorItem.isWearingAnyNoirArmor(mc.player)
+                    && mc.screen == null && !mc.player.isShiftKeyDown()) {
                 net.minecraft.world.entity.LivingEntity bestTarget = null;
                 double bestScore = Double.POSITIVE_INFINITY;
                 for (net.minecraft.world.entity.Entity e : mc.level.getEntities(mc.player, mc.player.getBoundingBox().inflate(44.0D))) {
@@ -90,11 +92,12 @@ public class ClientInputEvents {
                             || ClientSkillStateHandler.isTrueDemonLord()
                             || ClientSkillStateHandler.isPrimordial()
                             || com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(mc.player)
+                            || com.minhphuc.weapons.content.tensura.PrimordialArmorItem.isWearingFullSetOfAnyDemon(mc.player)
                             || mc.player.isCreative();
                     if (canOpen) {
                         mc.setScreen(new com.minhphuc.weapons.client.gui.SkillWheelScreen());
                     } else {
-                        mc.player.displayClientMessage(Component.literal("§c⚠️ Bạn cần thức tỉnh Chân Ma Vương, Thủy Tổ, mặc Giáp Thần Linh hoặc Nhập Xác Ác Ma để mở Bánh Xe Kỹ Năng!"), true);
+                        mc.player.displayClientMessage(Component.literal("§c⚠️ Bạn cần thức tỉnh Chân Ma Vương, Thủy Tổ, mặc đủ Bộ Đồ Thủy Tổ, Giáp Thần Linh hoặc Nhập Xác Ác Ma để mở Bánh Xe Kỹ Năng!"), true);
                     }
                 }
             }
@@ -114,7 +117,7 @@ public class ClientInputEvents {
 
             if (ModKeyBindings.RAPHAEL_AUTO_KEY.consumeClick()) {
                 if (mc.screen == null) {
-                    // Nhấn phím X: Bật / Tắt Chế độ Tự Động Chiến Đấu Trí Tuệ Vương Raphael
+                    // Nhấn phím X: Bật / Tắt Chế độ Tự Động Chiến Đấu Thông Tuệ Vương Raphael
                     ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
                             com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE));
                 }
@@ -132,6 +135,19 @@ public class ClientInputEvents {
                         ModMessages.sendToServer(new com.minhphuc.weapons.network.ServerboundSageActionPacket(
                                 com.minhphuc.weapons.network.ServerboundSageActionPacket.ACTION_WARP_VELDORA));
                     }
+                }
+            }
+
+            // Phản hồi 1-chạm nhanh cho Thông Tuệ Vương Raphael: [Y] Đồng Ý, [N] Bỏ Qua
+            if (ModKeyBindings.RAPHAEL_CONFIRM_KEY.consumeClick()) {
+                if (mc.screen == null && SageHudManager.hasPendingProposal()) {
+                    SageHudManager.confirmPendingProposal();
+                }
+            }
+
+            if (ModKeyBindings.RAPHAEL_DECLINE_KEY.consumeClick()) {
+                if (mc.screen == null && SageHudManager.hasPendingProposal()) {
+                    SageHudManager.declinePendingProposal();
                 }
             }
         });
@@ -165,9 +181,10 @@ public class ClientInputEvents {
                 return;
             }
             boolean isWearingDivine = com.minhphuc.weapons.content.divine.DivineArmorItem.isWearingAnyPiece(player);
+            boolean isWearingPrimordialSet = com.minhphuc.weapons.content.tensura.PrimordialArmorItem.isWearingFullSetOfAnyDemon(player);
             boolean isPossessing = com.minhphuc.weapons.client.ClientPossessionHandler.isLocalPlayerPossessing();
 
-            if (heldStack.isEmpty() || isWearingDivine || isPossessing) {
+            if (heldStack.isEmpty() || isWearingDivine || isWearingPrimordialSet || isPossessing) {
                 long now = System.currentTimeMillis();
                 if (now - lastRightClickCastTime >= 100) {
                     lastRightClickCastTime = now;

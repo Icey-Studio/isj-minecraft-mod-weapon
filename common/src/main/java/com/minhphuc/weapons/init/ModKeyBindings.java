@@ -14,6 +14,8 @@ public class ModKeyBindings {
     public static final String KEY_SAGE_ACTION = "key.weapons.sage_action";
     public static final String KEY_OPEN_STOMACH = "key.weapons.open_stomach";
     public static final String KEY_RAPHAEL_AUTO = "key.weapons.raphael_auto";
+    public static final String KEY_RAPHAEL_CONFIRM = "key.weapons.raphael_confirm";
+    public static final String KEY_RAPHAEL_DECLINE = "key.weapons.raphael_decline";
 
     public static final KeyMapping SELECT_BULLET_KEY = new KeyMapping(
             KEY_SELECT_BULLET,
@@ -64,6 +66,20 @@ public class ModKeyBindings {
             KEY_CATEGORY_WEAPONS
     );
 
+    public static final KeyMapping RAPHAEL_CONFIRM_KEY = new KeyMapping(
+            KEY_RAPHAEL_CONFIRM,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_Y,
+            KEY_CATEGORY_WEAPONS
+    );
+
+    public static final KeyMapping RAPHAEL_DECLINE_KEY = new KeyMapping(
+            KEY_RAPHAEL_DECLINE,
+            InputConstants.Type.KEYSYM,
+            GLFW.GLFW_KEY_N,
+            KEY_CATEGORY_WEAPONS
+    );
+
     public static void register() {
         KeyMappingRegistry.register(SELECT_BULLET_KEY);
         KeyMappingRegistry.register(BEELZEBUTH_KEY);
@@ -72,5 +88,7 @@ public class ModKeyBindings {
         KeyMappingRegistry.register(SAGE_ACTION_KEY);
         KeyMappingRegistry.register(OPEN_STOMACH_KEY);
         KeyMappingRegistry.register(RAPHAEL_AUTO_KEY);
+        KeyMappingRegistry.register(RAPHAEL_CONFIRM_KEY);
+        KeyMappingRegistry.register(RAPHAEL_DECLINE_KEY);
     }
 }
