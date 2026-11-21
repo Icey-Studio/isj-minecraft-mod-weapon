@@ -24,7 +24,7 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 37 : 36;
+        return hasCreation ? 38 : 37;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
@@ -65,12 +65,13 @@ public class TensuraSkillDispatcher {
                 case 28 -> "§6§l29. Ban Danh Xưng (Naming Ability)";
                 case 29 -> "§b§l30. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 30 -> "§3§l31. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 31 -> "§b§l32. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 31 -> "§b§l32. Thông Tuệ Vương Raphael (Kỹ Năng)";
                 case 32 -> "§5§l33. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 33 -> "§b§l34. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 case 34 -> "§6§l35. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
                 case 35 -> "§b§l36. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
                 case 36 -> "§6§l37. Ma Vương Bá Khí (Demon Lord's Haki)";
+                case 37 -> "§d§l38. Kẻ Tham Lam (Greedy One)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -105,12 +106,13 @@ public class TensuraSkillDispatcher {
                 case 27 -> "§6§l28. Ban Danh Xưng (Naming Ability)";
                 case 28 -> "§b§l29. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 29 -> "§3§l30. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 30 -> "§b§l31. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 30 -> "§b§l31. Thông Tuệ Vương Raphael (Kỹ Năng)";
                 case 31 -> "§5§l32. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 32 -> "§b§l33. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
                 case 33 -> "§6§l34. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
                 case 34 -> "§b§l35. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
                 case 35 -> "§6§l36. Ma Vương Bá Khí (Demon Lord's Haki)";
+                case 36 -> "§d§l37. Kẻ Tham Lam (Greedy One)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -264,6 +266,15 @@ public class TensuraSkillDispatcher {
                     case 34 -> MagiculesManager.toggleMagiculeOverdrive(player);
                     case 35 -> MagiculesManager.toggleMagiculeAegis(player);
                     case 36 -> MagiculesManager.castDemonLordHaki(level, player);
+                    case 37 -> {
+                        if (player.isShiftKeyDown()) {
+                            GreedAbility.castDesireOverload(level, player);
+                        } else if (player.isCrouching()) {
+                            GreedAbility.castDesireSubjugation(level, player);
+                        } else {
+                            GreedAbility.castChainsOfGreed(level, player);
+                        }
+                    }
                 }
             } else {
                 switch (index) {
@@ -312,6 +323,15 @@ public class TensuraSkillDispatcher {
                     case 33 -> MagiculesManager.toggleMagiculeOverdrive(player);
                     case 34 -> MagiculesManager.toggleMagiculeAegis(player);
                     case 35 -> MagiculesManager.castDemonLordHaki(level, player);
+                    case 36 -> {
+                        if (player.isShiftKeyDown()) {
+                            GreedAbility.castDesireOverload(level, player);
+                        } else if (player.isCrouching()) {
+                            GreedAbility.castDesireSubjugation(level, player);
+                        } else {
+                            GreedAbility.castChainsOfGreed(level, player);
+                        }
+                    }
                 }
             }
         } catch (Throwable t) {

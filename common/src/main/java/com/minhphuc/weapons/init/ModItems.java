@@ -38,6 +38,12 @@ public class ModItems {
     public static final RegistrySupplier<Item> DEMON_LORD_SOUL = ITEMS.register("demon_lord_soul",
             () -> new com.minhphuc.weapons.content.tensura.DemonLordSoulItem(new Item.Properties()));
 
+    public static final RegistrySupplier<Item> MARIABELL_SOUL = ITEMS.register("mariabell_soul",
+            () -> new Item(new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC).stacksTo(16)));
+
+    public static final RegistrySupplier<Item> GREED_AWAKENING_ORB = ITEMS.register("greed_awakening_orb",
+            () -> new com.minhphuc.weapons.content.tensura.GreedAwakeningOrbItem(new Item.Properties().rarity(net.minecraft.world.item.Rarity.EPIC)));
+
     public static final RegistrySupplier<Item> MILIM_DRAGON_CONTRACT = ITEMS.register("milim_dragon_contract",
             () -> new com.minhphuc.weapons.content.tensura.MilimDragonContractItem(new Item.Properties()));
 
@@ -115,6 +121,108 @@ public class ModItems {
 
     public static final RegistrySupplier<Item> HINATA_SWORD = ITEMS.register("hinata_sword",
             () -> new com.minhphuc.weapons.content.divine.HinataSwordItem(new Item.Properties()));
+
+    // ==========================================
+    // MODULE: 7 BỘ TRANG BỊ ÁC MA THỦY TỔ HUYỀN THOẠI (28 MÓN)
+    // ==========================================
+    private static RegistrySupplier<net.minecraft.world.item.ArmorMaterial> registerPrimordialArmorMaterial(String name) {
+        return ARMOR_MATERIALS.register("primordial_" + name, () -> {
+            java.util.Map<net.minecraft.world.item.ArmorItem.Type, Integer> defense = java.util.Map.of(
+                    net.minecraft.world.item.ArmorItem.Type.BOOTS, 4,
+                    net.minecraft.world.item.ArmorItem.Type.LEGGINGS, 7,
+                    net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, 9,
+                    net.minecraft.world.item.ArmorItem.Type.HELMET, 4
+            );
+            return new net.minecraft.world.item.ArmorMaterial(
+                    defense,
+                    25,
+                    net.minecraft.sounds.SoundEvents.ARMOR_EQUIP_NETHERITE,
+                    () -> net.minecraft.world.item.crafting.Ingredient.EMPTY,
+                    java.util.List.of(new net.minecraft.world.item.ArmorMaterial.Layer(
+                            net.minecraft.resources.ResourceLocation.fromNamespaceAndPath(WeaponsMod.MOD_ID, "primordial_" + name))),
+                    3.5F,
+                    0.15F
+            );
+        });
+    }
+
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_NOIR_MATERIAL = registerPrimordialArmorMaterial("noir");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_ROUGE_MATERIAL = registerPrimordialArmorMaterial("rouge");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_BLANC_MATERIAL = registerPrimordialArmorMaterial("blanc");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_JAUNE_MATERIAL = registerPrimordialArmorMaterial("jaune");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_VIOLET_MATERIAL = registerPrimordialArmorMaterial("violet");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_BLEU_MATERIAL = registerPrimordialArmorMaterial("bleu");
+    public static final RegistrySupplier<net.minecraft.world.item.ArmorMaterial> PRIMORDIAL_VERT_MATERIAL = registerPrimordialArmorMaterial("vert");
+
+    // 1. Bộ Noir (Diablo)
+    public static final RegistrySupplier<Item> NOIR_HELMET = ITEMS.register("noir_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_NOIR_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.NOIR, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> NOIR_CHESTPLATE = ITEMS.register("noir_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_NOIR_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.NOIR, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> NOIR_LEGGINGS = ITEMS.register("noir_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_NOIR_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.NOIR, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> NOIR_BOOTS = ITEMS.register("noir_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_NOIR_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.NOIR, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 2. Bộ Rouge (Guy Crimson)
+    public static final RegistrySupplier<Item> ROUGE_HELMET = ITEMS.register("rouge_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_ROUGE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.ROUGE, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> ROUGE_CHESTPLATE = ITEMS.register("rouge_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_ROUGE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.ROUGE, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> ROUGE_LEGGINGS = ITEMS.register("rouge_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_ROUGE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.ROUGE, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> ROUGE_BOOTS = ITEMS.register("rouge_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_ROUGE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.ROUGE, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 3. Bộ Blanc (Testarossa)
+    public static final RegistrySupplier<Item> BLANC_HELMET = ITEMS.register("blanc_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLANC_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLANC, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLANC_CHESTPLATE = ITEMS.register("blanc_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLANC_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLANC, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLANC_LEGGINGS = ITEMS.register("blanc_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLANC_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLANC, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLANC_BOOTS = ITEMS.register("blanc_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLANC_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLANC, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 4. Bộ Jaune (Carrera)
+    public static final RegistrySupplier<Item> JAUNE_HELMET = ITEMS.register("jaune_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_JAUNE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.JAUNE, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> JAUNE_CHESTPLATE = ITEMS.register("jaune_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_JAUNE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.JAUNE, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> JAUNE_LEGGINGS = ITEMS.register("jaune_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_JAUNE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.JAUNE, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> JAUNE_BOOTS = ITEMS.register("jaune_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_JAUNE_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.JAUNE, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 5. Bộ Violet (Ultima)
+    public static final RegistrySupplier<Item> VIOLET_HELMET = ITEMS.register("violet_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VIOLET_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VIOLET, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> VIOLET_CHESTPLATE = ITEMS.register("violet_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VIOLET_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VIOLET, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> VIOLET_LEGGINGS = ITEMS.register("violet_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VIOLET_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VIOLET, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> VIOLET_BOOTS = ITEMS.register("violet_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VIOLET_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VIOLET, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 6. Bộ Bleu (Rain)
+    public static final RegistrySupplier<Item> BLEU_HELMET = ITEMS.register("bleu_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLEU_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLEU, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLEU_CHESTPLATE = ITEMS.register("bleu_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLEU_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLEU, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLEU_LEGGINGS = ITEMS.register("bleu_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLEU_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLEU, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> BLEU_BOOTS = ITEMS.register("bleu_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_BLEU_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.BLEU, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
+
+    // 7. Bộ Vert (Misery)
+    public static final RegistrySupplier<Item> VERT_HELMET = ITEMS.register("vert_helmet",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VERT_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VERT, net.minecraft.world.item.ArmorItem.Type.HELMET, new Item.Properties()));
+    public static final RegistrySupplier<Item> VERT_CHESTPLATE = ITEMS.register("vert_chestplate",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VERT_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VERT, net.minecraft.world.item.ArmorItem.Type.CHESTPLATE, new Item.Properties()));
+    public static final RegistrySupplier<Item> VERT_LEGGINGS = ITEMS.register("vert_leggings",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VERT_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VERT, net.minecraft.world.item.ArmorItem.Type.LEGGINGS, new Item.Properties()));
+    public static final RegistrySupplier<Item> VERT_BOOTS = ITEMS.register("vert_boots",
+            () -> new com.minhphuc.weapons.content.tensura.PrimordialArmorItem(PRIMORDIAL_VERT_MATERIAL, com.minhphuc.weapons.entity.tensura.DemonType.VERT, net.minecraft.world.item.ArmorItem.Type.BOOTS, new Item.Properties()));
 
     public static final RegistrySupplier<Item> DISINTEGRATION_MAGIC_CIRCLE = ITEMS.register("disintegration_magic_circle",
             () -> new Item(new Item.Properties()));
@@ -505,6 +613,42 @@ public class ModItems {
                         output.accept(HINATA_LEGGINGS.get());
                         output.accept(HINATA_BOOTS.get());
                         output.accept(HINATA_SWORD.get());
+
+                        // 7 Bộ Trang Bị Ác Ma Thủy Tổ Huyền Thoại (28 món: Đầu, Áo, Quần, Giày)
+                        output.accept(NOIR_HELMET.get());
+                        output.accept(NOIR_CHESTPLATE.get());
+                        output.accept(NOIR_LEGGINGS.get());
+                        output.accept(NOIR_BOOTS.get());
+
+                        output.accept(ROUGE_HELMET.get());
+                        output.accept(ROUGE_CHESTPLATE.get());
+                        output.accept(ROUGE_LEGGINGS.get());
+                        output.accept(ROUGE_BOOTS.get());
+
+                        output.accept(BLANC_HELMET.get());
+                        output.accept(BLANC_CHESTPLATE.get());
+                        output.accept(BLANC_LEGGINGS.get());
+                        output.accept(BLANC_BOOTS.get());
+
+                        output.accept(JAUNE_HELMET.get());
+                        output.accept(JAUNE_CHESTPLATE.get());
+                        output.accept(JAUNE_LEGGINGS.get());
+                        output.accept(JAUNE_BOOTS.get());
+
+                        output.accept(VIOLET_HELMET.get());
+                        output.accept(VIOLET_CHESTPLATE.get());
+                        output.accept(VIOLET_LEGGINGS.get());
+                        output.accept(VIOLET_BOOTS.get());
+
+                        output.accept(BLEU_HELMET.get());
+                        output.accept(BLEU_CHESTPLATE.get());
+                        output.accept(BLEU_LEGGINGS.get());
+                        output.accept(BLEU_BOOTS.get());
+
+                        output.accept(VERT_HELMET.get());
+                        output.accept(VERT_CHESTPLATE.get());
+                        output.accept(VERT_LEGGINGS.get());
+                        output.accept(VERT_BOOTS.get());
                         output.accept(GUIDE_BOOK.get());
                         output.accept(MOONLIGHT_SWORD.get());
                         output.accept(THIEN_MA_KATANA.get());
