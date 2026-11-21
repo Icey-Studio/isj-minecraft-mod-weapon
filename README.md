@@ -157,13 +157,14 @@ Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thàn
 ### 💰 9. Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One) & Cố Vấn Tác Chiến 1-Chạm
 * **Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One - 强欲者)**:
   * **Quy trình thức tỉnh**: Chỉ dành cho Chân Ma Vương. Đánh bại Mariabell Rosso thu thập Tinh Hồn để thanh tẩy, hoặc sử dụng trực tiếp **Ngọc Thức Tỉnh Kẻ Tham Lam (`Greed Awakening Orb`)**.
-  * **Thức 1: Khống Chế Dục Vọng (`Crouch + Chuột Phải`)**: Tẩy não toàn bộ quái vật trong bán kính 22m biến thành binh đoàn mắt đỏ trung thành, tự động bảo vệ chủ nhân.
-  * **Thức 2: Xiềng Xích Tham Lam (`Chuột Phải`)**: Phóng xích ma pháp neon hồng trói chặt mục tiêu, rút 25% máu tối đa và hút trọn thể lực/MP về người chơi.
+  * **Thức 1: Khống Chế Dục Vọng (`Crouch + Chuột Phải`)**: Tẩy não toàn bộ quái vật trong bán kính 22m biến thành binh đoàn con rối mắt đỏ trung thành, tự động bảo vệ chủ nhân.
+  * **Thức 2: Xiềng Xích Tham Lam (`Chuột Phải`)**: Phóng xích ma pháp neon hồng trói chặt mục tiêu, hút 20% máu và **CƯỠNG CHẾ THAO TÚNG** biến quái thành con rối phục tùng (không giết luôn quái).
   * **Thức 3: Bùng Nổ Dục Vọng (`Shift + Chuột Phải`)**: Kích nổ lòng tham trong tâm trí kẻ địch, gây 85-180 sát thương chuẩn cực đại kèm hiệu ứng chấn động Sonic Boom.
-  * **Nội tại linh hồn vĩnh cửu**: Nhận thêm **+50% EXP** khi tiêu diệt mục tiêu và **35% tỉ lệ tước đoạt vũ khí** của nạn nhân thẳng vào Không Gian Dạ Dày Azathoth.
+  * **Nội tại linh hồn vĩnh cửu**: Con rối tự động bám theo bảo vệ chủ nhân; người chơi nhận thêm **+50% EXP** khi tiêu diệt mục tiêu và **35% tỉ lệ tước đoạt vũ khí** của nạn nhân thẳng vào Không Gian Dạ Dày Azathoth.
 * **Hệ Thống Cố Vấn Tác Chiến 1-Chạm (1-Tap Tactical Co-Pilot `[Y]` / `[N]`)**:
-  * Khi người chơi gặp các tình huống nguy cấp trong thế giới (máu thấp, rơi vào hư không, bị bao vây bởi đám đông, rơi xuống dung nham, trang bị hỏng, đồ rơi vãi, Veldora phát cuồng...), Đại Hiền Giả / Raphael sẽ chủ động phân tích và đưa ra đề xuất chiến thuật lên màn hình.
-  * **Phím `[Y]` (Đồng ý / Chấp thuận)**: Đại Hiền Giả lập tức thi triển giải pháp tối ưu chỉ trong 1 tick (Cấp cứu sinh mệnh, Hút khoáng sản/đồ vào Azathoth, Hóa đá dung nham, Đổi hướng đạn đạo, Trấn an rồng bạo nộ, Sửa chữa trang bị...).
+  * Khi người chơi gặp các tình huống nguy cấp trong thế giới (máu thấp, rơi vào hư không, bị Cửu Thế Quyền Hiện moi Tim/Não, bị bao vây bởi đám đông, rơi xuống dung nham, trang bị hỏng, đồ rơi vãi, Veldora phát cuồng...), Đại Hiền Giả / Raphael sẽ chủ động phân tích và đưa ra đề xuất chiến thuật lên màn hình.
+  * **Tự động né tránh khung chat**: Khi người chơi mở khung chat hoặc gõ lệnh (`/`), banner Raphael tự động trượt lên cao để không bao giờ bị ô chat hay bảng gợi ý lệnh che khuất!
+  * **Phím `[Y]` (Đồng ý / Chấp thuận)**: Đại Hiền Giả lập tức thi triển giải pháp tối ưu chỉ trong 1 tick (Tái sinh 100% nhục thân Tim/Não bằng Nhãn Cầu Thị Thực, Cấp cứu sinh mệnh, Hút khoáng sản/đồ vào Azathoth, Hóa đá dung nham, Đổi hướng đạn đạo, Trấn an rồng bạo nộ, Sửa chữa trang bị...).
   * **Phím `[N]` (Từ chối)**: Bỏ qua khuyến nghị chiến thuật và ẩn thông báo.
 
 ---

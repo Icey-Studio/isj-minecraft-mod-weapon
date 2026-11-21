@@ -26,6 +26,7 @@ public class ServerboundSageActionPacket {
     public static final int ACTION_EXTRACT_VEIN = 15;
     public static final int ACTION_WATER_BREATHING = 16;
     public static final int ACTION_DISARM_TARGET = 17;
+    public static final int ACTION_SEER_FLESH_REGEN = 18;
 
     private final int action;
 

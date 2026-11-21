@@ -120,6 +120,7 @@ public class TensuraEvents {
             tickEvokerWitchDemonSummons(level);
             tickAutonomousSpiritAndTempest(level);
             MobMeleeSkillSystem.tickWorldMobs(level);
+            com.minhphuc.weapons.content.tensura.GreedAbility.tickPuppets(level);
         });
     }
 
@@ -357,6 +358,8 @@ public class TensuraEvents {
         net.minecraft.world.item.Item soulItem = null;
         if (victim instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
             soulItem = ModItems.MILIM_SOUL.get();
+        } else if (victim instanceof com.minhphuc.weapons.entity.tensura.MariabellEntity) {
+            soulItem = ModItems.MARIABELL_SOUL.get();
         } else if (victim instanceof com.minhphuc.weapons.entity.tensura.VelgryndEntity) {
             soulItem = ModItems.VELGRYND_SOUL.get();
         } else if (victim instanceof com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity) {
@@ -678,6 +681,13 @@ public class TensuraEvents {
 
     public static EventResult onLivingHurt(LivingEntity victim, DamageSource source, float amount) {
         if (victim == null || victim.level().isClientSide()) return EventResult.pass();
+
+        // Con rối của Kẻ Tham Lam không bao giờ gây sát thương lên người chơi
+        if (victim instanceof ServerPlayer && source.getEntity() instanceof net.minecraft.world.entity.Mob puppet
+                && puppet.getTags().contains(com.minhphuc.weapons.content.tensura.GreedAbility.TAG_GREED_CONTROLLED)) {
+            puppet.setTarget(null);
+            return EventResult.interruptFalse();
+        }
 
         // Chặn nếu bị Thần Hư Không Azathoth xóa sổ
         if (victim.getTags().contains(JuraTempestManager.TAG_TRAINING_DUMMY)) {

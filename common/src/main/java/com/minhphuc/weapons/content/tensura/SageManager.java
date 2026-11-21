@@ -375,6 +375,14 @@ public final class SageManager {
                     0xFF34D399, 7000, false, ServerboundSageActionPacket.ACTION_DECODE_CURSE);
         }
 
+        // Kiểm tra Lời nguyền Đoạt Mệnh (Moi Tim / Đoạt Não) từ Cửu Thế Quyền Hiện
+        if (com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.hasCurse(sp) && now - data.getLong("SageCuuTheCurseTick") >= 120L) {
+            data.putLong("SageCuuTheCurseTick", now);
+            sendCornerAlert(sp,
+                    "« NGUY CẤP »: Phát hiện nhục thân bị tước đoạt Tim/Não bởi Cửu Thế Quyền Hiện! Đề xuất: Sử dụng [Nhãn Cầu Thị Thực] để tái tạo 100% thể xác?",
+                    0xFFE11D48, 12000, false, ServerboundSageActionPacket.ACTION_SEER_FLESH_REGEN);
+        }
+
         // N10, N11: Độ bền Giáp & Vũ khí
         ItemStack main = sp.getMainHandItem();
         boolean mainDamaged = (!main.isEmpty() && main.isDamageableItem() && main.getDamageValue() >= main.getMaxDamage() * 0.80F);
@@ -802,6 +810,20 @@ public final class SageManager {
                 } else {
                     sendCornerAlert(sp, "« Báo cáo »: Mục tiêu đã thoát khỏi tầm tước vũ khí của Bạo Thực Vương.", 0xFFF59E0B, 4000, false);
                 }
+            }
+            case ServerboundSageActionPacket.ACTION_SEER_FLESH_REGEN -> {
+                com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(sp, "Nhãn Cầu Thị Thực Tái Sinh Nhục Thân");
+                sp.removeAllEffects();
+                sp.setHealth(sp.getMaxHealth());
+                sp.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 240, 4, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 3, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 600, 3, false, false));
+                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.2, sp.getZ(), 45, 0.5, 0.8, 0.5, 0.2);
+                sl.sendParticles(ParticleTypes.FLASH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 2, 0, 0, 0, 0);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.6F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.4F, 1.5F);
+                sp.displayClientMessage(Component.literal("§6§l[THỊ THỰC TÁI SINH] §fThông Tuệ Vương Raphael đã kích hoạt Nhãn Cầu Thị Thực: Tái cấu trúc thành công 100% Tim và Não!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Nhục thân đã tái cấu trúc hoàn tất! Lời nguyền tử vong bị thanh tẩy tuyệt đối!", 0xFF22C55E, 5000, false);
             }
         }
     }

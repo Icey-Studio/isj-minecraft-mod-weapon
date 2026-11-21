@@ -1042,14 +1042,14 @@ public class GuideBookScreen extends Screen {
         int y = top + 52;
         y = drawWrapped(g, " §d1. Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One - 强欲者):", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §f• §6Thức tỉnh: §fLà Chân Ma Vương, thanh tẩy Hồn Mariabell hoặc dùng §dNgọc Thức Tỉnh Tham Lam§f.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §c1. Khống Chế [Crouch]: §7Tẩy não quái 22m thành hộ vệ mắt đỏ trung thành.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §d2. Xiềng Xích [Chuột Phải]: §7Xích hồng trói, hút 25% máu tối đa & thể lực về bản thân.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §43. Bùng Nổ [Shift+Phải]: §7Gây 85-180 sát thương chuẩn tâm trí cực đại.", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• §eNội tại: §7+50% EXP khi hạ quái, 35% tước đoạt vũ khí kẻ địch vào Dạ Dày Azathoth.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §c1. Khống Chế [Crouch]: §7Tẩy não bầy quái 22m thành con rối mắt đỏ bảo vệ.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §d2. Xiềng Xích [Chuột Phải]: §7Bắn xích trói, hút HP & §eCƯỠNG CHẾ THAO TÚNG§7 con rối.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §43. Bùng Nổ [Shift+Phải]: §7Kích nổ con rối gây 180 sát thương chuẩn cực đại.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §eNội tại: §7Con rối tự hộ vệ, +50% EXP khi hạ quái, 35% đoạt vũ khí vào Azathoth.", left + 16, y, fullW, maxY);
         y += 3;
         y = drawWrapped(g, " §b2. Cố Vấn Tác Chiến 1-Chạm Đại Hiền Giả ([Y] / [N]):", left + 16, y, fullW, maxY);
-        y = drawWrapped(g, "   §f• Đại Hiền Giả tự động cảnh báo nguy cấp (máu yếu, void, lava, quái đông, đồ rơi, Veldora giận dữ...).", left + 16, y, fullW, maxY);
-        drawWrapped(g, "   §f• Bấm §a[Y] (Đồng ý)§f thi triển tức thì trong 1 tick (Cấp cứu, Né void, Hóa đá lava, Hút khoáng, Trấn an rồng). Bấm §c[N]§f để từ chối.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Raphael tự cảnh báo (máu thấp, void, lava, quái đông, bị Cửu Thế moi Tim/Não...).", left + 16, y, fullW, maxY);
+        drawWrapped(g, "   §f• Bấm §a[Y] (Đồng ý)§f kích hoạt tức thì (Dùng Nhãn Cầu Thị Thực hồi 100% Tim/Não, Cấp cứu, Né void, Hóa đá lava...). Bấm §c[N]§f để từ chối.", left + 16, y, fullW, maxY);
     }
 
     private void renderPageAuthor(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {

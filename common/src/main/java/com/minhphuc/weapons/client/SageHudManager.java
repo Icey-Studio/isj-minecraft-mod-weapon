@@ -162,8 +162,10 @@ public final class SageHudManager {
         List<FormattedCharSequence> lines = font.split(Component.literal(visibleText + cursor), textAreaW);
         int bannerH = Math.max(42, 22 + lines.size() * 10);
 
+        boolean isChatOpen = (mc.screen instanceof net.minecraft.client.gui.screens.ChatScreen);
         int bx = (screenW - maxBannerW) / 2;
-        int by = screenH - bannerH - 52; // Nằm thanh thoát ngay trên hotbar/chỉ số, không đè boss bar
+        // Khi người chơi mở khung chat hoặc gõ lệnh (/), nâng banner lên trên cao (y = 28) để không bị ô chat hay menu gợi ý lệnh che khuất
+        int by = isChatOpen ? 28 : (screenH - bannerH - 52);
 
         // 4. VẼ NỀN THỦY TINH ĐEN MA PHÁP & VIỀN HÀO QUANG
         int bgAlpha = (int) (210 * alpha);

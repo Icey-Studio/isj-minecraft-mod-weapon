@@ -26,14 +26,16 @@ import java.util.List;
 /**
  * KỸ NĂNG ĐỘC NHẤT: KẺ THAM LAM (GREEDY ONE - 强欲者)
  * Kế thừa nguyên bản quyền năng tà mị chi phối dục vọng của Mariabell Rosso:
- *  1. Mê Hoặc Dục Vọng (Desire Subjugation): Tẩy não đàn quái trong 20m biến thành tay sai mắt đỏ.
- *  2. Xiềng Xích Đoạt Mệnh (Chains of Greed): Phóng xích hồng neon khóa chân & hút 25% HP + Ma Tố.
- *  3. Bùng Nổ Tâm Trí (Desire Overload): Búng tay kích nổ quá tải dục vọng gây sát thương chuẩn nổ tung.
+ *  1. Mê Hoặc Dục Vọng (Desire Subjugation): Thao túng tâm trí diện rộng 22m biến bầy quái thành con rối phục tùng.
+ *  2. Xiềng Xích Tham Lam (Chains of Greed): Phóng xích ma pháp trói mục tiêu, hút HP & CƯỠNG CHẾ THAO TÚNG con rối.
+ *  3. Bùng Nổ Tâm Trí (Desire Overload): Búng tay kích nổ quá tải dục vọng toàn bộ con rối gây sát thương chuẩn nổ tung.
  */
 public final class GreedAbility {
 
     public static final String TAG_GREED_UNLOCKED = "GreedSkillUnlocked";
     public static final String TAG_GREED_CONTROLLED = "GreedControlled";
+    public static final String TAG_GREED_OWNER = "GreedOwnerUUID";
+
     private static final DustParticleOptions NEON_PINK = new DustParticleOptions(new Vector3f(1.0F, 0.12F, 0.85F), 2.2F);
     private static final DustParticleOptions DARK_MAGENTA = new DustParticleOptions(new Vector3f(0.7F, 0.05F, 0.9F), 1.8F);
 
@@ -62,7 +64,6 @@ public final class GreedAbility {
             sl.playSound(null, player.getX(), player.getY(), player.getZ(),
                     SoundEvents.WITHER_SPAWN, SoundSource.PLAYERS, 1.5F, 1.5F);
 
-            // Bắn cột hào quang ma trận hồng tím quanh người
             for (int i = 0; i < 360; i += 15) {
                 double rad = Math.toRadians(i);
                 double px = player.getX() + Math.cos(rad) * 2.8D;
@@ -74,8 +75,49 @@ public final class GreedAbility {
         }
     }
 
+    public static boolean canManipulate(LivingEntity entity) {
+        if (entity == null || !entity.isAlive()) return false;
+        if (entity instanceof ServerPlayer) return false;
+        if (entity instanceof VeldoraEntity || entity instanceof VelgryndEntity || entity instanceof VelzardEntity || entity instanceof MilimEntity) {
+            return false;
+        }
+        return entity instanceof Mob;
+    }
+
+    public static void subjugateMob(Mob mob, ServerPlayer player, ServerLevel level) {
+        if (!canManipulate(mob)) return;
+
+        mob.addTag(TAG_GREED_CONTROLLED);
+        EntityDataHelper.getCustomData(mob).putString(TAG_GREED_OWNER, player.getStringUUID());
+
+        // Đổi tên hiển thị con rối
+        String rawName = mob.getType().getDescription().getString();
+        mob.setCustomName(Component.literal("§d§l[Con Rối] §f" + rawName));
+        mob.setCustomNameVisible(true);
+
+        // Xóa hoàn toàn thù hận đối với người chơi
+        mob.setTarget(null);
+
+        // Ban phát sinh lực dục vọng cực đại
+        mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 18000, 2, false, false));
+        mob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 18000, 1, false, false));
+        mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 18000, 1, false, false));
+        mob.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 18000, 1, false, false));
+
+        // Tự động tìm kẻ địch xung quanh người chơi để tấn công
+        List<LivingEntity> enemies = level.getEntitiesOfClass(LivingEntity.class, mob.getBoundingBox().inflate(18.0D),
+                e -> e.isAlive() && e != player && e != mob && !e.getTags().contains(TAG_GREED_CONTROLLED));
+        if (!enemies.isEmpty()) {
+            mob.setTarget(enemies.get(0));
+        }
+
+        // VFX trái tim và hạt neon hồng
+        level.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + 1.2D, mob.getZ(), 8, 0.3, 0.4, 0.3, 0.05);
+        level.sendParticles(NEON_PINK, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 12, 0.3, 0.5, 0.3, 0.02);
+    }
+
     /**
-     * THỨC 1: MÊ HOẶC DỤC VỌNG (DESIRE SUBJUGATION)
+     * THỨC 1: MÊ HOẶC DỤC VỌNG (DESIRE SUBJUGATION) - Crouch
      * Thao túng tâm trí toàn bộ quái vật xung quanh trong bán kính 22m thành con rối trung thành.
      */
     public static void castDesireSubjugation(ServerLevel level, ServerPlayer player) {
@@ -105,35 +147,18 @@ public final class GreedAbility {
 
         int controlledCount = 0;
         for (Mob mob : targets) {
-            // Không áp đặt được Boss cấp Chân Long hoặc Ma Vương tối cổ
-            if (mob instanceof VeldoraEntity || mob instanceof VelgryndEntity || mob instanceof VelzardEntity || mob instanceof MilimEntity) {
-                continue;
-            }
-            mob.addTag(TAG_GREED_CONTROLLED);
-            mob.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 900, 2, false, false));
-            mob.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 900, 1, false, false));
-            mob.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 900, 2, false, false));
-            mob.setTarget(null);
-
-            // Đổi mục tiêu của quái sang kẻ thù gần nhất của người chơi
-            List<LivingEntity> enemies = level.getEntitiesOfClass(LivingEntity.class, mob.getBoundingBox().inflate(16.0D),
-                    e -> e.isAlive() && e != player && e != mob && !e.getTags().contains(TAG_GREED_CONTROLLED));
-            if (!enemies.isEmpty()) {
-                mob.setTarget(enemies.get(0));
-            }
-
-            level.sendParticles(ParticleTypes.HEART, mob.getX(), mob.getY() + 1.2D, mob.getZ(), 6, 0.3, 0.4, 0.3, 0.05);
-            level.sendParticles(NEON_PINK, mob.getX(), mob.getY() + 1.0D, mob.getZ(), 8, 0.3, 0.5, 0.3, 0.02);
+            if (!canManipulate(mob)) continue;
+            subjugateMob(mob, player, level);
             controlledCount++;
         }
 
-        player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fMê Hoặc Dục Vọng: Đã thao túng tâm trí §e" + controlledCount + " §fsinh vật thành con rối!"), true);
-        SageManager.sendCornerAlert(player, "« Kẻ Tham Lam »: Đã mở rộng trường Dục Vọng — Chi phối thành công " + controlledCount + " mục tiêu làm bia đỡ đạn!", 0xFFF43F5E, 5000, false);
+        player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fMê Hoặc Dục Vọng: Đã thao túng tâm trí §e" + controlledCount + " §fsinh vật thành con rối trung thành!"), true);
+        SageManager.sendCornerAlert(player, "« Kẻ Tham Lam »: Đã mở rộng trường Dục Vọng — Thao túng thành công " + controlledCount + " mục tiêu làm con rối bảo vệ!", 0xFFF43F5E, 5000, false);
     }
 
     /**
-     * THỨC 2: XIỀNG XÍCH THAM LAM (CHAINS OF GREED DRAIN)
-     * Bắn chùm xích hồng neon trói cứng đối thủ trước mặt, hút 25% máu & toàn bộ Ma Tố nạp về bản thân.
+     * THỨC 2: XIỀNG XÍCH THAM LAM (CHAINS OF GREED DRAIN & MANIPULATION) - Chuột Phải
+     * Bắn chùm xích hồng neon trói cứng đối thủ trước mặt, hút 20% HP & CƯỠNG CHẾ THAO TÚNG con rối (không giết luôn).
      */
     public static void castChainsOfGreed(ServerLevel level, ServerPlayer player) {
         if (!isUnlocked(player)) {
@@ -143,8 +168,7 @@ public final class GreedAbility {
 
         Vec3 eye = player.getEyePosition();
         Vec3 look = player.getLookAngle();
-        double maxDist = 24.0D;
-        Vec3 reach = eye.add(look.scale(maxDist));
+        double maxDist = 26.0D;
 
         level.playSound(null, player.getX(), player.getY(), player.getZ(),
                 SoundEvents.CHAIN_PLACE, SoundSource.PLAYERS, 2.0F, 1.3F);
@@ -155,25 +179,38 @@ public final class GreedAbility {
                 player.getBoundingBox().expandTowards(look.scale(maxDist)).inflate(3.5D),
                 e -> e.isAlive() && e != player);
 
+        int controlledCount = 0;
         int drainedCount = 0;
         float totalHealed = 0.0F;
 
         for (LivingEntity v : victims) {
-            v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 9, false, false));
-            v.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 100, 3, false, false));
-            v.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false));
-
-            float dmg = Math.max(30.0F, v.getMaxHealth() * 0.25F);
-            v.hurt(level.damageSources().magic(), dmg);
-            totalHealed += Math.min(20.0F, dmg * 0.5F);
-
-            // Bắn tia hạt xích từ mục tiêu về người chơi
+            // Hiệu ứng tia hạt xích từ mục tiêu về người chơi
             Vec3 targetPos = v.position();
             Vec3 dir = player.position().subtract(targetPos);
             for (int i = 0; i <= 15; i++) {
                 double progress = i / 15.0D;
                 Vec3 p = targetPos.add(dir.scale(progress));
                 level.sendParticles(NEON_PINK, p.x, p.y + 1.0D, p.z, 2, 0.05, 0.05, 0.05, 0.01);
+            }
+
+            v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 9, false, false));
+            v.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 80, 3, false, false));
+
+            float siphon = Math.min(v.getMaxHealth() * 0.20F, 30.0F);
+            totalHealed += siphon;
+
+            if (canManipulate(v) && v instanceof Mob mob) {
+                // Giữ lại ít nhất 4 HP để KHÔNG GIẾT LUÔN quái, mà THAO TÚNG thành con rối
+                if (mob.getHealth() - siphon < 4.0F) {
+                    mob.setHealth(Math.max(4.0F, mob.getHealth() * 0.5F));
+                } else {
+                    mob.hurt(level.damageSources().magic(), siphon);
+                }
+                subjugateMob(mob, player, level);
+                controlledCount++;
+            } else {
+                // Boss hoặc player không thể thao túng thì chịu sát thương trừng phạt nặng
+                v.hurt(level.damageSources().magic(), Math.max(35.0F, v.getMaxHealth() * 0.25F));
             }
             drainedCount++;
         }
@@ -182,15 +219,19 @@ public final class GreedAbility {
             player.heal(totalHealed);
             MagiculesManager.addAzathothConversion(player, 40_000L * drainedCount);
             level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, player.getX(), player.getY() + 1.0D, player.getZ(), 20, 0.4, 0.6, 0.4, 0.1);
-            player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fXiềng Xích Đoạt Mệnh: Trói " + drainedCount + " mục tiêu & Hồi +" + (int) totalHealed + " HP!"), true);
+            if (controlledCount > 0) {
+                player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fXiềng Xích Tham Lam: Đã trói buộc & THAO TÚNG §e" + controlledCount + " §fsinh vật làm con rối!"), true);
+            } else {
+                player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fXiềng Xích Tham Lam: Rút sinh lực " + drainedCount + " mục tiêu & Hồi +" + (int) totalHealed + " HP!"), true);
+            }
         } else {
-            player.displayClientMessage(Component.literal("§7[Kẻ Tham Lam] Không tìm thấy mục tiêu nào trong tầm ngắm 24m."), true);
+            player.displayClientMessage(Component.literal("§7[Kẻ Tham Lam] Không tìm thấy mục tiêu nào trong tầm ngắm 26m."), true);
         }
     }
 
     /**
-     * THỨC 3: BÙNG NỔ DỤC VỌNG - SỤP ĐỔ TÂM TRÍ (DESIRE OVERLOAD)
-     * Kích nổ não bộ & mạch năng lượng của toàn bộ quái vật bị dính Greed hoặc xung quanh.
+     * THỨC 3: BÙNG NỔ DỤC VỌNG - SỤP ĐỔ TÂM TRÍ (DESIRE OVERLOAD) - Shift + Chuột Phải
+     * Kích nổ não bộ & mạch năng lượng của toàn bộ con rối hoặc quái vật xung quanh gây sát thương chuẩn cực đại.
      */
     public static void castDesireOverload(ServerLevel level, ServerPlayer player) {
         if (!isUnlocked(player)) {
@@ -214,9 +255,9 @@ public final class GreedAbility {
         int burstCount = 0;
         for (LivingEntity e : enemies) {
             boolean wasControlled = e.getTags().contains(TAG_GREED_CONTROLLED);
-            float baseDmg = wasControlled ? 180.0F : 85.0F; // Con rối bị nổ gấp đôi sát thương
+            float baseDmg = wasControlled ? 180.0F : 85.0F; // Con rối bị kích nổ bộc phát gấp đôi sát thương
             e.hurt(level.damageSources().magic(), baseDmg);
-            e.setDeltaMovement(0, 0.8D, 0); // Hất tung
+            e.setDeltaMovement(0, 0.8D, 0);
 
             level.sendParticles(NEON_PINK, e.getX(), e.getY() + 1.0D, e.getZ(), 30, 0.5, 0.6, 0.5, 0.15);
             level.sendParticles(ParticleTypes.ASH, e.getX(), e.getY() + 1.0D, e.getZ(), 15, 0.4, 0.4, 0.4, 0.05);
@@ -224,5 +265,62 @@ public final class GreedAbility {
         }
 
         player.displayClientMessage(Component.literal("§d§l[KẺ THAM LAM] §fQuá Tải Dục Vọng: Kích nổ tâm trí §c" + burstCount + " §fmục tiêu xung quanh!"), true);
+    }
+
+    /**
+     * DUY TRÌ & ĐIỀU KHIỂN HỘ VỆ CON RỐI THEO THỜI GIAN THỰC (ZERO LAG)
+     * Gọi định kỳ từ server tick: bảo vệ người chơi, bám theo chủ nhân, không bao giờ đánh chủ.
+     */
+    public static void tickPuppets(ServerLevel level) {
+        if (level == null || level.isClientSide()) return;
+        long gameTime = level.getGameTime();
+        if (gameTime % 10L != 0L) return; // Throttle 0.5 giây / lần
+
+        List<ServerPlayer> players = level.players();
+        if (players.isEmpty()) return;
+
+        for (ServerPlayer player : players) {
+            if (!isUnlocked(player)) continue;
+
+            String playerUuidStr = player.getStringUUID();
+            List<Mob> puppets = level.getEntitiesOfClass(Mob.class, player.getBoundingBox().inflate(36.0D),
+                    m -> m.isAlive() && m.getTags().contains(TAG_GREED_CONTROLLED));
+
+            for (Mob puppet : puppets) {
+                // Kiểm tra chủ nhân
+                String ownerUuid = EntityDataHelper.getCustomData(puppet).getString(TAG_GREED_OWNER);
+                if (!ownerUuid.isEmpty() && !ownerUuid.equals(playerUuidStr)) {
+                    continue; // Thuộc quyền người chơi khác
+                }
+
+                // 1. Không bao giờ tấn công chủ nhân
+                if (puppet.getTarget() == player) {
+                    puppet.setTarget(null);
+                }
+
+                // 2. Tự động hỗ trợ giao tranh
+                LivingEntity attacker = player.getLastHurtByMob();
+                LivingEntity target = player.getLastHurtMob();
+                if (attacker != null && attacker.isAlive() && attacker != puppet && !attacker.getTags().contains(TAG_GREED_CONTROLLED)) {
+                    puppet.setTarget(attacker);
+                } else if (target != null && target.isAlive() && target != puppet && !target.getTags().contains(TAG_GREED_CONTROLLED)) {
+                    puppet.setTarget(target);
+                }
+
+                // 3. Di chuyển bám theo chủ nhân
+                double distSq = puppet.distanceToSqr(player);
+                if (distSq > 14.0D * 14.0D && distSq <= 36.0D * 36.0D && puppet.getTarget() == null) {
+                    puppet.getNavigation().moveTo(player, 1.35D);
+                } else if (distSq > 36.0D * 36.0D) {
+                    // Dịch chuyển tức thời lại gần chủ nhân nếu bị bỏ quá xa
+                    puppet.teleportTo(player.getX() + 1.5D, player.getY(), player.getZ() + 1.5D);
+                }
+
+                // 4. Hiệu ứng hạt con rối định kỳ
+                if (gameTime % 20L == 0L) {
+                    level.sendParticles(NEON_PINK, puppet.getX(), puppet.getY() + puppet.getBbHeight() + 0.3D, puppet.getZ(), 1, 0.1, 0.1, 0.1, 0.01);
+                }
+            }
+        }
     }
 }
