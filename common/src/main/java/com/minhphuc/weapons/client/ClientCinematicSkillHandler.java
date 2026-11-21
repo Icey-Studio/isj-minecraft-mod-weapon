@@ -344,28 +344,17 @@ public final class ClientCinematicSkillHandler {
     }
 
     // =========================================================================
-    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - STABLE MAJESTIC SHOULDER CAM, REDUCED SHAKE)
+    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - STABLE MAJESTIC SHOULDER CAM XUYÊN SUỐT CHIÊU)
     // =========================================================================
     private static Pose getBeelzebuthPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
-        Vec3 camPos;
-        Vec3 lookTarget;
+        // Giữ cố định góc máy điện ảnh lệch vai phải ổn định ngắm nhìn tâm lốc xoáy (Giai đoạn 1)
+        Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
+        double subtleShake = Math.sin(age * 1.2) * 0.08; // Rung siêu nhẹ
+        Vec3 camPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2 + subtleShake, 0);
+        Vec3 lookTarget = centerPos.add(0, 1.0, 0);
 
-        if (age < 50.0f) {
-            // Lệch vai phải ổn định (không rung lắc mạnh)
-            Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
-            double subtleShake = Math.sin(age * 1.2) * 0.08; // Rung siêu nhẹ
-            camPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2 + subtleShake, 0);
-            lookTarget = centerPos.add(0, 1.0, 0);
-        } else {
-            float blend = Math.clamp((age - 50.0f) / 20.0f, 0.0f, 1.0f);
-            float ease = blend * blend * (3.0f - 2.0f * blend);
-            Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
-            Vec3 endPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2, 0);
-            camPos = endPos.lerp(vanillaPos, ease);
-            lookTarget = centerPos.lerp(vanillaPos.add(aimDir.scale(10.0)), ease);
-        }
-
-        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 50.0f, 70.0f);
+        // Giữ nguyên góc nhìn cho đến những tick cuối cùng của chiêu thức
+        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 76.0f, 80.0f);
     }
 
     // =========================================================================
