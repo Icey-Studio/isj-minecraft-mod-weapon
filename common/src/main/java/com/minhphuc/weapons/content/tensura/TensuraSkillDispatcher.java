@@ -39,7 +39,7 @@ public class TensuraSkillDispatcher {
                 case 2 -> "§a§l3. Phép Màu Của Thần Linh (Miracle of the Gods)";
                 case 3 -> "§d§l4. Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)";
                 case 4 -> "§4§l5. Ngày Tận Thế (Apocalypse)";
-                case 5 -> "§5§l6. Bạo thực vương (Beelzebuth)";
+                case 5 -> "§5§l6. Bạo Thực Vương (Beelzebuth)";
                 case 6 -> "§c§l7. Phẫn Nộ Vương: Long Tinh Bộc Viêm Bá (Dragon Nova)";
                 case 7 -> "§e§l8. Thần Nộ: Tuyệt Diệt Tinh Tú (Extinction Stars)";
                 case 8 -> "§2§l9. Thị Thực (Seer Flesh)";
@@ -81,7 +81,7 @@ public class TensuraSkillDispatcher {
                 case 2 -> "§a§l3. Phép Màu Của Thần Linh (Miracle of the Gods)";
                 case 3 -> "§d§l4. Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)";
                 case 4 -> "§4§l5. Ngày Tận Thế (Apocalypse)";
-                case 5 -> "§5§l6. Bạo thực vương (Beelzebuth)";
+                case 5 -> "§5§l6. Bạo Thực Vương (Beelzebuth)";
                 case 6 -> "§c§l7. Phẫn Nộ Vương: Long Tinh Bộc Viêm Bá (Dragon Nova)";
                 case 7 -> "§e§l8. Thần Nộ: Tuyệt Diệt Tinh Tú (Extinction Stars)";
                 case 8 -> "§2§l9. Thị Thực (Seer Flesh)";
@@ -225,7 +225,17 @@ public class TensuraSkillDispatcher {
                     case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
                     case 3 -> FaithAndGraceAbility.cast(level, player);
                     case 4 -> ApocalypseAbility.cast(level, player);
-                    case 5 -> BeelzebuthAbility.executeBeelzebuth(level, player);
+                    case 5 -> {
+                        if (player.isShiftKeyDown()) {
+                            if (player.getXRot() > 35.0F) {
+                                BeelzebuthAbility.castTidalRelease(level, player);
+                            } else {
+                                BeelzebuthAbility.castWaterBlade(level, player);
+                            }
+                        } else {
+                            BeelzebuthAbility.executeBeelzebuth(level, player);
+                        }
+                    }
                     case 6 -> DragonNovaAbility.cast(level, player);
                     case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
                     case 8 -> SeerFleshAbility.cast(level, player);
@@ -283,7 +293,17 @@ public class TensuraSkillDispatcher {
                     case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
                     case 3 -> FaithAndGraceAbility.cast(level, player);
                     case 4 -> ApocalypseAbility.cast(level, player);
-                    case 5 -> BeelzebuthAbility.executeBeelzebuth(level, player);
+                    case 5 -> {
+                        if (player.isShiftKeyDown()) {
+                            if (player.getXRot() > 35.0F) {
+                                BeelzebuthAbility.castTidalRelease(level, player);
+                            } else {
+                                BeelzebuthAbility.castWaterBlade(level, player);
+                            }
+                        } else {
+                            BeelzebuthAbility.executeBeelzebuth(level, player);
+                        }
+                    }
                     case 6 -> DragonNovaAbility.cast(level, player);
                     case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
                     case 8 -> SeerFleshAbility.cast(level, player);

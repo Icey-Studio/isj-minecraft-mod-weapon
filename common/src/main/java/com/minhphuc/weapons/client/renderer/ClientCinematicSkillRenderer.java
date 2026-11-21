@@ -605,66 +605,136 @@ public final class ClientCinematicSkillRenderer {
     }
 
     // =========================================================================
-    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - VOID DRAGON MAW & COSMIC ACCRETION CORONA)
+    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - ANIME WATER VOID TORNADO & CYAN WATER RIBBONS)
     // =========================================================================
     private static void renderBeelzebuth(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
-        float r = 36.0f * skill.powerMultiplier();
-        float fade = (age < skill.totalTicks() - 10) ? 1.0f : (float) Math.max(0.0, (skill.totalTicks() - age) / 10.0f);
+        float mult = skill.powerMultiplier() > 0.1f ? skill.powerMultiplier() : 1.0f;
+        float h = 42.0f * mult;
+        float fade = (age < 8.0f) ? (age / 8.0f) : ((age < skill.totalTicks() - 12) ? 1.0f : Math.max(0.0f, (skill.totalTicks() - age) / 12.0f));
+        int op = (int) (fade * 220.0f);
 
-        // 1. Khối cầu chân trời sự kiện hắc ám (Event Horizon Singularity)
-        billboardDisc(v, m, new Vec3(0, 3.5, 0), 7.5f, 0x0A0012, fade);
-        billboardDisc(v, m, new Vec3(0, 3.5, 0), 9.0f, 0x4A148C, fade * 0.75f);
-
-        // 2. Đĩa bồi tụ Plasma xoay tít tốc độ cao (Accretion Disk)
-        for (int ringIdx = 0; ringIdx < 5; ringIdx++) {
-            float ringR = 8.0f + ringIdx * 6.0f;
-            float rotSpeed = (5 - ringIdx) * 0.09f;
-            int ringColor = (ringIdx % 2 == 0) ? 0x9C27B0 : 0xFF1744;
-            renderHexagonRing(v, m, 3.5f, ringR, 0.40f, ringColor, 0.85f * fade, age * rotSpeed);
+        // 1. Sóng gợn nước xoáy dưới mặt hồ / đại dương (Base Concentric Water Ripple Rings)
+        for (int i = 0; i < 4; i++) {
+            float rippleR = ((age * 2.2f + i * 5.0f) % 20.0f);
+            float rippleAlpha = (1.0f - rippleR / 20.0f) * fade * 0.85f;
+            ring(v, m, 0.10f + i * 0.04f, rippleR, 0.45f, 0x00E5FF, rippleAlpha);
         }
 
-        // 3. 3D VOID DRAGON MAW: HÀM RỒNG HƯ KHÔNG LAO TỚI THÔN PHỆ KHÔNG GIAN
-        Vec3 dir = skill.direction();
-        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
-        Vec3 d = dir.normalize();
-        Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-        Vec3 right = d.cross(up).normalize();
-        Vec3 upVec = d.cross(right).normalize();
+        // 2. Lõi Lốc Xoáy Hư Không Tím Đen Khổng Lồ (Towering Dark Purple Void Tornado Funnel)
+        // Chiều cao H = 42m, nở dần từ đáy R_base = 3.8m lên đỉnh R_top = 13.5m, xoay tít tốc độ cao
+        int slices = 16;
+        int segments = 16;
+        float baseR = 3.8f * mult;
+        float topR = 13.5f * mult;
 
-        Vec3 jawBase = new Vec3(0, 3.5, 0).add(d.scale(3.0));
-        float biteAngle = (float) Math.sin(age * 0.32f) * 0.35f + 0.45f; // Hoạt ảnh hàm rồng ngoạm
-        float jawLen = 14.0f;
+        for (int s = 0; s < slices; s++) {
+            float t0 = (float) s / slices;
+            float t1 = (float) (s + 1) / slices;
+            float y0 = t0 * h;
+            float y1 = t1 * h;
 
-        // Hàm trên (Upper Jaw)
-        Vec3 upperTip = jawBase.add(d.scale(jawLen)).add(upVec.scale(jawLen * (float) Math.sin(biteAngle)));
-        Vec3 upperLeft = jawBase.add(right.scale(4.5)).add(upVec.scale(2.5));
-        Vec3 upperRight = jawBase.add(right.scale(-4.5)).add(upVec.scale(2.5));
-        stroke(v, m, upperLeft, upperTip, 0.45f, fade * 0.95f, 0xBA68C8);
-        stroke(v, m, upperRight, upperTip, 0.45f, fade * 0.95f, 0xBA68C8);
+            // Bán kính lốc xoáy lượn sóng nhẹ tạo độ rung động tự nhiên như anime
+            float r0 = (baseR + t0 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t0 * 10.0f + age * 0.25f));
+            float r1 = (baseR + t1 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t1 * 10.0f + age * 0.25f));
 
-        // Hàm dưới (Lower Jaw)
-        Vec3 lowerTip = jawBase.add(d.scale(jawLen)).add(upVec.scale(-jawLen * (float) Math.sin(biteAngle)));
-        Vec3 lowerLeft = jawBase.add(right.scale(3.8)).add(upVec.scale(-2.0));
-        Vec3 lowerRight = jawBase.add(right.scale(-3.8)).add(upVec.scale(-2.0));
-        stroke(v, m, lowerLeft, lowerTip, 0.45f, fade * 0.95f, 0xBA68C8);
-        stroke(v, m, lowerRight, lowerTip, 0.45f, fade * 0.95f, 0xBA68C8);
+            float rot0 = age * 0.15f + t0 * 1.2f;
+            float rot1 = age * 0.15f + t1 * 1.2f;
 
-        // Nanh rồng hư không (Void Dragon Fangs)
-        stroke(v, m, upperTip, upperTip.add(upVec.scale(-3.0)), 0.30f, fade * 0.98f, 0xFFFFFF);
-        stroke(v, m, lowerTip, lowerTip.add(upVec.scale(2.5)), 0.30f, fade * 0.98f, 0xFFFFFF);
+            for (int seg = 0; seg < segments; seg++) {
+                double a00 = rot0 + (seg * 2.0 * Math.PI / segments);
+                double a01 = rot0 + ((seg + 1) * 2.0 * Math.PI / segments);
+                double a10 = rot1 + (seg * 2.0 * Math.PI / segments);
+                double a11 = rot1 + ((seg + 1) * 2.0 * Math.PI / segments);
 
-        // 4. Sấm sét thứ nguyên (Dimensional Lightning) xé rách không gian
-        for (int l = 0; l < 8; l++) {
-            double baseA = l * Math.PI / 4.0 + age * 0.05;
-            Vec3 p0 = new Vec3(0, 3.5, 0);
-            for (int seg = 1; seg <= 5; seg++) {
-                double dist = seg * (r / 5.0);
-                double jitterX = Math.sin(age * 0.8 + l * 4.0 + seg * 2.0) * 1.5;
-                double jitterY = Math.cos(age * 0.6 + l * 3.0 + seg * 1.7) * 1.5;
-                Vec3 pNext = new Vec3(Math.cos(baseA) * dist + jitterX, 3.5 + jitterY, Math.sin(baseA) * dist);
-                stroke(v, m, p0, pNext, 0.28f, fade * 0.90f, 0xE1BEE7);
-                p0 = pNext;
+                float x00 = (float) Math.cos(a00) * r0;
+                float z00 = (float) Math.sin(a00) * r0;
+                float x01 = (float) Math.cos(a01) * r0;
+                float z01 = (float) Math.sin(a01) * r0;
+
+                float x10 = (float) Math.cos(a10) * r1;
+                float z10 = (float) Math.sin(a10) * r1;
+                float x11 = (float) Math.cos(a11) * r1;
+                float z11 = (float) Math.sin(a11) * r1;
+
+                // Màu tím thẫm đan xen tím đen ma vương
+                int col = (seg % 2 == 0) ? 0x2A0845 : 0x4A148C;
+                if ((s + seg) % 3 == 0) col = 0x6A1B9A;
+                quad(v, m, x00, y0, z00, x01, y0, z01, x11, y1, z11, x10, y1, z10, col, op);
             }
+        }
+
+        // Lõi đen hư vô đậm đặc ở trung tâm
+        cylinder(v, m, baseR * 0.6f, h, 0.95f * fade, 0x0E0018, age);
+
+        // 3. 4 Dải Ruy Băng Nước Xoáy Màu Lam Ngọc (4 Spiraling Cyan Water Ribbons wrapping the column)
+        int ribbonSteps = 32;
+        for (int rIdx = 0; rIdx < 4; rIdx++) {
+            double startAngle = rIdx * (Math.PI / 2.0);
+
+            for (int step = 0; step < ribbonSteps; step++) {
+                float ta = (float) step / ribbonSteps;
+                float tb = (float) (step + 1) / ribbonSteps;
+                float ya = ta * h;
+                float yb = tb * h;
+
+                // Xoắn 2.4 vòng từ gốc lên đỉnh
+                double thetaA = startAngle + (ta * 2.4 * Math.PI * 2.0) - (age * 0.22);
+                double thetaB = startAngle + (tb * 2.4 * Math.PI * 2.0) - (age * 0.22);
+
+                float ra = (baseR + ta * (topR - baseR)) + 1.2f + 0.5f * (float) Math.sin(ta * 8.0f + age * 0.3f);
+                float rb = (baseR + tb * (topR - baseR)) + 1.2f + 0.5f * (float) Math.sin(tb * 8.0f + age * 0.3f);
+
+                Vec3 pa = new Vec3(Math.cos(thetaA) * ra, ya, Math.sin(thetaA) * ra);
+                Vec3 pb = new Vec3(Math.cos(thetaB) * rb, yb, Math.sin(thetaB) * rb);
+
+                // Dải ruy băng nước rộng 0.65m màu lam ngọc phát sáng
+                stroke(v, m, pa, pb, 0.65f, fade * 0.95f, 0x00E5FF);
+                stroke(v, m, pa.add(0, 0.25, 0), pb.add(0, 0.25, 0), 0.35f, fade * 0.98f, 0xE0F7FA); // Bọt nước trắng sáng viền dải ruy băng
+            }
+        }
+
+        // 4. Các Đĩa Phẳng Cộng Hưởng Hư Không Cắt Ngang (Horizontal Resonance Discs)
+        float[] discHeights = { 0.22f * h, 0.46f * h, 0.70f * h, 0.88f * h };
+        for (int d = 0; d < discHeights.length; d++) {
+            float dy = discHeights[d];
+            float frac = dy / h;
+            float discInnerR = (baseR + frac * (topR - baseR));
+            float discOuterR = discInnerR * 1.55f;
+
+            // Đĩa phẳng hình lục giác/bát giác với viền tím neon
+            ring(v, m, dy, discOuterR, 0.55f, 0x80DEEA, fade * 0.85f);
+            ring(v, m, dy + 0.15f, discInnerR, 0.40f, 0xBA68C8, fade * 0.90f);
+
+            // Mặt phẳng đĩa cắt ngang
+            int discSegments = 16;
+            for (int seg = 0; seg < discSegments; seg++) {
+                double a0 = (seg * 2.0 * Math.PI / discSegments) + (age * 0.05f * (d % 2 == 0 ? 1 : -1));
+                double a1 = ((seg + 1) * 2.0 * Math.PI / discSegments) + (age * 0.05f * (d % 2 == 0 ? 1 : -1));
+
+                float xi0 = (float) Math.cos(a0) * discInnerR;
+                float zi0 = (float) Math.sin(a0) * discInnerR;
+                float xi1 = (float) Math.cos(a1) * discInnerR;
+                float zi1 = (float) Math.sin(a1) * discInnerR;
+
+                float xo0 = (float) Math.cos(a0) * discOuterR;
+                float zo0 = (float) Math.sin(a0) * discOuterR;
+                float xo1 = (float) Math.cos(a1) * discOuterR;
+                float zo1 = (float) Math.sin(a1) * discOuterR;
+
+                quad(v, m, xi0, dy, zi0, xi1, dy, zi1, xo1, dy, zo1, xo0, dy, zo0, 0x311B92, (int) (fade * 180));
+            }
+        }
+
+        // 5. Đỉnh Hư Không Chân Trời Sự Kiện (Summit Void Singularity)
+        billboardDisc(v, m, new Vec3(0, h, 0), topR * 1.4f, 0x0A0012, fade * 0.98f);
+        ring(v, m, h, topR * 1.45f, 0.6f, 0x9C27B0, fade * 0.90f);
+
+        // 6. Tinh thể bọt nước & tia sét hư không bay lên trời
+        for (int p = 0; p < 16; p++) {
+            double pa = p * 2.4 + age * 0.08;
+            float py = ((age * 1.2f + p * 2.8f) % h);
+            float pr = (baseR + (py / h) * (topR - baseR)) + (float) Math.sin(p + age * 0.2) * 1.5f;
+            billboardDisc(v, m, new Vec3(Math.cos(pa) * pr, py, Math.sin(pa) * pr), 0.45f, (p % 2 == 0 ? 0x00E5FF : 0xBA68C8), fade * 0.85f);
         }
     }
 
