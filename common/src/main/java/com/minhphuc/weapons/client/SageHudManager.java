@@ -79,10 +79,11 @@ public final class SageHudManager {
         Minecraft mc = Minecraft.getInstance();
         if (mc.player == null) return;
 
-        if (currentActive.offerVeldoraWarp() || currentActive.actionId() == ServerboundSageActionPacket.ACTION_WARP_VELDORA) {
+        int action = currentActive.actionId();
+        if (action > 0) {
+            ModMessages.sendToServer(new ServerboundSageActionPacket(action));
+        } else if (currentActive.offerVeldoraWarp()) {
             ModMessages.sendToServer(new ServerboundSageActionPacket(ServerboundSageActionPacket.ACTION_WARP_VELDORA));
-        } else if (currentActive.actionId() > 0) {
-            ModMessages.sendToServer(new ServerboundSageActionPacket(currentActive.actionId()));
         }
 
         mc.player.playSound(SoundEvents.BEACON_ACTIVATE, 0.75F, 1.7F);

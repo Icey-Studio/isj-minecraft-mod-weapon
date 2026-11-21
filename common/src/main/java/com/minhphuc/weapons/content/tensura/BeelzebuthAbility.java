@@ -380,7 +380,7 @@ public class BeelzebuthAbility {
                         data.putLong("BeelzebuthPendingCenterPos", BlockPos.containing(v.centerPos).asLong());
                         SageManager.sendCornerAlert(v.caster,
                                 "« Báo cáo »: Đã hấp thụ " + v.absorbedWaterBlocks + " khối nước. Ngài có muốn Thông Tuệ Vương Raphael thanh tẩy và hoàn trả nguồn nước tinh khiết không? [Y] Đồng ý / [N] Giữ trong Dạ Dày",
-                                0xFF00E5FF, 9000, true, ServerboundSageActionPacket.ACTION_PURIFY_RESTORE_WATER);
+                                0xFF00E5FF, 9000, false, ServerboundSageActionPacket.ACTION_PURIFY_RESTORE_WATER);
                     }
 
                     // Đề xuất 2: Tái cấu trúc Zombie Dân Làng
@@ -388,7 +388,7 @@ public class BeelzebuthAbility {
                         data.putInt("BeelzebuthPendingZombieVillagers", v.swallowedZombies);
                         SageManager.sendCornerAlert(v.caster,
                                 "« Báo cáo »: Phát hiện " + v.swallowedZombies + " cá thể Zombie Dân Làng trong Dạ Dày. Ngài có muốn giải trừ virus và tái cấu trúc thành Dân Làng không? [Y] Tái Cấu Trúc / [N] Tiêu Hóa",
-                                0xFF22C55E, 9000, true, ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES);
+                                0xFF22C55E, 9000, false, ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES);
                     }
                 }
 

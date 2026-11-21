@@ -421,7 +421,7 @@ public final class SageManager {
                 data.putLong("SageGolemRepairTick", now);
                 sendCornerAlert(sp,
                         "« Báo cáo »: Phát hiện Người Sắt bị tổn hại (" + (int) golem.getHealth() + "/" + (int) golem.getMaxHealth() + " HP). Ngài có muốn tiêu hao Thép Ma Thuật trong Dạ Dày để phục hồi 100% thể trạng không? [Y] Sửa Chữa / [N] Bỏ Qua",
-                        0xFF38BDF8, 8000, true, ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM);
+                        0xFF38BDF8, 8000, false, ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM);
                 break;
             }
         }
@@ -432,7 +432,7 @@ public final class SageManager {
                 data.putLong("SageAngryBeesTick", now);
                 sendCornerAlert(sp,
                         "« Cảnh báo »: Đàn ong đang cuồng nộ do mất tổ! Ngài có muốn dùng Mật Hoa Tinh Khiết trong Dạ Dày để xoa dịu và tái lập tổ ong mật không? [Y] Xoa Dịu / [N] Bỏ Qua",
-                        0xFFF59E0B, 8000, true, ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES);
+                        0xFFF59E0B, 8000, false, ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES);
                 break;
             }
         }
@@ -443,7 +443,7 @@ public final class SageManager {
                 data.putLong("SageBerserkPacifyTick", now);
                 sendCornerAlert(sp,
                         "« Cảnh báo »: Phát hiện thực thể Ma Vương đang trong trạng thái Cuồng Nộ (Berserk)! Ngài có muốn dùng Hư Không Tâm Linh để hóa giải cơn thịnh nộ không? [Y] Hóa Giải / [N] Bỏ Qua",
-                        0xFFEF4444, 8500, true, ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON);
+                        0xFFEF4444, 8500, false, ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON);
                 break;
             }
         }
