@@ -24,7 +24,7 @@ import java.util.List;
 public class GuideBookScreen extends Screen {
 
     private int currentPage = 0;
-    private static final int TOTAL_PAGES = 30;
+    private static final int TOTAL_PAGES = 31;
     private static final int PAGE_TOC = 1;
     private static final int PAGE_ARMOR = 4;
     private static final int PAGE_AUTHOR = TOTAL_PAGES - 1;
@@ -191,7 +191,7 @@ public class GuideBookScreen extends Screen {
         addTocButton(left, top, bookW, 10, "12 · Thái Tuế Tinh Quân & Thị Nhục", 11);
         addTocButton(left, top, bookW, 11, "15 · Súng Hoàng Kim Carrera", 14);
         addTocButton(left, top, bookW, 12, "16 · Thất Thủy Tổ, Thể Xác & Nhập Xác", 15);
-        addTocButton(left, top, bookW, 13, "27 · Ma Giới, Veldora, Mê Cung & Boss", 26);
+        addTocButton(left, top, bookW, 13, "30 · Kẻ Tham Lam & Cố Vấn 1-Chạm", 29);
 
         // Nút Tác Giả & GitHub
         int authorBtnY = top + bookH - 52;
@@ -311,7 +311,8 @@ public class GuideBookScreen extends Screen {
             case 26 -> renderPageUnderworldAndDemons(guiGraphics, left, top, bookW, maxY, fullW);
             case 27 -> renderPageVeldoraSageAzathoth(guiGraphics, left, top, bookW, maxY, fullW);
             case 28 -> renderPageTempestAndLabyrinth(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
-            case 29 -> renderPageAuthor(guiGraphics, left, top, bookW, maxY, fullW);
+            case 29 -> renderPageGreedAndTacticalCoPilot(guiGraphics, left, top, bookW, maxY, fullW, mouseX, mouseY);
+            case 30 -> renderPageAuthor(guiGraphics, left, top, bookW, maxY, fullW);
         }
 
         if (hoveredTooltipStack != null && !hoveredTooltipStack.isEmpty()) {
@@ -428,7 +429,7 @@ public class GuideBookScreen extends Screen {
 
         y = drawWrapped(g, "§b⚡ Hệ Thống Phím Tắt & Đặc Quyền Mới:", x, y, fullW, maxY);
         y += 2;
-        y = drawWrapped(g, " §e• [G] Bánh Xe Kỹ Năng / [Z] Đổi Chiêu: §fChọn nhanh chiêu, ghim 4 ô Yêu Thích & Safe Mode. §a(Đặc quyền: 0s Cooldown!)", x + 2, y, fullW - 4, maxY);
+        y = drawWrapped(g, " §e• [G] Bánh Xe / [Z] Đổi Chiêu / [Y]/[N] Cố Vấn: §fChọn nhanh chiêu; [Y]/[N] nhận lệnh chiến thuật 1-chạm Đại Hiền Giả. §a(0s Cooldown!)", x + 2, y, fullW - 4, maxY);
         y = drawWrapped(g, " §b• [B] Dạ Dày Azathoth / [X] Tự Động Raphael: §f[B] mở Không Gian Ảo (120 ô, click túi cất đồ); [X] bật/tắt Raphael Auto-Battle!", x + 2, y, fullW - 4, maxY);
         y = drawWrapped(g, " §3• [V] Hang Phong Ấn / [K] Nghịch Thời Trảm: §f[V] dịch chuyển tới Hang Veldora (Shift+V quét 24m); [K] chém Nghịch Thời.", x + 2, y, fullW - 4, maxY);
         y = drawWrapped(g, " §a• [Chuột Phải] Thi Triển / [Page Up] Đạn Súng: §fTung kỹ năng đang chọn (tay không / Giáp Thần / Nhập Xác).", x + 2, y, fullW - 4, maxY);
@@ -1008,7 +1009,7 @@ public class GuideBookScreen extends Screen {
         y = drawWrapped(g, "   §f• Nhấn §a[V] §fđến Hang Veldora, giải phong ấn bằng §dAzathoth§f. Cả 3 Long Chủng đều §cphá khối khi bay (dạng rồng)§f & dùng §echiêu Ma Vương uy lực 1.4x§f (Veldora người biết bay).", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §f• §5Phong Sát Kỹ Năng§f vô hiệu mọi chiêu thức của Boss/Ác Ma/Người chơi (ưu tiên mục tiêu đang nhìn hoặc 32m).", left + 16, y, fullW, maxY);
         y += 2;
-        y = drawWrapped(g, " §b2. Trí Tuệ Vương Raphael ([G] & Auto-Battle [X]):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, " §b2. Thông Tuệ Vương Raphael ([G] & Auto-Battle [X]):", left + 16, y, fullW, maxY);
         y = drawWrapped(g, "   §f• §e50 Kỹ Năng Chủ Động§f + §bAuto-Battle [X]§f tự bay né đòn, bật Uriel khi nguy cấp & xả chiêu 0.6s/lần ([X] / [Shift] trả quyền).", left + 16, y, fullW, maxY);
         drawWrapped(g, " §d3. Dạ Dày Vô Hạn Azathoth ([B]): §f120 ô chứa đồ, §eClick Túi Đồ cất trực tiếp§f, §dAuto-Loot Hư Không§f & Chuyển Hóa tăng vĩnh viễn §bMa Tố / EP§f!", left + 16, y, fullW, maxY);
     }
@@ -1027,6 +1028,28 @@ public class GuideBookScreen extends Screen {
         y = drawWrapped(g, " §a• Tinh Linh & Dân Làng Tempest: §fĐặt Tế Đàn Tinh Linh + xúc tác nguyên tố để triệu hồi 6 Tinh Linh; Dân làng nhận Chúc Phúc thành Công Dân Tempest!", left + 16, y, fullW, maxY);
         y = drawWrapped(g, " §5• Mê Cung 100 Tầng Ramiris & Chronoa: §fBấm §bRaphael #8§f trong [G] để quét tọa độ Cổng Mê Cung gần nhất! Thanh tẩy Chronoa bằng Táo Vàng khi <30% HP.", left + 16, y, fullW, maxY);
         drawWrapped(g, " §4• Di Tích Tâm Linh Cấp S: §fĐập vỡ Tà Thần Tượng trước khi Lời Nguyền Đếm Ngược đạt 100%!", left + 16, y, fullW, maxY);
+    }
+
+    private void renderPageGreedAndTacticalCoPilot(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW, int mouseX, int mouseY) {
+        drawHeaderTitle(g, left, top, bookW, "§d§l✦ KẺ THAM LAM & CỐ VẤN TÁC CHIẾN 1-CHẠM", 0xFFFF66CC);
+
+        int iconY = top + 28;
+        drawIconRow(g, left + 16, iconY, mouseX, mouseY,
+                new ItemStack(ModItems.GREED_AWAKENING_ORB.get()),
+                new ItemStack(ModItems.MARIABELL_SOUL.get()));
+        drawWrapped(g, "§d[Ngọc Thức Tỉnh Kẻ Tham Lam & Tinh Hồn Mariabell Rosso]", left + 70, iconY + 5, bookW - 84, maxY);
+
+        int y = top + 52;
+        y = drawWrapped(g, " §d1. Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One - 强欲者):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §6Thức tỉnh: §fLà Chân Ma Vương, thanh tẩy Hồn Mariabell hoặc dùng §dNgọc Thức Tỉnh Tham Lam§f.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §c1. Khống Chế [Crouch]: §7Tẩy não quái 22m thành hộ vệ mắt đỏ trung thành.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §d2. Xiềng Xích [Chuột Phải]: §7Xích hồng trói, hút 25% máu tối đa & thể lực về bản thân.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §43. Bùng Nổ [Shift+Phải]: §7Gây 85-180 sát thương chuẩn tâm trí cực đại.", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• §eNội tại: §7+50% EXP khi hạ quái, 35% tước đoạt vũ khí kẻ địch vào Dạ Dày Azathoth.", left + 16, y, fullW, maxY);
+        y += 3;
+        y = drawWrapped(g, " §b2. Cố Vấn Tác Chiến 1-Chạm Đại Hiền Giả ([Y] / [N]):", left + 16, y, fullW, maxY);
+        y = drawWrapped(g, "   §f• Đại Hiền Giả tự động cảnh báo nguy cấp (máu yếu, void, lava, quái đông, đồ rơi, Veldora giận dữ...).", left + 16, y, fullW, maxY);
+        drawWrapped(g, "   §f• Bấm §a[Y] (Đồng ý)§f thi triển tức thì trong 1 tick (Cấp cứu, Né void, Hóa đá lava, Hút khoáng, Trấn an rồng). Bấm §c[N]§f để từ chối.", left + 16, y, fullW, maxY);
     }
 
     private void renderPageAuthor(GuiGraphics g, int left, int top, int bookW, int maxY, int fullW) {

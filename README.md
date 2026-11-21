@@ -154,15 +154,35 @@ Kỹ năng thứ 23 kết nối toàn bộ tinh hoa tuyệt kỹ của mod thàn
 
 ---
 
+### 💰 9. Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One) & Cố Vấn Tác Chiến 1-Chạm
+* **Kỹ Năng Độc Nhất: Kẻ Tham Lam (Greedy One - 强欲者)**:
+  * **Quy trình thức tỉnh**: Chỉ dành cho Chân Ma Vương. Đánh bại Mariabell Rosso thu thập Tinh Hồn để thanh tẩy, hoặc sử dụng trực tiếp **Ngọc Thức Tỉnh Kẻ Tham Lam (`Greed Awakening Orb`)**.
+  * **Thức 1: Khống Chế Dục Vọng (`Crouch + Chuột Phải`)**: Tẩy não toàn bộ quái vật trong bán kính 22m biến thành binh đoàn mắt đỏ trung thành, tự động bảo vệ chủ nhân.
+  * **Thức 2: Xiềng Xích Tham Lam (`Chuột Phải`)**: Phóng xích ma pháp neon hồng trói chặt mục tiêu, rút 25% máu tối đa và hút trọn thể lực/MP về người chơi.
+  * **Thức 3: Bùng Nổ Dục Vọng (`Shift + Chuột Phải`)**: Kích nổ lòng tham trong tâm trí kẻ địch, gây 85-180 sát thương chuẩn cực đại kèm hiệu ứng chấn động Sonic Boom.
+  * **Nội tại linh hồn vĩnh cửu**: Nhận thêm **+50% EXP** khi tiêu diệt mục tiêu và **35% tỉ lệ tước đoạt vũ khí** của nạn nhân thẳng vào Không Gian Dạ Dày Azathoth.
+* **Hệ Thống Cố Vấn Tác Chiến 1-Chạm (1-Tap Tactical Co-Pilot `[Y]` / `[N]`)**:
+  * Khi người chơi gặp các tình huống nguy cấp trong thế giới (máu thấp, rơi vào hư không, bị bao vây bởi đám đông, rơi xuống dung nham, trang bị hỏng, đồ rơi vãi, Veldora phát cuồng...), Đại Hiền Giả / Raphael sẽ chủ động phân tích và đưa ra đề xuất chiến thuật lên màn hình.
+  * **Phím `[Y]` (Đồng ý / Chấp thuận)**: Đại Hiền Giả lập tức thi triển giải pháp tối ưu chỉ trong 1 tick (Cấp cứu sinh mệnh, Hút khoáng sản/đồ vào Azathoth, Hóa đá dung nham, Đổi hướng đạn đạo, Trấn an rồng bạo nộ, Sửa chữa trang bị...).
+  * **Phím `[N]` (Từ chối)**: Bỏ qua khuyến nghị chiến thuật và ẩn thông báo.
+
+---
+
 ## 🎮 Bảng Phím Tắt & Thao Tác (Keybindings)
 
 | Phím Tắt | Thao Tác | Chức Năng |
 | :---: | :--- | :--- |
-| **`Z`** | **Xoay Vòng Tuyệt Kỹ** | Chuyển đổi giữa 22 kỹ năng bản thể & bật/tắt Uriel |
+| **`Z`** | **Xoay Vòng Tuyệt Kỹ** | Chuyển đổi giữa 38 kỹ năng bản thể & bật/tắt Uriel |
+| **`G`** | **Bánh Xe Kỹ Năng (Radial Wheel)** | Mở giao diện xoay chọn kỹ năng dạng vòng tròn trực quan kèm 4 ô Yêu Thích |
+| **`Y`** | **Chấp Thuận Chiến Thuật (Tactical Accept)** | Đồng ý thực thi đề xuất cứu sinh / phản công 1-chạm của Đại Hiền Giả |
+| **`N`** | **Từ Chối Đề Xuất (Tactical Decline)** | Bỏ qua khuyến nghị chiến thuật của Đại Hiền Giả |
+| **`B`** | **Dạ Dày Vô Hạn Azathoth** | Mở kho lưu trữ không gian ảo 120 ô, auto-loot & click chuyển đồ |
+| **`X`** | **Tự Động Chiến Đấu Raphael** | Bật / tắt chế độ Raphael Auto-Battle (tự né đòn, bật khiên, xả chiêu) |
+| **`V`** | **Dịch Chuyển Hang Veldora** | Dịch chuyển tức thời đến Hang Phong Ấn Veldora / Quét phạm vi 24m |
+| **`K`** | **Nghịch Thời Nhất Trảm** | Nhát chém đảo ngược thời gian |
 | **`Chuột Phải`** | **Kích Hoạt Kỹ Năng** | Thi triển chiêu thức đã chọn / Bắn Cầu Linh Tử 7 màu (Kiếm) / Mở sách |
 | **`Chuột Trái`** | **Tấn Công / Hắc Thiểm** | Trảm Kích Hắc Thiểm Bá Vương khi cầm Nguyệt Quang Kiếm |
 | **`Page Up`** | **Chọn Ma Đạn Hoàng Kim** | Mở bảng GUI chọn 4 loại ma đạn khi cầm Súng Hoàng Kim |
-| **`X`** | **Nghịch Thời Nhất Trảm** | Kích hoạt nhát chém đảo ngược thời gian |
 
 ---
 
