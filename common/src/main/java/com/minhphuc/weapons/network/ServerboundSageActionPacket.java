@@ -33,6 +33,9 @@ public class ServerboundSageActionPacket {
     public static final int ACTION_REPAIR_IRON_GOLEM = 22;
     public static final int ACTION_PACIFY_ANGRY_BEES = 23;
     public static final int ACTION_GRANT_DEMON_BODY_CONTRACT = 24;
+    public static final int ACTION_RELOCATE_VILLAGERS = 25;
+    public static final int ACTION_FERTILIZE_CROPS = 26;
+    public static final int ACTION_EVOLVE_VILLAGER_GUARDS = 27;
 
     private final int action;
 

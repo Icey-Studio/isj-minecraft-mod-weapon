@@ -451,6 +451,60 @@ public final class SageManager {
             }
         }
 
+        // Tác chiến Raphael 1-Chạm: Ban Phước Ruộng Đồng Thôn Làng (Phì Nhiêu Hư Không)
+        if (now - data.getLong("SageFertilizeCropsTick") >= 400L) {
+            BlockPos pCenter = sp.blockPosition();
+            int unripenedCrops = 0;
+            for (int dx = -10; dx <= 10 && unripenedCrops < 4; dx += 2) {
+                for (int dz = -10; dz <= 10 && unripenedCrops < 4; dz += 2) {
+                    for (int dy = -2; dy <= 2 && unripenedCrops < 4; dy++) {
+                        BlockPos bp = pCenter.offset(dx, dy, dz);
+                        BlockState bs = sl.getBlockState(bp);
+                        if (bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop && !crop.isMaxAge(bs)) {
+                            unripenedCrops++;
+                        } else if (bs.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bmb && bmb.isValidBonemealTarget(sl, bp, bs)) {
+                            unripenedCrops++;
+                        }
+                    }
+                }
+            }
+            if (unripenedCrops >= 3) {
+                data.putLong("SageFertilizeCropsTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện cánh đồng hoa màu của thôn làng chưa chín. Ngài có muốn giải phóng Dưỡng Chất Ma Tố trong Dạ Dày làm chín rộ toàn bộ ruộng đồng không? [Y] Ban Phước Ruộng Đồng / [N] Bỏ Qua",
+                        0xFF84CC16, 8500, false, ServerboundSageActionPacket.ACTION_FERTILIZE_CROPS);
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Tiến Hóa Dân Làng thành Hộ Vệ Tinh Nhuệ Tempest
+        if (now - data.getLong("SageEvolveGuardsTick") >= 500L) {
+            List<Villager> ordinaryVillagers = sl.getEntitiesOfClass(Villager.class, sp.getBoundingBox().inflate(14.0D),
+                    v -> v.isAlive() && !v.getTags().contains("TempestGuardianGuard"));
+            if (ordinaryVillagers.size() >= 1) {
+                data.putLong("SageEvolveGuardsTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện " + ordinaryVillagers.size() + " Dân Làng chưa có khả năng tự vệ. Ngài có muốn kích hoạt [Chuỗi Thức Ăn] tiến hóa họ thành Hộ Vệ Tinh Nhuệ Tempest không? [Y] Tiến Hóa Hộ Vệ / [N] Bỏ Qua",
+                        0xFFF59E0B, 8500, false, ServerboundSageActionPacket.ACTION_EVOLVE_VILLAGER_GUARDS);
+            }
+        }
+
+        // Hào quang Chuỗi Thức Ăn (Food Chain Aura) cho toàn bộ thuộc hạ & cư dân quanh 36m
+        if (now % 30L == 0L) {
+            List<LivingEntity> allies = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(36.0D),
+                    e -> e.isAlive() && e != sp && (e instanceof PrimordialDemonEntity pde && pde.isOwnedBy(sp)
+                            || e instanceof UnderworldDemonEntity ude && ude.isOwnedBy(sp)
+                            || (e instanceof Villager v && (v.getTags().contains(JuraTempestManager.TAG_CITADEL_RESIDENT) || v.getTags().contains("TempestGuardianGuard")))
+                            || e instanceof IronGolem));
+            for (LivingEntity ally : allies) {
+                ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 1, false, false, false));
+                ally.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 0, false, false, false));
+                ally.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 80, 0, false, false, false));
+                if (now % 60L == 0L) {
+                    sl.sendParticles(new DustParticleOptions(new Vector3f(0.1F, 0.9F, 1.0F), 0.9F), ally.getX(), ally.getY() + 0.8D, ally.getZ(), 2, 0.2, 0.3, 0.2, 0.02);
+                }
+            }
+        }
+
         // N38..N48
         if (AntiMagicBarrierManager.isInBarrier(sl, sp.position())) {
             pushAlert(sp, "Cảnh báo: Đang ở trong Kết Giới Đoạt Ma — Các kỹ năng phụ thuộc Ma Tố bị giới hạn nghiêm trọng!", "", 600);
@@ -1063,6 +1117,100 @@ public final class SageManager {
 
                 sp.displayClientMessage(Component.literal("§5§l[HỢP NHẤT LINH HỒN GIẢ LẬP] §fĐã ban Thể Xác Vật Lý cho " + spawnedCount + " Ác Ma & trao Khế Ước vào túi đồ!"), false);
                 sendCornerAlert(sp, "« Xác nhận »: Hợp nhất Linh Hồn Giả Lập thành công! Đã ban Thể Xác Vật Lý hoàn thiện (không dùng xương) và thêm Khế Ước Ác Ma vào túi đồ!", 0xFF8B5CF6, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_RELOCATE_VILLAGERS -> {
+                net.minecraft.nbt.ListTag villagersList = data.getList("BeelzebuthPendingVillagersList", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                int count = villagersList.size();
+                if (count == 0) count = Math.max(1, data.getInt("BeelzebuthPendingVillagersCount"));
+                data.remove("BeelzebuthPendingVillagersList");
+                data.remove("BeelzebuthPendingVillagersCount");
+
+                int relocated = 0;
+                for (int i = 0; i < villagersList.size(); i++) {
+                    CompoundTag vTag = villagersList.getCompound(i);
+                    Villager v = EntityType.VILLAGER.create(sl);
+                    if (v != null) {
+                        double ox = (i % 4 - 1.5D) * 1.4D;
+                        double oz = (i / 4 - 1.5D) * 1.4D;
+                        v.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                        v.readAdditionalSaveData(vTag);
+                        v.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                        v.setCustomName(Component.literal("§a§l[Cư Dân Tempest] §f" + v.getDisplayName().getString()));
+                        v.setCustomNameVisible(true);
+                        v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 2));
+                        v.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 600, 1));
+                        v.setVillagerXp(Math.max(v.getVillagerXp(), 100));
+                        sl.addFreshEntity(v);
+                        relocated++;
+                    }
+                }
+                sp.addEffect(new MobEffectInstance(MobEffects.HERO_OF_THE_VILLAGE, 12000, 4));
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.4F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.5F, 1.0F);
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.2, sp.getZ(), 50, 1.5, 0.8, 1.5, 0.1);
+                sp.displayClientMessage(Component.literal("§a§l[ĐỊNH CƯ TEMPEST] §fĐã đưa " + relocated + " Dân Làng ra định cư thành công! Nhận hiệu ứng Anh Hùng Thôn Làng V!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã đưa " + relocated + " Dân Làng ra định cư an toàn! Họ đã chính thức gia nhập Liên Bang Tempest với mức tri ân tối đa!", 0xFF10B981, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_FERTILIZE_CROPS -> {
+                BlockPos pCenter = sp.blockPosition();
+                int fertilizedCount = 0;
+                for (int dx = -18; dx <= 18; dx++) {
+                    for (int dz = -18; dz <= 18; dz++) {
+                        for (int dy = -3; dy <= 3; dy++) {
+                            BlockPos bp = pCenter.offset(dx, dy, dz);
+                            BlockState bs = sl.getBlockState(bp);
+                            if (bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop) {
+                                if (!crop.isMaxAge(bs)) {
+                                    sl.setBlock(bp, crop.getStateForAge(crop.getMaxAge()), Block.UPDATE_ALL);
+                                    fertilizedCount++;
+                                }
+                            } else if (bs.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bmb) {
+                                if (bmb.isValidBonemealTarget(sl, bp, bs)) {
+                                    bmb.performBonemeal(sl, sl.random, bp, bs);
+                                    fertilizedCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 1.6F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.4F);
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 45, 1.5, 0.6, 1.5, 0.1);
+                sp.displayClientMessage(Component.literal("§a§l[PHÌ NHIÊU HƯ KHÔNG] §fĐã giải phóng Dưỡng Chất Ma Tố làm chín rộ " + fertilizedCount + " ruộng hoa màu!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã giải phóng Dưỡng Chất Ma Tố! Toàn bộ " + fertilizedCount + " ruộng đồng hoa màu đã chín rộ lập tức!", 0xFF84CC16, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_EVOLVE_VILLAGER_GUARDS -> {
+                List<Villager> targets = sl.getEntitiesOfClass(Villager.class, sp.getBoundingBox().inflate(18.0D),
+                        v -> v.isAlive() && !v.getTags().contains("TempestGuardianGuard"));
+                int evolved = 0;
+                for (Villager v : targets) {
+                    v.addTag("TempestGuardianGuard");
+                    v.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                    v.setCustomName(Component.literal("§6§l[Hộ Vệ Tempest] §f" + v.getDisplayName().getString()));
+                    v.setCustomNameVisible(true);
+                    v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 72000, 2, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 72000, 2, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 72000, 1, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 72000, 1, false, false, true));
+                    sl.sendParticles(ParticleTypes.ENCHANTED_HIT, v.getX(), v.getY() + 1.0, v.getZ(), 35, 0.5, 0.8, 0.5, 0.1);
+                    evolved++;
+                }
+                // Triệu hồi 1 Người Sắt Hộ Vệ Thép Ma Thuật bảo vệ cổng làng
+                IronGolem golem = EntityType.IRON_GOLEM.create(sl);
+                if (golem != null) {
+                    golem.moveTo(sp.getX() + 2.0, sp.getY(), sp.getZ() + 2.0, sp.getYRot(), 0.0F);
+                    golem.addTag("TempestGuardianGuard");
+                    golem.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                    golem.setCustomName(Component.literal("§3§l[Hộ Vệ Thép Ma Thuật Tempest]"));
+                    golem.setCustomNameVisible(true);
+                    golem.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 72000, 2));
+                    golem.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 72000, 3));
+                    sl.addFreshEntity(golem);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.6F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.5F, 0.9F);
+                sp.displayClientMessage(Component.literal("§6§l[TIẾN HÓA HỘ VỆ TEMPEST] §fĐã ban phước tiến hóa thành công " + evolved + " Dân Làng thành Hộ Vệ & triệu tập Người Sắt bảo vệ!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Chuỗi Thức Ăn đã ban phước thành công! " + evolved + " Dân Làng đã tiến hóa thành Hộ Vệ Tinh Nhuệ Tempest!", 0xFFF59E0B, 6500, false);
             }
         }
     }

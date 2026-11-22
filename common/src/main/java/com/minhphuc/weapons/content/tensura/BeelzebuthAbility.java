@@ -87,6 +87,8 @@ public class BeelzebuthAbility {
         public int swallowedDemonsCount = 0;
         public String firstSwallowedDemonName = "";
         public final List<CompoundTag> swallowedDemonsData = new ArrayList<>();
+        public int swallowedVillagersCount = 0;
+        public final List<CompoundTag> swallowedVillagersData = new ArrayList<>();
 
         public ActiveBeelzebuthVortex(ServerLevel level, ServerPlayer caster, Vec3 centerPos, Vec3 dir, int form,
                                      int totalTicks, SkillPowerRoll powerRoll, float scaleMultiplier) {
@@ -370,6 +372,16 @@ public class BeelzebuthAbility {
                             demon.discard();
                             v.swallowedEntities++;
                         }
+                    } else if (entity instanceof net.minecraft.world.entity.npc.Villager villager) {
+                        // Sơ tán an toàn Dân Làng vào Dạ Dày Vô Hạn (không gây sát thương)
+                        CompoundTag vTag = new CompoundTag();
+                        villager.saveWithoutId(vTag);
+                        v.swallowedVillagersData.add(vTag);
+                        v.swallowedVillagersCount++;
+                        v.level.sendParticles(ParticleTypes.HAPPY_VILLAGER, villager.getX(), villager.getY() + 1.0D, villager.getZ(), 10, 0.3, 0.5, 0.3, 0.05);
+                        v.level.sendParticles(ParticleTypes.PORTAL, villager.getX(), villager.getY() + 0.5D, villager.getZ(), 15, 0.3, 0.5, 0.3, 0.08);
+                        villager.discard();
+                        v.swallowedEntities++;
                     } else if (entity instanceof LivingEntity living) {
                         if (living.getHealth() <= 120.0F || living.getMaxHealth() <= 200.0F) {
                             v.level.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -501,6 +513,19 @@ public class BeelzebuthAbility {
                         SageManager.sendCornerAlert(v.caster,
                                 "« Báo cáo »: Đã thôn phệ " + v.swallowedDemonsCount + " ác ma (" + v.firstSwallowedDemonName + ") vào Dạ Dày Vô Hạn. Ngài có muốn hợp nhất vào Linh Hồn Giả Lập, ban Thể Xác Vật Lý (không dùng xương) và nhận Khế Ước Ác Ma không? [Y] Ban Thể Xác & Khế Ước / [N] Giữ trong Dạ Dày",
                                 0xFF8B5CF6, 9500, false, ServerboundSageActionPacket.ACTION_GRANT_DEMON_BODY_CONTRACT);
+                    }
+
+                    // Đề xuất 5: Sơ tán & Định cư Dân Làng Tempest
+                    if (v.swallowedVillagersCount > 0) {
+                        net.minecraft.nbt.ListTag listTag = new net.minecraft.nbt.ListTag();
+                        for (CompoundTag t : v.swallowedVillagersData) {
+                            listTag.add(t);
+                        }
+                        data.put("BeelzebuthPendingVillagersList", listTag);
+                        data.putInt("BeelzebuthPendingVillagersCount", v.swallowedVillagersCount);
+                        SageManager.sendCornerAlert(v.caster,
+                                "« Báo cáo »: Đã sơ tán an toàn " + v.swallowedVillagersCount + " Dân Làng vào Dạ Dày Vô Hạn. Ngài có muốn Thông Tuệ Vương Raphael đưa họ ra định cư tại đây và gia nhập Liên Bang Tempest không? [Y] Định Cư & Gia Nhập / [N] Giữ trong Dạ Dày",
+                                0xFF10B981, 9500, false, ServerboundSageActionPacket.ACTION_RELOCATE_VILLAGERS);
                     }
                 }
 

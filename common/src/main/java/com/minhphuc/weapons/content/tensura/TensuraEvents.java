@@ -455,6 +455,16 @@ public class TensuraEvents {
 
         if (player != null) {
             handleMobDeathDrop(player, victim);
+
+            // Chuỗi Thức Ăn (Food Chain): Thu hoạch Ma Tố khi Ác Ma hoặc Đệ tử hạ gục mục tiêu
+            if (source.getEntity() instanceof PrimordialDemonEntity || source.getEntity() instanceof UnderworldDemonEntity) {
+                MagiculesManager.restoreMagicules(player, 10_000L);
+                MagiculesManager.addAzathothConversion(player, 10_000L);
+                if (victim.level() instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.PORTAL, victim.getX(), victim.getY() + 0.5D, victim.getZ(), 10, 0.3, 0.4, 0.3, 0.05);
+                }
+            }
+
             ItemStack mainWeapon = player.getMainHandItem();
             WeaponGradeHelper.WeaponGrade upgraded = WeaponGradeHelper.recordWeaponKill(mainWeapon, victim);
             if (upgraded != null) {
