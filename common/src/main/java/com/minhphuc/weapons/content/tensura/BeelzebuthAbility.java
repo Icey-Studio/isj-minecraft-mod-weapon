@@ -3,6 +3,9 @@ package com.minhphuc.weapons.content.tensura;
 import com.minhphuc.weapons.config.SkillVisualConfig;
 import com.minhphuc.weapons.content.divine.SkillPowerRoll;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.entity.tensura.PrimordialDemonEntity;
+import com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity;
+import com.minhphuc.weapons.init.ModBlocks;
 import com.minhphuc.weapons.init.ModItems;
 import com.minhphuc.weapons.mixin.DisplayAccessor;
 import com.minhphuc.weapons.mixin.ItemDisplayAccessor;
@@ -77,9 +80,13 @@ public class BeelzebuthAbility {
         public final float scaleMultiplier;
         public int absorbedWaterBlocks = 0;
         public int absorbedLavaBlocks = 0;
+        public int absorbedDomainBlocks = 0;
         public int swallowedEntities = 0;
         public int swallowedItems = 0;
         public int swallowedZombies = 0;
+        public int swallowedDemonsCount = 0;
+        public String firstSwallowedDemonName = "";
+        public final List<CompoundTag> swallowedDemonsData = new ArrayList<>();
 
         public ActiveBeelzebuthVortex(ServerLevel level, ServerPlayer caster, Vec3 centerPos, Vec3 dir, int form,
                                      int totalTicks, SkillPowerRoll powerRoll, float scaleMultiplier) {
@@ -308,6 +315,61 @@ public class BeelzebuthAbility {
                         if (v.caster != null) {
                             SageManager.sendCornerAlert(v.caster, "« Báo cáo »: Đã thanh tẩy và thôn phệ Hỗn Độn Long vào Dạ Dày Vô Hạn Azathoth! (+350,000 EP)", 0xFFA855F7, 8000, false);
                         }
+                    } else if (entity instanceof Display.ItemDisplay display) {
+                        ItemStack dItem = ((ItemDisplayAccessor) display).weapons$getItemStack();
+                        if (!dItem.isEmpty() && (dItem.is(ModItems.DISINTEGRATION_MAGIC_CIRCLE.get()) || dItem.is(ModItems.BEELZEBUTH_MAGIC_CIRCLE.get()) || dItem.getItem().getDescriptionId().contains("magic_circle"))) {
+                            v.level.sendParticles(ParticleTypes.FLASH, display.getX(), display.getY() + 0.5D, display.getZ(), 2, 0, 0, 0, 0);
+                            v.level.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, display.getX(), display.getY() + 0.5D, display.getZ(), 15, 0.4, 0.4, 0.4, 0.08);
+                            display.discard();
+                            v.absorbedDomainBlocks += 2;
+                            if (v.caster != null) {
+                                MagiculesManager.restoreMagicules(v.caster, 40_000L);
+                                MagiculesManager.addAzathothConversion(v.caster, 40_000L);
+                                v.caster.heal(15.0F);
+                            }
+                        }
+                    } else if (entity instanceof PrimordialDemonEntity demon) {
+                        // Thôn Phệ Ác Ma Thủy Tổ
+                        if (v.caster == null || !demon.isOwnedBy(v.caster)) {
+                            CompoundTag dTag = new CompoundTag();
+                            dTag.putString("Type", "PRIMORDIAL");
+                            dTag.putInt("DemonType", demon.getDemonType().ordinal());
+                            dTag.putString("CustomName", demon.getCustomDemonName() != null ? demon.getCustomDemonName() : "");
+                            dTag.putBoolean("IsNamed", demon.isNamed());
+                            dTag.putBoolean("IsDemonLord", demon.getTags().contains("TensuraDemonLordMob"));
+                            demon.saveWithoutId(dTag);
+                            v.swallowedDemonsData.add(dTag);
+                            v.swallowedDemonsCount++;
+                            if (v.firstSwallowedDemonName.isEmpty()) {
+                                v.firstSwallowedDemonName = demon.getEffectiveDemonName();
+                            }
+                            v.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 25, 0.4, 0.6, 0.4, 0.08);
+                            v.level.sendParticles(ParticleTypes.FLASH, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 2, 0, 0, 0, 0);
+                            demon.discard();
+                            v.swallowedEntities++;
+                        }
+                    } else if (entity instanceof UnderworldDemonEntity demon) {
+                        // Thôn Phệ Ác Ma Ma Giới
+                        if (v.caster == null || !demon.isOwnedBy(v.caster)) {
+                            CompoundTag dTag = new CompoundTag();
+                            dTag.putString("Type", "UNDERWORLD");
+                            dTag.putInt("DemonType", demon.getDemonType().ordinal());
+                            dTag.putInt("Rank", demon.getRank().ordinal());
+                            dTag.putInt("Morph", demon.getMorph().ordinal());
+                            dTag.putString("CustomName", demon.getCustomDemonName() != null ? demon.getCustomDemonName() : "");
+                            dTag.putBoolean("IsNamed", demon.isNamed());
+                            dTag.putBoolean("IsDemonLord", demon.isDemonLord());
+                            demon.saveWithoutId(dTag);
+                            v.swallowedDemonsData.add(dTag);
+                            v.swallowedDemonsCount++;
+                            if (v.firstSwallowedDemonName.isEmpty()) {
+                                v.firstSwallowedDemonName = demon.getEffectiveTitle();
+                            }
+                            v.level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 25, 0.4, 0.6, 0.4, 0.08);
+                            v.level.sendParticles(ParticleTypes.FLASH, demon.getX(), demon.getY() + 1.0D, demon.getZ(), 2, 0, 0, 0, 0);
+                            demon.discard();
+                            v.swallowedEntities++;
+                        }
                     } else if (entity instanceof LivingEntity living) {
                         if (living.getHealth() <= 120.0F || living.getMaxHealth() <= 200.0F) {
                             v.level.sendParticles(ParticleTypes.FLASH, living.getX(), living.getY() + 1.0D, living.getZ(), 1, 0, 0, 0, 0);
@@ -327,7 +389,7 @@ public class BeelzebuthAbility {
                 }
             }
 
-            // 2. HẤP THỤ CHẤT LỎNG AN TOÀN - CHỐNG LAG ĐẠI DƯƠNG (Safe Fluid Absorption)
+            // 2. HẤP THỤ CHẤT LỎNG & LÃNH ĐỊA ÁC MA, MA PHÁP TRẬN (Safe Fluid & Domain Barrier Absorption)
             if (v.ticksRemaining % 2 == 0) {
                 int drainedInPulse = 0;
                 int maxDrainPerPulse = 32;
@@ -353,10 +415,40 @@ public class BeelzebuthAbility {
                                 v.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
                                 v.absorbedLavaBlocks++;
                                 drainedInPulse++;
+                            } else if (DomainBarrierBlock.isAnyDomainBarrier(state.getBlock())
+                                    || state.is(ModBlocks.ANTI_MAGIC_BARRIER.get())
+                                    || state.is(ModBlocks.MULTILAYER_BARRIER.get())
+                                    || state.is(ModBlocks.DRAGON_PRISON_BARRIER.get())) {
+                                v.level.setBlock(p, Blocks.AIR.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
+                                v.absorbedDomainBlocks++;
+                                drainedInPulse++;
+                                v.level.sendParticles(ParticleTypes.WITCH, p.getX() + 0.5D, p.getY() + 0.5D, p.getZ() + 0.5D, 4, 0.3, 0.3, 0.3, 0.05);
+                                if (v.caster != null) {
+                                    MagiculesManager.restoreMagicules(v.caster, 12_000L);
+                                    MagiculesManager.addAzathothConversion(v.caster, 12_000L);
+                                    v.caster.heal(3.5F);
+                                }
                             }
                         }
                     }
                 }
+
+                // Hóa giải các Lãnh Địa Ác Ma Thủy Tổ đang hoạt động trong khu vực
+                for (PrimordialDemonEntity pde : v.level.getEntitiesOfClass(PrimordialDemonEntity.class, vacuumBox, d -> d.activeDomainTicks > 0)) {
+                    pde.cleanDomainBarriers();
+                    pde.clearActiveCircles();
+                    pde.activeDomainTicks = 0;
+                    pde.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 80, 4));
+                    pde.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 2));
+                    v.level.sendParticles(ParticleTypes.ELECTRIC_SPARK, pde.getX(), pde.getY() + 1.0D, pde.getZ(), 30, 0.4, 0.6, 0.4, 0.15);
+                    v.absorbedDomainBlocks += 5;
+                    if (v.caster != null) {
+                        MagiculesManager.restoreMagicules(v.caster, 80_000L);
+                        MagiculesManager.addAzathothConversion(v.caster, 80_000L);
+                        v.caster.heal(25.0F);
+                    }
+                }
+                AntiMagicBarrierManager.removeBarriersInArea(v.level, v.centerPos, 24.0D, null);
             }
 
             // 3. KẾT THÚC CHIÊU THỨC: KÍCH HOẠT ĐỀ XUẤT RAPHAEL 1-CHẠM [Y] / [N]
@@ -389,6 +481,26 @@ public class BeelzebuthAbility {
                         SageManager.sendCornerAlert(v.caster,
                                 "« Báo cáo »: Phát hiện " + v.swallowedZombies + " cá thể Zombie Dân Làng trong Dạ Dày. Ngài có muốn giải trừ virus và tái cấu trúc thành Dân Làng không? [Y] Tái Cấu Trúc / [N] Tiêu Hóa",
                                 0xFF22C55E, 9000, false, ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES);
+                    }
+
+                    // Đề xuất 3: Thôn phệ Lãnh Địa Ác Ma & Ma Pháp Trận
+                    if (v.absorbedDomainBlocks > 0) {
+                        SageManager.sendCornerAlert(v.caster,
+                                "« Báo cáo »: Đã thôn phệ " + v.absorbedDomainBlocks + " cấu trúc Lãnh Địa & Ma Pháp Trận! Chuyển hóa toàn bộ thành Ma Tố & Hồi Phục Thể Trạng!",
+                                0xFF38BDF8, 6500, false);
+                    }
+
+                    // Đề xuất 4: Hợp nhất Ác Ma vào Linh Hồn Giả Lập & Ban Thể Xác
+                    if (v.swallowedDemonsCount > 0) {
+                        net.minecraft.nbt.ListTag listTag = new net.minecraft.nbt.ListTag();
+                        for (CompoundTag t : v.swallowedDemonsData) {
+                            listTag.add(t);
+                        }
+                        data.put("BeelzebuthPendingDemonsList", listTag);
+                        data.putInt("BeelzebuthPendingDemonsCount", v.swallowedDemonsCount);
+                        SageManager.sendCornerAlert(v.caster,
+                                "« Báo cáo »: Đã thôn phệ " + v.swallowedDemonsCount + " ác ma (" + v.firstSwallowedDemonName + ") vào Dạ Dày Vô Hạn. Ngài có muốn hợp nhất vào Linh Hồn Giả Lập, ban Thể Xác Vật Lý (không dùng xương) và nhận Khế Ước Ác Ma không? [Y] Ban Thể Xác & Khế Ước / [N] Giữ trong Dạ Dày",
+                                0xFF8B5CF6, 9500, false, ServerboundSageActionPacket.ACTION_GRANT_DEMON_BODY_CONTRACT);
                     }
                 }
 

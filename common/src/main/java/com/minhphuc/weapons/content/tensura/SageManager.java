@@ -9,7 +9,10 @@ import com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility;
 import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.data.ItemStackDataHelper;
+import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity;
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.CharybdisEntity;
 import com.minhphuc.weapons.entity.tensura.ChronoaEntity;
 import com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity;
@@ -953,6 +956,113 @@ public final class SageManager {
                 sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.HONEYCOMB_WAX_ON, SoundSource.PLAYERS, 1.2F, 1.2F);
                 sp.displayClientMessage(Component.literal("§e§l[XOA DỊU ĐÀN ONG] §fĐã xoa dịu đàn ong cuồng nộ và tái lập tổ ấm hòa hoãn!"), false);
                 sendCornerAlert(sp, "« Xác nhận »: Đã dùng Mật Hoa Tinh Khiết xoa dịu thành công đàn ong! Đàn ong đã hòa hoãn và lấy lại tổ ấm!", 0xFFF59E0B, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_GRANT_DEMON_BODY_CONTRACT -> {
+                net.minecraft.nbt.ListTag demonsList = data.getList("BeelzebuthPendingDemonsList", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                int count = demonsList.size();
+                if (count == 0) {
+                    count = Math.max(1, data.getInt("BeelzebuthPendingDemonsCount"));
+                }
+                data.remove("BeelzebuthPendingDemonsList");
+                data.remove("BeelzebuthPendingDemonsCount");
+
+                int spawnedCount = 0;
+                for (int i = 0; i < demonsList.size(); i++) {
+                    CompoundTag tag = demonsList.getCompound(i);
+                    String demonTypeStr = tag.getString("Type");
+                    double ox = (i % 3 - 1) * 1.5D;
+                    double oz = (i / 3 - 1) * 1.5D;
+
+                    if ("PRIMORDIAL".equals(demonTypeStr)) {
+                        DemonType dType = DemonType.values()[Math.min(tag.getInt("DemonType"), DemonType.values().length - 1)];
+                        PrimordialDemonEntity demon = ModEntities.PRIMORDIAL_DEMON.get().create(sl);
+                        if (demon != null) {
+                            demon.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                            demon.setDemonType(dType);
+                            demon.tame(sp);
+                            demon.setPhysicalBody(true); // Ban thể xác vật lý hoàn thiện mà KHÔNG dùng xương!
+                            demon.setWinged(true);
+                            if (tag.contains("CustomName") && !tag.getString("CustomName").isEmpty()) {
+                                demon.setCustomDemonName(tag.getString("CustomName"));
+                                demon.setNamed(tag.getBoolean("IsNamed"));
+                            }
+                            if (tag.getBoolean("IsDemonLord")) {
+                                demon.addTag("TensuraDemonLordMob");
+                                demon.addTag("TensuraDemonLordCalm");
+                            }
+                            demon.updateAttributesForType(dType);
+                            demon.setHealth(demon.getMaxHealth());
+                            sl.addFreshEntity(demon);
+                            spawnedCount++;
+
+                            // Bỏ vào túi đồ Khế Ước Thể Xác của Ác Ma Thủy Tổ:
+                            ItemStack pactStack = new ItemStack(dType.getBodyPactItem().get());
+                            ItemStackDataHelper.putString(pactStack, "DemonType", dType.name());
+                            ItemStackDataHelper.putBoolean(pactStack, "HasPhysicalBody", true);
+                            ItemStackDataHelper.putString(pactStack, "BodyOrigin", "Linh Hồn Giả Lập (Bạo Thực Vương)");
+                            ItemStackDataHelper.putBoolean(pactStack, "IsSummoned", true);
+                            ItemStackDataHelper.putString(pactStack, "DemonUUID", demon.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerUUID", sp.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerName", sp.getName().getString());
+                            ItemStackDataHelper.putFloat(pactStack, "CurrentHp", demon.getHealth());
+                            ItemStackDataHelper.putFloat(pactStack, "MaxHp", demon.getMaxHealth());
+                            if (demon.isNamed()) {
+                                ItemStackDataHelper.putBoolean(pactStack, "IsNamed", true);
+                                ItemStackDataHelper.putString(pactStack, "CustomDemonName", demon.getEffectiveDemonName());
+                            }
+                            if (!sp.getInventory().add(pactStack)) {
+                                sp.drop(pactStack, false);
+                            }
+                        }
+                    } else { // "UNDERWORLD" or generic
+                        int dTypeIdx = tag.contains("DemonType") ? tag.getInt("DemonType") : 0;
+                        DemonType dType = DemonType.values()[Math.min(dTypeIdx, DemonType.values().length - 1)];
+                        UnderworldDemonEntity demon = ModEntities.UNDERWORLD_DEMON.get().create(sl);
+                        if (demon != null) {
+                            demon.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                            demon.tame(sp);
+                            demon.setDemonType(dType);
+                            if (tag.contains("Rank")) {
+                                demon.setRank(UnderworldDemonEntity.DemonRank.values()[Math.min(tag.getInt("Rank"), UnderworldDemonEntity.DemonRank.values().length - 1)]);
+                            }
+                            if (tag.contains("Morph")) {
+                                demon.setMorph(UnderworldDemonEntity.DemonMorph.values()[Math.min(tag.getInt("Morph"), UnderworldDemonEntity.DemonMorph.values().length - 1)]);
+                            }
+                            demon.setBerserkDemonLord(false);
+                            demon.removeTag("TensuraDemonLordBerserk");
+                            demon.addTag("TensuraDemonLordCalm");
+                            // Ban thể xác vật lý hoàn thiện mà KHÔNG dùng xương:
+                            demon.grantPhysicalBody("Linh Hồn Giả Lập (Bạo Thực Vương)", sp);
+                            demon.setHealth(demon.getMaxHealth());
+                            sl.addFreshEntity(demon);
+                            spawnedCount++;
+
+                            // Bỏ vào túi đồ Khế Ước Thể Xác của Ác Ma:
+                            ItemStack pactStack = new ItemStack(dType.getBodyPactItem().get());
+                            ItemStackDataHelper.putString(pactStack, "DemonType", dType.name());
+                            ItemStackDataHelper.putString(pactStack, "CustomDemonName", demon.getEffectiveTitle());
+                            ItemStackDataHelper.putBoolean(pactStack, "HasPhysicalBody", true);
+                            ItemStackDataHelper.putString(pactStack, "BodyOrigin", "Linh Hồn Giả Lập (Bạo Thực Vương)");
+                            ItemStackDataHelper.putBoolean(pactStack, "IsSummoned", true);
+                            ItemStackDataHelper.putString(pactStack, "DemonUUID", demon.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerUUID", sp.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerName", sp.getName().getString());
+                            ItemStackDataHelper.putFloat(pactStack, "CurrentHp", demon.getHealth());
+                            ItemStackDataHelper.putFloat(pactStack, "MaxHp", demon.getMaxHealth());
+                            if (!sp.getInventory().add(pactStack)) {
+                                sp.drop(pactStack, false);
+                            }
+                        }
+                    }
+                }
+
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.8F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.PLAYERS, 2.0F, 0.9F);
+                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 80, 1.2, 1.5, 1.2, 0.1);
+                sl.sendParticles(ParticleTypes.FLASH, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 4, 0.5, 0.5, 0.5, 0);
+
+                sp.displayClientMessage(Component.literal("§5§l[HỢP NHẤT LINH HỒN GIẢ LẬP] §fĐã ban Thể Xác Vật Lý cho " + spawnedCount + " Ác Ma & trao Khế Ước vào túi đồ!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Hợp nhất Linh Hồn Giả Lập thành công! Đã ban Thể Xác Vật Lý hoàn thiện (không dùng xương) và thêm Khế Ước Ác Ma vào túi đồ!", 0xFF8B5CF6, 6500, false);
             }
         }
     }
