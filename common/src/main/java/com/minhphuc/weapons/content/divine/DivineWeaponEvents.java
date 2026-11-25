@@ -161,12 +161,19 @@ public class DivineWeaponEvents {
 
                     boolean isTrueDemonLord = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraTrueDemonLord");
                     boolean isWearingDivineArmor = DivineArmorItem.isWearingAnyPiece(serverPlayer);
+                    boolean isInnatePrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isInnatePrimordial(serverPlayer);
                     boolean isPrimordial = com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.isPrimordial(serverPlayer);
+                    boolean hasLordSkills = isTrueDemonLord || isWearingDivineArmor || isInnatePrimordial || serverPlayer.isCreative();
 
-                    if (isTrueDemonLord || isWearingDivineArmor || isPrimordial) {
+                    if (hasLordSkills || isPrimordial) {
                         int selectedSkill = EntityDataHelper.getCustomData(serverPlayer).getInt("TensuraDemonLordSkill");
                         boolean hasCreation = EntityDataHelper.getCustomData(serverPlayer).getBoolean("TensuraMaterialCreation");
-                        int lordSkills = TensuraSkillDispatcher.getSkillCount(hasCreation);
+                        int lordSkills = hasLordSkills ? TensuraSkillDispatcher.getSkillCount(hasCreation) : 0;
+                        int totalSkills = lordSkills + (isPrimordial ? com.minhphuc.weapons.content.tensura.PrimordialPlayerDataHelper.TOTAL_PRIMORDIAL_SKILLS : 0);
+                        if (selectedSkill < 0 || selectedSkill >= totalSkills) {
+                            selectedSkill = 0;
+                            EntityDataHelper.getCustomData(serverPlayer).putInt("TensuraDemonLordSkill", 0);
+                        }
 
                         ServerLevel sl = (ServerLevel) serverPlayer.level();
                         if (selectedSkill < lordSkills) {
@@ -222,8 +229,12 @@ public class DivineWeaponEvents {
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
                         || player.getTags().contains("KuboPenetrationDamage");
                 boolean isDisintegration = player.getTags().contains("DisintegrationDamage");
+                boolean isChronoaPierce = player.getTags().contains("ChronoaPenetrationDamage")
+                        || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity
+                        || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.ChronoaEntity;
                 boolean isVelgryndPenetration = player.getTags().contains("VelgryndPenetrationDamage")
                         || player.getTags().contains("VelzardPenetrationDamage")
+                        || isChronoaPierce
                         || source.getEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
                         || source.getDirectEntity() instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity;
 

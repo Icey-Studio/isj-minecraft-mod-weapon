@@ -9,7 +9,10 @@ import com.minhphuc.weapons.content.divine.SanctuaryDisintegrationAbility;
 import com.minhphuc.weapons.content.evolution.EvolvedSkillHelper;
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
 import com.minhphuc.weapons.data.EntityDataHelper;
+import com.minhphuc.weapons.data.ItemStackDataHelper;
+import com.minhphuc.weapons.entity.ModEntities;
 import com.minhphuc.weapons.entity.darkgathering.CursedIdolEntity;
+import com.minhphuc.weapons.entity.tensura.DemonType;
 import com.minhphuc.weapons.entity.tensura.CharybdisEntity;
 import com.minhphuc.weapons.entity.tensura.ChronoaEntity;
 import com.minhphuc.weapons.entity.tensura.ElementalSpiritEntity;
@@ -27,34 +30,42 @@ import com.minhphuc.weapons.world.LabyrinthWorldData;
 import com.minhphuc.weapons.world.VeldoraWorldData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.DustParticleOptions;
+import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.effect.MobEffectInstance;
 import net.minecraft.world.effect.MobEffects;
+import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.TamableAnimal;
+import net.minecraft.world.entity.animal.Bee;
+import net.minecraft.world.entity.animal.IronGolem;
+import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.monster.Enemy;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PickaxeItem;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.AABB;
+import net.minecraft.world.phys.Vec3;
+import org.joml.Vector3f;
 
 import java.util.List;
+import java.util.Set;
 
 /**
- * Hệ thống Trí Tuệ [Đại Hiền Giả] -> [Trí Tuệ Vương Raphael]:
+ * Hệ thống Trí Tuệ [Đại Hiền Giả] -> [Thông Tuệ Vương Raphael]:
  * Quản lý & phát 50 loại Thông Báo Ngữ Cảnh theo thời gian thực ở góc màn hình.
  */
 public final class SageManager {
@@ -64,56 +75,56 @@ public final class SageManager {
     private static final String TAG_WEAPON_WARNED = "SageWeaponWarnTick";
 
     public static final List<String> NOTIFICATION_CATALOG = List.of(
-            "1. Bắt tín hiệu Dao Động Long Chủng Veldora & đề nghị Dịch Chuyển",
-            "2. Cảnh báo Mob cầm vũ khí phẩm cấp Hiếm (Rare) trở lên",
-            "3. Auto-Battle khẩn cấp: Tự bật Kết Giới & Hồi Phục khi < 30% HP",
-            "4. Báo động Sinh Lực Nguy Kịch (< 20% HP)",
-            "5. Cảnh báo Suy Kiệt Dinh Dưỡng (Độ no < 6)",
-            "6. Cảnh báo Thiếu Dưỡng Khí dưới nước (< 35% Oxy)",
-            "7. Cảnh báo Bỏng Nhiệt / Đứng trong Lửa & Dung Nham",
-            "8. Cảnh báo Nhiễm Độc (Poison) hoặc Khô Héo (Wither)",
-            "9. Cảnh báo Hạ Thân Nhiệt & Đóng Băng Thân Thể",
-            "10. Cảnh báo Độ Bền Áo Giáp sắp hỏng (< 15%)",
-            "11. Cảnh báo Độ Bền Vũ Khí cầm tay sắp gãy (< 15%)",
-            "12. Báo Hành Trang Gần Đầy (>= 34/36 ô) — Đề nghị Dạ Dày Azathoth",
-            "13. Thông báo Tiến Nhập Ma Giới (Underworld / Nether)",
-            "14. Cảnh báo Quần Xã Huyết Vực (Crimson / Blood Gorge)",
-            "15. Cảnh báo Quần Xã Băng Vực (Abyssal Frost)",
-            "16. Cảnh báo Quần Xã Tro Tàn & Đồi Xương Trắng (Bone Wastes)",
-            "17. Phát hiện Cổng Di Tích Mê Cung 100 Tầng Của Ramiris",
-            "18. Báo cáo Tiến Nhập Địa Tầng Đá Sâu (Y < 0)",
-            "19. Cảnh báo Ngưỡng Địa Tầng Nền Đá Cổ Đại (Y < -45)",
-            "20. Cảnh báo Vượt Mực Tầng Không Cao (Y > 180)",
-            "21. Thông báo Giông Bão & Sấm Sét Khí Quyển",
-            "22. Thông báo Màn Đêm Buông Xuống & Nguy Cơ Ác Ma",
-            "23. Thông báo Rạng Đông Mới & Tái Tạo Ánh Sáng",
-            "24. Phân tích Bạo Phong Long Veldora (Dạng Rồng / Dạng Người)",
-            "25. Báo cáo Tỷ Lệ 30% Veldora Đang Bận Khi Triệu Hồi",
-            "26. Phân tích Chước Nhiệt Long Velgrynd & Đòn Xuyên Giáp Thứ 3",
-            "27. Phân tích Bạch Băng Long Velzard & Lãnh Khí Vĩnh Cửu",
-            "28. Cảnh báo Ma Vương Cổ Đại Milim Nava & Satanael",
-            "29. Phân tích Ác Ma Thủy Tổ (Primordial) & Đề nghị Phong Sát",
-            "30. Nhận diện Ác Ma Ma Giới (Hấp Thụ / Ban Xác bằng Xương)",
-            "31. Phân tích Thủy Quái Bay Charybdis & Khiên Vảy Chống Phép",
-            "32. Phân tích Orc Disaster Geld & Hỗn Độn Thực Giả",
-            "33. Phân tích Anh Hùng Chronoa & Rủi Ro Tha Hóa",
-            "34. Nhận diện Tinh Linh Nguyên Tố Hộ Vệ Khu Vực",
-            "35. Cảnh báo Di Tích / Thực Thể Bị Nguyền Cấp S (Cursed Idol)",
-            "36. Cảnh báo Vòng Vây Đông Đảo (>= 5 quái vật gần kề)",
-            "37. Phát hiện Mục Tiêu Tàng Hình trong bán kính 24m",
-            "38. Cảnh báo Đang Đứng Trong Kháng Ma Kết Giới (Triệt Ma Tố)",
-            "39. Cảnh báo Đang Bị Dính Phong Sát Kỹ Năng",
-            "40. Xác nhận Phòng Ngự Tuyệt Đối Uriel Đang Kích Hoạt",
-            "41. Xác nhận Tiên Tri Rykuzin Sinka Đang Bật",
-            "42. Xác nhận Đánh Dấu Ấn Ký Không Gian (Vĩnh Viễn / Chiến Thuật)",
-            "43. Cảnh báo Dạ Dày Vô Hạn Azathoth Sắp Đầy (>= 20/24 ô)",
-            "44. Chúc mừng Tiến Hóa Đại Hiền Giả -> Trí Tuệ Vương Raphael",
-            "45. Xác nhận Ban Danh Xưng Nâng Cấp Sinh Vật",
-            "46. Cảnh báo Đỏ: Ác Ma Tiến Hóa Ma Vương Mất Kiểm Soát (70% Phản Chủ)",
-            "47. Báo cáo Hiệu Suất Hộ Vệ Dân Làng Liên Bang Tempest",
-            "48. Thông báo Chế Độ Bảo Vệ Địa Hình (Safe Mode) Đang Hoạt Động",
-            "49. Phát hiện Mỏ Kim Cương / Ancient Debris Lộ Thiên (Khi cầm Cuốc)",
-            "50. Xác nhận Giải Phong Ấn Thành Công Bạo Phong Long Veldora"
+            "1. Báo cáo: Cảm ứng được Dao Động Không Gian bất thường — Đề xuất Dịch Chuyển",
+            "2. Cảnh báo: Mục tiêu sở hữu vũ khí cấp bậc Hiếm trở lên — Đề xuất tước đoạt",
+            "3. Khẩn cấp: Tự động kích hoạt Kết Giới Khẩn Cấp & Siêu Hồi Phục khi sinh lực nguy kịch",
+            "4. Cảnh báo: Kết Giới Đa Tầng đã bị phá vỡ cấu trúc bảo hộ",
+            "5. Cảnh báo: Sinh lực chạm ngưỡng nguy kịch — Đề xuất kích hoạt Siêu Dược Liệu",
+            "6. Báo cáo: Dưỡng khí cạn kiệt — Đề xuất kích hoạt Thủy Tinh Hô Hấp",
+            "7. Cảnh báo: Nhiệt độ môi trường cực hạn — Đề xuất Đóng Băng Dung Nham",
+            "8. Báo cáo: Phát hiện Độc Tố / Héo Mòn — Đề xuất Phân Giải thành Ma Tố",
+            "9. Cảnh báo: Thân nhiệt hạ thấp nghiêm trọng dưới ngưỡng an toàn",
+            "10. Báo cáo: Tính toàn vẹn cấu trúc Áo Giáp còn dưới 20% — Đề xuất Tái Cấu Trúc Nguyên Tử",
+            "11. Báo cáo: Vũ khí sắp đứt gãy — Đề xuất Tái Cấu Trúc Nguyên Tử sửa chữa",
+            "12. Báo cáo: Kho lưu trữ ba-lô gần đầy — Đề xuất chuyển vào Dạ Dày Azathoth",
+            "13. Báo cáo: Tiến nhập Ác Ma Giới (Nether Dimension)",
+            "14. Cảnh báo: Quần Xã Huyết Vực — Lãnh địa của Ác Ma dòng Xích Sắc",
+            "15. Cảnh báo: Quần Xã Băng Vực — Lãnh địa của Ác Ma dòng Bạch Sắc",
+            "16. Cảnh báo: Quần Xã Tro Tàn & Đồi Xương Trắng",
+            "17. Báo cáo: Phát hiện Liên Kết Không Gian dẫn tới Hang Phong Ấn Veldora",
+            "18. Báo cáo: Tiến nhập Tầng Đá Sâu Deepslate",
+            "19. Cảnh báo: Đã xuống ngưỡng Địa Tầng Nền Đá Cổ Đại (Y < -45)",
+            "20. Cảnh báo: Vượt ngưỡng Tầng Không (Y > 180) — Đề phòng Thủy Quái Charybdis",
+            "21. Báo cáo: Hiện tượng Giông Bão & Sấm Sét tự nhiên",
+            "22. Cảnh báo: Màn đêm buông xuống — Tần suất xuất hiện ma vật gia tăng",
+            "23. Báo cáo: Rạng đông xuất hiện — Quang học tự nhiên phục hồi",
+            "24. Phân tích: Bạo Phong Long Veldora Tempest (Dạng Rồng / Dạng Người)",
+            "25. Báo cáo: Không nhận được sự đồng thuận từ Veldora — Triệu hồi tạm hoãn",
+            "26. Cảnh báo: Cảm ứng Chước Nhiệt Long Velgrynd & Hỏa Lực Cực Hạn",
+            "27. Cảnh báo: Cảm ứng Bạch Băng Long Velzard & Hàn Khí Tĩnh Chỉ",
+            "28. Cảnh báo: Phát hiện Ma Vương Milim Nava — Phẫn Nộ Vương Satanael",
+            "29. Phân tích: Ác Ma Thượng Cấp đã tồn tại qua nhiều kỷ nguyên",
+            "30. Nhận diện: Ác Ma Ma Giới — Có thể ban nhục thể Ma Thiết để sắc phong",
+            "31. Phân tích: Thủy Quái Charybdis sở hữu Hồi Phục Siêu Tốc & Vảy Ma Thần",
+            "32. Phân tích: Chúa Tể Orc Geld & Kỹ năng Kẻ Đói Khát",
+            "33. Phân tích: Thực thể Chronoa — Dao động thời gian tiệm cận Chân Long",
+            "34. Nhận diện: Tinh Linh Nguyên Tố đang trấn giữ khu vực",
+            "35. Cảnh báo: Nguồn tà khí ăn mòn cực đại phát ra từ Di Tích Cổ",
+            "36. Cảnh báo: Đang bị bao vây bởi đàn quái — Đề xuất Trọng Lực Áp Chế",
+            "37. Cảm quan: Phát hiện thực thể Tàng Hình — Đề xuất vạch trần ma trận",
+            "38. Cảnh báo: Đang ở trong Kết Giới Đoạt Ma — Kỹ năng Ma Tố bị giới hạn",
+            "39. Cảnh báo: Mục tiêu sở hữu năng lực Phong Sát Kỹ Năng",
+            "40. Xác nhận: Phòng Ngự Tuyệt Đối của Uriel đang duy trì bảo hộ",
+            "41. Xác nhận: Thuật Tiên Tri đang quét quỹ đạo chuyển động thời gian thực",
+            "42. Xác nhận: Đã thiết lập Ấn Ký Tọa Độ Không Gian",
+            "43. Cảnh báo: Dạ Dày Vô Hạn sắp đạt giới hạn dung lượng lưu trữ",
+            "44. Xác nhận: Tiến Hóa thành công Đại Hiền Giả -> Thông Tuệ Vương Raphael",
+            "45. Xác nhận: Mục tiêu đã được ban danh xưng và tiến hóa chủng tộc",
+            "46. Cảnh báo: Ác Ma tiến hóa mất kiểm soát năng lượng",
+            "47. Báo cáo: Hiệu suất bảo hộ cư dân Liên Bang Tempest đạt mức ổn định",
+            "48. Xác nhận: Chế Độ Bảo Vệ Địa Hình (Safe Mode) đang hoạt động",
+            "49. Cảm ứng Ma Lực: Phát hiện mạch Kim Cương / Ancient Debris kề bên",
+            "50. Xác nhận: Giải Mã & Giải Phong Ấn thành công Long Giam Vô Hạn Veldora"
     );
 
     private SageManager() {}
@@ -121,12 +132,37 @@ public final class SageManager {
     public static String getSpeakerLabel(ServerPlayer sp) {
         CompoundTag data = EntityDataHelper.getCustomData(sp);
         return data.getBoolean("TensuraTrueDemonLord")
-                ? "§b§l<< TRÍ TUỆ VƯƠNG RAPHAEL >>"
+                ? "§b§l<< THÔNG TUỆ VƯƠNG RAPHAEL >>"
                 : "§3§l<< ĐẠI HIỀN GIẢ (GREAT SAGE) >>";
     }
 
+    /**
+     * Chuẩn Tensura: Định danh toàn bộ sinh vật trong game dưới dạng « Cá thể [Tên] ».
+     */
+    public static String formatIndividual(net.minecraft.world.entity.Entity entity) {
+        if (entity == null) return "« Cá thể [Vô Danh] »";
+        String name = entity.getDisplayName().getString();
+        if (name.startsWith("« Cá thể [") && name.endsWith("] »")) return name;
+        return "« Cá thể [" + name + "] »";
+    }
+
+    public static String formatIndividual(String name) {
+        if (name == null || name.isBlank()) return "« Cá thể [Vô Danh] »";
+        if (name.startsWith("« Cá thể [") && name.endsWith("] »")) return name;
+        if (name.startsWith("Cá thể [") && name.endsWith("]")) return "« " + name + " »";
+        return "« Cá thể [" + name + "] »";
+    }
+
     public static void sendCornerAlert(ServerPlayer sp, String text, int accentColor, int durationMs, boolean offerWarp) {
-        ModMessages.sendToPlayer(new ClientboundSageAlertPacket(getSpeakerLabel(sp), text, accentColor, durationMs, offerWarp), sp);
+        sendCornerAlert(sp, text, accentColor, durationMs, offerWarp, offerWarp ? ServerboundSageActionPacket.ACTION_WARP_VELDORA : 0);
+    }
+
+    public static void sendCornerAlert(ServerPlayer sp, String text, int accentColor, int durationMs, boolean offerWarp, int actionId) {
+        ModMessages.sendToPlayer(new ClientboundSageAlertPacket(getSpeakerLabel(sp), text, accentColor, durationMs, offerWarp, actionId), sp);
+    }
+
+    public static void pushAlert(ServerPlayer sp, String text, String extra, int cooldownTicks) {
+        pushAlert(sp, String.valueOf(text != null ? text.hashCode() : 0), text, extra, cooldownTicks);
     }
 
     public static void pushAlert(ServerPlayer sp, String alertId, String text, String extra, int cooldownTicks) {
@@ -140,6 +176,26 @@ public final class SageManager {
         sendCornerAlert(sp, text + (extra != null && !extra.isEmpty() ? " " + extra : ""), 0xFF38BDF8, 6500, false);
     }
 
+    /**
+     * Báo cáo sự cố kỹ thuật / lỗi thi triển kỹ năng theo thời gian thực qua góc HUD của Raphael.
+     */
+    public static void reportSystemAnomaly(ServerPlayer sp, String context, Throwable err) {
+        String reason = (err != null && err.getMessage() != null && !err.getMessage().isBlank())
+                ? err.getMessage()
+                : (err != null ? err.getClass().getSimpleName() : "Lỗi không xác định");
+        com.minhphuc.weapons.WeaponsMod.LOGGER.error("[Raphael Diagnostics] Lỗi tại '{}'", context, err);
+        if (sp == null || sp.level().isClientSide()) return;
+        CompoundTag data = EntityDataHelper.getCustomData(sp);
+        long now = sp.level().getGameTime();
+        String key = "SageAnomalyTick_" + Math.abs(context.hashCode());
+        long last = data.getLong(key);
+        if (last != 0L && now - last < 60L) return;
+        data.putLong(key, now);
+        sendCornerAlert(sp,
+                "Cảnh báo lỗi hệ thống [" + context + "]: " + reason + " — Hãy khởi động lại game nếu vừa cập nhật mod.",
+                0xFFEF4444, 8000, false);
+    }
+
     public static void tickPlayer(ServerPlayer sp) {
         if (sp == null || sp.level().isClientSide()) return;
         ServerLevel sl = sp.serverLevel();
@@ -148,7 +204,11 @@ public final class SageManager {
 
         // CHẾ ĐỘ TỰ ĐỘNG (RAPHAEL AUTO-PILOT TAKEOVER): Nhấn Shift để trả lại quyền điều khiển
         if (data.getBoolean(TAG_AUTO_BATTLE)) {
-            if (sp.isShiftKeyDown()) {
+            if (PrimordialArmorItem.isWearingAnyNoirArmor(sp)) {
+                data.putBoolean(TAG_AUTO_BATTLE, false);
+                TensuraSkillHelper.syncSkillStateToClient(sp);
+                sendCornerAlert(sp, "Đang mặc bộ đồ Noir (Diablo) — Tính năng tự động của Raphael/Đại Hiền Giả bị vô hiệu hóa!", 0xFFA855F7, 4500, false);
+            } else if (sp.isShiftKeyDown()) {
                 data.putBoolean(TAG_AUTO_BATTLE, false);
                 TensuraSkillHelper.syncSkillStateToClient(sp);
                 sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.3F, 1.4F);
@@ -177,7 +237,7 @@ public final class SageManager {
                     double dist = Math.hypot(cavePos.getX() - sp.getX(), cavePos.getZ() - sp.getZ());
                     String dir = getCardinalDirection(sp.getX(), sp.getZ(), cavePos.getX(), cavePos.getZ());
                     sendCornerAlert(sp,
-                            "Báo cáo. Bắt được Dao Động Long Chủng bất thường hướng " + dir + " (~" + (int) dist + "m). Có muốn kích hoạt Dịch Chuyển tới Hang Động Phong Ấn?",
+                            "Báo cáo. phát hiện Dao Động không gian bất thường hướng " + dir + " (~" + (int) dist + "m). Có muốn kích hoạt Dịch Chuyển tới đó không?",
                             0xFF00E5FF, 9500, true);
                 }
             }
@@ -186,8 +246,8 @@ public final class SageManager {
             BlockPos labPos = labData.getOrRollEntrancePos(sl);
             if (!labData.isEntranceBuilt() && sp.distanceToSqr(labPos.getX(), sp.getY(), labPos.getZ()) <= 112.0D * 112.0D) {
                 labData.ensureEntranceGenerated(sl);
-                pushAlert(sp, "RAMIRIS_LABYRINTH_FOUND",
-                        "Đã phát hiện di tích Mê Cung 100 Tầng Của Ramiris ở gần đây! (" + labPos.getX() + ", " + labPos.getZ() + ")",
+                pushAlert(sp,
+                        "Đã phát hiện di tích Mê Cung cổ đại ở gần đây! (" + labPos.getX() + ", " + labPos.getZ() + ")",
                         "", 1200);
             }
         }
@@ -224,43 +284,59 @@ public final class SageManager {
                 if (grade.ordinal() >= WeaponGradeHelper.WeaponGrade.RARE.ordinal()) {
                     data.putLong(TAG_WEAPON_WARNED, now);
                     sendCornerAlert(sp,
-                            "Cảnh báo! [" + mob.getName().getString() + "] đang cầm vũ khí " + grade.colorPrefix + "[" + grade.title + "]§f: " + stack.getHoverName().getString() + "!",
-                            0xFFFF9800, 6500, false);
+                            "« Cảnh báo »: " + formatIndividual(mob) + " đang sở hữu vũ khí " + grade.colorPrefix + "[" + grade.title + "]§f: " + stack.getHoverName().getString() + "! Đề xuất: Dùng [Bạo Thực Vương] tước đoạt vũ khí vào Dạ Dày.",
+                            0xFFFF9800, 7500, false, ServerboundSageActionPacket.ACTION_DISARM_TARGET);
                 }
             }
 
             if (le instanceof VeldoraEntity v) {
-                pushAlert(sp, "DETECT_VELDORA", "Phân tích: Bạo Phong Long Veldora (" + (v.isHumanForm() ? "Dạng Người" : "Chân Thân Rồng x30") + ") đang hiện diện gần đây!", "", 1200);
+                pushAlert(sp, "DETECT_VELDORA", "« Báo cáo »: " + formatIndividual(v) + " (" + (v.isHumanForm() ? "Dạng Người" : "Dạng Rồng") + ") đang đồng hành kề bên!", "", 1200);
             } else if (le instanceof VelgryndEntity) {
-                pushAlert(sp, "DETECT_VELGRYND", "Cảnh báo Long Chủng! Chước Nhiệt Long Velgrynd (74.35M EP) — chú ý đòn thứ 3 xuyên Giáp Thần!", "", 1200);
+                pushAlert(sp, "DETECT_VELGRYND", "« Cảnh báo »: Cảm ứng được sự hiện diện của [Chước Nhiệt Long Velgrynd] (74.35M EP) — Nguy cơ thiêu đốt cực hạn!", "", 1200);
             } else if (le instanceof VelzardEntity) {
-                pushAlert(sp, "DETECT_VELZARD", "Báo động Đệ Nhị Long! Bạch Băng Long Velzard — giữ di chuyển liên tục để không bị đóng băng vĩnh cửu!", "", 1200);
+                pushAlert(sp, "DETECT_VELZARD", "« Cảnh báo »: Cảm ứng được sự hiện diện của [Bạch Băng Long Velzard] (80M EP) — Nguy cơ ngưng trệ dòng chảy ma tố!", "", 1200);
             } else if (le instanceof MilimEntity) {
-                pushAlert(sp, "DETECT_MILIM", "Cảnh báo Ma Vương Cổ Đại! Milim Nava (Satanael) — sẵn sàng Phong Sát Kỹ Năng khi tụ Long Tinh Bộc Viêm Bá!", "", 1200);
-            } else if (le instanceof PrimordialDemonEntity) {
-                pushAlert(sp, "DETECT_PRIMORDIAL", "Phát hiện Ác Ma Thủy Tổ (Primordial)! Không thể so sánh với ác ma thường — hãy cẩn trọng Lãnh Địa!", "", 1200);
+                pushAlert(sp, "DETECT_MILIM", "« Cảnh báo »: Cảm ứng được sự hiện diện của [Ma Vương Milim Nava] — Tuyệt kỹ Phẫn Nộ Vương Satanael vô hạn uy lực!", "", 1200);
+            } else if (le instanceof PrimordialDemonEntity p) {
+                pushAlert(sp, "DETECT_PRIMORDIAL", "« Cảnh báo »: Phát hiện thực thể " + formatIndividual(p) + " mang bản chất Thủy Tổ Ác Ma!", "", 1200);
             } else if (le instanceof UnderworldDemonEntity u) {
-                pushAlert(sp, "DETECT_UNDERWORLD_DEMON", "Phân tích Ác Ma Ma Giới [" + u.getRank().title + "]. Cầm Xương để ban thể xác hoặc Điện Thoại Ma Thép để soi nguồn gốc!", "", 1800);
-            } else if (le instanceof CharybdisEntity) {
-                pushAlert(sp, "DETECT_CHARYBDIS", "Phân tích Charybdis: Đang kích hoạt Khiên Vảy Chống Phép — phá giáp trước khi tung đại chiêu!", "", 1200);
-            } else if (le instanceof OrcDisasterGeldEntity) {
-                pushAlert(sp, "DETECT_GELD", "Cảnh báo Tai Ương Orc Disaster Geld! Đừng để Binh Đoàn Đói Khát kéo dài giao tranh!", "", 1200);
-            } else if (le instanceof ChronoaEntity) {
-                pushAlert(sp, "DETECT_CHRONOA", "Phân tích Anh Hùng Chronoa: Cẩn thận nguy cơ Tha Hóa ban đêm với Giáp Thần Linh!", "", 1800);
+                pushAlert(sp, "DETECT_UNDERWORLD_DEMON", "« Báo cáo »: Phân tích Ác Ma " + formatIndividual(u) + " [" + u.getRank().title + "]. Có thể ban thể xác Ma Thiết để sắc phong.", "", 1800);
+            } else if (le instanceof CharybdisEntity c) {
+                pushAlert(sp, "DETECT_CHARYBDIS", "« Cảnh báo »: " + formatIndividual(c) + " sở hữu Hồi Phục Siêu Tốc & Vảy Ma Thần phản ma pháp!", "", 1200);
+            } else if (le instanceof OrcDisasterGeldEntity g) {
+                pushAlert(sp, "DETECT_GELD", "« Cảnh báo »: Chúa tể Orc " + formatIndividual(g) + " đang kích hoạt năng lực Thôn Phệ Kẻ Đói Khát!", "", 1200);
+            } else if (le instanceof ChronoaEntity ch) {
+                pushAlert(sp, "DETECT_CHRONOA", "« Báo cáo »: Cảm ứng dao động thời gian bất thường từ " + formatIndividual(ch) + " — Uy lực tiệm cận Chân Long!", "", 1800);
             } else if (le instanceof ElementalSpiritEntity spirit) {
-                pushAlert(sp, "DETECT_SPIRIT", "Nhận diện Tinh Linh Nguyên Tố [" + spirit.getElementalType().displayName + "] đang hộ vệ khu vực.", "", 1800);
-            } else if (le instanceof CursedIdolEntity) {
-                pushAlert(sp, "DETECT_CURSED_IDOL", "Phát hiện Thực Thể Bị Nguyền Cấp S! Nguyền lực Dark Gathering đang ăn mòn xung quanh!", "", 1200);
-            } else if (le instanceof Villager && le.getCustomName() != null && le.getCustomName().getString().contains("Tempest")) {
-                pushAlert(sp, "DETECT_TEMPEST_CITIZEN", "Đang ở gần cư dân Liên Bang Tempest — hiệu suất phòng hộ khu vực ổn định!", "", 2400);
+                pushAlert(sp, "DETECT_SPIRIT", "« Báo cáo »: Tinh Linh Nguyên Tố " + formatIndividual(spirit) + " [" + spirit.getElementalType().displayName + "] đang bảo vệ khu vực.", "", 1800);
+            } else if (le instanceof CursedIdolEntity ci) {
+                pushAlert(sp, "DETECT_CURSED_IDOL", "« Cảnh báo »: Phát hiện " + formatIndividual(ci) + " tỏa ra uế khí ăn mòn sinh mệnh xung quanh!", "", 1200);
+            } else if (le instanceof Villager v && v.getCustomName() != null && v.getCustomName().getString().contains("Tempest")) {
+                pushAlert(sp, "DETECT_TEMPEST_CITIZEN", "« Báo cáo »: Cư dân " + formatIndividual(v) + " của Liên Bang Tempest đang được bảo hộ ổn định.", "", 2400);
             }
         }
 
-        if (hostileCount >= 5) {
-            pushAlert(sp, "SWARM_DANGER", "Cảnh báo! Phát hiện vòng vây " + hostileCount + " sinh vật thù địch quanh bạn — đề nghị bật Đa Trùng Kết Giới!", "", 600);
+        // Cảnh báo đạn đạo (Projectile Detection)
+        List<net.minecraft.world.entity.projectile.Projectile> nearbyProjectiles = sl.getEntitiesOfClass(
+                net.minecraft.world.entity.projectile.Projectile.class,
+                sp.getBoundingBox().inflate(12.0D),
+                p -> p.isAlive() && p.getOwner() != sp
+        );
+        if (!nearbyProjectiles.isEmpty() && now - data.getLong("SageProjWarnTick") >= 160L) {
+            data.putLong("SageProjWarnTick", now);
+            sendCornerAlert(sp,
+                    "« Cảnh báo »: Phát hiện đạn đạo thù địch đang lao tới! Đề xuất: Kích hoạt [Đảo Chiều Không Gian] phản hồi quỹ đạo về kẻ địch.",
+                    0xFF00E5FF, 6500, false, ServerboundSageActionPacket.ACTION_REVERSE_PROJECTILES);
+        }
+
+        if (hostileCount >= 5 && now - data.getLong("SageSwarmWarnTick") >= 200L) {
+            data.putLong("SageSwarmWarnTick", now);
+            sendCornerAlert(sp,
+                    "« Cảnh báo »: Đang bị bao vây bởi " + hostileCount + " cá thể thù địch! Đề xuất: Kích hoạt [Trọng Lực Áp Chế] sụp đổ trọng trường giải vây.",
+                    0xFFA855F7, 7000, false, ServerboundSageActionPacket.ACTION_SWARM_GRAVITY);
         }
         if (invisibleFound) {
-            pushAlert(sp, "INVISIBLE_ENEMY", "Cảm Quan Ma Lực phát hiện thực thể Tàng Hình trong 24m! Dùng [Quét Vạn Vật] hoặc Raphael #7 để vạch trần!", "", 800);
+            pushAlert(sp, "INVISIBLE_ENEMY", "« Cảm Quan Ma Lực »: Phát hiện thực thể Tàng Hình trong bán kính xung quanh. Dùng [Shift+V] để vạch trần!", "", 800);
         }
     }
 
@@ -273,38 +349,61 @@ public final class SageManager {
                 sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 2));
                 sp.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 2));
                 consumeHealingItemIfAny(sp);
-                sendCornerAlert(sp, "Chế Độ Tác Chiến Auto-Battle: Sinh lực dưới 30%, đã kích hoạt Kết Giới Khẩn Cấp & Hồi Phục!", 0xFF22D3EE, 4500, false);
+                sendCornerAlert(sp, "« Chế Độ Tác Chiến Auto-Battle »: Sinh lực suy giảm trầm trọng — Tự động kích hoạt Kết Giới Khẩn Cấp & Siêu Hồi Phục!", 0xFF22D3EE, 4500, false);
             }
-        } else if (sp.getHealth() < sp.getMaxHealth() * 0.20F) {
-            pushAlert(sp, "CRITICAL_HP", "Báo động Sinh Lực Nguy Kịch (< 20% HP)! Hãy dùng Skill #11 Raphael hoặc Dược Tề!", "", 300);
+        } else if (sp.getHealth() < sp.getMaxHealth() * 0.25F && now - data.getLong("SageCritHpTick") >= 200L) {
+            data.putLong("SageCritHpTick", now);
+            sendCornerAlert(sp,
+                    "« NGUY CẤP »: Sinh lực chạm ngưỡng nguy kịch (< 25%)! Đề xuất: Kích hoạt [Siêu Dược Liệu Toàn Phần] hồi 100% HP & Thanh Tẩy.",
+                    0xFFEF4444, 7500, false, ServerboundSageActionPacket.ACTION_EMERGENCY_HEAL);
         }
 
-        if (sp.getFoodData().getFoodLevel() <= 5) {
-            pushAlert(sp, "LOW_HUNGER", "Cảnh báo Suy Kiệt Dinh Dưỡng: Thanh đói xuống thấp — kích hoạt Raphael #14 để bổ sung!", "", 800);
+        if (sp.getFoodData().getFoodLevel() <= 5 && now - data.getLong("SageHungerTick") >= 300L) {
+            data.putLong("SageHungerTick", now);
+            sendCornerAlert(sp, "« Cảnh báo »: Thể lực suy kiệt trầm trọng! Đề xuất: Phục hồi năng lượng từ Dạ Dày Azathoth.", 0xFFF59E0B, 6000, false, ServerboundSageActionPacket.ACTION_EMERGENCY_HEAL);
         }
-        if (sp.getAirSupply() < sp.getMaxAirSupply() * 0.35F) {
-            pushAlert(sp, "LOW_OXYGEN", "Cảnh báo Thiếu Dưỡng Khí! Dùng Raphael #15 (Thở Nước) trước khi ngạt!", "", 400);
+        if (sp.getAirSupply() < sp.getMaxAirSupply() * 0.35F && now - data.getLong("SageAirTick") >= 160L) {
+            data.putLong("SageAirTick", now);
+            sendCornerAlert(sp,
+                    "« Báo cáo »: Dưỡng khí cạn kiệt! Đề xuất: Kích hoạt [Thủy Tinh Hô Hấp] duy trì hô hấp & tầm nhìn đại dương.",
+                    0xFF00E5FF, 6500, false, ServerboundSageActionPacket.ACTION_WATER_BREATHING);
         }
-        if (sp.isOnFire() && !sp.hasEffect(MobEffects.FIRE_RESISTANCE)) {
-            pushAlert(sp, "ON_FIRE", "Cảnh báo Bỏng Nhiệt! Sử dụng Raphael #19 hoặc #45 để thanh tẩy lửa tức thì!", "", 500);
+        if ((sp.isOnFire() || sp.isInLava()) && !sp.hasEffect(MobEffects.FIRE_RESISTANCE) && now - data.getLong("SageLavaTick") >= 200L) {
+            data.putLong("SageLavaTick", now);
+            sendCornerAlert(sp,
+                    "« Cảnh báo »: Nhiệt độ môi trường cực hạn! Đề xuất: Kích hoạt [Đóng Băng Dung Nham] tạo vùng đá an toàn & cấp Kháng Lửa.",
+                    0xFFF97316, 7000, false, ServerboundSageActionPacket.ACTION_SOLIDIFY_LAVA);
         }
-        if (sp.hasEffect(MobEffects.POISON) || sp.hasEffect(MobEffects.WITHER)) {
-            pushAlert(sp, "TOXIC_DEBUFF", "Phát hiện Độc Tố / Héo Mòn (Poison/Wither)! Đề nghị chạy Giải Mã Nguyền Rủa!", "", 450);
+        if ((sp.hasEffect(MobEffects.POISON) || sp.hasEffect(MobEffects.WITHER) || sp.getTicksFrozen() > 60) && now - data.getLong("SageDebuffTick") >= 180L) {
+            data.putLong("SageDebuffTick", now);
+            sendCornerAlert(sp,
+                    "« Báo cáo »: Phát hiện Độc Tố / Héo Mòn / Đóng Băng ăn mòn cơ thể! Đề xuất: Kích hoạt [Phân Giải Độc Tố] nạp +35.000 Ma Tố.",
+                    0xFF34D399, 7000, false, ServerboundSageActionPacket.ACTION_DECODE_CURSE);
         }
-        if (sp.getTicksFrozen() > 60) {
-            pushAlert(sp, "HYPOTHERMIA", "Cảnh báo Hạ Thân Nhiệt! Cơ thể đang đóng băng, tránh đứng yên!", "", 400);
+
+        // Kiểm tra Lời nguyền Đoạt Mệnh (Moi Tim / Đoạt Não) từ Cửu Thế Quyền Hiện
+        if (com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.hasCurse(sp) && now - data.getLong("SageCuuTheCurseTick") >= 120L) {
+            data.putLong("SageCuuTheCurseTick", now);
+            sendCornerAlert(sp,
+                    "« NGUY CẤP »: Phát hiện nhục thân bị tước đoạt Tim/Não bởi Cửu Thế Quyền Hiện! Đề xuất: Sử dụng [Nhãn Cầu Thị Thực] để tái tạo 100% thể xác?",
+                    0xFFE11D48, 12000, false, ServerboundSageActionPacket.ACTION_SEER_FLESH_REGEN);
         }
 
         // N10, N11: Độ bền Giáp & Vũ khí
         ItemStack main = sp.getMainHandItem();
-        if (!main.isEmpty() && main.isDamageableItem() && main.getDamageValue() >= main.getMaxDamage() * 0.85F) {
-            pushAlert(sp, "WEAPON_LOW_DURA", "Vũ khí [" + main.getHoverName().getString() + "] sắp hỏng! Dùng Raphael #31 Tu Sửa Tuyệt Đối!", "", 900);
-        }
+        boolean mainDamaged = (!main.isEmpty() && main.isDamageableItem() && main.getDamageValue() >= main.getMaxDamage() * 0.80F);
+        boolean armorDamaged = false;
         for (ItemStack armor : sp.getArmorSlots()) {
-            if (!armor.isEmpty() && armor.isDamageableItem() && armor.getDamageValue() >= armor.getMaxDamage() * 0.85F) {
-                pushAlert(sp, "ARMOR_LOW_DURA", "Áo Giáp [" + armor.getHoverName().getString() + "] còn dưới 15% độ bền!", "", 900);
+            if (!armor.isEmpty() && armor.isDamageableItem() && armor.getDamageValue() >= armor.getMaxDamage() * 0.80F) {
+                armorDamaged = true;
                 break;
             }
+        }
+        if ((mainDamaged || armorDamaged) && now - data.getLong("SageDurabilityTick") >= 300L) {
+            data.putLong("SageDurabilityTick", now);
+            sendCornerAlert(sp,
+                    "« Báo cáo »: Trang bị sắp đứt gãy (độ bền < 20%)! Đề xuất: Kích hoạt [Tái Cấu Trúc Nguyên Tử] phục hồi 100% độ bền.",
+                    0xFFF59E0B, 7500, false, ServerboundSageActionPacket.ACTION_REPAIR_GEAR);
         }
 
         // N12: Hành trang gần đầy
@@ -312,76 +411,181 @@ public final class SageManager {
         for (int i = 0; i < 36; i++) {
             if (!sp.getInventory().getItem(i).isEmpty()) usedSlots++;
         }
-        if (usedSlots >= 34) {
-            pushAlert(sp, "INVENTORY_NEAR_FULL", "Hành trang gần đầy (" + usedSlots + "/36 ô)! Đề nghị chuyển bớt vào Dạ Dày Vô Hạn Azathoth.", "", 1800);
+        if (usedSlots >= 33 && now - data.getLong("SageInventoryFullTick") >= 400L) {
+            data.putLong("SageInventoryFullTick", now);
+            sendCornerAlert(sp,
+                    "« Báo cáo »: Ba-lô cá nhân gần đầy (" + usedSlots + "/36 ô)! Đề xuất: Kích hoạt [Quản Gia Hư Không] chuyển toàn bộ khoáng/đất vào Dạ Dày Azathoth.",
+                    0xFFA855F7, 7500, false, ServerboundSageActionPacket.ACTION_HOOVER_TRASH);
+        }
+
+        // Tác chiến Raphael 1-Chạm: Người Sắt bị tổn hại
+        if (now - data.getLong("SageGolemRepairTick") >= 300L) {
+            for (net.minecraft.world.entity.animal.IronGolem golem : sl.getEntitiesOfClass(net.minecraft.world.entity.animal.IronGolem.class, sp.getBoundingBox().inflate(16.0D), g -> g.isAlive() && g.getHealth() < g.getMaxHealth() * 0.75F)) {
+                data.putLong("SageGolemRepairTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện Người Sắt bị tổn hại (" + (int) golem.getHealth() + "/" + (int) golem.getMaxHealth() + " HP). Ngài có muốn tiêu hao Thép Ma Thuật trong Dạ Dày để phục hồi 100% thể trạng không? [Y] Sửa Chữa / [N] Bỏ Qua",
+                        0xFF38BDF8, 8000, false, ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM);
+                break;
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Đàn Ong Cuồng Nộ do mất tổ
+        if (now - data.getLong("SageAngryBeesTick") >= 300L) {
+            for (net.minecraft.world.entity.animal.Bee bee : sl.getEntitiesOfClass(net.minecraft.world.entity.animal.Bee.class, sp.getBoundingBox().inflate(16.0D), b -> b.isAlive() && b.isAngry())) {
+                data.putLong("SageAngryBeesTick", now);
+                sendCornerAlert(sp,
+                        "« Cảnh báo »: Đàn ong đang cuồng nộ do mất tổ! Ngài có muốn dùng Mật Hoa Tinh Khiết trong Dạ Dày để xoa dịu và tái lập tổ ong mật không? [Y] Xoa Dịu / [N] Bỏ Qua",
+                        0xFFF59E0B, 8000, false, ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES);
+                break;
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Ma Vương Thức Tỉnh hoặc Boss rơi vào trạng thái Cuồng Nộ (Berserk)
+        if (now - data.getLong("SageBerserkPacifyTick") >= 400L) {
+            for (LivingEntity boss : sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(24.0D), e -> e != sp && e.isAlive() && (e instanceof com.minhphuc.weapons.entity.tensura.OrcDisasterGeldEntity || e instanceof com.minhphuc.weapons.entity.tensura.MilimEntity || (e.hasEffect(MobEffects.DAMAGE_BOOST) && e.getEffect(MobEffects.DAMAGE_BOOST).getAmplifier() >= 2)))) {
+                data.putLong("SageBerserkPacifyTick", now);
+                sendCornerAlert(sp,
+                        "« Cảnh báo »: Phát hiện thực thể Ma Vương đang trong trạng thái Cuồng Nộ (Berserk)! Ngài có muốn dùng Hư Không Tâm Linh để hóa giải cơn thịnh nộ không? [Y] Hóa Giải / [N] Bỏ Qua",
+                        0xFFEF4444, 8500, false, ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON);
+                break;
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Ban Phước Ruộng Đồng Thôn Làng (Phì Nhiêu Hư Không)
+        if (now - data.getLong("SageFertilizeCropsTick") >= 400L) {
+            BlockPos pCenter = sp.blockPosition();
+            int unripenedCrops = 0;
+            for (int dx = -10; dx <= 10 && unripenedCrops < 4; dx += 2) {
+                for (int dz = -10; dz <= 10 && unripenedCrops < 4; dz += 2) {
+                    for (int dy = -2; dy <= 2 && unripenedCrops < 4; dy++) {
+                        BlockPos bp = pCenter.offset(dx, dy, dz);
+                        BlockState bs = sl.getBlockState(bp);
+                        if (bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop && !crop.isMaxAge(bs)) {
+                            unripenedCrops++;
+                        } else if (bs.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bmb && bmb.isValidBonemealTarget(sl, bp, bs)) {
+                            unripenedCrops++;
+                        }
+                    }
+                }
+            }
+            if (unripenedCrops >= 3) {
+                data.putLong("SageFertilizeCropsTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện cánh đồng hoa màu của thôn làng chưa chín. Ngài có muốn giải phóng Dưỡng Chất Ma Tố trong Dạ Dày làm chín rộ toàn bộ ruộng đồng không? [Y] Ban Phước Ruộng Đồng / [N] Bỏ Qua",
+                        0xFF84CC16, 8500, false, ServerboundSageActionPacket.ACTION_FERTILIZE_CROPS);
+            }
+        }
+
+        // Tác chiến Raphael 1-Chạm: Tiến Hóa Dân Làng thành Hộ Vệ Tinh Nhuệ Tempest
+        if (now - data.getLong("SageEvolveGuardsTick") >= 500L) {
+            List<Villager> ordinaryVillagers = sl.getEntitiesOfClass(Villager.class, sp.getBoundingBox().inflate(14.0D),
+                    v -> v.isAlive() && !v.getTags().contains("TempestGuardianGuard"));
+            if (ordinaryVillagers.size() >= 1) {
+                data.putLong("SageEvolveGuardsTick", now);
+                sendCornerAlert(sp,
+                        "« Báo cáo »: Phát hiện " + ordinaryVillagers.size() + " Dân Làng chưa có khả năng tự vệ. Ngài có muốn kích hoạt [Chuỗi Thức Ăn] tiến hóa họ thành Hộ Vệ Tinh Nhuệ Tempest không? [Y] Tiến Hóa Hộ Vệ / [N] Bỏ Qua",
+                        0xFFF59E0B, 8500, false, ServerboundSageActionPacket.ACTION_EVOLVE_VILLAGER_GUARDS);
+            }
+        }
+
+        // Hào quang Chuỗi Thức Ăn (Food Chain Aura) cho toàn bộ thuộc hạ & cư dân quanh 36m
+        if (now % 30L == 0L) {
+            List<LivingEntity> allies = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(36.0D),
+                    e -> e.isAlive() && e != sp && (e instanceof PrimordialDemonEntity pde && pde.isOwnedBy(sp)
+                            || e instanceof UnderworldDemonEntity ude && ude.isOwnedBy(sp)
+                            || (e instanceof Villager v && (v.getTags().contains(JuraTempestManager.TAG_CITADEL_RESIDENT) || v.getTags().contains("TempestGuardianGuard")))
+                            || e instanceof IronGolem));
+            for (LivingEntity ally : allies) {
+                ally.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 80, 1, false, false, false));
+                ally.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 80, 0, false, false, false));
+                ally.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 80, 0, false, false, false));
+                if (now % 60L == 0L) {
+                    sl.sendParticles(new DustParticleOptions(new Vector3f(0.1F, 0.9F, 1.0F), 0.9F), ally.getX(), ally.getY() + 0.8D, ally.getZ(), 2, 0.2, 0.3, 0.2, 0.02);
+                }
+            }
         }
 
         // N38..N48
         if (AntiMagicBarrierManager.isInBarrier(sl, sp.position())) {
-            pushAlert(sp, "IN_ANTI_MAGIC", "Cảnh báo: Bạn đang ở trong Kháng Ma Kết Giới! Chỉ dùng được Linh Tử, Vật Lý, Tiên Tri hoặc Phong Sát!", "", 600);
+            pushAlert(sp, "Cảnh báo: Đang ở trong Kết Giới Đoạt Ma — Các kỹ năng phụ thuộc Ma Tố bị giới hạn nghiêm trọng!", "", 600);
         }
         if (SkillNullificationAbility.isEntitySkillSealed(sp)) {
-            pushAlert(sp, "SKILL_SEALED_SELF", "Cảnh báo! Toàn bộ kỹ năng của bạn đang bị Phong Sát (còn " + SkillNullificationAbility.getRemainingSealSeconds(sp) + "s)!", "", 300);
+            pushAlert(sp, "Cảnh báo: Toàn bộ kỹ năng đã bị vô hiệu do Phong Sát Kỹ Năng (còn " + SkillNullificationAbility.getRemainingSealSeconds(sp) + "s)!", "", 300);
         }
         if (EvolvedSkillHelper.isUrielDefenseActive(sp)) {
-            pushAlert(sp, "URIEL_ACTIVE_NOTE", "Phòng Ngự Tuyệt Đối Uriel đang hoạt động — lưu ý Bạch Băng Long Velzard & Linh Tử có thể xuyên giáp!", "", 2400);
+            pushAlert(sp, "Linh Tử Thao Túng có thể xuyên qua Phòng Ngự Tuyệt Đối của Uriel — Chú ý né tránh công kích thánh tích!", "", 2400);
         }
         if (RykuzinSinkaAbility.isActive(sp)) {
-            pushAlert(sp, "RYKUZIN_ACTIVE_NOTE", "Tiên Tri Rykuzin Sinka đang quét quỹ đạo tấn công xung quanh bạn.", "", 2400);
+            pushAlert(sp, "Thuật Tiên Tri đang quét quỹ đạo tấn công thời gian thực.", "", 2400);
         }
-        if (AzathothStomachData.getEntries(sp).size() >= 20) {
-            pushAlert(sp, "STOMACH_ALMOST_FULL", "Dạ Dày Vô Hạn Azathoth sắp đầy (" + AzathothStomachData.getEntries(sp).size() + "/24 ô)! Hãy chuyển hóa bớt thành Ma Tố.", "", 1800);
+        if (AzathothStomachData.getEntries(sp).size() >= 110) {
+            pushAlert(sp, "Dạ Dày Vô Hạn sắp đầy (" + AzathothStomachData.getEntries(sp).size() + "/" + AzathothStomachData.MAX_SLOTS + " ô)! Hãy chuyển hóa bớt thành Ma Tố dự trữ.", "", 1800);
         }
         if (data.getBoolean("TensuraTrueDemonLord") && !data.getBoolean("RaphaelAscendedNotified")) {
             data.putBoolean("RaphaelAscendedNotified", true);
-            sendCornerAlert(sp, "Thông báo Thăng Hoa! Unique Skill [Đại Hiền Giả] đã tiến hóa thành Ultimate Skill [Trí Tuệ Vương Raphael]!", 0xFF00E5FF, 8000, false);
+            sendCornerAlert(sp, "« Báo Cáo »: Tiến hóa thành công! Kỹ Năng Độc Nhất [Đại Hiền Giả] đã tiến hóa thành Kỹ Năng Tối Thượng [Thông Tuệ Vương Raphael]!", 0xFF00E5FF, 9000, false);
         }
         if (TensuraSkillHelper.isSafeMode(sp)) {
-            pushAlert(sp, "SAFE_MODE_REMINDER", "Safe Mode (Chống Phá Địa Hình) đang BẬT — các đại chiêu sẽ không hủy hoại công trình của bạn.", "", 3600);
+            pushAlert(sp, "Chế độ Bảo Vệ Địa Hình (Safe Mode) đang BẬT.", "", 3600);
         }
     }
 
     private static void monitorEnvironmentAndOres(ServerLevel sl, ServerPlayer sp) {
+        CompoundTag data = EntityDataHelper.getCustomData(sp);
+        long now = sl.getGameTime();
+
+        // Cảnh báo rơi xuống Hư Vô The End hoặc Overworld
+        if (sp.getY() < -45.0D && (sl.dimension() == Level.END || sp.getY() < -62.0D)) {
+            if (now - data.getLong("SageVoidWarnTick") >= 100L) {
+                data.putLong("SageVoidWarnTick", now);
+                sendCornerAlert(sp,
+                        "« BÁO ĐỘNG HƯ VÔ »: Bản thân đang rơi vào Vực Thẳm Diệt Vong! Đề xuất: Kích hoạt [Hư Không Vị Diện Nhảy Vọt] đưa bản thân về đất liền an toàn ngay lập tức!",
+                        0xFF00E5FF, 7500, false, ServerboundSageActionPacket.ACTION_ESCAPE_VOID);
+            }
+        }
+
         if (sl.dimension() == Level.NETHER) {
-            pushAlert(sp, "ENTER_UNDERWORLD", "Đã tiến nhập Ma Giới (Underworld)! Ác Ma dòng dõi Thủy Tổ đang ẩn náu ở đây.", "", 2400);
             String biomeId = sl.getBiome(sp.blockPosition()).unwrapKey().map(k -> k.location().getPath()).orElse("");
             if (biomeId.contains("blood_gorge") || biomeId.contains("crimson")) {
-                pushAlert(sp, "BIOME_BLOOD_GORGE", "Quần xã Huyết Vực Ma Giới: Dòng dõi Rouge (Đỏ) cực kỳ hiếu chiến tại đây!", "", 2400);
+                pushAlert(sp, "« Báo cáo »: Tiến nhập Quần Xã Huyết Vực thuộc Ác Ma Giới.", "", 2400);
             } else if (biomeId.contains("abyssal_frost")) {
-                pushAlert(sp, "BIOME_ABYSSAL_FROST", "Quần xã Băng Vực Ma Giới: Cẩn thận Ác Ma Băng Tuyết dòng Bleu/Blanc!", "", 2400);
+                pushAlert(sp, "« Báo cáo »: Tiến nhập Quần Xã Băng Vực Ma Giới.", "", 2400);
             } else if (biomeId.contains("bone_wastes") || biomeId.contains("basalt")) {
-                pushAlert(sp, "BIOME_BONE_WASTES", "Quần xã Đồi Xương Trắng & Tro Tàn: Ác Ma Dị Thú & Phi Hành đang tuần tra!", "", 2400);
+                pushAlert(sp, "« Báo cáo »: Tiến nhập Quần Xã Đồi Xương Trắng & Tro Tàn.", "", 2400);
             }
         }
 
         double y = sp.getY();
-        if (y < -45.0D) {
-            pushAlert(sp, "DEEP_BEDROCK_LAYER", "Đã xuống ngưỡng Địa Tầng Nền Đá (Y < -45): Mật độ Kim Cương & Dung Nham dày đặc!", "", 2400);
-        } else if (y < 0.0D) {
-            pushAlert(sp, "DEEP_SLATE_LAYER", "Đã vào Tầng Đá Sâu Deepslate (Y < 0): Dùng Raphael #5 để quét mạch khoáng quý!", "", 2400);
+        if (y < -45.0D && sl.dimension() == Level.OVERWORLD) {
+            pushAlert(sp, "DEEP_BEDROCK_LAYER", "Đã chạm ngưỡng Địa Tầng Nền Đá (Y < -45): Mật độ Kim Cương & Dung Nham dày đặc!", "", 2400);
+        } else if (y < 0.0D && sl.dimension() == Level.OVERWORLD) {
+            pushAlert(sp, "DEEP_SLATE_LAYER", "Đã vào Tầng Đá Sâu Deepslate (Y < 0): Khuyến nghị dùng Raphael để quét mạch khoáng!", "", 2400);
         } else if (y > 180.0D) {
-            pushAlert(sp, "HIGH_ALTITUDE_LAYER", "Đạt độ cao Tầng Không (Y > 180): Chú ý tốc độ rơi & Thủy Quái Charybdis!", "", 2400);
+            pushAlert(sp, "HIGH_ALTITUDE_LAYER", "Đạt độ cao Tầng Không (Y > 180): Cẩn trọng Thủy Quái Charybdis phục kích!", "", 2400);
         }
 
         if (sl.isThundering()) {
-            pushAlert(sp, "WEATHER_THUNDER", "Cảnh báo Thời Tiết: Bão sấm dữ dội đang hoành hành trên bầu trời!", "", 2400);
+            pushAlert(sp, "Cảnh báo Khí Tượng: Bão sấm dữ dội đang hoành hành — Tần suất sét đánh tự nhiên gia tăng!", "", 2400);
         }
         long dayTime = sl.getDayTime() % 24000L;
         if (dayTime >= 13000L && dayTime <= 13600L) {
-            pushAlert(sp, "NIGHT_FALL", "Màn đêm đã buông xuống — Ác Ma Ma Giới có xác suất xuất hiện tại Overworld!", "", 1200);
+            pushAlert(sp, "Màn đêm đã buông xuống — Khuyến nghị kích hoạt Cảm Quan Ma Lực cảnh giới ma vật.", "", 1200);
         } else if (dayTime >= 0L && dayTime <= 500L) {
-            pushAlert(sp, "DAWN_BREAK", "Rạng Đông đã lên — tầm nhìn & ánh sáng tự nhiên đã phục hồi!", "", 1200);
+            pushAlert(sp, "Rạng Đông đã lên — Tầm nhìn & ánh sáng tự nhiên đã phục hồi.", "", 1200);
         }
 
         // N49: Quét Kim Cương / Debris lộ thiên nếu đang cầm Cuốc
-        if (sp.getMainHandItem().getItem() instanceof PickaxeItem) {
+        if (sp.getMainHandItem().getItem() instanceof PickaxeItem && now - data.getLong("SageOreVeinTick") >= 240L) {
             BlockPos c = sp.blockPosition();
-            for (int dx = -6; dx <= 6; dx++) {
-                for (int dy = -4; dy <= 4; dy++) {
-                    for (int dz = -6; dz <= 6; dz++) {
+            for (int dx = -5; dx <= 5; dx++) {
+                for (int dy = -3; dy <= 3; dy++) {
+                    for (int dz = -5; dz <= 5; dz++) {
                         Block b = sl.getBlockState(c.offset(dx, dy, dz)).getBlock();
                         if (b == Blocks.DIAMOND_ORE || b == Blocks.DEEPSLATE_DIAMOND_ORE || b == Blocks.ANCIENT_DEBRIS) {
-                            pushAlert(sp, "NEARBY_RARE_ORE", "Phát hiện mạch " + b.getName().getString() + " ở ngay gần đây (trong 6m)!", "", 600);
+                            data.putLong("SageOreVeinTick", now);
+                            sendCornerAlert(sp,
+                                    "« Cảm ứng Ma Lực »: Phát hiện mạch [" + b.getName().getString() + "] kề bên! Đề xuất: Dùng [Trảm Kích Không Gian] khai thác trực tiếp vào túi đồ.",
+                                    0xFF38BDF8, 7000, false, ServerboundSageActionPacket.ACTION_EXTRACT_VEIN);
                             return;
                         }
                     }
@@ -414,12 +618,16 @@ public final class SageManager {
                 if (sl != ow) {
                     sp.teleportTo(ow, standPos.getX() + 0.5, standPos.getY(), standPos.getZ() + 0.5, 180.0F, -10.0F);
                 } else {
-                    SpatialTeleportAbility.executeCinematicDemonTeleport(ow, sp, standPos, "Hang Động Phong Ấn Bạo Phong Long Veldora");
+                    SpatialTeleportAbility.executeCinematicDemonTeleport(ow, sp, standPos, "Hang Động Phong Nơi Ấn Bạo Phong Long Veldora");
                 }
                 com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.syncPrisonsToPlayer(sp);
-                sendCornerAlert(sp, "Đã khởi chạy Không Gian Chuyển Vị tới Hang Động Phong Ấn Bạo Phong Long Veldora!", 0xFF38BDF8, 5000, false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã Dịch Chuyển Không Gian tới Hang Động Phong Ấn Bạo Phong Long Veldora!", 0xFF38BDF8, 5000, false);
             }
             case ServerboundSageActionPacket.ACTION_TOGGLE_AUTO_BATTLE -> {
+                if (PrimordialArmorItem.isWearingAnyNoirArmor(sp)) {
+                    PrimordialArmorItem.toggleNoirClaws(sp);
+                    return;
+                }
                 boolean next = !data.getBoolean(TAG_AUTO_BATTLE);
                 data.putBoolean(TAG_AUTO_BATTLE, next);
                 TensuraSkillHelper.syncSkillStateToClient(sp);
@@ -432,7 +640,7 @@ public final class SageManager {
                         next ? SoundEvents.BEACON_POWER_SELECT : SoundEvents.BEACON_DEACTIVATE,
                         SoundSource.PLAYERS, 1.4F, next ? 1.5F : 1.2F);
                 sendCornerAlert(sp, next
-                        ? "§aBẬT §fChế Độ Ủy Thác Toàn Phần — §bTrí Tuệ Vương Raphael §fđang tiếp quản điều khiển! (Nhấn §eShift §fđể trở lại)"
+                        ? "§aBẬT §fChế Độ Tự Động — §bThông Tuệ Vương Raphael §fđang tiếp quản điều khiển! (Nhấn §eShift §fđể trở lại)"
                         : "§cTẮT §fChế Độ Tự Động — Đã hoàn trả quyền điều khiển cơ thể cho chủ nhân!", 0xFF00E5FF, 5000, false);
             }
             case ServerboundSageActionPacket.ACTION_SCAN_AREA -> {
@@ -440,7 +648,41 @@ public final class SageManager {
                 for (LivingEntity le : scanned) {
                     le.addEffect(new MobEffectInstance(MobEffects.GLOWING, 120, 0, false, false));
                 }
-                sendCornerAlert(sp, "Quét Vạn Vật tầm gần: Đã đánh dấu §e" + scanned.size() + " §fsinh thể trong bán kính 24m!", 0xFFA855F7, 4500, false);
+
+                Vec3 eye = sp.getEyePosition();
+                Vec3 look = sp.getLookAngle();
+                Vec3 reach = eye.add(look.scale(32.0D));
+                LivingEntity focus = null;
+                double bestDist = 32.0D;
+                for (LivingEntity cand : sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().expandTowards(look.scale(32.0D)).inflate(2.5D), e -> e != sp && e.isAlive())) {
+                    var hit = cand.getBoundingBox().inflate(0.4D).clip(eye, reach);
+                    if (hit.isPresent()) {
+                        double d = eye.distanceTo(hit.get());
+                        if (d < bestDist) {
+                            bestDist = d;
+                            focus = cand;
+                        }
+                    }
+                }
+                if (focus == null && !scanned.isEmpty()) {
+                    scanned.sort(java.util.Comparator.comparingDouble(e -> e.distanceToSqr(sp)));
+                    if (scanned.get(0).distanceToSqr(sp) <= 16.0D * 16.0D) {
+                        focus = scanned.get(0);
+                    }
+                }
+
+                if (focus != null) {
+                    AllOfCreationAbility.appraiseLivingEntity(sp, focus);
+                    long focusEp = AllOfCreationAbility.estimateEP(focus);
+                    String lineageNote = (focus instanceof com.minhphuc.weapons.entity.tensura.UnderworldDemonEntity uDemon)
+                            ? " §7| §dDòng dõi: §e" + uDemon.getDemonType().getTitleVi()
+                            : "";
+                    sendCornerAlert(sp, "Phân Tích: §e" + focus.getDisplayName().getString()
+                            + " §7| §bEP: " + MagiculesManager.formatCompact(focusEp)
+                            + lineageNote + " §7(+" + scanned.size() + " mục tiêu gần)", 0xFFA855F7, 5500, false);
+                } else {
+                    sendCornerAlert(sp, "Quét Vạn Vật tầm gần: Đã đánh dấu §e" + scanned.size() + " §fsinh vật trong bán kính gần!", 0xFFA855F7, 4500, false);
+                }
             }
             case ServerboundSageActionPacket.ACTION_DECODE_CURSE -> {
                 sp.removeEffect(MobEffects.WITHER);
@@ -451,8 +693,524 @@ public final class SageManager {
                 sp.removeEffect(MobEffects.DIG_SLOWDOWN);
                 sp.removeEffect(MobEffects.HUNGER);
                 sp.clearFire();
-                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.0F, 1.6F);
-                sendCornerAlert(sp, "Giải Mã & Thanh Tẩy Nguyên Tố: Đã hóa giải toàn bộ hiệu ứng nguyền rủa bất lợi!", 0xFF34D399, 4500, false);
+                MagiculesManager.addAzathothConversion(sp, 35_000L);
+                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.0, sp.getZ(), 20, 0.4, 0.5, 0.4, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_POWER_SELECT, SoundSource.PLAYERS, 1.2F, 1.6F);
+                sendCornerAlert(sp, "« Xác nhận »: Đã phân giải toàn bộ độc tố/nguyền rủa & nạp +35.000 Ma Tố dự trữ!", 0xFF34D399, 4500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_REPAIR_GEAR -> {
+                int repairedCount = 0;
+                ItemStack mainHand = sp.getMainHandItem();
+                if (!mainHand.isEmpty() && mainHand.isDamageableItem() && mainHand.isDamaged()) {
+                    mainHand.setDamageValue(0);
+                    repairedCount++;
+                }
+                for (ItemStack armor : sp.getArmorSlots()) {
+                    if (!armor.isEmpty() && armor.isDamageableItem() && armor.isDamaged()) {
+                        armor.setDamageValue(0);
+                        repairedCount++;
+                    }
+                }
+                sl.sendParticles(ParticleTypes.END_ROD, sp.getX(), sp.getY() + 1.0, sp.getZ(), 25, 0.4, 0.6, 0.4, 0.05);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.1F, 1.4F);
+                sendCornerAlert(sp, "« Xác nhận »: Kích hoạt [Tái Cấu Trúc Nguyên Tử] thành công! Đã phục hồi 100% độ bền cho " + repairedCount + " trang bị!", 0xFFF59E0B, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_HOOVER_TRASH -> {
+                AzathothStomachData.depositAllBackpack(sp);
+                List<ItemEntity> drops = sl.getEntitiesOfClass(ItemEntity.class, sp.getBoundingBox().inflate(12.0D), ItemEntity::isAlive);
+                int absorbedDrops = 0;
+                for (ItemEntity ie : drops) {
+                    ItemStack st = ie.getItem().copy();
+                    if (AzathothStomachData.storeItemStackIntoStomach(sp, st, false)) {
+                        if (st.isEmpty()) ie.discard();
+                        else ie.setItem(st);
+                        absorbedDrops++;
+                    }
+                }
+                sl.sendParticles(ParticleTypes.PORTAL, sp.getX(), sp.getY() + 0.8, sp.getZ(), 30, 0.5, 0.5, 0.5, 0.2);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ENDERMAN_TELEPORT, SoundSource.PLAYERS, 1.2F, 1.3F);
+                sendCornerAlert(sp, "« Xác nhận »: [Quản Gia Hư Không] đã dọn sạch kho đồ & thu nạp " + absorbedDrops + " vật phẩm rơi vào Dạ Dày Azathoth!", 0xFFA855F7, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_EMERGENCY_HEAL -> {
+                sp.setHealth(sp.getMaxHealth());
+                sp.getFoodData().setFoodLevel(20);
+                sp.getFoodData().setSaturation(20.0F);
+                sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 120, 2, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 120, 3, false, false));
+                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 0.5, 0.8, 0.5, 0.2);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.3F, 1.2F);
+                sendCornerAlert(sp, "« Xác nhận »: Đã giải phóng [Siêu Dược Liệu Toàn Phần] — Phục hồi 100% Sinh Lực & Thể Lực!", 0xFF22C55E, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_REVERSE_PROJECTILES -> {
+                List<net.minecraft.world.entity.projectile.Projectile> projectiles = sl.getEntitiesOfClass(
+                        net.minecraft.world.entity.projectile.Projectile.class,
+                        sp.getBoundingBox().inflate(18.0D),
+                        p -> p.isAlive() && p.getOwner() != sp
+                );
+                int count = 0;
+                for (var p : projectiles) {
+                    Vec3 motion = p.getDeltaMovement();
+                    p.setDeltaMovement(motion.scale(-1.6D));
+                    p.setOwner(sp);
+                    count++;
+                }
+                sl.sendParticles(ParticleTypes.ENCHANTED_HIT, sp.getX(), sp.getY() + 1.0, sp.getZ(), 35, 0.6, 0.6, 0.6, 0.2);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 1.4F, 1.6F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_ACTIVATE, SoundSource.PLAYERS, 1.0F, 1.8F);
+                sendCornerAlert(sp, "« Xác nhận »: [Đảo Chiều Không Gian] thành công! Đã bẻ ngược quỹ đạo của " + count + " đạn đạo về phía kẻ địch!", 0xFF00E5FF, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_OVERDRIVE_SKILL -> {
+                data.putBoolean("TensuraMagiculeOverdrive", true);
+                TensuraSkillHelper.syncSkillStateToClient(sp);
+                sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 300, 3, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 300, 2, false, false));
+                sl.sendParticles(ParticleTypes.FLASH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 2, 0, 0, 0, 0);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.LIGHTNING_BOLT_THUNDER, SoundSource.PLAYERS, 1.2F, 1.3F);
+                sendCornerAlert(sp, "« Xác nhận »: [Ma Tố Quá Tải - Overdrive] KÍCH HOẠT! Tăng 250% Uy Lực Tuyệt Kỹ trong 15 giây!", 0xFFEF4444, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_RESET_COOLDOWN -> {
+                if (!sp.getMainHandItem().isEmpty()) {
+                    sp.getCooldowns().removeCooldown(sp.getMainHandItem().getItem());
+                }
+                if (!sp.getOffhandItem().isEmpty()) {
+                    sp.getCooldowns().removeCooldown(sp.getOffhandItem().getItem());
+                }
+                data.putLong("TensuraSkillCooldownGlobal", 0L);
+                data.putLong("SageWeaponWarnTick", 0L);
+                sl.sendParticles(ParticleTypes.WITCH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 25, 0.4, 0.4, 0.4, 0.05);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.AMETHYST_BLOCK_RESONATE, SoundSource.PLAYERS, 1.5F, 1.7F);
+                sendCornerAlert(sp, "« Xác nhận »: Raphael đã cưỡng chế lập lại ma trận — Toàn bộ Hồi Chiêu Kỹ Năng đã được RESET về 0s!", 0xFF38BDF8, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_ESCAPE_VOID -> {
+                BlockPos targetPos = null;
+                BlockPos current = sp.blockPosition();
+                for (int r = 1; r <= 80; r += 4) {
+                    for (int dx = -r; dx <= r; dx += 8) {
+                        for (int dz = -r; dz <= r; dz += 8) {
+                            BlockPos check = new BlockPos(current.getX() + dx, 65, current.getZ() + dz);
+                            BlockPos surface = sl.getHeightmapPos(net.minecraft.world.level.levelgen.Heightmap.Types.MOTION_BLOCKING, check);
+                            if (surface.getY() > 5 && !sl.getBlockState(surface.below()).isAir()) {
+                                targetPos = surface;
+                                break;
+                            }
+                        }
+                        if (targetPos != null) break;
+                    }
+                    if (targetPos != null) break;
+                }
+                if (targetPos == null) targetPos = new BlockPos(0, 75, 0);
+
+                sp.teleportTo(sl, targetPos.getX() + 0.5D, targetPos.getY() + 0.2D, targetPos.getZ() + 0.5D, Set.of(), sp.getYRot(), 0.0F);
+                sp.setDeltaMovement(0, 0, 0);
+                sp.fallDistance = 0.0F;
+                sp.addEffect(new MobEffectInstance(MobEffects.SLOW_FALLING, 160, 0, false, false));
+                sl.sendParticles(ParticleTypes.PORTAL, sp.getX(), sp.getY() + 1.0, sp.getZ(), 40, 0.6, 0.8, 0.6, 0.2);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.CHORUS_FRUIT_TELEPORT, SoundSource.PLAYERS, 1.4F, 1.2F);
+                sendCornerAlert(sp, "« Xác nhận »: [Hư Không Vị Diện Nhảy Vọt] thành công! Đã kéo bản thân trở về đất liền an toàn!", 0xFF00E5FF, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_SOLIDIFY_LAVA -> {
+                BlockPos base = sp.blockPosition();
+                int solidified = 0;
+                for (int dx = -3; dx <= 3; dx++) {
+                    for (int dy = -2; dy <= 1; dy++) {
+                        for (int dz = -3; dz <= 3; dz++) {
+                            BlockPos p = base.offset(dx, dy, dz);
+                            if (sl.getBlockState(p).is(Blocks.LAVA)) {
+                                sl.setBlockAndUpdate(p, Blocks.OBSIDIAN.defaultBlockState());
+                                solidified++;
+                            }
+                        }
+                    }
+                }
+                sp.clearFire();
+                sp.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 1200, 0, false, false));
+                sl.sendParticles(ParticleTypes.SNOWFLAKE, sp.getX(), sp.getY() + 0.5, sp.getZ(), 35, 0.8, 0.4, 0.8, 0.05);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.LAVA_EXTINGUISH, SoundSource.PLAYERS, 1.4F, 1.1F);
+                sendCornerAlert(sp, "« Xác nhận »: [Trường Hạ Nhiệt Tuyệt Đối] đã đóng băng " + solidified + " khối Dung Nham & cấp Kháng Lửa 1 phút!", 0xFF38BDF8, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_SWARM_GRAVITY -> {
+                List<LivingEntity> enemies = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(14.0D), e -> e != sp && e instanceof Enemy && e.isAlive());
+                for (LivingEntity e : enemies) {
+                    e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 120, 9, false, false));
+                    e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 120, 2, false, false));
+                    e.hurt(sl.damageSources().magic(), 45.0F);
+                    e.setDeltaMovement(0, -1.2D, 0);
+                }
+                sl.sendParticles(ParticleTypes.SONIC_BOOM, sp.getX(), sp.getY() + 0.5, sp.getZ(), 1, 0, 0, 0, 0);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.PLAYERS, 1.3F, 0.8F);
+                sendCornerAlert(sp, "« Xác nhận »: [Trọng Lực Áp Chế] sụp đổ thành công! Đã đè sụp và khóa chân " + enemies.size() + " thực thể thù địch!", 0xFFA855F7, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PACIFY_VELDORA -> {
+                VeldoraEntity veldora = VeldoraWorldData.findSingletonVeldora(sl.getServer());
+                if (veldora != null && veldora.isAlive()) {
+                    veldora.heal(veldora.getMaxHealth() * 0.35F);
+                    veldora.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 600, 2, false, false));
+                    sl.sendParticles(ParticleTypes.ELECTRIC_SPARK, veldora.getX(), veldora.getY() + 1.5, veldora.getZ(), 30, 0.6, 0.6, 0.6, 0.2);
+                    sl.playSound(null, veldora.getX(), veldora.getY(), veldora.getZ(), SoundEvents.ENDER_DRAGON_GROWL, SoundSource.PLAYERS, 1.6F, 1.1F);
+                    sp.displayClientMessage(Component.literal("§b§l[VELDORA] §f\"KUAHAHA! Đúng là bạn hiền tuyệt nhất, ta tràn đầy sức mạnh rồi!\""), false);
+                    sendCornerAlert(sp, "« Xác nhận »: [Hành Lang Linh Hồn] truyền dẫn hoàn tất — Hồi phục 35% Sinh Lực & Cường Hóa Veldora!", 0xFF00E5FF, 5000, false);
+                } else {
+                    sendCornerAlert(sp, "« Báo cáo »: Hiện không có cá thể Veldora trên chiến trường để liên kết năng lượng.", 0xFFF59E0B, 4000, false);
+                }
+            }
+            case ServerboundSageActionPacket.ACTION_EXTRACT_VEIN -> {
+                BlockPos base = sp.blockPosition();
+                int mined = 0;
+                for (int dx = -5; dx <= 5; dx++) {
+                    for (int dy = -4; dy <= 4; dy++) {
+                        for (int dz = -5; dz <= 5; dz++) {
+                            BlockPos p = base.offset(dx, dy, dz);
+                            BlockState state = sl.getBlockState(p);
+                            Block b = state.getBlock();
+                            if (b == Blocks.DIAMOND_ORE || b == Blocks.DEEPSLATE_DIAMOND_ORE || b == Blocks.ANCIENT_DEBRIS || b == Blocks.EMERALD_ORE || b == Blocks.DEEPSLATE_EMERALD_ORE) {
+                                sl.destroyBlock(p, true, sp);
+                                mined++;
+                            }
+                        }
+                    }
+                }
+                sl.sendParticles(ParticleTypes.ENCHANTED_HIT, sp.getX(), sp.getY() + 1.0, sp.getZ(), 20, 0.4, 0.4, 0.4, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.1F, 1.6F);
+                sendCornerAlert(sp, "« Xác nhận »: [Trảm Kích Không Gian] khai thác thành công " + mined + " khối khoáng sản quý thẳng vào túi đồ!", 0xFF38BDF8, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_WATER_BREATHING -> {
+                sp.setAirSupply(sp.getMaxAirSupply());
+                sp.addEffect(new MobEffectInstance(MobEffects.WATER_BREATHING, 12000, 0, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.NIGHT_VISION, 12000, 0, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.DOLPHINS_GRACE, 6000, 0, false, false));
+                sl.sendParticles(ParticleTypes.BUBBLE_POP, sp.getX(), sp.getY() + 1.0, sp.getZ(), 25, 0.3, 0.3, 0.3, 0.05);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.2F, 1.3F);
+                sendCornerAlert(sp, "« Xác nhận »: [Thủy Tinh Hô Hấp] đã kích hoạt! Duy trì dưỡng khí vô hạn & tầm nhìn đại dương!", 0xFF00E5FF, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_DISARM_TARGET -> {
+                Vec3 eye = sp.getEyePosition();
+                Vec3 look = sp.getLookAngle();
+                Vec3 reach = eye.add(look.scale(14.0D));
+                LivingEntity victim = null;
+                for (LivingEntity cand : sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().expandTowards(look.scale(14.0D)).inflate(2.0D), e -> e != sp && e.isAlive())) {
+                    if (cand instanceof Mob m && !m.getMainHandItem().isEmpty()) {
+                        victim = m;
+                        break;
+                    }
+                }
+                if (victim instanceof Mob m) {
+                    ItemStack weapon = m.getMainHandItem().copy();
+                    m.setItemInHand(InteractionHand.MAIN_HAND, ItemStack.EMPTY);
+                    AzathothStomachData.storeItemStackIntoStomach(sp, weapon, false);
+                    sl.sendParticles(ParticleTypes.REVERSE_PORTAL, m.getX(), m.getY() + 1.0, m.getZ(), 20, 0.3, 0.5, 0.3, 0.1);
+                    sl.playSound(null, m.getX(), m.getY(), m.getZ(), SoundEvents.ITEM_BREAK, SoundSource.PLAYERS, 1.3F, 1.4F);
+                    sendCornerAlert(sp, "« Xác nhận »: [Hàm Nuốt Bạo Thực Vương] đã tước đoạt thành công [" + weapon.getHoverName().getString() + "] vào Dạ Dày Azathoth!", 0xFFA855F7, 5000, false);
+                } else {
+                    sendCornerAlert(sp, "« Báo cáo »: Mục tiêu đã thoát khỏi tầm tước vũ khí của Bạo Thực Vương.", 0xFFF59E0B, 4000, false);
+                }
+            }
+            case ServerboundSageActionPacket.ACTION_SEER_FLESH_REGEN -> {
+                com.minhphuc.weapons.content.darkgathering.CuuTheCurseManager.cure(sp, "Nhãn Cầu Thị Thực Tái Sinh Nhục Thân");
+                sp.removeAllEffects();
+                sp.setHealth(sp.getMaxHealth());
+                sp.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 240, 4, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 240, 3, false, false));
+                sp.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 600, 3, false, false));
+                sl.sendParticles(ParticleTypes.TOTEM_OF_UNDYING, sp.getX(), sp.getY() + 1.2, sp.getZ(), 45, 0.5, 0.8, 0.5, 0.2);
+                sl.sendParticles(ParticleTypes.FLASH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 2, 0, 0, 0, 0);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.6F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.4F, 1.5F);
+                sp.displayClientMessage(Component.literal("§6§l[THỊ THỰC TÁI SINH] §fThông Tuệ Vương Raphael đã kích hoạt Nhãn Cầu Thị Thực: Tái cấu trúc thành công 100% Tim và Não!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Nhục thân đã tái cấu trúc hoàn tất! Lời nguyền tử vong bị thanh tẩy tuyệt đối!", 0xFF22C55E, 5000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PURIFY_RESTORE_WATER -> {
+                int pendingWater = data.getInt("BeelzebuthPendingPurifyWater");
+                long centerLong = data.getLong("BeelzebuthPendingCenterPos");
+                BlockPos center = centerLong != 0 ? BlockPos.of(centerLong) : sp.blockPosition();
+                int radius = 8;
+                int restored = 0;
+                int limit = Math.max(32, Math.min(pendingWater, 256));
+                for (int y = center.getY(); y >= center.getY() - 6 && restored < limit; y--) {
+                    for (int x = -radius; x <= radius && restored < limit; x++) {
+                        for (int z = -radius; z <= radius && restored < limit; z++) {
+                            if (x * x + z * z > radius * radius) continue;
+                            BlockPos p = new BlockPos(center.getX() + x, y, center.getZ() + z);
+                            if (sl.getBlockState(p).isAir() && !sl.getBlockState(p.below()).isAir()) {
+                                sl.setBlock(p, Blocks.WATER.defaultBlockState(), Block.UPDATE_CLIENTS | Block.UPDATE_SUPPRESS_DROPS);
+                                restored++;
+                            }
+                        }
+                    }
+                }
+                data.putInt("BeelzebuthPendingPurifyWater", 0);
+                sl.sendParticles(ParticleTypes.SPLASH, sp.getX(), sp.getY() + 1.0, sp.getZ(), 35, 1.0, 0.5, 1.0, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.SPLASH_POTION_BREAK, SoundSource.PLAYERS, 1.5F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.CONDUIT_ACTIVATE, SoundSource.PLAYERS, 1.2F, 1.4F);
+                sp.displayClientMessage(Component.literal("§b§l[THANH TẨY NGUỒN NƯỚC] §fĐã thanh tẩy thành công và hoàn trả nguồn nước tinh khiết!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã thanh tẩy thành công! Hoàn trả nguồn nước tinh khiết vào môi trường (không gây giật lag)!", 0xFF00E5FF, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_RECONSTRUCT_ZOMBIES -> {
+                int count = Math.max(1, data.getInt("BeelzebuthPendingZombieVillagers"));
+                data.putInt("BeelzebuthPendingZombieVillagers", 0);
+                for (int i = 0; i < Math.min(count, 8); i++) {
+                    Villager villager = EntityType.VILLAGER.create(sl);
+                    if (villager != null) {
+                        double ox = (i % 3 - 1) * 1.5D;
+                        double oz = (i / 3 - 1) * 1.5D;
+                        villager.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                        villager.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                        villager.setCustomName(Component.literal("§aDân Làng Phục Hưng"));
+                        sl.addFreshEntity(villager);
+                    }
+                }
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.2, sp.getZ(), 40, 1.2, 0.8, 1.2, 0.1);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ZOMBIE_VILLAGER_CONVERTED, SoundSource.PLAYERS, 1.4F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.3F);
+                sp.displayClientMessage(Component.literal("§a§l[TÁI CẤU TRÚC DÂN LÀNG] §fThông Tuệ Vương Raphael đã giải trừ tà khí, tái sinh thành công Dân Làng!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Tái cấu trúc thành công! " + count + " cá thể đã được giải trừ tà khí, hoàn nguyên thành Dân Làng khỏe mạnh!", 0xFF22C55E, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PACIFY_BERSERK_DEMON -> {
+                List<LivingEntity> enraged = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(24.0D),
+                        e -> e != sp && e.isAlive() && (e instanceof OrcDisasterGeldEntity || e instanceof MilimEntity || e.hasEffect(MobEffects.DAMAGE_BOOST)));
+                int count = 0;
+                for (LivingEntity le : enraged) {
+                    le.removeEffect(MobEffects.DAMAGE_BOOST);
+                    le.removeEffect(MobEffects.MOVEMENT_SPEED);
+                    if (le instanceof Mob mob) {
+                        mob.setTarget(null);
+                    }
+                    le.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 2));
+                    le.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 200, 1));
+                    sl.sendParticles(ParticleTypes.HEART, le.getX(), le.getY() + 1.5, le.getZ(), 15, 0.6, 0.6, 0.6, 0.05);
+                    count++;
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEACON_DEACTIVATE, SoundSource.PLAYERS, 1.5F, 1.8F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.5F);
+                sp.displayClientMessage(Component.literal("§d§l[HÓA GIẢI CUỒNG NỘ] §fHư Không Tâm Linh đã thanh tẩy tâm trí Ma Vương/Boss cuồng bạo!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Hư Không Tâm Linh đã thanh tẩy thành công trạng thái Cuồng Nộ! " + count + " thực thể đã lấy lại lý trí hoàn toàn!", 0xFF38BDF8, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_REPAIR_IRON_GOLEM -> {
+                List<IronGolem> golems = sl.getEntitiesOfClass(IronGolem.class, sp.getBoundingBox().inflate(16.0D), g -> g.isAlive());
+                for (IronGolem g : golems) {
+                    g.setHealth(g.getMaxHealth());
+                    g.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 1));
+                    g.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 1200, 2));
+                    sl.sendParticles(ParticleTypes.ENCHANTED_HIT, g.getX(), g.getY() + 1.2, g.getZ(), 30, 0.6, 0.8, 0.6, 0.1);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ANVIL_USE, SoundSource.PLAYERS, 1.4F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.IRON_GOLEM_REPAIR, SoundSource.PLAYERS, 1.6F, 1.0F);
+                sp.displayClientMessage(Component.literal("§b§l[SỬA CHỮA NGƯỜI SẮT] §fĐã dùng Thép Ma Thuật gia cố và phục hồi 100% thể trạng Người Sắt!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã tiêu hao Thép Ma Thuật phục hồi 100% thể trạng Người Sắt! Lớp giáp bảo vệ đã được gia cố tối đa!", 0xFF38BDF8, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_PACIFY_ANGRY_BEES -> {
+                List<Bee> bees = sl.getEntitiesOfClass(Bee.class, sp.getBoundingBox().inflate(20.0D), b -> b.isAlive());
+                for (Bee b : bees) {
+                    b.stopBeingAngry();
+                    b.setTarget(null);
+                    b.setRemainingPersistentAngerTime(0);
+                    b.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 300, 1));
+                    sl.sendParticles(ParticleTypes.HEART, b.getX(), b.getY() + 0.3, b.getZ(), 3, 0.2, 0.2, 0.2, 0.02);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BEE_POLLINATE, SoundSource.PLAYERS, 1.5F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.HONEYCOMB_WAX_ON, SoundSource.PLAYERS, 1.2F, 1.2F);
+                sp.displayClientMessage(Component.literal("§e§l[XOA DỊU ĐÀN ONG] §fĐã xoa dịu đàn ong cuồng nộ và tái lập tổ ấm hòa hoãn!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã dùng Mật Hoa Tinh Khiết xoa dịu thành công đàn ong! Đàn ong đã hòa hoãn và lấy lại tổ ấm!", 0xFFF59E0B, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_GRANT_DEMON_BODY_CONTRACT -> {
+                net.minecraft.nbt.ListTag demonsList = data.getList("BeelzebuthPendingDemonsList", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                int count = demonsList.size();
+                if (count == 0) {
+                    count = Math.max(1, data.getInt("BeelzebuthPendingDemonsCount"));
+                }
+                data.remove("BeelzebuthPendingDemonsList");
+                data.remove("BeelzebuthPendingDemonsCount");
+
+                int spawnedCount = 0;
+                for (int i = 0; i < demonsList.size(); i++) {
+                    CompoundTag tag = demonsList.getCompound(i);
+                    String demonTypeStr = tag.getString("Type");
+                    double ox = (i % 3 - 1) * 1.5D;
+                    double oz = (i / 3 - 1) * 1.5D;
+
+                    if ("PRIMORDIAL".equals(demonTypeStr)) {
+                        DemonType dType = DemonType.values()[Math.min(tag.getInt("DemonType"), DemonType.values().length - 1)];
+                        PrimordialDemonEntity demon = ModEntities.PRIMORDIAL_DEMON.get().create(sl);
+                        if (demon != null) {
+                            demon.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                            demon.setDemonType(dType);
+                            demon.tame(sp);
+                            demon.setPhysicalBody(true); // Ban thể xác vật lý hoàn thiện mà KHÔNG dùng xương!
+                            demon.setWinged(true);
+                            if (tag.contains("CustomName") && !tag.getString("CustomName").isEmpty()) {
+                                demon.setCustomDemonName(tag.getString("CustomName"));
+                                demon.setNamed(tag.getBoolean("IsNamed"));
+                            }
+                            if (tag.getBoolean("IsDemonLord")) {
+                                demon.addTag("TensuraDemonLordMob");
+                                demon.addTag("TensuraDemonLordCalm");
+                            }
+                            demon.updateAttributesForType(dType);
+                            demon.setHealth(demon.getMaxHealth());
+                            sl.addFreshEntity(demon);
+                            spawnedCount++;
+
+                            // Bỏ vào túi đồ Khế Ước Thể Xác của Ác Ma Thủy Tổ:
+                            ItemStack pactStack = new ItemStack(dType.getBodyPactItem().get());
+                            ItemStackDataHelper.putString(pactStack, "DemonType", dType.name());
+                            ItemStackDataHelper.putBoolean(pactStack, "HasPhysicalBody", true);
+                            ItemStackDataHelper.putString(pactStack, "BodyOrigin", "Linh Hồn Giả Lập (Bạo Thực Vương)");
+                            ItemStackDataHelper.putBoolean(pactStack, "IsSummoned", true);
+                            ItemStackDataHelper.putString(pactStack, "DemonUUID", demon.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerUUID", sp.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerName", sp.getName().getString());
+                            ItemStackDataHelper.putFloat(pactStack, "CurrentHp", demon.getHealth());
+                            ItemStackDataHelper.putFloat(pactStack, "MaxHp", demon.getMaxHealth());
+                            if (demon.isNamed()) {
+                                ItemStackDataHelper.putBoolean(pactStack, "IsNamed", true);
+                                ItemStackDataHelper.putString(pactStack, "CustomDemonName", demon.getEffectiveDemonName());
+                            }
+                            if (!sp.getInventory().add(pactStack)) {
+                                sp.drop(pactStack, false);
+                            }
+                        }
+                    } else { // "UNDERWORLD" or generic
+                        int dTypeIdx = tag.contains("DemonType") ? tag.getInt("DemonType") : 0;
+                        DemonType dType = DemonType.values()[Math.min(dTypeIdx, DemonType.values().length - 1)];
+                        UnderworldDemonEntity demon = ModEntities.UNDERWORLD_DEMON.get().create(sl);
+                        if (demon != null) {
+                            demon.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                            demon.tame(sp);
+                            demon.setDemonType(dType);
+                            if (tag.contains("Rank")) {
+                                demon.setRank(UnderworldDemonEntity.DemonRank.values()[Math.min(tag.getInt("Rank"), UnderworldDemonEntity.DemonRank.values().length - 1)]);
+                            }
+                            if (tag.contains("Morph")) {
+                                demon.setMorph(UnderworldDemonEntity.DemonMorph.values()[Math.min(tag.getInt("Morph"), UnderworldDemonEntity.DemonMorph.values().length - 1)]);
+                            }
+                            demon.setBerserkDemonLord(false);
+                            demon.removeTag("TensuraDemonLordBerserk");
+                            demon.addTag("TensuraDemonLordCalm");
+                            // Ban thể xác vật lý hoàn thiện mà KHÔNG dùng xương:
+                            demon.grantPhysicalBody("Linh Hồn Giả Lập (Bạo Thực Vương)", sp);
+                            demon.setHealth(demon.getMaxHealth());
+                            sl.addFreshEntity(demon);
+                            spawnedCount++;
+
+                            // Bỏ vào túi đồ Khế Ước Thể Xác của Ác Ma:
+                            ItemStack pactStack = new ItemStack(dType.getBodyPactItem().get());
+                            ItemStackDataHelper.putString(pactStack, "DemonType", dType.name());
+                            ItemStackDataHelper.putString(pactStack, "CustomDemonName", demon.getEffectiveTitle());
+                            ItemStackDataHelper.putBoolean(pactStack, "HasPhysicalBody", true);
+                            ItemStackDataHelper.putString(pactStack, "BodyOrigin", "Linh Hồn Giả Lập (Bạo Thực Vương)");
+                            ItemStackDataHelper.putBoolean(pactStack, "IsSummoned", true);
+                            ItemStackDataHelper.putString(pactStack, "DemonUUID", demon.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerUUID", sp.getStringUUID());
+                            ItemStackDataHelper.putString(pactStack, "OwnerName", sp.getName().getString());
+                            ItemStackDataHelper.putFloat(pactStack, "CurrentHp", demon.getHealth());
+                            ItemStackDataHelper.putFloat(pactStack, "MaxHp", demon.getMaxHealth());
+                            if (!sp.getInventory().add(pactStack)) {
+                                sp.drop(pactStack, false);
+                            }
+                        }
+                    }
+                }
+
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.8F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.EVOKER_PREPARE_SUMMON, SoundSource.PLAYERS, 2.0F, 0.9F);
+                sl.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 80, 1.2, 1.5, 1.2, 0.1);
+                sl.sendParticles(ParticleTypes.FLASH, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 4, 0.5, 0.5, 0.5, 0);
+
+                sp.displayClientMessage(Component.literal("§5§l[HỢP NHẤT LINH HỒN GIẢ LẬP] §fĐã ban Thể Xác Vật Lý cho " + spawnedCount + " Ác Ma & trao Khế Ước vào túi đồ!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Hợp nhất Linh Hồn Giả Lập thành công! Đã ban Thể Xác Vật Lý hoàn thiện (không dùng xương) và thêm Khế Ước Ác Ma vào túi đồ!", 0xFF8B5CF6, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_RELOCATE_VILLAGERS -> {
+                net.minecraft.nbt.ListTag villagersList = data.getList("BeelzebuthPendingVillagersList", net.minecraft.nbt.Tag.TAG_COMPOUND);
+                int count = villagersList.size();
+                if (count == 0) count = Math.max(1, data.getInt("BeelzebuthPendingVillagersCount"));
+                data.remove("BeelzebuthPendingVillagersList");
+                data.remove("BeelzebuthPendingVillagersCount");
+
+                int relocated = 0;
+                for (int i = 0; i < villagersList.size(); i++) {
+                    CompoundTag vTag = villagersList.getCompound(i);
+                    Villager v = EntityType.VILLAGER.create(sl);
+                    if (v != null) {
+                        double ox = (i % 4 - 1.5D) * 1.4D;
+                        double oz = (i / 4 - 1.5D) * 1.4D;
+                        v.moveTo(sp.getX() + ox, sp.getY(), sp.getZ() + oz, sp.getYRot(), 0.0F);
+                        v.readAdditionalSaveData(vTag);
+                        v.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                        v.setCustomName(Component.literal("§a§l[Cư Dân Tempest] §f" + v.getDisplayName().getString()));
+                        v.setCustomNameVisible(true);
+                        v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 1200, 2));
+                        v.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 600, 1));
+                        v.setVillagerXp(Math.max(v.getVillagerXp(), 100));
+                        sl.addFreshEntity(v);
+                        relocated++;
+                    }
+                }
+                sp.addEffect(new MobEffectInstance(MobEffects.HERO_OF_THE_VILLAGE, 12000, 4));
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.4F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.VILLAGER_YES, SoundSource.NEUTRAL, 1.5F, 1.0F);
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.2, sp.getZ(), 50, 1.5, 0.8, 1.5, 0.1);
+                sp.displayClientMessage(Component.literal("§a§l[ĐỊNH CƯ TEMPEST] §fĐã đưa " + relocated + " Dân Làng ra định cư thành công! Nhận hiệu ứng Anh Hùng Thôn Làng V!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã đưa " + relocated + " Dân Làng ra định cư an toàn! Họ đã chính thức gia nhập Liên Bang Tempest với mức tri ân tối đa!", 0xFF10B981, 6500, false);
+            }
+            case ServerboundSageActionPacket.ACTION_FERTILIZE_CROPS -> {
+                BlockPos pCenter = sp.blockPosition();
+                int fertilizedCount = 0;
+                for (int dx = -18; dx <= 18; dx++) {
+                    for (int dz = -18; dz <= 18; dz++) {
+                        for (int dy = -3; dy <= 3; dy++) {
+                            BlockPos bp = pCenter.offset(dx, dy, dz);
+                            BlockState bs = sl.getBlockState(bp);
+                            if (bs.getBlock() instanceof net.minecraft.world.level.block.CropBlock crop) {
+                                if (!crop.isMaxAge(bs)) {
+                                    sl.setBlock(bp, crop.getStateForAge(crop.getMaxAge()), Block.UPDATE_ALL);
+                                    fertilizedCount++;
+                                }
+                            } else if (bs.getBlock() instanceof net.minecraft.world.level.block.BonemealableBlock bmb) {
+                                if (bmb.isValidBonemealTarget(sl, bp, bs)) {
+                                    bmb.performBonemeal(sl, sl.random, bp, bs);
+                                    fertilizedCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.BONE_MEAL_USE, SoundSource.BLOCKS, 1.6F, 1.0F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.PLAYER_LEVELUP, SoundSource.PLAYERS, 1.2F, 1.4F);
+                sl.sendParticles(ParticleTypes.HAPPY_VILLAGER, sp.getX(), sp.getY() + 1.0D, sp.getZ(), 45, 1.5, 0.6, 1.5, 0.1);
+                sp.displayClientMessage(Component.literal("§a§l[PHÌ NHIÊU HƯ KHÔNG] §fĐã giải phóng Dưỡng Chất Ma Tố làm chín rộ " + fertilizedCount + " ruộng hoa màu!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Đã giải phóng Dưỡng Chất Ma Tố! Toàn bộ " + fertilizedCount + " ruộng đồng hoa màu đã chín rộ lập tức!", 0xFF84CC16, 6000, false);
+            }
+            case ServerboundSageActionPacket.ACTION_EVOLVE_VILLAGER_GUARDS -> {
+                List<Villager> targets = sl.getEntitiesOfClass(Villager.class, sp.getBoundingBox().inflate(18.0D),
+                        v -> v.isAlive() && !v.getTags().contains("TempestGuardianGuard"));
+                int evolved = 0;
+                for (Villager v : targets) {
+                    v.addTag("TempestGuardianGuard");
+                    v.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                    v.setCustomName(Component.literal("§6§l[Hộ Vệ Tempest] §f" + v.getDisplayName().getString()));
+                    v.setCustomNameVisible(true);
+                    v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 72000, 2, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 72000, 2, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 72000, 1, false, false, true));
+                    v.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 72000, 1, false, false, true));
+                    sl.sendParticles(ParticleTypes.ENCHANTED_HIT, v.getX(), v.getY() + 1.0, v.getZ(), 35, 0.5, 0.8, 0.5, 0.1);
+                    evolved++;
+                }
+                // Triệu hồi 1 Người Sắt Hộ Vệ Thép Ma Thuật bảo vệ cổng làng
+                IronGolem golem = EntityType.IRON_GOLEM.create(sl);
+                if (golem != null) {
+                    golem.moveTo(sp.getX() + 2.0, sp.getY(), sp.getZ() + 2.0, sp.getYRot(), 0.0F);
+                    golem.addTag("TempestGuardianGuard");
+                    golem.addTag(JuraTempestManager.TAG_CITADEL_RESIDENT);
+                    golem.setCustomName(Component.literal("§3§l[Hộ Vệ Thép Ma Thuật Tempest]"));
+                    golem.setCustomNameVisible(true);
+                    golem.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 72000, 2));
+                    golem.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 72000, 3));
+                    sl.addFreshEntity(golem);
+                }
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.TOTEM_USE, SoundSource.PLAYERS, 1.6F, 1.2F);
+                sl.playSound(null, sp.getX(), sp.getY(), sp.getZ(), SoundEvents.ANVIL_USE, SoundSource.BLOCKS, 1.5F, 0.9F);
+                sp.displayClientMessage(Component.literal("§6§l[TIẾN HÓA HỘ VỆ TEMPEST] §fĐã ban phước tiến hóa thành công " + evolved + " Dân Làng thành Hộ Vệ & triệu tập Người Sắt bảo vệ!"), false);
+                sendCornerAlert(sp, "« Xác nhận »: Chuỗi Thức Ăn đã ban phước thành công! " + evolved + " Dân Làng đã tiến hóa thành Hộ Vệ Tinh Nhuệ Tempest!", 0xFFF59E0B, 6500, false);
             }
         }
     }
@@ -467,23 +1225,32 @@ public final class SageManager {
             sl.sendParticles(cyan, sp.getX() + Math.cos(a) * 0.9D, sp.getY() + 0.15D, sp.getZ() + Math.sin(a) * 0.9D, 1, 0, 0, 0, 0);
         }
 
-        // Duy trì phòng hộ & thanh tẩy trạng thái bất lợi
-        if (now % 20L == 0L) {
-            sp.heal(1.5F);
-            if (sp.getFoodData().getFoodLevel() < 16) sp.getFoodData().eat(6, 0.8F);
+        // Duy trì phòng hộ khẩn cấp, hồi phục & thanh tẩy trạng thái bất lợi (nhanh & thông minh)
+        if (now % 15L == 0L) {
+            sp.heal(2.5F);
+            if (sp.getFoodData().getFoodLevel() < 18) sp.getFoodData().eat(6, 0.9F);
             if (sp.isOnFire()) sp.clearFire();
             sp.removeEffect(MobEffects.POISON);
             sp.removeEffect(MobEffects.WITHER);
             sp.removeEffect(MobEffects.DARKNESS);
             sp.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
-            sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 45, 1, true, false));
+            sp.removeEffect(MobEffects.WEAKNESS);
+            sp.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 50, 1, true, false));
+            sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 50, 1, true, false));
         }
-        if (now % 60L == 0L && !EvolvedSkillHelper.isUrielDefenseActive(sp)) {
+        // Khẩn cấp bật Đa Trùng Kết Giới / Hồi Máu ngay khi HP xuống dưới 45%
+        if (sp.getHealth() < sp.getMaxHealth() * 0.45F && now % 20L == 0L) {
+            sp.heal(8.0F);
+            if (!EvolvedSkillHelper.isUrielDefenseActive(sp)) {
+                MultilayerBarrierAbility.cast(sl, sp);
+            }
+            RaphaelSkillRegistry.execute(sl, sp, 10); // Siêu Hồi Phục Tế Bào
+        } else if (now % 60L == 0L && !EvolvedSkillHelper.isUrielDefenseActive(sp)) {
             MultilayerBarrierAbility.cast(sl, sp);
         }
 
-        // Tìm mục tiêu thù địch gần nhất trong 42m (bỏ qua đồng minh đã thuần phục & dân làng)
-        List<LivingEntity> hostiles = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(42.0D),
+        // Tìm mục tiêu thù địch trong 48m & chấm điểm ưu tiên Boss / mục tiêu áp sát
+        List<LivingEntity> hostiles = sl.getEntitiesOfClass(LivingEntity.class, sp.getBoundingBox().inflate(48.0D),
                 e -> e != sp && e.isAlive()
                         && (e instanceof Enemy || (e instanceof Mob m && m.getTarget() == sp))
                         && !(e instanceof Villager)
@@ -493,17 +1260,24 @@ public final class SageManager {
 
         if (hostiles.isEmpty()) {
             if (now % 30L == 0L) {
-                sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO-PILOT] §7Đang tuần tra không gian... §8(Nhấn §eSHIFT §8để trả quyền)"), true);
+                sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO-PILOT] §7Đang kiểm tra không gian... §8(Nhấn §e[X] §8hoặc §e[SHIFT] §8để trả quyền)"), true);
             }
             return;
         }
 
-        hostiles.sort((a, b) -> Double.compare(a.distanceToSqr(sp), b.distanceToSqr(sp)));
+        hostiles.sort((a, b) -> {
+            double scoreA = a.distanceToSqr(sp) - (isHighPriorityBoss(a) ? 400.0D : 0.0D);
+            double scoreB = b.distanceToSqr(sp) - (isHighPriorityBoss(b) ? 400.0D : 0.0D);
+            return Double.compare(scoreA, scoreB);
+        });
         LivingEntity target = hostiles.get(0);
         double dist = Math.sqrt(sp.distanceToSqr(target));
 
-        // 1) Điều khiển di chuyển cơ thể chủ động tiếp cận / né đòn / áp sát
+        // 1) Điều khiển di chuyển cơ thể tốc độ cao: bay áp sát trên cao (đánh Charybdis vây lưng) hoặc quần đảo né đòn
         sp.fallDistance = 0.0F;
+        double desiredY = (target instanceof CharybdisEntity)
+                ? (target.getY() + target.getBbHeight() + 1.5D)
+                : target.getY();
         Vec3 diff = target.position().subtract(sp.position());
         Vec3 horiz = new Vec3(diff.x, 0.0D, diff.z);
         double hLen = horiz.length();
@@ -511,28 +1285,36 @@ public final class SageManager {
 
         double vy = sp.getDeltaMovement().y;
         if (sp.onGround() && sp.horizontalCollision) {
-            vy = 0.46D;
-        } else if (target.getY() > sp.getY() + 2.5D && dist < 24.0D) {
-            vy = 0.28D;
+            vy = 0.48D;
+        } else if (desiredY > sp.getY() + 1.8D) {
+            vy = Math.min(0.45D, (desiredY - sp.getY()) * 0.14D);
+        } else if (desiredY < sp.getY() - 2.5D && !sp.onGround()) {
+            vy = -0.25D;
         }
 
         Vec3 move;
-        if (dist > 7.5D) {
-            double speed = Math.min(0.46D, 0.26D + dist * 0.012D);
+        if (sp.getHealth() < sp.getMaxHealth() * 0.35F && dist < 8.0D) {
+            // Né lùi khẩn cấp khi máu thấp & địch quá gần
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 40L < 20L) ? 0.42D : -0.42D);
+            move = new Vec3(-dirH.x * 0.38D + tangent.x, Math.max(vy, 0.18D), -dirH.z * 0.38D + tangent.z);
+        } else if (dist > 8.0D) {
+            double speed = Math.min(0.58D, 0.34D + dist * 0.014D);
             move = new Vec3(dirH.x * speed, vy, dirH.z * speed);
-        } else if (dist < 3.6D) {
-            // Quần đảo quanh mục tiêu khi cận chiến
-            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 80L < 40L) ? 0.28D : -0.28D);
-            move = new Vec3(tangent.x - dirH.x * 0.08D, vy, tangent.z - dirH.z * 0.08D);
+        } else if (dist < 3.4D) {
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale((now % 60L < 30L) ? 0.36D : -0.36D);
+            move = new Vec3(tangent.x - dirH.x * 0.10D, vy, tangent.z - dirH.z * 0.10D);
         } else {
-            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale(0.18D);
-            move = new Vec3(dirH.x * 0.16D + tangent.x, vy, dirH.z * 0.16D + tangent.z);
+            Vec3 tangent = new Vec3(-dirH.z, 0.0D, dirH.x).scale(0.24D);
+            move = new Vec3(dirH.x * 0.22D + tangent.x, vy, dirH.z * 0.22D + tangent.z);
         }
         sp.setDeltaMovement(move);
         sp.hurtMarked = true;
 
-        // Căn hướng nhìn về phía mục tiêu để tung kỹ năng chuẩn xác
-        Vec3 eyeAim = target.getEyePosition().subtract(sp.getEyePosition());
+        // Căn hướng nhìn chính xác về phía mục tiêu để tung kỹ năng
+        Vec3 aimPoint = (target instanceof CharybdisEntity)
+                ? target.position().add(0.0D, target.getBbHeight() * 0.85D, 0.0D)
+                : target.getEyePosition();
+        Vec3 eyeAim = aimPoint.subtract(sp.getEyePosition());
         double hDist = Math.max(0.01D, Math.hypot(eyeAim.x, eyeAim.z));
         float yaw = (float) (Math.atan2(-eyeAim.x, eyeAim.z) * (180.0D / Math.PI));
         float pitch = (float) (-Math.atan2(eyeAim.y, hDist) * (180.0D / Math.PI));
@@ -540,20 +1322,20 @@ public final class SageManager {
         sp.setXRot(pitch);
         sp.setYHeadRot(yaw);
 
-        // Cận chiến tự động khi đứng gần
-        if (dist <= 4.6D && now % 10L == 0L) {
+        // Cận chiến liên hoàn tốc độ cao (mỗi 6 ticks)
+        if (dist <= 4.8D && now % 6L == 0L) {
             sp.swing(net.minecraft.world.InteractionHand.MAIN_HAND, true);
             sp.attack(target);
         }
 
-        // 2) Tự do thi triển toàn bộ kho kỹ năng Tensura & Raphael (mỗi 24 ticks)
+        // 2) Tác chiến thông minh không hồi chiêu (tốc độ tung chiêu gấp đôi: mỗi 12 ticks = 0.6s)
         long lastCast = data.getLong("RaphaelAutoLastCast");
-        if (now - lastCast >= 24L) {
+        if (now - lastCast >= 12L) {
             data.putLong("RaphaelAutoLastCast", now);
             int rot = data.getInt("RaphaelAutoSkillRot");
             data.putInt("RaphaelAutoSkillRot", (rot + 1) % 14);
 
-            if (dist > 18.0D && rot % 3 == 0) {
+            if (dist > 18.0D && rot % 2 == 0) {
                 SpatialTeleportAbility.castCombatBlink(sl, sp);
             } else {
                 switch (rot) {
@@ -577,19 +1359,32 @@ public final class SageManager {
                         else RaphaelSkillRegistry.execute(sl, sp, 48);
                     }
                     case 10 -> {
-                        if (target.getMaxHealth() >= 250.0F) InfiniteDragonPrisonAbility.cast(sl, sp, 2);
+                        if (target.getMaxHealth() >= 250.0F) InfiniteDragonPrisonAbility.cast(sl, sp, 1);
                         else RaphaelSkillRegistry.execute(sl, sp, 22);
                     }
                     case 11 -> {
-                        if (target.getMaxHealth() >= 300.0F) SkillNullificationAbility.cast(sl, sp);
-                        else RaphaelSkillRegistry.execute(sl, sp, 24);
+                        if (target.getMaxHealth() >= 300.0F && !SkillNullificationAbility.isEntitySkillSealed(target)) {
+                            SkillNullificationAbility.cast(sl, sp);
+                        } else {
+                            RaphaelSkillRegistry.execute(sl, sp, 24);
+                        }
                     }
                     case 12 -> NihilityCollapseAbility.cast(sl, sp);
                     case 13 -> BeelzebuthAbility.executeBeelzebuth(sl, sp);
                 }
             }
-            sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO] §fĐang tác chiến với §e" + target.getName().getString() + " §8| Nhấn §c[SHIFT] §8để trở lại"), true);
+            sp.displayClientMessage(Component.literal("§b§l[RAPHAEL AUTO] §fĐang tác chiến: §e" + target.getName().getString() + " §8| §c[X] / [SHIFT] §8trả quyền"), true);
         }
+    }
+
+    private static boolean isHighPriorityBoss(LivingEntity e) {
+        return e instanceof CharybdisEntity
+                || e instanceof MilimEntity
+                || e instanceof VelgryndEntity
+                || e instanceof VelzardEntity
+                || e instanceof OrcDisasterGeldEntity
+                || e instanceof ChronoaEntity
+                || e.getMaxHealth() >= 200.0F;
     }
 
     private static String getCardinalDirection(double x1, double z1, double x2, double z2) {

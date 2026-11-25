@@ -24,12 +24,14 @@ import net.minecraft.world.item.ItemStack;
 public class TensuraSkillDispatcher {
 
     public static int getSkillCount(boolean hasCreation) {
-        return hasCreation ? 34 : 33;
+        return hasCreation ? 38 : 37;
     }
 
     public static String getSkillName(ServerPlayer player, int index, boolean hasCreation) {
         boolean urielActive = EvolvedSkillHelper.isUrielDefenseActive(player);
         boolean rykuzinActive = RykuzinSinkaAbility.isActive(player);
+        boolean overdriveActive = MagiculesManager.isMagiculeOverdriveActive(player);
+        boolean aegisActive = MagiculesManager.isMagiculeAegisActive(player);
         if (hasCreation) {
             return switch (index) {
                 case 0 -> "§e§l1. Linh Tử Băng Hoại (Disintegration)";
@@ -37,7 +39,7 @@ public class TensuraSkillDispatcher {
                 case 2 -> "§a§l3. Phép Màu Của Thần Linh (Miracle of the Gods)";
                 case 3 -> "§d§l4. Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)";
                 case 4 -> "§4§l5. Ngày Tận Thế (Apocalypse)";
-                case 5 -> "§5§l6. Bạo thực vương (Beelzebuth)";
+                case 5 -> "§5§l6. Bạo Thực Vương (Beelzebuth)";
                 case 6 -> "§c§l7. Phẫn Nộ Vương: Long Tinh Bộc Viêm Bá (Dragon Nova)";
                 case 7 -> "§e§l8. Thần Nộ: Tuyệt Diệt Tinh Tú (Extinction Stars)";
                 case 8 -> "§2§l9. Thị Thực (Seer Flesh)";
@@ -63,9 +65,13 @@ public class TensuraSkillDispatcher {
                 case 28 -> "§6§l29. Ban Danh Xưng (Naming Ability)";
                 case 29 -> "§b§l30. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 30 -> "§3§l31. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 31 -> "§b§l32. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 31 -> "§b§l32. Thông Tuệ Vương Raphael (Kỹ Năng)";
                 case 32 -> "§5§l33. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 33 -> "§b§l34. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
+                case 34 -> "§6§l35. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
+                case 35 -> "§b§l36. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
+                case 36 -> "§6§l37. Ma Vương Bá Khí (Demon Lord's Haki)";
+                case 37 -> "§d§l38. Kẻ Tham Lam (Greedy One)";
                 default -> "§7Chưa chọn";
             };
         } else {
@@ -75,7 +81,7 @@ public class TensuraSkillDispatcher {
                 case 2 -> "§a§l3. Phép Màu Của Thần Linh (Miracle of the Gods)";
                 case 3 -> "§d§l4. Bí Ẩn Của Đức Tin Và Ân Sủng (Faith and Grace)";
                 case 4 -> "§4§l5. Ngày Tận Thế (Apocalypse)";
-                case 5 -> "§5§l6. Bạo thực vương (Beelzebuth)";
+                case 5 -> "§5§l6. Bạo Thực Vương (Beelzebuth)";
                 case 6 -> "§c§l7. Phẫn Nộ Vương: Long Tinh Bộc Viêm Bá (Dragon Nova)";
                 case 7 -> "§e§l8. Thần Nộ: Tuyệt Diệt Tinh Tú (Extinction Stars)";
                 case 8 -> "§2§l9. Thị Thực (Seer Flesh)";
@@ -100,9 +106,13 @@ public class TensuraSkillDispatcher {
                 case 27 -> "§6§l28. Ban Danh Xưng (Naming Ability)";
                 case 28 -> "§b§l29. Dị Giới Thần Môn (Dimensional Sanctuary)";
                 case 29 -> "§3§l30. Triệu Hồi Bạo Phong Long Veldora (Summon Veldora)";
-                case 30 -> "§b§l31. Trí Tuệ Vương Raphael (Kỹ Năng)";
+                case 30 -> "§b§l31. Thông Tuệ Vương Raphael (Kỹ Năng)";
                 case 31 -> "§5§l32. Dạ Dày Vô Hạn Azathoth (Quản Lý Hấp Thụ)";
                 case 32 -> "§b§l33. Đại Chuyển Di Quân Đoàn (80m Army Teleport)";
+                case 33 -> "§6§l34. Ma Tố Quá Tải (" + (overdriveActive ? "§a§lBẬT§6§l" : "§c§lTẮT§6§l") + ")";
+                case 34 -> "§b§l35. Khiên Ma Tố Chuyển Hóa (" + (aegisActive ? "§a§lBẬT§b§l" : "§c§lTẮT§b§l") + ")";
+                case 35 -> "§6§l36. Ma Vương Bá Khí (Demon Lord's Haki)";
+                case 36 -> "§d§l37. Kẻ Tham Lam (Greedy One)";
                 default -> "§7Chưa chọn";
             };
         }
@@ -207,97 +217,145 @@ public class TensuraSkillDispatcher {
             return;
         }
 
-        if (hasCreation) {
-            switch (index) {
-                case 0 -> SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
-                case 1 -> JacobsLadderAbility.cast(level, player, ItemStack.EMPTY);
-                case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
-                case 3 -> FaithAndGraceAbility.cast(level, player);
-                case 4 -> ApocalypseAbility.cast(level, player);
-                case 5 -> BeelzebuthAbility.executeBeelzebuth(level, player);
-                case 6 -> DragonNovaAbility.cast(level, player);
-                case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
-                case 8 -> SeerFleshAbility.cast(level, player);
-                case 9 -> SpatialTeleportAbility.castMark(level, player);
-                case 10 -> SpatialTeleportAbility.castTeleport(level, player);
-                case 11 -> HorizontalHolyBeamAbility.cast(level, player);
-                case 12 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
-                case 13 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
-                case 14 -> ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
-                case 15 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
-                case 16 -> MultilayerBarrierAbility.cast(level, player);
-                case 17 -> ZoneTrackAbility.cast(level, player);
-                case 18 -> UniversalSenseAbility.cast(level, player, 3);
-                case 19 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
-                case 20 -> EvolvedSkillHelper.toggleUrielDefense(player);
-                case 21 -> RykuzinSinkaAbility.toggle(level, player);
-                case 22 -> HellflareAbility.cast(level, player);
-                case 23 -> DarkFlameShotAbility.cast(level, player);
-                case 24 -> NihilityCollapseAbility.cast(level, player);
-                case 25 -> SupernovaAbility.cast(level, player);
-                case 26 -> SkillNullificationAbility.cast(level, player);
-                case 27 -> {
-                    if (player.isShiftKeyDown()) {
-                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
-                    } else {
-                        AzathothAbility.cast(level, player);
+        try {
+            if (hasCreation) {
+                switch (index) {
+                    case 0 -> SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
+                    case 1 -> JacobsLadderAbility.cast(level, player, ItemStack.EMPTY);
+                    case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
+                    case 3 -> FaithAndGraceAbility.cast(level, player);
+                    case 4 -> ApocalypseAbility.cast(level, player);
+                    case 5 -> {
+                        if (player.isShiftKeyDown()) {
+                            if (player.getXRot() > 35.0F) {
+                                BeelzebuthAbility.castTidalRelease(level, player);
+                            } else {
+                                BeelzebuthAbility.castWaterBlade(level, player);
+                            }
+                        } else {
+                            BeelzebuthAbility.executeBeelzebuth(level, player);
+                        }
+                    }
+                    case 6 -> DragonNovaAbility.cast(level, player);
+                    case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
+                    case 8 -> SeerFleshAbility.cast(level, player);
+                    case 9 -> SpatialTeleportAbility.castMark(level, player);
+                    case 10 -> SpatialTeleportAbility.castTeleport(level, player);
+                    case 11 -> HorizontalHolyBeamAbility.cast(level, player);
+                    case 12 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
+                    case 13 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
+                    case 14 -> ModMessages.sendToPlayer(new ClientboundOpenMaterialCreationPacket(), player);
+                    case 15 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
+                    case 16 -> MultilayerBarrierAbility.cast(level, player);
+                    case 17 -> ZoneTrackAbility.cast(level, player);
+                    case 18 -> UniversalSenseAbility.cast(level, player, 3);
+                    case 19 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
+                    case 20 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                    case 21 -> RykuzinSinkaAbility.toggle(level, player);
+                    case 22 -> HellflareAbility.cast(level, player);
+                    case 23 -> DarkFlameShotAbility.cast(level, player);
+                    case 24 -> NihilityCollapseAbility.cast(level, player);
+                    case 25 -> SupernovaAbility.cast(level, player);
+                    case 26 -> SkillNullificationAbility.cast(level, player);
+                    case 27 -> {
+                        if (player.isShiftKeyDown()) {
+                            com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                        } else {
+                            AzathothAbility.cast(level, player);
+                        }
+                    }
+                    case 28 -> TensuraNamingAbility.cast(level, player);
+                    case 29 -> DimensionalSanctuaryAbility.cast(level, player);
+                    case 30 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
+                    case 31 -> {
+                        boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
+                        ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
+                    }
+                    case 32 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                    case 33 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
+                    case 34 -> MagiculesManager.toggleMagiculeOverdrive(player);
+                    case 35 -> MagiculesManager.toggleMagiculeAegis(player);
+                    case 36 -> MagiculesManager.castDemonLordHaki(level, player);
+                    case 37 -> {
+                        if (player.isShiftKeyDown()) {
+                            GreedAbility.castDesireOverload(level, player);
+                        } else if (player.isCrouching()) {
+                            GreedAbility.castDesireSubjugation(level, player);
+                        } else {
+                            GreedAbility.castChainsOfGreed(level, player);
+                        }
                     }
                 }
-                case 28 -> TensuraNamingAbility.cast(level, player);
-                case 29 -> DimensionalSanctuaryAbility.cast(level, player);
-                case 30 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
-                case 31 -> {
-                    boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
-                    ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
-                }
-                case 32 -> ServerboundAzathothActionPacket.sendOpenGui(player);
-                case 33 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
-            }
-        } else {
-            switch (index) {
-                case 0 -> SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
-                case 1 -> JacobsLadderAbility.cast(level, player, ItemStack.EMPTY);
-                case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
-                case 3 -> FaithAndGraceAbility.cast(level, player);
-                case 4 -> ApocalypseAbility.cast(level, player);
-                case 5 -> BeelzebuthAbility.executeBeelzebuth(level, player);
-                case 6 -> DragonNovaAbility.cast(level, player);
-                case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
-                case 8 -> SeerFleshAbility.cast(level, player);
-                case 9 -> SpatialTeleportAbility.castMark(level, player);
-                case 10 -> SpatialTeleportAbility.castTeleport(level, player);
-                case 11 -> HorizontalHolyBeamAbility.cast(level, player);
-                case 12 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
-                case 13 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
-                case 14 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
-                case 15 -> MultilayerBarrierAbility.cast(level, player);
-                case 16 -> ZoneTrackAbility.cast(level, player);
-                case 17 -> UniversalSenseAbility.cast(level, player, 3);
-                case 18 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
-                case 19 -> EvolvedSkillHelper.toggleUrielDefense(player);
-                case 20 -> RykuzinSinkaAbility.toggle(level, player);
-                case 21 -> HellflareAbility.cast(level, player);
-                case 22 -> DarkFlameShotAbility.cast(level, player);
-                case 23 -> NihilityCollapseAbility.cast(level, player);
-                case 24 -> SupernovaAbility.cast(level, player);
-                case 25 -> SkillNullificationAbility.cast(level, player);
-                case 26 -> {
-                    if (player.isShiftKeyDown()) {
-                        com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
-                    } else {
-                        AzathothAbility.cast(level, player);
+            } else {
+                switch (index) {
+                    case 0 -> SanctuaryDisintegrationAbility.cast(level, player, ItemStack.EMPTY);
+                    case 1 -> JacobsLadderAbility.cast(level, player, ItemStack.EMPTY);
+                    case 2 -> PurificationPillarAbility.cast(level, player, ItemStack.EMPTY);
+                    case 3 -> FaithAndGraceAbility.cast(level, player);
+                    case 4 -> ApocalypseAbility.cast(level, player);
+                    case 5 -> {
+                        if (player.isShiftKeyDown()) {
+                            if (player.getXRot() > 35.0F) {
+                                BeelzebuthAbility.castTidalRelease(level, player);
+                            } else {
+                                BeelzebuthAbility.castWaterBlade(level, player);
+                            }
+                        } else {
+                            BeelzebuthAbility.executeBeelzebuth(level, player);
+                        }
+                    }
+                    case 6 -> DragonNovaAbility.cast(level, player);
+                    case 7 -> TaisuiExtinctionStarsAbility.cast(level, player);
+                    case 8 -> SeerFleshAbility.cast(level, player);
+                    case 9 -> SpatialTeleportAbility.castMark(level, player);
+                    case 10 -> SpatialTeleportAbility.castTeleport(level, player);
+                    case 11 -> HorizontalHolyBeamAbility.cast(level, player);
+                    case 12 -> TengaiKyuseiSwordAbility.castReverseTimeSlash(level, player);
+                    case 13 -> ReverseVelocityIaijutsuAbility.castReverseVelocityIai(level, player);
+                    case 14 -> AntiMagicBarrierManager.castPlayerBarrier(level, player);
+                    case 15 -> MultilayerBarrierAbility.cast(level, player);
+                    case 16 -> ZoneTrackAbility.cast(level, player);
+                    case 17 -> UniversalSenseAbility.cast(level, player, 3);
+                    case 18 -> InfiniteDragonPrisonAbility.cast(level, player, 3);
+                    case 19 -> EvolvedSkillHelper.toggleUrielDefense(player);
+                    case 20 -> RykuzinSinkaAbility.toggle(level, player);
+                    case 21 -> HellflareAbility.cast(level, player);
+                    case 22 -> DarkFlameShotAbility.cast(level, player);
+                    case 23 -> NihilityCollapseAbility.cast(level, player);
+                    case 24 -> SupernovaAbility.cast(level, player);
+                    case 25 -> SkillNullificationAbility.cast(level, player);
+                    case 26 -> {
+                        if (player.isShiftKeyDown()) {
+                            com.minhphuc.weapons.network.ServerboundAzathothActionPacket.sendOpenGui(player);
+                        } else {
+                            AzathothAbility.cast(level, player);
+                        }
+                    }
+                    case 27 -> TensuraNamingAbility.cast(level, player);
+                    case 28 -> DimensionalSanctuaryAbility.cast(level, player);
+                    case 29 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
+                    case 30 -> {
+                        boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
+                        ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
+                    }
+                    case 31 -> ServerboundAzathothActionPacket.sendOpenGui(player);
+                    case 32 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
+                    case 33 -> MagiculesManager.toggleMagiculeOverdrive(player);
+                    case 34 -> MagiculesManager.toggleMagiculeAegis(player);
+                    case 35 -> MagiculesManager.castDemonLordHaki(level, player);
+                    case 36 -> {
+                        if (player.isShiftKeyDown()) {
+                            GreedAbility.castDesireOverload(level, player);
+                        } else if (player.isCrouching()) {
+                            GreedAbility.castDesireSubjugation(level, player);
+                        } else {
+                            GreedAbility.castChainsOfGreed(level, player);
+                        }
                     }
                 }
-                case 27 -> TensuraNamingAbility.cast(level, player);
-                case 28 -> DimensionalSanctuaryAbility.cast(level, player);
-                case 29 -> SummonVeldoraAbility.summon(level, player, player.isShiftKeyDown());
-                case 30 -> {
-                    boolean auto = com.minhphuc.weapons.data.EntityDataHelper.getCustomData(player).getBoolean("TensuraRaphaelAutoBattle");
-                    ModMessages.sendToPlayer(new ClientboundOpenRaphaelPacket(auto), player);
-                }
-                case 31 -> ServerboundAzathothActionPacket.sendOpenGui(player);
-                case 32 -> SpatialTeleportAbility.castMassArmyTeleport(level, player, -1);
             }
+        } catch (Throwable t) {
+            SageManager.reportSystemAnomaly(player, "Kỹ năng Chân Ma Vương / Thần Linh #" + index, t);
         }
     }
 }

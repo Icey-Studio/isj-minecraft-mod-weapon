@@ -14,14 +14,17 @@ public class ClientboundOpenAzathothPacket {
 
     private final List<AzathothStomachData.StomachEntry> entries;
     private final boolean veldoraUnlocked;
+    private final boolean autoLoot;
 
-    public ClientboundOpenAzathothPacket(List<AzathothStomachData.StomachEntry> entries, boolean veldoraUnlocked) {
+    public ClientboundOpenAzathothPacket(List<AzathothStomachData.StomachEntry> entries, boolean veldoraUnlocked, boolean autoLoot) {
         this.entries = entries;
         this.veldoraUnlocked = veldoraUnlocked;
+        this.autoLoot = autoLoot;
     }
 
     public ClientboundOpenAzathothPacket(FriendlyByteBuf buf) {
         this.veldoraUnlocked = buf.readBoolean();
+        this.autoLoot = buf.readBoolean();
         int count = buf.readVarInt();
         this.entries = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
@@ -36,6 +39,7 @@ public class ClientboundOpenAzathothPacket {
 
     public void encode(FriendlyByteBuf buf) {
         buf.writeBoolean(veldoraUnlocked);
+        buf.writeBoolean(autoLoot);
         buf.writeVarInt(entries.size());
         for (var e : entries) {
             buf.writeUtf(e.name(), 128);
@@ -46,6 +50,6 @@ public class ClientboundOpenAzathothPacket {
     }
 
     public void handle(Supplier<NetworkManager.PacketContext> ctx) {
-        ctx.get().queue(() -> Minecraft.getInstance().setScreen(new AzathothStomachScreen(entries, veldoraUnlocked)));
+        ctx.get().queue(() -> Minecraft.getInstance().setScreen(new AzathothStomachScreen(entries, veldoraUnlocked, autoLoot)));
     }
 }

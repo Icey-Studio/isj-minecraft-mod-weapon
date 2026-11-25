@@ -12,7 +12,7 @@ import net.minecraft.sounds.SoundEvents;
 import java.util.List;
 
 /**
- * Giao diện Trí Tuệ Vương Raphael (50 Kỹ Năng chia 5 Nhóm × 10 Chiêu Thức).
+ * Giao diện Thông Tuệ Vương Raphael (50 Kỹ Năng chia 5 Nhóm × 10 Chiêu Thức).
  * Truy cập trực tiếp từ Bánh Xe Kỹ Năng [G].
  */
 public class RaphaelSkillScreen extends Screen {
@@ -23,7 +23,7 @@ public class RaphaelSkillScreen extends Screen {
     private final boolean autoBattle;
 
     public RaphaelSkillScreen(boolean autoBattle) {
-        super(Component.literal("Trí Tuệ Vương Raphael — 50 Kỹ Năng"));
+        super(Component.literal("Thông Tuệ Vương Raphael — 50 Kỹ Năng"));
         this.autoBattle = autoBattle;
     }
 
@@ -34,13 +34,13 @@ public class RaphaelSkillScreen extends Screen {
         int left = (this.width - PANEL_W) / 2;
         int top = (this.height - PANEL_H) / 2;
 
-        // Nền & Viền Lam-Vàng Trí Tuệ Vương
+        // Nền & Viền Lam-Vàng Thông Tuệ Vương
         g.fill(left - 2, top - 2, left + PANEL_W + 2, top + PANEL_H + 2, 0xFF040B16);
         g.fill(left - 1, top - 1, left + PANEL_W + 1, top + PANEL_H + 1, 0xFF38BDF8);
         g.fill(left, top, left + PANEL_W, top + PANEL_H, 0xF0081326);
 
         // Header
-        g.drawString(font, "§b§l<< TRÍ TUỆ VƯƠNG RAPHAEL >> §7(50 Kỹ Năng)", left + 10, top + 8, 0xFFFFFFFF, false);
+        g.drawString(font, "§b§l<< THÔNG TUỆ VƯƠNG RAPHAEL >> §7(50 Kỹ Năng)", left + 10, top + 8, 0xFFFFFFFF, false);
         g.drawString(font, autoBattle ? "§a● Auto-Battle: BẬT" : "§7○ Auto-Battle: TẮT", left + PANEL_W - 148, top + 8, 0xFFFFFFFF, false);
 
         // Nút Quay lại [G]
@@ -94,7 +94,7 @@ public class RaphaelSkillScreen extends Screen {
         }
 
         // Footer hint
-        g.drawCenteredString(font, "§8[Click vào kỹ năng để Trí Tuệ Vương Raphael thi triển tức thì • Chọn Tab để xem đủ 50 chiêu]", left + PANEL_W / 2, top + PANEL_H - 13, 0xFF64748B);
+        g.drawCenteredString(font, "§8[Click vào kỹ năng để Thông Tuệ Vương Raphael thi triển tức thì • Chọn Tab để xem đủ 50 chiêu]", left + PANEL_W / 2, top + PANEL_H - 13, 0xFF64748B);
 
         if (hoverTip != null) {
             g.renderTooltip(font, Component.literal(hoverTip), mouseX, mouseY);

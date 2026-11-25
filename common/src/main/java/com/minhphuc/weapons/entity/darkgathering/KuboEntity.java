@@ -128,14 +128,14 @@ public class KuboEntity extends Monster {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 26.0D) // Máu ngang zombie
-                .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.MOVEMENT_SPEED, 0.38D)
-                .add(Attributes.ATTACK_DAMAGE, 35.0D) // Sát thương khá đau
-                .add(Attributes.ARMOR, 4.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 2.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.6D)
-                .add(Attributes.FOLLOW_RANGE, 48.0D);
+                .add(Attributes.MAX_HEALTH, 4200.0D) // Cân bằng Tà Thần Hộ Pháp Bậc 1+ (3x)
+                .add(Attributes.FLYING_SPEED, 0.65D)
+                .add(Attributes.MOVEMENT_SPEED, 0.45D)
+                .add(Attributes.ATTACK_DAMAGE, 285.0D) // Sát thương hư vô cực cao (3x)
+                .add(Attributes.ARMOR, 32.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 22.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.9D)
+                .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
     @Override
@@ -178,6 +178,8 @@ public class KuboEntity extends Monster {
         this.goalSelector.addGoal(6, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, com.minhphuc.weapons.entity.tensura.VeldoraEntity.class, 5, false, false,
+                e -> e instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Player.class, true));
         this.targetSelector.addGoal(3, new NearestAttackableTargetGoal<>(this, Monster.class, 10, true, false,
                 e -> !(e instanceof KuboEntity) && e.isAlive()));
@@ -229,15 +231,15 @@ public class KuboEntity extends Monster {
      * Tái tính toán toàn bộ thuộc tính HP, DMG, Giáp theo số lượng linh hồn và thể trạng tiến hóa
      */
     public void recalculateAttributes() {
-        double mobMult = getMobSoulsCount() * 0.30D;
-        double demonMult = getDemonSoulsCount() * 0.60D;
-        double formMult = isComplete() ? 6.00D : (isUltimate() ? 5.00D : 0.0D);
+        double mobMult = getMobSoulsCount() * 0.50D;
+        double demonMult = getDemonSoulsCount() * 1.20D;
+        double formMult = isComplete() ? 18.0D : (isUltimate() ? 11.0D : 0.0D);
         double totalMult = 1.0D + mobMult + demonMult + formMult;
 
-        double baseHp = 26.0D * totalMult + this.getEntityData().get(DATA_BONUS_HP);
-        double baseDmg = 35.0D * totalMult;
-        double baseArmor = 4.0D + (isUltimateOrComplete() ? 25.0D : 0.0D) + this.getEntityData().get(DATA_BONUS_ARMOR);
-        double baseToughness = 2.0D + (isUltimateOrComplete() ? 15.0D : 0.0D);
+        double baseHp = 1350.0D * totalMult + this.getEntityData().get(DATA_BONUS_HP);
+        double baseDmg = 285.0D * totalMult;
+        double baseArmor = 32.0D + (isComplete() ? 55.0D : (isUltimate() ? 40.0D : 0.0D)) + this.getEntityData().get(DATA_BONUS_ARMOR);
+        double baseToughness = 10.0D + (isComplete() ? 25.0D : (isUltimate() ? 18.0D : 0.0D));
 
         var hpAttr = this.getAttribute(Attributes.MAX_HEALTH);
         if (hpAttr != null) {
@@ -269,6 +271,12 @@ public class KuboEntity extends Monster {
         if (voidScytheCooldown > 0) voidScytheCooldown--;
         if (gravityWellCooldown > 0) gravityWellCooldown--;
         if (screechCooldown > 0) screechCooldown--;
+
+        // Tái sinh thụ động mạnh mẽ cho Không Vong Tối Thượng & Hoàn Chỉnh
+        if (!this.level().isClientSide && this.tickCount % 10 == 0 && this.getHealth() < this.getMaxHealth()) {
+            float healAmt = isComplete() ? 28.0F : (isUltimate() ? 14.0F : 4.0F);
+            this.heal(healAmt);
+        }
 
         // Xử lý báo hiệu Tiếng Hét Vô Tận
         if (screechTelegraphTicks > 0) {
@@ -327,7 +335,7 @@ public class KuboEntity extends Monster {
                         AABB dmgBox = new AABB(well.center.x - 5.0D, well.center.y - 2.0D, well.center.z - 5.0D,
                                 well.center.x + 5.0D, well.center.y + 4.0D, well.center.z + 5.0D);
                         for (LivingEntity v : well.level.getEntitiesOfClass(LivingEntity.class, dmgBox, e -> e != this && e.isAlive())) {
-                            v.hurt(well.level.damageSources().magic(), 60.0F);
+                            v.hurt(well.level.damageSources().magic(), 180.0F);
                         }
                     }
                     it.remove();
@@ -556,7 +564,7 @@ public class KuboEntity extends Monster {
 
         double step = 1.0D;
         Vec3 cur = eyePos;
-        float damage = isComplete() ? 320.0F : (isUltimate() ? 250.0F : 140.0F);
+        float damage = isComplete() ? 2550.0F : (isUltimate() ? 1560.0F : 660.0F);
 
         Set<UUID> hitEntities = new HashSet<>();
 
@@ -615,7 +623,7 @@ public class KuboEntity extends Monster {
         }
 
         boolean isCrouching = target.isCrouching();
-        float baseDmg = isComplete() ? 280.0F : (isUltimate() ? 200.0F : 110.0F);
+        float baseDmg = isComplete() ? 840.0F : (isUltimate() ? 600.0F : 330.0F);
         if (isCrouching) {
             baseDmg *= 0.3F;
             sl.playSound(null, target.getX(), target.getY(), target.getZ(), SoundEvents.SHIELD_BLOCK, SoundSource.PLAYERS, 2.5F, 1.2F);
@@ -677,7 +685,7 @@ public class KuboEntity extends Monster {
                 sp.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 100, 2, false, false, true));
                 sp.addEffect(new MobEffectInstance(MobEffects.DARKNESS, 100, 0, false, false, true));
             }
-            applyKuboAttackDamage(v, isComplete() ? 180.0F : (isUltimate() ? 120.0F : 60.0F));
+            applyKuboAttackDamage(v, isComplete() ? 420.0F : (isUltimate() ? 280.0F : 140.0F));
             Vec3 push = v.position().subtract(this.position()).normalize().scale(1.8D).add(0, 0.4D, 0);
             v.setDeltaMovement(push);
             v.hasImpulse = true;
@@ -837,7 +845,7 @@ public class KuboEntity extends Monster {
         int count = getMobSoulsCount() + 1;
         this.getEntityData().set(DATA_MOB_SOULS_COUNT, count);
         recalculateAttributes();
-        this.heal(8.0F);
+        this.heal(24.0F);
 
         this.playSound(SoundEvents.EXPERIENCE_ORB_PICKUP, 1.5F, 0.8F);
         if (this.level() instanceof ServerLevel sl) {
@@ -856,7 +864,7 @@ public class KuboEntity extends Monster {
         this.getEntityData().set(DATA_ABSORBED_SOUL_TYPE, SoulType.PRIMORDIAL_DEMON.ordinal());
 
         recalculateAttributes();
-        this.heal(50.0F);
+        this.heal(150.0F);
 
         this.playSound(SoundEvents.EVOKER_CAST_SPELL, 2.0F, 0.7F);
         this.playSound(SoundEvents.WARDEN_ROAR, 2.0F, 1.2F);

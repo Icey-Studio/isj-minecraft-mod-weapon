@@ -198,9 +198,9 @@ public final class ClientCinematicSkillHandler {
         float age = (float) (mc.level.getGameTime() - startWorldTick) + partialTicks;
         if (age < 0 || age >= totalTicks) return null;
 
-        // Tính toán vị trí máy quay theo kịch bản của từng kỹ năng
+        // Tính toán vị trí máy quay theo kịch bản của từng kỹ năng (Linh Tử Băng Hoại giữ nguyên góc nhìn tự do)
         return switch (activeSkillId) {
-            case SkillVisualConfig.SKILL_DISINTEGRATION -> getDisintegrationPose(age, vanillaPos, vanillaYaw, vanillaPitch);
+            case SkillVisualConfig.SKILL_DISINTEGRATION -> null;
             case SkillVisualConfig.SKILL_JACOBS_LADDER -> getJacobsLadderPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_PURIFICATION_PILLAR -> getPurificationPillarPose(age, vanillaPos, vanillaYaw, vanillaPitch);
             case SkillVisualConfig.SKILL_FAITH_AND_GRACE -> getFaithAndGracePose(age, vanillaPos, vanillaYaw, vanillaPitch);
@@ -344,28 +344,19 @@ public final class ClientCinematicSkillHandler {
     }
 
     // =========================================================================
-    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - STABLE MAJESTIC SHOULDER CAM, REDUCED SHAKE)
+    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - STABLE MAJESTIC SHOULDER CAM XUYÊN SUỐT CHIÊU)
     // =========================================================================
     private static Pose getBeelzebuthPose(float age, Vec3 vanillaPos, float vanillaYaw, float vanillaPitch) {
-        Vec3 camPos;
-        Vec3 lookTarget;
+        // Giữ cố định góc máy điện ảnh lệch vai phải ổn định ngắm nhìn tâm lốc xoáy / phễu hư không
+        Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
+        double subtleShake = Math.sin(age * 1.2) * 0.08; // Rung siêu nhẹ
+        Vec3 camPos = vanillaPos.add(right.scale(2.4)).add(aimDir.scale(-4.5)).add(0, 1.3 + subtleShake, 0);
+        Vec3 lookTarget = (Math.abs(aimDir.y) < 0.92D && aimDir.lengthSqr() > 1e-4)
+                ? centerPos.add(aimDir.scale(20.0D))
+                : centerPos.add(0, 1.0D, 0);
 
-        if (age < 50.0f) {
-            // Lệch vai phải ổn định (không rung lắc mạnh)
-            Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
-            double subtleShake = Math.sin(age * 1.2) * 0.08; // Rung siêu nhẹ
-            camPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2 + subtleShake, 0);
-            lookTarget = centerPos.add(0, 1.0, 0);
-        } else {
-            float blend = Math.clamp((age - 50.0f) / 20.0f, 0.0f, 1.0f);
-            float ease = blend * blend * (3.0f - 2.0f * blend);
-            Vec3 right = aimDir.cross(new Vec3(0, 1, 0)).normalize();
-            Vec3 endPos = vanillaPos.add(right.scale(2.2)).add(aimDir.scale(-4.2)).add(0, 1.2, 0);
-            camPos = endPos.lerp(vanillaPos, ease);
-            lookTarget = centerPos.lerp(vanillaPos.add(aimDir.scale(10.0)), ease);
-        }
-
-        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 50.0f, 70.0f);
+        // Giữ nguyên góc nhìn cho đến những tick cuối cùng của chiêu thức
+        return buildLookAtPose(camPos, lookTarget, vanillaYaw, vanillaPitch, age, 76.0f, 80.0f);
     }
 
     // =========================================================================
@@ -1005,6 +996,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> "DỊ GIỚI THẦN MÔN: THÁNH VỰC KHÔNG GIAN";
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> "LINH TỬ BỘC PHÁT: ĐẠI PHÁO NĂNG LƯỢNG THỦY TỔ";
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> "THẤT SẮC THẦN TRỤ: CỘT SÁNG CỰC ĐẠI";
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> "BẠO PHONG LONG: ĐẠI PHÁO PLASMA CHÂN LONG";
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> "HỖN ĐỘN LONG: DIỆT TINH TỨC HỖN MANG";
             default -> "TUYỆT KỸ MA VƯƠNG TENSURA";
         };
     }
@@ -1034,6 +1027,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> "次元神門 - DIMENSIONAL SANCTUARY";
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> "霊子暴発 - SPIRITRON OUTBURST";
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> "七色神柱 - CHROMATIC LIGHT PILLAR";
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> "暴風竜 - TEMPEST PLASMA CANNON";
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> "混沌竜 - CHAOS STAR BUSTER";
             default -> "ULTIMATE SKILL";
         };
     }
@@ -1063,6 +1058,8 @@ public final class ClientCinematicSkillHandler {
             case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> 0x00E5FF; // Xanh lam dị giới
             case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> 0xFFD600; // Hoàng kim linh tử
             case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> 0xFF1744;   // Thất sắc quang trụ
+            case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> 0x00E5FF; // Lam ngọc bão tố
+            case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> 0xFF00FF;      // Hồng tím hỗn mang
             default -> 0xFFFFFF;
         };
     }

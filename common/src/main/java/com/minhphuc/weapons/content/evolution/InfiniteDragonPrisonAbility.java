@@ -57,11 +57,16 @@ public class InfiniteDragonPrisonAbility {
         public int ticksAlive = 0;
         public int maxDurationTicks = -1; // -1 = vĩnh cửu (người chơi), >0 = tạm thời (ác ma)
         public boolean isVeldoraCavePrison = false;
+        public boolean trapPlayers = false;
         public final Map<BlockPos, BlockState> replacedBlocks = new ConcurrentHashMap<>();
 
         public ActivePrison(ServerLevel level, ServerPlayer caster, Vec3 center, double radius, double domeHeight, double skirtDepth, int tier) {
+            this(level, caster != null ? caster.getUUID() : UUID.randomUUID(), center, radius, domeHeight, skirtDepth, tier);
+        }
+
+        public ActivePrison(ServerLevel level, UUID casterUuid, Vec3 center, double radius, double domeHeight, double skirtDepth, int tier) {
             this.level = level;
-            this.casterUuid = caster != null ? caster.getUUID() : UUID.randomUUID();
+            this.casterUuid = casterUuid != null ? casterUuid : UUID.randomUUID();
             this.center = center;
             this.radius = radius;
             this.domeHeight = Math.max(radius, domeHeight);
@@ -130,7 +135,8 @@ public class InfiniteDragonPrisonAbility {
         synchronized (ACTIVE_PRISONS) {
             for (ActivePrison p : ACTIVE_PRISONS) {
                 if (p.level == player.serverLevel()) {
-                    Vec3 domeParams = new Vec3(p.domeHeight, p.skirtDepth, 1.0D);
+                    // dirZ = 2.0D -> đồng bộ ngầm lại vòm 3D cho client mà không giật camera của người thi triển
+                    Vec3 domeParams = new Vec3(p.domeHeight, p.skirtDepth, 2.0D);
                     int remainingTicks = p.maxDurationTicks > 0 ? Math.max(1, p.maxDurationTicks - p.ticksAlive) : 72000;
                     ModMessages.sendToPlayer(new ClientboundCinematicSkillPacket(
                             SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, p.casterUuid, p.center, domeParams, remainingTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) p.radius
@@ -266,6 +272,41 @@ public class InfiniteDragonPrisonAbility {
         return prison;
     }
 
+    /**
+     * Chronoa thi triển Lồng Giam Vô Hạn giam giữ mục tiêu (bao gồm cả Người Chơi) bên trong đấu trường thời-không.
+     */
+    public static ActivePrison spawnChronoaPrison(ServerLevel level, LivingEntity caster, Vec3 rawCenter, double radius, int durationTicks) {
+        if (level == null || rawCenter == null) return null;
+        UUID casterId = caster != null ? caster.getUUID() : UUID.randomUUID();
+        synchronized (ACTIVE_PRISONS) {
+            for (ActivePrison existing : ACTIVE_PRISONS) {
+                if (existing.level == level && existing.casterUuid.equals(casterId)) {
+                    return existing;
+                }
+            }
+        }
+        double groundY = findTrueGroundY(level, rawCenter.x, rawCenter.y, rawCenter.z);
+        double skirtDepth = computePerimeterSkirtDepth(level, rawCenter.x, groundY, rawCenter.z, radius);
+        double domeHeight = Math.max(radius, (rawCenter.y - groundY) + radius * 0.85D);
+        Vec3 center = new Vec3(rawCenter.x, groundY, rawCenter.z);
+        Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+
+        ActivePrison prison = new ActivePrison(level, casterId, center, radius, domeHeight, skirtDepth, 3);
+        prison.maxDurationTicks = durationTicks;
+        prison.trapPlayers = true;
+        ACTIVE_PRISONS.add(prison);
+
+        if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
+            ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
+                    SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, casterId, center, domeParams, durationTicks, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
+            ));
+        }
+
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.END_PORTAL_SPAWN, SoundSource.HOSTILE, 2.4F, 0.85F);
+        level.playSound(null, center.x, center.y, center.z, SoundEvents.BEACON_ACTIVATE, SoundSource.HOSTILE, 2.2F, 1.35F);
+        return prison;
+    }
+
     public static boolean hasVeldoraCavePrison(ServerLevel level, Vec3 center) {
         if (level == null || center == null) return false;
         synchronized (ACTIVE_PRISONS) {
@@ -292,13 +333,13 @@ public class InfiniteDragonPrisonAbility {
         double radius = 15.0D;
         double domeHeight = 16.0D;
         double skirtDepth = 3.0D;
-        ActivePrison prison = new ActivePrison(level, null, center, radius, domeHeight, skirtDepth, 3);
+        ActivePrison prison = new ActivePrison(level, (ServerPlayer) null, center, radius, domeHeight, skirtDepth, 3);
         prison.maxDurationTicks = -1;
         prison.isVeldoraCavePrison = true;
         ACTIVE_PRISONS.add(prison);
 
         if (SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)) {
-            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 1.0D);
+            Vec3 domeParams = new Vec3(domeHeight, skirtDepth, 2.0D);
             ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                     SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) radius
             ));
@@ -411,11 +452,11 @@ public class InfiniteDragonPrisonAbility {
                     cleanPrison(prison);
                     continue;
                 }
-                // Gia hạn gói tin 3D Lồng Giam Vô Hạn định kỳ (mỗi 30s) cho lồng vĩnh cửu & hang Veldora
+                // Gia hạn gói tin 3D Lồng Giam Vô Hạn định kỳ (mỗi 30s) cho lồng vĩnh cửu & hang Veldora (dirZ = 2.0D -> đồng bộ ngầm, không giật camera)
                 if (prison.maxDurationTicks < 0 && prison.ticksAlive % 600 == 0
                         && SkillVisualConfig.isCinematicEnabled(SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON)
                         && level.hasNearbyAlivePlayer(prison.center.x, prison.center.y, prison.center.z, 260.0D)) {
-                    Vec3 domeParams = new Vec3(prison.domeHeight, prison.skirtDepth, 1.0D);
+                    Vec3 domeParams = new Vec3(prison.domeHeight, prison.skirtDepth, 2.0D);
                     ModMessages.sendToPlayers(level.players(), new ClientboundCinematicSkillPacket(
                             SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON, prison.casterUuid, prison.center, domeParams, 72000, ClientboundCinematicSkillPacket.ACTION_START, (float) prison.radius
                     ));
@@ -444,10 +485,12 @@ public class InfiniteDragonPrisonAbility {
                 AABB prisonBox = new AABB(center.x - r - 2.0D, center.y - skirt - 2.0D, center.z - r - 2.0D,
                         center.x + r + 2.0D, center.y + h + 2.0D, center.z + r + 2.0D);
                 List<LivingEntity> entities = level.getEntitiesOfClass(LivingEntity.class, prisonBox,
-                        e -> e.isAlive() && !(e instanceof Player) && !PrimordialDemonEntity.isContractedAllyOfPlayer(prison.casterUuid, e));
+                        e -> e.isAlive() && (prison.trapPlayers
+                                ? (!e.getUUID().equals(prison.casterUuid) && (!(e instanceof Player p) || (!p.isCreative() && !p.isSpectator())))
+                                : (!(e instanceof Player) && !PrimordialDemonEntity.isContractedAllyOfPlayer(prison.casterUuid, e))));
 
                 // 2. Giam cầm trường lực Lồng Bán Cầu Đa Diện 3D (Chạm đất + Bao quát trên không):
-                // Quái chỉ có thể vào từ bên ngoài, KHÔNG THỂ RA ngoài qua vách bán cầu hoặc nóc bán cầu!
+                // Quái (hoặc người chơi khi bị Chronoa giam) không thể thoát qua vách bán cầu hoặc nóc bán cầu!
                 for (LivingEntity e : entities) {
                     double dx = e.getX() - center.x;
                     double dz = e.getZ() - center.z;
@@ -473,19 +516,29 @@ public class InfiniteDragonPrisonAbility {
                         e.setDeltaMovement(toInterior.scale(0.85D));
                         if (normDist > 0.96D && horizDist > 0.1D) {
                             double maxHoriz = r * 0.88D * (dy > 0 ? Math.sqrt(Math.max(0.1D, 1.0D - Math.min(0.9D, (dy / h) * (dy / h)))) : 1.0D);
+                            double pushX = e.getX();
+                            double pushY = e.getY();
+                            double pushZ = e.getZ();
                             if (horizDist > maxHoriz) {
                                 double scale = maxHoriz / horizDist;
-                                e.setPos(center.x + dx * scale, Math.min(e.getY(), center.y + h * 0.88D), center.z + dz * scale);
+                                pushX = center.x + dx * scale;
+                                pushY = Math.min(e.getY(), center.y + h * 0.88D);
+                                pushZ = center.z + dz * scale;
                             } else if (dy > h * 0.88D) {
-                                e.setPos(e.getX(), center.y + h * 0.85D, e.getZ());
+                                pushY = center.y + h * 0.85D;
+                            }
+                            if (e instanceof ServerPlayer sp) {
+                                sp.connection.teleport(pushX, pushY, pushZ, sp.getYRot(), sp.getXRot());
+                            } else {
+                                e.setPos(pushX, pushY, pushZ);
                             }
                         }
                         e.hurtMarked = true;
                         level.sendParticles(ParticleTypes.ELECTRIC_SPARK, e.getX(), e.getY() + 1.0, e.getZ(), 4, 0.2, 0.2, 0.2, 0.1);
                     }
 
-                    // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting mỗi 20 ticks)
-                    if (prison.ticksAlive % 20 == 0 && normDist <= 1.0D && e instanceof Mob mob) {
+                    // Kích hoạt trạng thái điên loạn cắn xé lẫn nhau (Frenzy / Infighting mỗi 20 ticks - bỏ qua khi Chronoa giam người chơi)
+                    if (!prison.trapPlayers && prison.ticksAlive % 20 == 0 && normDist <= 1.0D && e instanceof Mob mob) {
                         if (mob instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity v && v.isSealed()) {
                             continue;
                         }
@@ -499,11 +552,18 @@ public class InfiniteDragonPrisonAbility {
                     }
                 }
 
-                // 3. Quét kiểm tra điều kiện phá vỡ lồng giam của Boss (Throttling mỗi 5 ticks)
+                // 3. Quét kiểm tra điều kiện phá vỡ lồng giam (Throttling mỗi 5 ticks)
                 if (prison.ticksAlive % 5 == 0) {
                     boolean cageBroken = false;
+                    if (prison.trapPlayers) {
+                        var casterEnt = level.getEntity(prison.casterUuid);
+                        if (casterEnt == null || !casterEnt.isAlive()) {
+                            cageBroken = true;
+                        }
+                    }
 
                     for (LivingEntity e : entities) {
+                        if (prison.trapPlayers) break;
                         double horizDist = Math.hypot(e.getX() - center.x, e.getZ() - center.z);
                         double dy = e.getY() - center.y;
                         boolean insideDome = horizDist <= r && dy >= -skirt && dy <= h;

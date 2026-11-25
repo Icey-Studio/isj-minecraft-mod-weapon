@@ -8,6 +8,7 @@ import com.minhphuc.weapons.content.divine.PurificationPillarAbility;
 import com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility;
 import com.minhphuc.weapons.content.evolution.UniversalSenseAbility;
 import com.minhphuc.weapons.content.tensura.AntiMagicBarrierManager;
+import com.minhphuc.weapons.content.tensura.AzathothStomachData;
 import com.minhphuc.weapons.content.tensura.ApocalypseAbility;
 import com.minhphuc.weapons.content.tensura.DarkFlameShotAbility;
 import com.minhphuc.weapons.content.tensura.DimensionalSanctuaryAbility;
@@ -200,14 +201,14 @@ public class PrimordialDemonEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return Monster.createMonsterAttributes()
-                .add(Attributes.MAX_HEALTH, 3600.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.38D)
-                .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.ATTACK_DAMAGE, 160.0D)
-                .add(Attributes.ARMOR, 24.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 16.0D)
+                .add(Attributes.MAX_HEALTH, 25500.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.42D)
+                .add(Attributes.FLYING_SPEED, 0.58D)
+                .add(Attributes.ATTACK_DAMAGE, 555.0D)
+                .add(Attributes.ARMOR, 44.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 30.0D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
-                .add(Attributes.FOLLOW_RANGE, 56.0D);
+                .add(Attributes.FOLLOW_RANGE, 64.0D);
     }
 
     @Override
@@ -217,10 +218,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 if (sl.dimension() != Level.OVERWORLD) {
                     return false;
                 }
-                // Kiểm tra xem còn bất kỳ Ác Ma nào CHƯA bị giữ Khế Ước trong người chơi hay không
+                // Kiểm tra xem còn bất kỳ Ác Ma nào CHƯA bị giữ Khế Ước và CHƯA tồn tại ngoài thế giới hay không
                 boolean anyUncontracted = false;
                 for (DemonType dt : DemonType.values()) {
-                    if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                    if (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)
+                            && PrimordialPactItem.findActivePrimordial(sl.getServer(), dt, this) == null) {
                         anyUncontracted = true;
                         break;
                     }
@@ -305,10 +307,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 || spawnType == net.minecraft.world.entity.MobSpawnType.EVENT
                 || spawnType == net.minecraft.world.entity.MobSpawnType.PATROL) {
             ServerLevel sl = level.getLevel();
-            // Lọc bỏ các Ác Ma đang nằm trong Khế Ước của người chơi
+            // Lọc bỏ các Ác Ma đang nằm trong Khế Ước của người chơi hoặc đã có cá thể tồn tại
             List<DemonType> uncontracted = new ArrayList<>();
             for (DemonType dt : DemonType.values()) {
-                if (sl == null || !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)) {
+                if (sl == null || (!PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, dt)
+                        && PrimordialPactItem.findActivePrimordial(sl.getServer(), dt, this) == null)) {
                     uncontracted.add(dt);
                 }
             }
@@ -403,7 +406,9 @@ public class PrimordialDemonEntity extends TamableAnimal {
         this.goalSelector.addGoal(9, new LookAtPlayerGoal(this, Player.class, 10.0F));
         this.goalSelector.addGoal(10, new RandomLookAroundGoal(this));
 
-        // THỦY TỔ CHƯA THU PHỤC: ƯU TIÊN SỐ 1 TẤN CÔNG ÁC MA ĐÃ KÝ KHẾ ƯỚC CỦA NGƯỜI CHƠI TRƯỚC!
+        // THỦY TỔ CHƯA THU PHỤC: ƯU TIÊN SỐ 1 TẤN CÔNG ÁC MA ĐÃ KÝ KHẾ ƯỚC & VELDORA!
+        this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, true, false,
+                e -> !this.isTame() && e instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         this.targetSelector.addGoal(0, new NearestAttackableTargetGoal<>(this, PrimordialDemonEntity.class, 10, true, false,
                 e -> !this.isTame() && e instanceof PrimordialDemonEntity pde && pde.isTame() && pde.isAlive()));
 
@@ -898,6 +903,9 @@ public class PrimordialDemonEntity extends TamableAnimal {
             return;
         }
 
+        // Tăng sức mạnh ma thuật Ác Ma Thủy Tổ lên x3
+        amount *= 3.0F;
+
         // Tăng thêm +50% sức mạnh khi đang trong Lãnh Địa của ác ma
         if (activeDomainTicks > 0) {
             amount *= 1.5F;
@@ -961,6 +969,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
     @Override
     public void tick() {
         super.tick();
+
+        // Quy Tắc Bản Thể Độc Tôn: Nếu có người chơi đang mặc đủ bộ giáp Thủy Tổ này -> Thực thể giải thể ngay lập tức
+        if (!this.level().isClientSide() && this.tickCount % 20 == 0) {
+            if (com.minhphuc.weapons.content.tensura.PrimordialArmorItem.isAnyPlayerWearingFullDemonSet(this.level().getServer(), this.getDemonType())) {
+                if (this.level() instanceof ServerLevel sl) {
+                    sl.sendParticles(ParticleTypes.SOUL, this.getX(), this.getY() + 1.0D, this.getZ(), 25, 0.4D, 0.6D, 0.4D, 0.08D);
+                    sl.sendParticles(ParticleTypes.SMOKE, this.getX(), this.getY() + 1.0D, this.getZ(), 20, 0.3D, 0.5D, 0.3D, 0.05D);
+                    sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WITHER_DEATH, SoundSource.HOSTILE, 1.2F, 1.5F);
+                }
+                this.discard();
+                return;
+            }
+        }
 
         // Đồng bộ thuộc tính theo DemonType nếu chưa gán
         if (!this.level().isClientSide() && this.tickCount == 1) {
@@ -1217,7 +1238,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
             }
         }
 
-        // Tác động lên các thực thể bên trong kết giới (chạy mỗi 4 ticks để giảm 75% tải tính toán thực thể)
+        // Cột trụ ma lực ở giữa vòng tròn vươn lên bầu trời (chuẩn theo Hình 1)
+        if (activeDomainTicks % 3 == 0) {
+            for (double cy = 0.5D; cy <= 16.0D; cy += 1.5D) {
+                double spiralAng = (this.tickCount * 0.18D) + (cy * 0.35D);
+                double sr = 1.2D;
+                double sx = domainCenter.x + Math.cos(spiralAng) * sr;
+                double sz = domainCenter.z + Math.sin(spiralAng) * sr;
+                level.sendParticles(ParticleTypes.SOUL_FIRE_FLAME, sx, domainCenter.y + cy, sz, 1, 0, 0, 0, 0.02D);
+                level.sendParticles(ParticleTypes.REVERSE_PORTAL, domainCenter.x, domainCenter.y + cy, domainCenter.z, 1, 0.05D, 0.05D, 0.05D, 0.01D);
+            }
+        }
+
+        // Tác động lên các thực thể bên trong kết giới (Hiệu ứng CẢ TỐT LẪN XẤU cho từng Thủy Tổ)
         if (activeDomainTicks % 4 == 0) {
             List<LivingEntity> entities = level.getEntitiesOfClass(
                     LivingEntity.class,
@@ -1225,26 +1258,92 @@ public class PrimordialDemonEntity extends TamableAnimal {
             );
 
             for (LivingEntity e : entities) {
-                if (e == this || e == this.getOwner()) continue;
-                if (isImmuneOrFriendly(e)) continue;
-
                 double dist = e.distanceToSqr(domainCenter);
+                if (dist > radius * radius) continue;
 
-                // Giam hãm: Nếu chạm rìa kết giới (14m - 19m), giật ngược lại tâm kết giới
-                if (dist >= 14.0D * 14.0D && dist <= 19.0D * 19.0D) {
-                    Vec3 pull = domainCenter.subtract(e.position()).normalize().scale(0.85D);
-                    e.setDeltaMovement(pull.x, 0.2D, pull.z);
-                    e.hasImpulse = true;
-                    level.sendParticles(ParticleTypes.FLASH, e.getX(), e.getY() + 1.0D, e.getZ(), 1, 0, 0, 0, 0);
-                }
+                boolean isAlly = (e == this || e == this.getOwner() || isImmuneOrFriendly(e));
 
-                // Áp chế suy yếu bên trong lãnh địa
-                if (dist <= radius * radius) {
-                    applyDemonicEffect(e, new MobEffectInstance(MobEffects.DARKNESS, 40, 0));
-                    applyDemonicEffect(e, new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
-
-                    if (this.tickCount % 20 < 4) {
-                        dealDemonicDamage(e, 35.0F);
+                if (isAlly) {
+                    // === HIỆU ỨNG TỐT CHO ĐỒNG MINH & CHỦ NHÂN ===
+                    switch (type) {
+                        case NOIR -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.INVISIBILITY, 40, 0, false, false));
+                            e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 1, false, false));
+                            if (e.getHealth() < e.getMaxHealth()) e.heal(3.0F);
+                        }
+                        case ROUGE -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.FIRE_RESISTANCE, 60, 0, false, false));
+                            e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 2, false, false));
+                        }
+                        case BLANC -> {
+                            e.removeEffect(MobEffects.POISON);
+                            e.removeEffect(MobEffects.WITHER);
+                            e.removeEffect(MobEffects.MOVEMENT_SLOWDOWN);
+                            e.removeEffect(MobEffects.WEAKNESS);
+                            e.addEffect(new MobEffectInstance(MobEffects.REGENERATION, 40, 1, false, false));
+                        }
+                        case JAUNE -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 2, false, false));
+                            e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, 1, false, false));
+                        }
+                        case VIOLET -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_BOOST, 40, 1, false, false));
+                            if (e.hasEffect(MobEffects.POISON)) e.heal(4.0F);
+                        }
+                        case BLEU -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.DAMAGE_RESISTANCE, 40, 2, false, false));
+                            e.addEffect(new MobEffectInstance(MobEffects.ABSORPTION, 40, 1, false, false));
+                        }
+                        case VERT -> {
+                            e.addEffect(new MobEffectInstance(MobEffects.JUMP, 40, 2, false, false));
+                            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SPEED, 40, 2, false, false));
+                        }
+                    }
+                } else {
+                    // === HIỆU ỨNG XẤU CHO KẺ ĐỊCH ===
+                    switch (type) {
+                        case NOIR -> {
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.DARKNESS, 40, 0));
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.WEAKNESS, 40, 2));
+                            if (this.tickCount % 20 < 4) dealDemonicDamage(e, 45.0F);
+                        }
+                        case ROUGE -> {
+                            e.setRemainingFireTicks(60);
+                            if (this.tickCount % 20 < 4) {
+                                dealDemonicDamage(e, 55.0F);
+                                level.sendParticles(ParticleTypes.EXPLOSION, e.getX(), e.getY() + 1.0D, e.getZ(), 1, 0, 0, 0, 0);
+                            }
+                        }
+                        case BLANC -> {
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.WITHER, 40, 2));
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 2));
+                            if (this.tickCount % 20 < 4) dealDemonicDamage(e, 40.0F);
+                        }
+                        case JAUNE -> {
+                            // Hút mạnh về tâm trọng lực
+                            Vec3 pull = domainCenter.subtract(e.position()).normalize().scale(0.65D);
+                            e.setDeltaMovement(pull.x, -0.4D, pull.z);
+                            e.hasImpulse = true;
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
+                        }
+                        case VIOLET -> {
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.POISON, 60, 2));
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.CONFUSION, 60, 0));
+                            if (this.tickCount % 20 < 4) dealDemonicDamage(e, 35.0F);
+                        }
+                        case BLEU -> {
+                            e.setTicksFrozen(80);
+                            applyDemonicEffect(e, new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 40, 3));
+                            if (this.tickCount % 20 < 4) dealDemonicDamage(e, 30.0F);
+                        }
+                        case VERT -> {
+                            // Cuồng phong hất tung
+                            if (this.tickCount % 20 < 4) {
+                                e.setDeltaMovement(0, 0.85D, 0);
+                                e.hasImpulse = true;
+                                dealDemonicDamage(e, 35.0F);
+                            }
+                        }
                     }
                 }
             }
@@ -1862,8 +1961,10 @@ public class PrimordialDemonEntity extends TamableAnimal {
     private void summonSupportMinions() {
         if (!(this.level() instanceof ServerLevel sl)) return;
 
-        boolean canSummonBleu = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.BLEU);
-        boolean canSummonVert = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.VERT);
+        boolean canSummonBleu = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.BLEU)
+                && PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.BLEU, null) == null;
+        boolean canSummonVert = !PrimordialPactItem.isDemonContractedInAnyPlayerInventory(sl, DemonType.VERT)
+                && PrimordialPactItem.findActivePrimordial(sl.getServer(), DemonType.VERT, null) == null;
         if (!canSummonBleu && !canSummonVert) {
             return; // Cả Bleu và Vert đều đang nằm trong Khế Ước của người chơi -> Rouge không thể triệu hồi!
         }
@@ -2435,7 +2536,7 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 dealDemonicDamage(target, 280.0F);
             }
             case JAUNE -> {
-                // Carrera Gatling Barrage: Xả 16 ma đạn hoàng kim liên hoàn
+                // Xạ Kích Xuyên Thấu Không Gian: Bắn xuyên tường trúng tim địch & Thu đoạt Trái Tim
                 for (int b = 0; b < 16; b++) {
                     Vec3 bp = tPos.add((this.random.nextDouble() - 0.5D) * 4.0D, this.random.nextDouble() * 2.0D, (this.random.nextDouble() - 0.5D) * 4.0D);
                     level.sendParticles(ParticleTypes.CRIT, bp.x, bp.y, bp.z, 15, 0.2D, 0.2D, 0.2D, 0.05D);
@@ -2443,7 +2544,19 @@ public class PrimordialDemonEntity extends TamableAnimal {
                 }
                 level.playSound(null, tPos.x, tPos.y, tPos.z, SoundEvents.GENERIC_EXPLODE.value(), SoundSource.PLAYERS, 2.5F, 1.6F);
                 level.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ANVIL_LAND, SoundSource.PLAYERS, 2.0F, 1.4F);
-                dealDemonicDamage(target, 300.0F);
+                dealDemonicDamage(target, 450.0F);
+
+                if (target.isDeadOrDying() || target.getHealth() <= 0.0F) {
+                    ItemStack heartStack = new ItemStack(ModItems.DEMON_LORD_SOUL.get());
+                    heartStack.set(net.minecraft.core.component.DataComponents.CUSTOM_NAME, Component.literal("§c§l[Trái Tim Của " + target.getName().getString() + "]"));
+                    if (this.isTame() && this.getOwner() instanceof ServerPlayer owner) {
+                        AzathothStomachData.storeItemStackIntoStomach(owner, heartStack, true);
+                        level.playSound(null, owner.getX(), owner.getY(), owner.getZ(), SoundEvents.ITEM_PICKUP, SoundSource.PLAYERS, 1.2F, 1.2F);
+                        owner.displayClientMessage(Component.literal("§6§l[JAUNE - XẠ KÍCH XUYÊN TÂM] §fĐã đoạt Trái Tim của §c" + target.getName().getString() + " §fvà chuyển thẳng vào Không Gian Ảo!"), true);
+                    } else {
+                        target.spawnAtLocation(heartStack);
+                    }
+                }
             }
             case VIOLET -> {
                 // Tử Hoa Mạn Đà La: Khai nở mandala hoa sen độc trên mặt đất 8m
@@ -2970,6 +3083,11 @@ public class PrimordialDemonEntity extends TamableAnimal {
         if (!(this.level() instanceof ServerLevel sl)) return;
         ServerPlayer owner = this.getOwner() instanceof ServerPlayer sp ? sp : null;
         if (owner == null) return;
+        if (owner.isShiftKeyDown()) {
+            announceSkill("Ma Pháp Không Gian: Xuyên Giới Đến Ác Ma Giới");
+            SpatialTeleportAbility.castTeleportToUnderworld(sl, owner);
+            return;
+        }
         announceSkill("Ma Pháp Không Gian: Dịch Chuyển (Spatial Teleportation)");
         SpatialTeleportAbility.castTeleportFromDemon(sl, owner, this);
     }

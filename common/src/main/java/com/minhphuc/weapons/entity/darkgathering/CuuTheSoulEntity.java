@@ -55,7 +55,7 @@ public class CuuTheSoulEntity extends PathfinderMob {
 
     public static AttributeSupplier.Builder createAttributes() {
         return PathfinderMob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 20.0D)
+                .add(Attributes.MAX_HEALTH, 60.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.45D)
                 .add(Attributes.KNOCKBACK_RESISTANCE, 1.0D);
     }
@@ -252,7 +252,7 @@ public class CuuTheSoulEntity extends PathfinderMob {
                 return;
             } else {
                 // Đánh trúng chí mạng: Sát thương khổng lồ và áp dụng án tử 7s cho Ác Ma
-                demon.hurt(sl.damageSources().mobAttack(this), 220.0F);
+                demon.hurt(sl.damageSources().mobAttack(this), 660.0F);
                 CuuTheCurseManager.applyCurse(sl, demon, cType);
                 return;
             }
@@ -263,7 +263,7 @@ public class CuuTheSoulEntity extends PathfinderMob {
 
         if (!(target instanceof ServerPlayer)) {
             // Sát thương va đập trực tiếp kèm án tử
-            float dmg = (this.strikeMode == 2) ? 160.0F : 90.0F;
+            float dmg = (this.strikeMode == 2) ? 480.0F : 270.0F;
             target.hurt(sl.damageSources().mobAttack(this), dmg);
         }
     }

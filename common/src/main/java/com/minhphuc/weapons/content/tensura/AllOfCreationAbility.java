@@ -152,14 +152,20 @@ public class AllOfCreationAbility {
 
         long ep = estimateEP(target);
         String species = determineSpecies(target);
-        String threatLevel = (target instanceof VelgryndEntity || target.getMaxHealth() >= 1000.0F)
+        String threatLevel = (target instanceof VelgryndEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity
+                || target instanceof com.minhphuc.weapons.entity.tensura.MilimEntity
+                || target instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity
+                || target instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity
+                || target.getMaxHealth() >= 1000.0F)
                 ? "§4§l[CẤM KỴ - THIÊN TAI ĐỈNH CAO]"
                 : (target instanceof Enemy ? "§c§l[HIỂM HỌA CHIẾN ĐẤU]" : "§a§l[AN TOÀN / THÂN THIỆN]");
 
         player.displayClientMessage(Component.literal("§b§l╔════════════════════════════════════════════════╗"), false);
         player.displayClientMessage(Component.literal("§b§l║   §e§l✦ THẨM ĐỊNH VẠN VẬT: SINH MỆNH THỰC THỂ ✦   §b§l║"), false);
         player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
-        player.displayClientMessage(Component.literal("§f  Danh Tính: §e" + name), false);
+        player.displayClientMessage(Component.literal("§f  Danh Tính: §e" + SageManager.formatIndividual(target)), false);
         player.displayClientMessage(Component.literal("§7  Chủng Tộc: §f" + species), false);
         player.displayClientMessage(Component.literal("§c  Sinh Lực (HP): §a" + String.format("%.1f / %.1f (%.0f%%)", hp, maxHp, hpPct)), false);
         player.displayClientMessage(Component.literal("§d  Ma Tố Lượng (EP): §b" + NUM_FORMAT.format(ep) + " EP"), false);
@@ -243,7 +249,8 @@ public class AllOfCreationAbility {
             player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
             player.displayClientMessage(Component.literal("§d§l║   ✦ HỒ SƠ ÁC MA MA GIỚI (UNDERWORLD) ✦   §d§l║"), false);
             player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
-            player.displayClientMessage(Component.literal("§f  Cấp Bậc / Hình Thái: §e" + uDemon.getRank().title + " §7[" + uDemon.getMorph().label + " - " + uDemon.getDemonType().getColorName() + "]"), false);
+            player.displayClientMessage(Component.literal("§d  Dòng Dõi Thủy Tổ: §eThuộc dòng dõi của " + uDemon.getDemonType().getTitleVi() + " (" + uDemon.getDemonType().getColorName() + ")"), false);
+            player.displayClientMessage(Component.literal("§f  Cấp Bậc / Hình Thái: §e" + uDemon.getRank().title + " §7[" + uDemon.getMorph().label + "]"), false);
             player.displayClientMessage(Component.literal("§b  EP Ước Lượng: §f" + String.format("%,d", uDemon.getCalculatedEP())), false);
             player.displayClientMessage(Component.literal("§a  Nguồn Gốc Thể Xác: §f" + (uDemon.hasPhysicalBody() ? uDemon.getBodyOrigin() : "§7Chưa có (Click Xương hoặc cho hấp thụ Dân Làng/Xác chết)")), false);
             player.displayClientMessage(Component.literal("§6  Năng Lực: §f" + (uDemon.isWinged() ? "Có Cánh Bay" : "Bộ Hành") + (uDemon.getRank().canCastMagic ? " | Phóng Ma Pháp Nguyên Tố" : " | Cận Chiến Thuần")), false);
@@ -258,10 +265,42 @@ public class AllOfCreationAbility {
             player.displayClientMessage(Component.literal("§3§l║   ✦ BẠO PHONG LONG VELDORA TEMPEST (TRUE DRAGON) ✦   §3§l║"), false);
             player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
             player.displayClientMessage(Component.literal("§f  Hình Thái Hiện Tại: §e" + (v.isHumanForm() ? "Dạng Người (Võ Thuật & Linh Hoạt)" : "Dạng Rồng Khổng Lồ (Phòng Thủ & Sức Mạnh x30)")), false);
-            player.displayClientMessage(Component.literal("§b  EP Chân Long: §f" + String.format("%,d", com.minhphuc.weapons.entity.tensura.VeldoraEntity.VELDORA_EP)), false);
+            player.displayClientMessage(Component.literal("§b  EP Chân Long: §f" + NUM_FORMAT.format(MagiculesManager.getTrueDragonEp(v)) + " EP"), false);
             player.displayClientMessage(Component.literal("§6  Tương Quan Sức Mạnh: §fNgang Velgrynd | Mạnh x5 Ác Ma Thủy Tổ (Ác ma tối đa chỉ có 8% thắng)"), false);
             player.displayClientMessage(Component.literal("§a  Đặc Quyền Dạng Người: §fCó thể Ban Danh Xưng nâng cấp cho sinh vật khác"), false);
             player.displayClientMessage(Component.literal("§c  Quy Luật Bất Biến: §fKhông thể bị Ban Tên hay Tiến Hóa Ma Vương"), false);
+        } else if (target instanceof VelgryndEntity vg) {
+            player.displayClientMessage(Component.literal("§6§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§c§l║   ✦ CHƯỚC NHIỆT LONG VELGRYND (TRUE DRAGON) ✦   §c§l║"), false);
+            player.displayClientMessage(Component.literal("§6§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§b  EP Chân Long: §f" + NUM_FORMAT.format(MagiculesManager.getTrueDragonEp(vg)) + " EP"), false);
+            player.displayClientMessage(Component.literal("§e  Quan Hệ: " + (vg.isAllied() ? "§aĐồng Minh Nghịch Lân" : "§cThù Địch Tuyệt Đối")), false);
+            player.displayClientMessage(Component.literal("§6  Kỹ Năng Tối Thượng: §fGia Tốc Cardinal, Chước Liệt Tiệt Đoán, 4 Tầng Vảy Rồng"), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity vz) {
+            player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§f§l║   ✦ BẠCH BĂNG LONG VELZARD (TRUE DRAGON) ✦   §b§l║"), false);
+            player.displayClientMessage(Component.literal("§b§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§b  EP Chân Long: §f" + NUM_FORMAT.format(MagiculesManager.getTrueDragonEp(vz)) + " EP"), false);
+            player.displayClientMessage(Component.literal("§3  Quyền Năng Tối Thượng: §fNhẫn Nại & Ái Dục Chi Vương Gabriel — Cố Định Hư Vô"), false);
+            player.displayClientMessage(Component.literal("§a  Kháng Tính: §fMiễn nhiễm tuyệt đối đóng băng, bạo kích & sát thương nhiệt độ thấp"), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) {
+            player.displayClientMessage(Component.literal("§d§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§5§l║   ✦ BẠO QUÂN HỦY DIỆT MILIM NAVA (BÁT TINH) ✦   §d§l║"), false);
+            player.displayClientMessage(Component.literal("§d§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§b  Chủng Tộc: §fLong Ma Nhân (Dragonoid) | §bEP: §e145,000,000+ EP"), false);
+            player.displayClientMessage(Component.literal("§c  Quyền Năng Tối Thượng: §fPhẫn Nộ Chi Vương Satanael — Long Tinh Bộc Viêm Bá"), false);
+        } else if (target instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) {
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§0§l║   ✦ MA VƯƠNG KHÔNG VONG (COSMIC VOID LORD) ✦   §5§l║"), false);
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§d  Kỹ Năng: §fTinh Vân Lực Trường (22m Hút & Héo Mòn) | Tia Nhật Thực Xuyên Giáp"), false);
+            player.displayClientMessage(Component.literal("§a  Tái Sinh & Vật Phẩm Rơi: §fHồi sinh liên tục | Rơi Linh Hồn & Ngọc Thức Tỉnh Ma Vương"), false);
+        } else if (target instanceof PrimordialDemonEntity pd) {
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§c§l║   ✦ ÁC MA THỦY TỔ: " + pd.getDemonType().getTitleVi().toUpperCase() + " ✦   §5§l║"), false);
+            player.displayClientMessage(Component.literal("§5§l╠════════════════════════════════════════════════╣"), false);
+            player.displayClientMessage(Component.literal("§f  Cấp Bậc: §e" + pd.getDemonRankTitle() + " §7| §bThể Xác: " + (pd.hasPhysicalBody() ? "§aĐã Có" : "§7Linh Thể")), false);
+            player.displayClientMessage(Component.literal("§d  Kỹ Năng Thủy Tổ: §f" + pd.getDemonType().getSkillNameVi()), false);
         } else if (target instanceof com.minhphuc.weapons.entity.tensura.CharybdisEntity c) {
             player.displayClientMessage(Component.literal("§3§l  [THẢM HỌA] THỦY QUÁI BAY CHARYBDIS"), false);
             player.displayClientMessage(Component.literal("§b  Vảy Nhiễu Loạn Ma Pháp: " + (c.isScaleShieldBroken() ? "§aĐã Vỡ (Chịu 100% Phép)" : "§cCòn " + Math.round(c.getScaleShield()) + " HP (Giảm 80% Phép)")), false);
@@ -407,10 +446,15 @@ public class AllOfCreationAbility {
         }
     }
 
-    private static String determineSpecies(LivingEntity entity) {
+    public static String determineSpecies(LivingEntity entity) {
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) return "Ma Vương Không Vong (Dark Gathering)";
         if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return "Tà Thần Hư Vô (Dark Gathering)";
-        if (entity instanceof VelgryndEntity) return "Long Chủng Tối Thượng (True Dragon)";
-        if (entity instanceof PrimordialDemonEntity demon) return "Thủy Tổ Ác Ma (" + demon.getDemonType().name() + ")";
+        if (entity instanceof VelgryndEntity) return "Long Chủng Tối Thượng — Chước Nhiệt Long (True Dragon)";
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) return "Long Chủng Tối Thượng — Bạch Băng Long (True Dragon)";
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity) return "Long Chủng Tối Thượng — Bạo Phong Long (True Dragon)";
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) return "Long Ma Nhân — Bát Tinh Ma Vương Cổ Đại (Dragonoid)";
+        if (entity instanceof PrimordialDemonEntity demon) return "Thủy Tổ Ác Ma (" + demon.getDemonType().getTitleVi() + ")";
+        if (entity instanceof UnderworldDemonEntity uDemon) return "Ác Ma Ma Giới — Thuộc dòng dõi của " + uDemon.getDemonType().getTitleVi();
         if (entity instanceof Player) return "Nhân Loại Thức Tỉnh (Awakened Human / Demon Lord)";
         if (entity instanceof net.minecraft.world.entity.boss.enderdragon.EnderDragon) return "Thượng Cổ Hắc Long (Void Dragon)";
         if (entity instanceof net.minecraft.world.entity.boss.wither.WitherBoss) return "Tử Linh Ma Tướng (Wither Sovereign)";
@@ -419,11 +463,25 @@ public class AllOfCreationAbility {
         return "Sinh Mệnh Tự Nhiên (Natural Creature)";
     }
 
-    private static long estimateEP(LivingEntity entity) {
-        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity) return 12500000L;
-        if (entity instanceof VelgryndEntity) return 74350000L;
+    public static long estimateEP(LivingEntity entity) {
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.DemonLordKuboEntity) return 85_000_000L;
+        if (entity instanceof com.minhphuc.weapons.entity.darkgathering.KuboEntity kubo) {
+            return kubo.isComplete() ? 160_000_000L : (kubo.isUltimate() ? 95_000_000L : 25_000_000L);
+        }
+        if (entity instanceof VelgryndEntity
+                || entity instanceof com.minhphuc.weapons.entity.tensura.VeldoraEntity
+                || entity instanceof com.minhphuc.weapons.entity.tensura.VelzardEntity) {
+            return MagiculesManager.getTrueDragonEp(entity);
+        }
+        if (entity instanceof com.minhphuc.weapons.entity.tensura.MilimEntity) return 145_000_000L;
         if (entity instanceof PrimordialDemonEntity demon) {
             return demon.getCalculatedEP();
+        }
+        if (entity instanceof UnderworldDemonEntity uDemon) {
+            return uDemon.getCalculatedEP();
+        }
+        if (entity instanceof ServerPlayer sp) {
+            return MagiculesManager.getTotalEp(sp);
         }
         if (entity instanceof Player player) {
             boolean isLord = EntityDataHelper.getCustomData(player).getBoolean("TensuraTrueDemonLord");

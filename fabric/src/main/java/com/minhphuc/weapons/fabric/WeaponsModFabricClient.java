@@ -8,6 +8,7 @@ import com.minhphuc.weapons.client.renderer.ClientCinematicSkillRenderer;
 import com.minhphuc.weapons.client.renderer.ClientHellflareRenderer;
 import com.minhphuc.weapons.client.ClientNihilityCinematicHandler;
 import com.minhphuc.weapons.client.ClientOrbitalCinematicHandler;
+import com.minhphuc.weapons.client.ClientPossessionHandler;
 import com.minhphuc.weapons.client.CustomImpactFrameOverlay;
 import com.minhphuc.weapons.client.renderer.AtomicPostFx;
 import com.minhphuc.weapons.client.renderer.AtomicRenderer;
@@ -110,6 +111,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
 
         // 6. Tự động dọn dẹp bộ nhớ đồ họa và trạng thái khi thoát thế giới hoặc tắt game
         ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
+            ClientPossessionHandler.clearAll();
             AtomicRenderer.reset();
             AtomicPostFx.reset();
             CustomImpactFrameOverlay.reset();
@@ -142,6 +144,7 @@ public class WeaponsModFabricClient implements ClientModInitializer {
             ClientCinematicSkillRenderer.reset();
             ClientCinematicSkillHandler.stopCinematic();
             ClientAzathothDragonRenderer.reset();
+            ClientPossessionHandler.clearAll();
             ClientAzathothCinematicHandler.stopCinematic();
             ClientSupernovaPlasmaRenderer.reset();
             ClientHellflareRenderer.reset();

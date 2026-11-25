@@ -1,0 +1,12 @@
+{
+  "type": "weapons:jura_tempest",
+  "generator": {
+    "type": "minecraft:flat",
+    "settings": {
+      "biome": "weapons:jura_tempest_sanctuary",
+      "features": false,
+      "lakes": false,
+      "layers": []
+    }
+  }
+}

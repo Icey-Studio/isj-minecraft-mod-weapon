@@ -55,7 +55,7 @@ import org.joml.Vector3f;
 import java.util.List;
 
 /**
- * TRÍ TUỆ VƯƠNG RAPHAEL (ULTIMATE SKILL: LORD OF WISDOM RAPHAEL)
+ * THÔNG TUỆ VƯƠNG RAPHAEL (ULTIMATE SKILL: LORD OF WISDOM RAPHAEL)
  * Quản lý & thực thi 50 KỸ NĂNG TÍNH TOÁN & THAO TÚNG CHÂN THỰC (0..49), chia làm 5 Nhóm × 10 Kỹ Năng:
  *  - Nhóm 0 (0..9): Phân Tích & Thẩm Định
  *  - Nhóm 1 (10..19): Hỗ Trợ & Sinh Tồn
@@ -89,22 +89,22 @@ public final class RaphaelSkillRegistry {
 
     public static final List<RaphaelSkill> SKILLS = List.of(
             // === NHÓM I: PHÂN TÍCH & THẨM ĐỊNH (0..9) ===
-            new RaphaelSkill(0, Category.ANALYSIS, "1. Thẩm Định Vạn Vật (All of Creation)", "Phân tích HP, Giáp, EP, phẩm cấp vũ khí & điểm yếu mục tiêu"),
-            new RaphaelSkill(1, Category.ANALYSIS, "2. Cảm Quan Ma Lực Cao Cấp (Magic Sense+)", "Định vị & phát sáng mọi sinh vật và Boss trong bán kính 48m"),
-            new RaphaelSkill(2, Category.ANALYSIS, "3. Giải Mã Nguyền Rủa (Curse Decoder)", "Thanh tẩy toàn bộ Poison, Wither, Slowness, Darkness & lửa"),
-            new RaphaelSkill(3, Category.ANALYSIS, "4. Truy Vết Long Chủng (Dragon Radar)", "Quét Hang Phong Ấn Veldora & các True Dragon gần nhất"),
-            new RaphaelSkill(4, Category.ANALYSIS, "5. Quét Mạch Khoáng Cổ Đại (Ore Scan)", "Quét Kim Cương, Debris, Ngọc Lục Bảo & Vàng trong 18m"),
-            new RaphaelSkill(5, Category.ANALYSIS, "6. Đọc Suy Nghĩ Thực Thể (Mind Scan)", "Phân tích trạng thái Aggro/Thuần Phục & làm choáng nhẹ địch 2s"),
-            new RaphaelSkill(6, Category.ANALYSIS, "7. Tính Toán Quỹ Đạo Tuyệt Đối (Trajectory)", "Tăng Sức Mạnh II, Tốc Độ II & phát hiện kẻ tàng hình"),
-            new RaphaelSkill(7, Category.ANALYSIS, "8. Phân Tích Mê Cung & Không Gian", "Kiểm tra Neo Không Gian, Mê Cung Ramiris & Kết Giới gần đây"),
+            new RaphaelSkill(0, Category.ANALYSIS, "1. Phân tích giám định", "Phân tích HP, Giáp, EP, phẩm cấp vũ khí & điểm yếu mục tiêu"),
+            new RaphaelSkill(1, Category.ANALYSIS, "2. Cảm nhận Ma Lực Cao Cấp (Magic Sense+)", "Định vị & phát sáng mọi sinh vật và Boss trong bán kính 48m"),
+            new RaphaelSkill(2, Category.ANALYSIS, "3. Giải Mã (Curse Decoder)", "Thanh tẩy toàn bộ Poison, Wither, Slowness, Darkness & lửa"),
+            new RaphaelSkill(3, Category.ANALYSIS, "4. Truy Vết", "Quét Hang Phong Ấn Veldora & các True Dragon gần nhất"),
+            new RaphaelSkill(4, Category.ANALYSIS, "5. Quét Mạch Khoáng Cổ Đại", "Quét Kim Cương, Debris, Ngọc Lục Bảo & Vàng trong 18m"),
+            new RaphaelSkill(5, Category.ANALYSIS, "6. Đọc Tâm Trí", "Phân tích trạng thái Aggro/Thuần Phục & làm choáng nhẹ địch 2s"),
+            new RaphaelSkill(6, Category.ANALYSIS, "7. Dự đoán công kích tương lai", "Tăng Sức Mạnh II, Tốc Độ II & phát hiện kẻ tàng hình"),
+            new RaphaelSkill(7, Category.ANALYSIS, "8. Phân Tích Không Gian", "Kiểm tra Neo Không Gian & Kết Giới"),
             new RaphaelSkill(8, Category.ANALYSIS, "9. Ước Lượng Chỉ Số EP Tổng Hợp", "Tính tổng EP bản thân, vũ khí phẩm cấp & đồng minh kề bên"),
-            new RaphaelSkill(9, Category.ANALYSIS, "10. Dự Đoán Nguy Hiểm (Danger Sense)", "Bật Giác Quan Nguy Hiểm: Absorption II + Resistance I (20s)"),
+            new RaphaelSkill(9, Category.ANALYSIS, "10. Dự Đoán Tương Lai", "Bật Giác Quan Nguy Hiểm: Absorption II + Resistance I (20s)"),
 
             // === NHÓM II: HỖ TRỢ & SINH TỒN (10..19) ===
-            new RaphaelSkill(10, Category.SURVIVAL, "11. Siêu Tốc Tái Sinh Khẩn Cấp", "Hồi ngay 60% HP tối đa + Regeneration III trong 10 giây"),
-            new RaphaelSkill(11, Category.SURVIVAL, "12. Tổng Hợp Dược Tề Toàn Phần", "Phục hồi 100% Máu, No Đủ & Hơi Thở Nước ngay lập tức"),
+            new RaphaelSkill(10, Category.SURVIVAL, "11. Siêu Tốc Tái Sinh", "Hồi ngay 60% HP tối đa + Regeneration III trong 10 giây"),
+            new RaphaelSkill(11, Category.SURVIVAL, "12. Tổng Hợp Thảo dược Toàn Phần", "Phục hồi 100% Máu, No Đủ & Hơi Thở Nước ngay lập tức"),
             new RaphaelSkill(12, Category.SURVIVAL, "13. Đa Trùng Kết Giới Tự Động", "Kích hoạt Đa Trùng Kết Giới + Absorption III bảo hộ"),
-            new RaphaelSkill(13, Category.SURVIVAL, "14. Tối Ưu Dinh Dưỡng & Thể Lực", "Hồi đầy thanh Đói, Saturation V & Haste II trong 30 giây"),
+            new RaphaelSkill(13, Category.SURVIVAL, "14. Tối Ưu Thể Lực", "Hồi đầy thanh Đói, Saturation V & Haste II trong 30 giây"),
             new RaphaelSkill(14, Category.SURVIVAL, "15. Quang Học Đêm & Thợ Lặn", "Night Vision 3p + Water Breathing 3p + Fire Resistance 60s"),
             new RaphaelSkill(15, Category.SURVIVAL, "16. Hồi Sinh Đồng Minh Toàn Diện", "Hồi +40 HP & giải trừ debuff cho Veldora, Ác Ma, Tinh Linh & Dân Làng"),
             new RaphaelSkill(16, Category.SURVIVAL, "17. Triệt Tiêu Chấn Động & Trọng Lực", "Cấp Resistance III + Slow Falling trong 15s miễn thương rơi"),

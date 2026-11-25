@@ -76,6 +76,9 @@ public final class ClientCinematicSkillRenderer {
 
     public record SkillInstanceKey(int skillId, UUID casterUuid, int blockX, int blockY, int blockZ) {
         public static SkillInstanceKey of(int skillId, UUID caster, Vec3 pos) {
+            if (skillId >= SkillVisualConfig.SKILL_CQC_TECHNIQUE) {
+                return new SkillInstanceKey(skillId, caster, (int) Math.round(pos.x), (int) (System.nanoTime() & 0x7FFFFFFFL), (int) Math.round(pos.z));
+            }
             if (skillId == SkillVisualConfig.SKILL_MULTILAYER_BARRIER || skillId == SkillVisualConfig.SKILL_INFINITE_DRAGON_PRISON) {
                 return new SkillInstanceKey(skillId, null, (int) Math.round(pos.x), (int) Math.round(pos.y), (int) Math.round(pos.z));
             }
@@ -348,6 +351,12 @@ public final class ClientCinematicSkillRenderer {
                 case SkillVisualConfig.SKILL_DIMENSIONAL_SANCTUARY -> renderDimensionalGate(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_SPIRITRON_OUTBURST -> renderSpiritronOutburst(mesh, mat, skill, age);
                 case SkillVisualConfig.SKILL_CHROMATIC_PILLAR -> renderChromaticPillar(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_CQC_TECHNIQUE -> renderCqcTechnique(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_DEAD_END_RAINBOW -> renderDeadEndRainbow(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_HINATA_THOUGHT_ACCEL -> renderHinataThoughtAccel(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_DEMON_LORD_HAKI -> renderDemonLordHaki(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_VELDORA_TEMPEST_CANNON -> renderVeldoraTempestCannon(mesh, mat, skill, age);
+                case SkillVisualConfig.SKILL_CHAOS_STAR_BUSTER -> renderChaosStarBuster(mesh, mat, skill, age);
             }
 
             var built = mesh.build();
@@ -596,66 +605,225 @@ public final class ClientCinematicSkillRenderer {
     }
 
     // =========================================================================
-    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - VOID DRAGON MAW & COSMIC ACCRETION CORONA)
+    // 5. BẠO THỰC VƯƠNG (BEELZEBUTH - ANIME TORNADO & HORIZONTAL CONICAL VOID MAW)
     // =========================================================================
     private static void renderBeelzebuth(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
-        float r = 36.0f * skill.powerMultiplier();
-        float fade = (age < skill.totalTicks() - 10) ? 1.0f : (float) Math.max(0.0, (skill.totalTicks() - age) / 10.0f);
+        float mult = skill.powerMultiplier() > 0.1f ? skill.powerMultiplier() : 1.0f;
+        float fade = (age < 8.0f) ? (age / 8.0f) : ((age < skill.totalTicks() - 12) ? 1.0f : Math.max(0.0f, (skill.totalTicks() - age) / 12.0f));
+        int op = (int) (fade * 220.0f);
 
-        // 1. Khối cầu chân trời sự kiện hắc ám (Event Horizon Singularity)
-        billboardDisc(v, m, new Vec3(0, 3.5, 0), 7.5f, 0x0A0012, fade);
-        billboardDisc(v, m, new Vec3(0, 3.5, 0), 9.0f, 0x4A148C, fade * 0.75f);
+        Vec3 dir = skill.direction();
+        boolean isHorizontalFunnel = (dir != null && Math.abs(dir.y) < 0.92D && dir.lengthSqr() > 1e-4);
 
-        // 2. Đĩa bồi tụ Plasma xoay tít tốc độ cao (Accretion Disk)
-        for (int ringIdx = 0; ringIdx < 5; ringIdx++) {
-            float ringR = 8.0f + ringIdx * 6.0f;
-            float rotSpeed = (5 - ringIdx) * 0.09f;
-            int ringColor = (ringIdx % 2 == 0) ? 0x9C27B0 : 0xFF1744;
-            renderHexagonRing(v, m, 3.5f, ringR, 0.40f, ringColor, 0.85f * fade, age * rotSpeed);
+        if (isHorizontalFunnel) {
+            // HÌNH THÁI 2: HẮC ĐỘNG THÔN PHỆ (PHỄU HƯ KHÔNG VƯƠN NGANG TỪ TAY)
+            Vec3 f = dir.normalize();
+            Vec3 tempUp = Math.abs(f.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 r = f.cross(tempUp).normalize();
+            Vec3 u = r.cross(f).normalize();
+
+            float len = 38.0f * mult;
+            float rBase = 1.2f * mult;
+            float rMouth = 14.0f * mult;
+            int slices = 16;
+            int segments = 16;
+
+            // 1. Thân phễu xoắn ốc tím thẫm vươn dài theo hướng nhìn
+            for (int s = 0; s < slices; s++) {
+                float t0 = (float) s / slices;
+                float t1 = (float) (s + 1) / slices;
+                float d0 = t0 * len;
+                float d1 = t1 * len;
+
+                float rad0 = (rBase + t0 * (rMouth - rBase)) * (1.0f + 0.08f * (float) Math.sin(t0 * 10.0f + age * 0.25f));
+                float rad1 = (rBase + t1 * (rMouth - rBase)) * (1.0f + 0.08f * (float) Math.sin(t1 * 10.0f + age * 0.25f));
+
+                float rot0 = age * 0.18f + s * 0.12f;
+                float rot1 = age * 0.18f + (s + 1) * 0.12f;
+
+                for (int seg = 0; seg < segments; seg++) {
+                    double a00 = rot0 + (seg * 2.0 * Math.PI / segments);
+                    double a01 = rot0 + ((seg + 1) * 2.0 * Math.PI / segments);
+                    double a10 = rot1 + (seg * 2.0 * Math.PI / segments);
+                    double a11 = rot1 + ((seg + 1) * 2.0 * Math.PI / segments);
+
+                    Vec3 p00 = f.scale(d0).add(r.scale(Math.cos(a00) * rad0)).add(u.scale(Math.sin(a00) * rad0));
+                    Vec3 p01 = f.scale(d0).add(r.scale(Math.cos(a01) * rad0)).add(u.scale(Math.sin(a01) * rad0));
+                    Vec3 p10 = f.scale(d1).add(r.scale(Math.cos(a10) * rad1)).add(u.scale(Math.sin(a10) * rad1));
+                    Vec3 p11 = f.scale(d1).add(r.scale(Math.cos(a11) * rad1)).add(u.scale(Math.sin(a11) * rad1));
+
+                    int col = (seg % 2 == 0) ? 0x2A0845 : 0x4A148C;
+                    if ((s + seg) % 3 == 0) col = 0x6A1B9A;
+                    quad(v, m, p00, p01, p11, p10, col, op);
+                }
+            }
+
+            // 2. 4 Dải ruy băng xoắn ốc lam ngọc quấn quanh thân phễu
+            int ribbonSteps = 28;
+            for (int rIdx = 0; rIdx < 4; rIdx++) {
+                double startAngle = rIdx * (Math.PI / 2.0);
+                for (int step = 0; step < ribbonSteps; step++) {
+                    float ta = (float) step / ribbonSteps;
+                    float tb = (float) (step + 1) / ribbonSteps;
+                    float da = ta * len;
+                    float db = tb * len;
+
+                    double thetaA = startAngle + (ta * 2.2 * Math.PI * 2.0) - (age * 0.22);
+                    double thetaB = startAngle + (tb * 2.2 * Math.PI * 2.0) - (age * 0.22);
+
+                    float ra = (rBase + ta * (rMouth - rBase)) + 0.8f + 0.4f * (float) Math.sin(ta * 8.0f + age * 0.3f);
+                    float rb = (rBase + tb * (rMouth - rBase)) + 0.8f + 0.4f * (float) Math.sin(tb * 8.0f + age * 0.3f);
+
+                    Vec3 pa = f.scale(da).add(r.scale(Math.cos(thetaA) * ra)).add(u.scale(Math.sin(thetaA) * ra));
+                    Vec3 pb = f.scale(db).add(r.scale(Math.cos(thetaB) * rb)).add(u.scale(Math.sin(thetaB) * rb));
+
+                    stroke(v, m, pa, pb, 0.55f, fade * 0.95f, 0x00E5FF);
+                    stroke(v, m, pa.add(f.scale(0.2)), pb.add(f.scale(0.2)), 0.30f, fade * 0.98f, 0xE0F7FA);
+                }
+            }
+
+            // 3. Vành Miệng Phễu Hư Không Phát Quang Lam Sáng (Glowing Cyan Open Mouth Rim)
+            Vec3 mouthCenter = f.scale(len);
+            for (int seg = 0; seg < 24; seg++) {
+                double a0 = (seg * 2.0 * Math.PI / 24);
+                double a1 = ((seg + 1) * 2.0 * Math.PI / 24);
+
+                Vec3 ma0 = mouthCenter.add(r.scale(Math.cos(a0) * rMouth)).add(u.scale(Math.sin(a0) * rMouth));
+                Vec3 ma1 = mouthCenter.add(r.scale(Math.cos(a1) * rMouth)).add(u.scale(Math.sin(a1) * rMouth));
+                stroke(v, m, ma0, ma1, 0.75f, fade * 0.98f, 0x00E5FF);
+
+                Vec3 maOuter0 = mouthCenter.add(r.scale(Math.cos(a0) * (rMouth + 1.2f))).add(u.scale(Math.sin(a0) * (rMouth + 1.2f)));
+                Vec3 maOuter1 = mouthCenter.add(r.scale(Math.cos(a1) * (rMouth + 1.2f))).add(u.scale(Math.sin(a1) * (rMouth + 1.2f)));
+                stroke(v, m, maOuter0, maOuter1, 0.45f, fade * 0.90f, 0x80DEEA);
+            }
+
+            // 4. Các luồng tia hút thực thể bay thẳng vào miệng phễu
+            for (int k = 0; k < 12; k++) {
+                double a = k * (Math.PI / 6.0) + (age * 0.08);
+                float inDist = ((age * 1.5f + k * 2.5f) % 16.0f);
+                Vec3 startPt = mouthCenter.add(f.scale(16.0f - inDist)).add(r.scale(Math.cos(a) * (rMouth * 0.9f))).add(u.scale(Math.sin(a) * (rMouth * 0.9f)));
+                Vec3 endPt = startPt.add(f.scale(-2.5));
+                stroke(v, m, startPt, endPt, 0.35f, fade * 0.85f, 0x00FFFF);
+            }
+            return;
         }
 
-        // 3. 3D VOID DRAGON MAW: HÀM RỒNG HƯ KHÔNG LAO TỚI THÔN PHỆ KHÔNG GIAN
-        Vec3 dir = skill.direction();
-        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
-        Vec3 d = dir.normalize();
-        Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
-        Vec3 right = d.cross(up).normalize();
-        Vec3 upVec = d.cross(right).normalize();
+        // HÌNH THÁI 1: VỰC TOÀN HƯ KHÔNG (CỘT LỐC XOÁY BÃO TỐ THẲNG ĐỨNG 42M)
+        float h = 42.0f * mult;
 
-        Vec3 jawBase = new Vec3(0, 3.5, 0).add(d.scale(3.0));
-        float biteAngle = (float) Math.sin(age * 0.32f) * 0.35f + 0.45f; // Hoạt ảnh hàm rồng ngoạm
-        float jawLen = 14.0f;
+        // 1. Sóng gợn nước xoáy dưới mặt hồ / đại dương (Base Concentric Water Ripple Rings)
+        for (int i = 0; i < 4; i++) {
+            float rippleR = ((age * 2.2f + i * 5.0f) % (20.0f * mult));
+            float rippleAlpha = (1.0f - rippleR / (20.0f * mult)) * fade * 0.85f;
+            ring(v, m, 0.10f + i * 0.04f, rippleR, 0.45f, 0x00E5FF, rippleAlpha);
+        }
 
-        // Hàm trên (Upper Jaw)
-        Vec3 upperTip = jawBase.add(d.scale(jawLen)).add(upVec.scale(jawLen * (float) Math.sin(biteAngle)));
-        Vec3 upperLeft = jawBase.add(right.scale(4.5)).add(upVec.scale(2.5));
-        Vec3 upperRight = jawBase.add(right.scale(-4.5)).add(upVec.scale(2.5));
-        stroke(v, m, upperLeft, upperTip, 0.45f, fade * 0.95f, 0xBA68C8);
-        stroke(v, m, upperRight, upperTip, 0.45f, fade * 0.95f, 0xBA68C8);
+        // 2. Lõi Lốc Xoáy Hư Không Tím Đen Khổng Lồ
+        int slices = 16;
+        int segments = 16;
+        float baseR = 3.8f * mult;
+        float topR = 13.5f * mult;
 
-        // Hàm dưới (Lower Jaw)
-        Vec3 lowerTip = jawBase.add(d.scale(jawLen)).add(upVec.scale(-jawLen * (float) Math.sin(biteAngle)));
-        Vec3 lowerLeft = jawBase.add(right.scale(3.8)).add(upVec.scale(-2.0));
-        Vec3 lowerRight = jawBase.add(right.scale(-3.8)).add(upVec.scale(-2.0));
-        stroke(v, m, lowerLeft, lowerTip, 0.45f, fade * 0.95f, 0xBA68C8);
-        stroke(v, m, lowerRight, lowerTip, 0.45f, fade * 0.95f, 0xBA68C8);
+        for (int s = 0; s < slices; s++) {
+            float t0 = (float) s / slices;
+            float t1 = (float) (s + 1) / slices;
+            float y0 = t0 * h;
+            float y1 = t1 * h;
 
-        // Nanh rồng hư không (Void Dragon Fangs)
-        stroke(v, m, upperTip, upperTip.add(upVec.scale(-3.0)), 0.30f, fade * 0.98f, 0xFFFFFF);
-        stroke(v, m, lowerTip, lowerTip.add(upVec.scale(2.5)), 0.30f, fade * 0.98f, 0xFFFFFF);
+            float r0 = (baseR + t0 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t0 * 10.0f + age * 0.25f));
+            float r1 = (baseR + t1 * (topR - baseR)) * (1.0f + 0.08f * (float) Math.sin(t1 * 10.0f + age * 0.25f));
 
-        // 4. Sấm sét thứ nguyên (Dimensional Lightning) xé rách không gian
-        for (int l = 0; l < 8; l++) {
-            double baseA = l * Math.PI / 4.0 + age * 0.05;
-            Vec3 p0 = new Vec3(0, 3.5, 0);
-            for (int seg = 1; seg <= 5; seg++) {
-                double dist = seg * (r / 5.0);
-                double jitterX = Math.sin(age * 0.8 + l * 4.0 + seg * 2.0) * 1.5;
-                double jitterY = Math.cos(age * 0.6 + l * 3.0 + seg * 1.7) * 1.5;
-                Vec3 pNext = new Vec3(Math.cos(baseA) * dist + jitterX, 3.5 + jitterY, Math.sin(baseA) * dist);
-                stroke(v, m, p0, pNext, 0.28f, fade * 0.90f, 0xE1BEE7);
-                p0 = pNext;
+            float rot0 = age * 0.15f + t0 * 1.2f;
+            float rot1 = age * 0.15f + t1 * 1.2f;
+
+            for (int seg = 0; seg < segments; seg++) {
+                double a00 = rot0 + (seg * 2.0 * Math.PI / segments);
+                double a01 = rot0 + ((seg + 1) * 2.0 * Math.PI / segments);
+                double a10 = rot1 + (seg * 2.0 * Math.PI / segments);
+                double a11 = rot1 + ((seg + 1) * 2.0 * Math.PI / segments);
+
+                float x00 = (float) Math.cos(a00) * r0;
+                float z00 = (float) Math.sin(a00) * r0;
+                float x01 = (float) Math.cos(a01) * r0;
+                float z01 = (float) Math.sin(a01) * r0;
+
+                float x10 = (float) Math.cos(a10) * r1;
+                float z10 = (float) Math.sin(a10) * r1;
+                float x11 = (float) Math.cos(a11) * r1;
+                float z11 = (float) Math.sin(a11) * r1;
+
+                int col = (seg % 2 == 0) ? 0x2A0845 : 0x4A148C;
+                if ((s + seg) % 3 == 0) col = 0x6A1B9A;
+                quad(v, m, x00, y0, z00, x01, y0, z01, x11, y1, z11, x10, y1, z10, col, op);
             }
+        }
+
+        cylinder(v, m, baseR * 0.6f, h, 0.95f * fade, 0x0E0018, age);
+
+        // 3. 4 Dải Ruy Băng Nước Xoáy Màu Lam Ngọc
+        int ribbonSteps = 32;
+        for (int rIdx = 0; rIdx < 4; rIdx++) {
+            double startAngle = rIdx * (Math.PI / 2.0);
+            for (int step = 0; step < ribbonSteps; step++) {
+                float ta = (float) step / ribbonSteps;
+                float tb = (float) (step + 1) / ribbonSteps;
+                float ya = ta * h;
+                float yb = tb * h;
+
+                double thetaA = startAngle + (ta * 2.4 * Math.PI * 2.0) - (age * 0.22);
+                double thetaB = startAngle + (tb * 2.4 * Math.PI * 2.0) - (age * 0.22);
+
+                float ra = (baseR + ta * (topR - baseR)) + 1.2f + 0.5f * (float) Math.sin(ta * 8.0f + age * 0.3f);
+                float rb = (baseR + tb * (topR - baseR)) + 1.2f + 0.5f * (float) Math.sin(tb * 8.0f + age * 0.3f);
+
+                Vec3 pa = new Vec3(Math.cos(thetaA) * ra, ya, Math.sin(thetaA) * ra);
+                Vec3 pb = new Vec3(Math.cos(thetaB) * rb, yb, Math.sin(thetaB) * rb);
+
+                stroke(v, m, pa, pb, 0.65f, fade * 0.95f, 0x00E5FF);
+                stroke(v, m, pa.add(0, 0.25, 0), pb.add(0, 0.25, 0), 0.35f, fade * 0.98f, 0xE0F7FA);
+            }
+        }
+
+        // 4. Các Đĩa Phẳng Cộng Hưởng Hư Không Cắt Ngang
+        float[] discHeights = { 0.22f * h, 0.46f * h, 0.70f * h, 0.88f * h };
+        for (int d = 0; d < discHeights.length; d++) {
+            float dy = discHeights[d];
+            float frac = dy / h;
+            float discInnerR = (baseR + frac * (topR - baseR));
+            float discOuterR = discInnerR * 1.55f;
+
+            ring(v, m, dy, discOuterR, 0.55f, 0x80DEEA, fade * 0.85f);
+            ring(v, m, dy + 0.15f, discInnerR, 0.40f, 0xBA68C8, fade * 0.90f);
+
+            int discSegments = 16;
+            for (int seg = 0; seg < discSegments; seg++) {
+                double a0 = (seg * 2.0 * Math.PI / discSegments) + (age * 0.05f * (d % 2 == 0 ? 1 : -1));
+                double a1 = ((seg + 1) * 2.0 * Math.PI / discSegments) + (age * 0.05f * (d % 2 == 0 ? 1 : -1));
+
+                float xi0 = (float) Math.cos(a0) * discInnerR;
+                float zi0 = (float) Math.sin(a0) * discInnerR;
+                float xi1 = (float) Math.cos(a1) * discInnerR;
+                float zi1 = (float) Math.sin(a1) * discInnerR;
+
+                float xo0 = (float) Math.cos(a0) * discOuterR;
+                float zo0 = (float) Math.sin(a0) * discOuterR;
+                float xo1 = (float) Math.cos(a1) * discOuterR;
+                float zo1 = (float) Math.sin(a1) * discOuterR;
+
+                quad(v, m, xi0, dy, zi0, xi1, dy, zi1, xo1, dy, zo1, xo0, dy, zo0, 0x311B92, (int) (fade * 180));
+            }
+        }
+
+        // 5. Đỉnh Hư Không Chân Trời Sự Kiện
+        billboardDisc(v, m, new Vec3(0, h, 0), topR * 1.4f, 0x0A0012, fade * 0.98f);
+        ring(v, m, h, topR * 1.45f, 0.6f, 0x9C27B0, fade * 0.90f);
+
+        // 6. Tinh thể bọt nước & tia sét hư không bay lên trời
+        for (int p = 0; p < 16; p++) {
+            double pa = p * 2.4 + age * 0.08;
+            float py = ((age * 1.2f + p * 2.8f) % h);
+            float pr = (baseR + (py / h) * (topR - baseR)) + (float) Math.sin(p + age * 0.2) * 1.5f;
+            billboardDisc(v, m, new Vec3(Math.cos(pa) * pr, py, Math.sin(pa) * pr), 0.45f, (p % 2 == 0 ? 0x00E5FF : 0xBA68C8), fade * 0.85f);
         }
     }
 
@@ -786,6 +954,178 @@ public final class ClientCinematicSkillRenderer {
                     p0 = pNext;
                 }
             }
+        }
+    }
+
+    // =========================================================================
+    // 6B. ĐẠI PHÁO PLASMA BẠO PHONG 3D (VELDORA TEMPEST CANNON)
+    // =========================================================================
+    private static void renderVeldoraTempestCannon(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float maxRange = 80.0f * skill.powerMultiplier();
+        Vec3 dir = skill.direction();
+        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        Vec3 d = dir.normalize();
+
+        if (age < 35.0f) {
+            float beamFade = (age < 26.0f) ? 1.0f : (float) Math.max(0.0, 1.0 - (age - 26.0f) / 9.0f);
+            Vec3 origin = Vec3.ZERO;
+
+            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 u = d.cross(up).normalize();
+            Vec3 w = d.cross(u).normalize();
+
+            // 1. CỘT PLASMA 3D ĐA TẦNG VOLUMETRIC CYLINDERS CHUẨN ĐIỆN ẢNH BẠO PHONG LONG (CYAN & GOLD)
+            // Lớp 1: Lõi Plasma Trắng Sấm Sét Siêu Sáng (1.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 1.6f, 0xFFFFFF, beamFade * 0.98f, age, 0.0f);
+            // Lớp 2: Thân Chùm Plasma Lam Ngọc Bạo Phong Chân Long (3.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 3.6f, 0x00E5FF, beamFade * 0.88f, age, 2.0f);
+            // Lớp 3: Sấm Sét Hoàng Kim Cực Đại (6.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 6.0f, 0xFFD700, beamFade * 0.65f, age, 4.0f);
+            // Lớp 4: Lốc Xoáy Khí Quyển Bão Tố Điện Từ (9.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 9.0f, 0x00B0FF, beamFade * 0.40f, age, 6.0f);
+            // Lớp 5: Trường Lực Bạo Phong Long Khổng Lồ (12.5m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 12.5f, 0x0D47A1, beamFade * 0.20f, age, 8.0f);
+
+            // 2. 36 NHÁNH LÔI ĐIỆN HOÀNG KIM & CYAN XOẮN ỐC 3D
+            int numTendrils = 36;
+            int tendrilNodes = 14;
+            for (int i = 0; i < numTendrils; i++) {
+                double baseAngle = i * (Math.PI * 2.0 / numTendrils) + age * 0.10;
+                Vec3 last = null;
+                for (int j = 0; j <= tendrilNodes; j++) {
+                    double dist = j * (maxRange / (double) tendrilNodes);
+                    double angle = baseAngle + (j * 0.60);
+                    double jitter = Math.sin(i * 15.3 + j * 7.5 + age * 0.32) * 0.6;
+                    double r = 4.5 + (j % 3) * 1.6 + jitter;
+                    Vec3 curr = origin.add(d.scale(dist))
+                            .add(u.scale(Math.cos(angle) * r))
+                            .add(w.scale(Math.sin(angle) * r));
+                    if (last != null) {
+                        int tendrilCol = (i % 3 == 0) ? 0xFFFFFF : ((i % 3 == 1) ? 0xFFD700 : 0x00E5FF);
+                        float strokeW = (i % 3 == 0) ? 0.24f : 0.18f;
+                        stroke(v, m, last, curr, strokeW, beamFade * (i % 2 == 0 ? 0.95f : 0.75f), tendrilCol);
+                    }
+                    last = curr;
+                }
+            }
+
+            // 3. 8 VÒNG SÓNG NỔ MACH RINGS CYAN & GOLD PHÓNG DỌC THÂN PHÁO
+            for (int k = 1; k <= 8; k++) {
+                double machDist = ((age * 6.5 + k * 10.0) % maxRange);
+                Vec3 ringCenter = origin.add(d.scale(machDist));
+                float ringR = 5.5f + (float) (Math.sin(machDist * 0.25 + age * 0.2) * 1.8f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR, 0.45f, 0x00E5FF, beamFade * 0.88f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR * 0.65f, 0.28f, 0xFFD700, beamFade * 0.95f);
+            }
+
+            // 4. HỌNG PHÁO ĐẦU NÒNG KHAI HỎA TẠI MIỆNG RỒNG
+            Vec3 muzzle1 = origin.add(d.scale(1.2));
+            renderDirectionalRing(v, m, muzzle1, u, w, 9.0f, 0.60f, 0x00E5FF, beamFade * 0.95f);
+            renderDirectionalRing(v, m, muzzle1, u, w, 6.0f, 0.40f, 0xFFD700, beamFade * 0.98f);
+            billboardDisc(v, m, muzzle1, 7.0f, 0x00E5FF, beamFade * 0.92f);
+            billboardDisc(v, m, muzzle1, 4.0f, 0xFFFFFF, beamFade * 0.98f);
+
+            // 5. ĐIỂM VA CHẠM BÙNG NỔ TRỰC DIỆN (IMPACT BLAST)
+            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            billboardDisc(v, m, impactCenter, 15.0f, 0x00E5FF, beamFade * 0.92f);
+            billboardDisc(v, m, impactCenter, 9.0f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 16.0f, 1.0f, 0xFFD700, beamFade * 0.88f);
+        } else {
+            // VỤ NỔ SIÊU TÂN TINH BÃO TỐ (Ticks 35 -> 48)
+            float blastAge = age - 35.0f;
+            float progress = Math.min(1.0f, blastAge / 13.0f);
+            float curR = 75.0f * progress;
+            float fade = (float) Math.max(0.0, 1.0 - progress);
+
+            ring(v, m, 1.5f, curR, 0.90f, 0x00E5FF, fade * 0.95f);
+            ring(v, m, 1.5f, curR * 0.70f, 0.70f, 0xFFD700, fade * 0.90f);
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 9.0f * (1.0f - progress * 0.5f), 130.0f, fade * 0.92f, 0x00E5FF);
+        }
+    }
+
+    // =========================================================================
+    // 6C. ĐẠI PHÁO PLASMA HỖN ĐỘN DIỆT TINH TỨC 3D (CHAOS STAR BUSTER)
+    // =========================================================================
+    private static void renderChaosStarBuster(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float maxRange = 80.0f * skill.powerMultiplier();
+        Vec3 dir = skill.direction();
+        if (dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        Vec3 d = dir.normalize();
+
+        if (age < 35.0f) {
+            float beamFade = (age < 26.0f) ? 1.0f : (float) Math.max(0.0, 1.0 - (age - 26.0f) / 9.0f);
+            Vec3 origin = Vec3.ZERO;
+
+            Vec3 up = Math.abs(d.y) < 0.99 ? new Vec3(0, 1, 0) : new Vec3(1, 0, 0);
+            Vec3 u = d.cross(up).normalize();
+            Vec3 w = d.cross(u).normalize();
+
+            // 1. CỘT PLASMA 3D ĐA TẦNG HỖN ĐỘN HƯ KHÔNG (MAGENTA & DEEP PURPLE)
+            // Lớp 1: Lõi Plasma Trắng Hồng Tinh Tú (1.6m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 1.6f, 0xFFFFFF, beamFade * 0.98f, age, 0.0f);
+            // Lớp 2: Plasma Hồng Tím Neon Hỗn Mang (3.8m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 3.8f, 0xFF00FF, beamFade * 0.88f, age, 2.0f);
+            // Lớp 3: Hư Không Tím Ma Pháp Cực Đại (6.2m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 6.2f, 0x8A2BE2, beamFade * 0.65f, age, 4.0f);
+            // Lớp 4: Vực Thẳm Tối Tăm Ma Tố (9.5m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 9.5f, 0x4B0082, beamFade * 0.40f, age, 6.0f);
+            // Lớp 5: Quầng Hỗn Độn Long Vô Biên (13.0m)
+            renderDirectionalPlasmaCylinder(v, m, origin, d, maxRange, 13.0f, 0x2E0854, beamFade * 0.20f, age, 8.0f);
+
+            // 2. 36 NHÁNH MA TỐ HẮC LÔI TÍM HỒNG XOẮN ỐC 3D
+            int numTendrils = 36;
+            int tendrilNodes = 14;
+            for (int i = 0; i < numTendrils; i++) {
+                double baseAngle = i * (Math.PI * 2.0 / numTendrils) + age * 0.10;
+                Vec3 last = null;
+                for (int j = 0; j <= tendrilNodes; j++) {
+                    double dist = j * (maxRange / (double) tendrilNodes);
+                    double angle = baseAngle + (j * 0.60);
+                    double jitter = Math.sin(i * 14.7 + j * 7.8 + age * 0.30) * 0.6;
+                    double r = 4.8 + (j % 3) * 1.6 + jitter;
+                    Vec3 curr = origin.add(d.scale(dist))
+                            .add(u.scale(Math.cos(angle) * r))
+                            .add(w.scale(Math.sin(angle) * r));
+                    if (last != null) {
+                        int tendrilCol = (i % 3 == 0) ? 0xFFFFFF : ((i % 3 == 1) ? 0xFF00FF : 0x8A2BE2);
+                        float strokeW = (i % 3 == 0) ? 0.24f : 0.18f;
+                        stroke(v, m, last, curr, strokeW, beamFade * (i % 2 == 0 ? 0.95f : 0.75f), tendrilCol);
+                    }
+                    last = curr;
+                }
+            }
+
+            // 3. 8 VÒNG SÓNG NỔ MACH RINGS HỖN ĐỘN
+            for (int k = 1; k <= 8; k++) {
+                double machDist = ((age * 6.5 + k * 10.0) % maxRange);
+                Vec3 ringCenter = origin.add(d.scale(machDist));
+                float ringR = 5.6f + (float) (Math.sin(machDist * 0.25 + age * 0.2) * 1.8f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR, 0.45f, 0xFF00FF, beamFade * 0.88f);
+                renderDirectionalRing(v, m, ringCenter, u, w, ringR * 0.65f, 0.28f, 0x8A2BE2, beamFade * 0.95f);
+            }
+
+            // 4. HỌNG PHÁO ĐẦU NÒNG KHAI HỎA
+            Vec3 muzzle1 = origin.add(d.scale(1.2));
+            renderDirectionalRing(v, m, muzzle1, u, w, 9.2f, 0.60f, 0xFF00FF, beamFade * 0.95f);
+            renderDirectionalRing(v, m, muzzle1, u, w, 6.0f, 0.40f, 0x8A2BE2, beamFade * 0.98f);
+            billboardDisc(v, m, muzzle1, 7.2f, 0xFF00FF, beamFade * 0.92f);
+            billboardDisc(v, m, muzzle1, 4.0f, 0xFFFFFF, beamFade * 0.98f);
+
+            // 5. ĐIỂM VA CHẠM BÙNG NỔ TRỰC DIỆN
+            Vec3 impactCenter = origin.add(d.scale(maxRange));
+            billboardDisc(v, m, impactCenter, 15.0f, 0xFF00FF, beamFade * 0.92f);
+            billboardDisc(v, m, impactCenter, 9.0f, 0xFFFFFF, beamFade * 0.98f);
+            renderDirectionalRing(v, m, impactCenter, u, w, 16.0f, 1.0f, 0x8A2BE2, beamFade * 0.88f);
+        } else {
+            // VỤ NỔ SIÊU TÂN TINH HƯ KHÔNG (Ticks 35 -> 48)
+            float blastAge = age - 35.0f;
+            float progress = Math.min(1.0f, blastAge / 13.0f);
+            float curR = 75.0f * progress;
+            float fade = (float) Math.max(0.0, 1.0 - progress);
+
+            ring(v, m, 1.5f, curR, 0.90f, 0xFF00FF, fade * 0.95f);
+            ring(v, m, 1.5f, curR * 0.70f, 0.70f, 0x4B0082, fade * 0.90f);
+            cylinderOffset(v, m, (float) (d.x * maxRange), (float) (d.z * maxRange), 9.0f * (1.0f - progress * 0.5f), 130.0f, fade * 0.92f, 0xFF00FF);
         }
     }
 
@@ -2288,5 +2628,268 @@ public final class ClientCinematicSkillRenderer {
 
     private static void energyVertex(VertexConsumer v, Matrix4f m, Vec3 p, int color, int opacity, float u, float texV) {
         energyVertex(v, m, (float) p.x, (float) p.y, (float) p.z, color, opacity, u, texV);
+    }
+
+    // =========================================================================
+    // HỆ THỐNG RENDER 3D CHO TẤT CẢ KỸ NĂNG ĐÁNH TAY (CQC) & HINATA & BÁ KHÍ
+    // Packing powerMultiplier = styleId * 100.0f + colorIndex * 10.0f + scale(1..9.5f)
+    // =========================================================================
+    private static final int[] CQC_PALETTE = {
+            0xFFE0F7FA, // 0: White-Cyan (Hinata / Rapier)
+            0xFFFFD54F, // 1: Gold (Veldora / Holy Guard / Milim)
+            0xFF38BDF8, // 2: Storm/Charybdis Cyan-Blue
+            0xFFA5F3FC, // 3: Velzard Ice Diamond
+            0xFFFF5722, // 4: Velgrynd Crimson Acceleration
+            0xFFE879F9, // 5: Chronoa Violet-Time
+            0xFFDC2626, // 6: Primordial/Kubo Blood Crimson
+            0xFF22C55E, // 7: Marbas/Spirit Emerald
+            0xFFF97316, // 8: Geld Heavy Earth Amber
+            0xFFC084FC  // 9: Void / Azathoth Purple
+    };
+
+    private static void renderCqcTechnique(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float packed = skill.powerMultiplier();
+        int styleId = Math.clamp((int) (packed / 100.0f), 0, 11);
+        int colorIdx = Math.clamp(((int) (packed / 10.0f)) % 10, 0, CQC_PALETTE.length - 1);
+        float scale = Math.max(0.9f, packed % 10.0f);
+        int mainColor = CQC_PALETTE[colorIdx];
+        int subColor = 0xFFFFFFFF;
+
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        Vec3 dir = skill.direction();
+        if (dir == null || dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        dir = dir.normalize();
+        Vec3 right = dir.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
+        right = right.normalize();
+        Vec3 up = right.cross(dir).normalize();
+
+        switch (styleId) {
+            case 0 -> { // 3D Sword Crescent Arc + Slash Ribbon
+                float r = (1.6f + 1.1f * t) * scale;
+                drawOrientedArc(v, m, new Vec3(0, 1.1, 0), dir, right, up, r, 0.35f * scale, -1.25f, 1.25f, 0.25f, mainColor, alpha);
+                drawOrientedArc(v, m, new Vec3(0, 1.1, 0), dir, right, up, r * 0.85f, 0.14f * scale, -1.0f, 1.0f, -0.15f, subColor, alpha * 0.9f);
+            }
+            case 1 -> { // 3D Multi-Thrust Pierce Cones (3-6 Razor Spear Beams)
+                int count = 3 + (colorIdx % 3);
+                for (int i = 0; i < count; i++) {
+                    float spread = (i - (count - 1) * 0.5f) * 0.38f * scale;
+                    float yOff = 1.0f + ((i % 2 == 0) ? 0.22f : -0.18f) * scale;
+                    Vec3 start = right.scale(spread).add(0, yOff, 0);
+                    float reach = (2.8f + t * 2.8f) * scale;
+                    Vec3 end = start.add(dir.scale(reach));
+                    stroke(v, m, start, end, 0.11f * scale, alpha * 0.85f, mainColor);
+                    stroke(v, m, start.add(0, 0.05, 0), end, 0.05f * scale, alpha, subColor);
+                    ringAt(v, m, start.add(dir.scale(reach * 0.45f)), dir, right, up, 0.38f * (1.1f - t * 0.5f) * scale, 0.06f, mainColor, alpha * 0.7f);
+                }
+            }
+            case 2 -> { // 3D Expanding Shockwave Rings + 12 Ground Cracks
+                float r1 = (1.2f + t * 4.2f) * scale;
+                float r2 = (0.6f + t * 2.9f) * scale;
+                ring(v, m, 0.12f, r1, 0.28f * (1.0f - t * 0.5f) * scale, mainColor, alpha);
+                ring(v, m, 0.35f + t * 0.6f, r2, 0.18f * scale, subColor, alpha * 0.85f);
+                for (int i = 0; i < 12; i++) {
+                    double a = i * Math.PI * 2.0 / 12.0;
+                    Vec3 p0 = new Vec3(Math.cos(a) * 0.5, 0.12, Math.sin(a) * 0.5);
+                    Vec3 p1 = new Vec3(Math.cos(a) * r1 * 1.1, 0.25 + t * 0.4, Math.sin(a) * r1 * 1.1);
+                    stroke(v, m, p0, p1, 0.09f * scale, alpha * 0.75f, mainColor);
+                }
+            }
+            case 3 -> { // 3D Crossed Claw / X-Rend
+                Vec3 center = dir.scale(1.2 * scale).add(0, 1.15, 0);
+                float r = (1.4f + 0.9f * t) * scale;
+                drawOrientedArc(v, m, center, dir, right, up, r, 0.24f * scale, -1.1f, 1.1f, 0.72f, mainColor, alpha);
+                drawOrientedArc(v, m, center, dir, right, up, r, 0.24f * scale, -1.1f, 1.1f, -0.72f, mainColor, alpha);
+                drawOrientedArc(v, m, center, dir, right, up, r * 0.82f, 0.10f * scale, -0.9f, 0.9f, 0.0f, subColor, alpha * 0.85f);
+            }
+            case 4 -> { // 3D Spiral Sonic Dash / Tackle Tunnel
+                float len = 4.5f * scale;
+                for (int rIdx = 0; rIdx < 5; rIdx++) {
+                    float along = ((rIdx / 5.0f) + t * 0.6f) % 1.0f * len;
+                    Vec3 c = dir.scale(along).add(0, 1.0, 0);
+                    float rad = (0.55f + rIdx * 0.22f) * scale;
+                    ringAt(v, m, c, dir, right, up, rad, 0.10f * scale, (rIdx % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+                stroke(v, m, new Vec3(0, 1.0, 0), dir.scale(len).add(0, 1.0, 0), 0.22f * scale, alpha * 0.75f, mainColor);
+            }
+            case 5 -> { // 3D 360 Spinning Sweep / Tail Whip Halo
+                float r = (2.2f + 1.4f * t) * scale;
+                float spin = age * 0.35f;
+                ring(v, m, 0.95f, r, 0.32f * scale, mainColor, alpha * 0.9f);
+                ring(v, m, 1.15f, r * 0.78f, 0.16f * scale, subColor, alpha * 0.8f);
+                for (int i = 0; i < 4; i++) {
+                    double a = spin + i * Math.PI * 0.5;
+                    Vec3 p = new Vec3(Math.cos(a) * r, 1.05, Math.sin(a) * r);
+                    stroke(v, m, new Vec3(0, 1.05, 0), p, 0.14f * scale, alpha * 0.65f, mainColor);
+                }
+            }
+            case 6 -> { // 3D Golden Guard Dome & Counter Burst
+                float domeR = (1.6f + t * 1.4f) * scale;
+                for (int yIdx = 0; yIdx < 4; yIdx++) {
+                    float y = 0.25f + yIdx * 0.55f * scale;
+                    float sliceR = domeR * (float) Math.sqrt(Math.max(0.15f, 1.0f - (yIdx * 0.22f)));
+                    ring(v, m, y, sliceR, 0.10f * scale, (yIdx % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+                for (int s = 0; s < 8; s++) {
+                    double a = s * Math.PI * 0.25 + age * 0.15;
+                    Vec3 tip = new Vec3(Math.cos(a) * domeR * 1.5, 1.1 + Math.sin(a * 2.0) * 0.4, Math.sin(a) * domeR * 1.5);
+                    stroke(v, m, new Vec3(0, 1.0, 0), tip, 0.09f * scale, alpha * 0.75f, subColor);
+                }
+            }
+            case 7 -> { // 3D Uppercut / Rising Sky Vortex
+                float h = (3.0f + t * 3.5f) * scale;
+                for (int i = 0; i < 16; i++) {
+                    float p0 = i / 16.0f;
+                    float p1 = (i + 1) / 16.0f;
+                    double a0 = p0 * Math.PI * 4.0 + age * 0.45;
+                    double a1 = p1 * Math.PI * 4.0 + age * 0.45;
+                    float rad0 = (0.4f + p0 * 1.1f) * scale;
+                    float rad1 = (0.4f + p1 * 1.1f) * scale;
+                    stroke(v, m, new Vec3(Math.cos(a0) * rad0, p0 * h, Math.sin(a0) * rad0),
+                            new Vec3(Math.cos(a1) * rad1, p1 * h, Math.sin(a1) * rad1), 0.15f * scale, alpha, mainColor);
+                }
+                stroke(v, m, Vec3.ZERO, new Vec3(0, h, 0), 0.24f * scale, alpha * 0.8f, subColor);
+            }
+            case 8 -> { // 3D Aerial Dive / Meteor Crash Funnel
+                float topY = (4.0f - t * 2.2f) * scale;
+                ring(v, m, 0.15f, (1.0f + t * 3.2f) * scale, 0.28f * scale, mainColor, alpha);
+                for (int i = 0; i < 8; i++) {
+                    double a = i * Math.PI * 0.25 + age * 0.2;
+                    Vec3 topPt = new Vec3(Math.cos(a) * 0.4f * scale, topY, Math.sin(a) * 0.4f * scale);
+                    Vec3 botPt = new Vec3(Math.cos(a) * (1.8f + t * 1.6f) * scale, 0.15, Math.sin(a) * (1.8f + t * 1.6f) * scale);
+                    stroke(v, m, topPt, botPt, 0.12f * scale, alpha * 0.8f, (i % 2 == 0) ? mainColor : subColor);
+                }
+            }
+            case 9 -> { // 3D Afterimage Silhouette Streak
+                for (int step = 0; step < 4; step++) {
+                    Vec3 c = dir.scale(-step * 0.9 * scale).add(0, 1.0, 0);
+                    float stepAlpha = alpha * (1.0f - step * 0.22f);
+                    billboardDisc(v, m, c, 0.65f * scale, mainColor, stepAlpha * 0.5f);
+                    ringAt(v, m, c, dir, right, up, 0.75f * scale, 0.08f, subColor, stepAlpha * 0.75f);
+                }
+            }
+            default -> { // 3D Colossal Cyclone / Charybdis Vortex (style 10-11)
+                float funnelH = 4.5f * scale;
+                for (int l = 0; l < 6; l++) {
+                    float y = 0.2f + (l / 6.0f) * funnelH;
+                    float rad = (1.2f + l * 0.55f + t * 1.1f) * scale;
+                    ring(v, m, y, rad, 0.22f * scale, (l % 2 == 0) ? mainColor : subColor, alpha * 0.85f);
+                }
+            }
+        }
+    }
+
+    private static void renderDeadEndRainbow(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float scale = Math.max(1.0f, skill.powerMultiplier());
+        Vec3 dir = skill.direction();
+        if (dir == null || dir.lengthSqr() < 1e-4) dir = new Vec3(0, 0, 1);
+        dir = dir.normalize();
+        Vec3 right = dir.cross(new Vec3(0, 1, 0));
+        if (right.lengthSqr() < 1e-4) right = new Vec3(1, 0, 0);
+        right = right.normalize();
+        Vec3 up = right.cross(dir).normalize();
+
+        int[] rainbow = {0xFFFF1744, 0xFFFF9100, 0xFFFFEA00, 0xFF00E676, 0xFF00E5FF, 0xFF2979FF, 0xFFD500F9};
+        Vec3 impactCenter = dir.scale(1.6 * scale).add(0, 1.15, 0);
+
+        // 7 Rotating Rainbow Spiritron Orbs + Starburst Rays
+        float orbitR = (1.1f + t * 2.6f) * scale;
+        for (int i = 0; i < 7; i++) {
+            double ang = (Math.PI * 2.0 * i / 7.0) + age * 0.28;
+            Vec3 orb = impactCenter.add(right.scale(Math.cos(ang) * orbitR)).add(up.scale(Math.sin(ang) * orbitR));
+            billboardDisc(v, m, orb, 0.42f * scale, rainbow[i], alpha);
+            stroke(v, m, new Vec3(0, 1.1, 0), orb, 0.11f * scale, alpha * 0.9f, rainbow[i]);
+            Vec3 rayOut = impactCenter.add(right.scale(Math.cos(ang) * orbitR * 2.2)).add(up.scale(Math.sin(ang) * orbitR * 2.2)).add(dir.scale(1.8 * scale));
+            stroke(v, m, orb, rayOut, 0.09f * scale, alpha * 0.85f, rainbow[i]);
+        }
+
+        // Central White-Gold Lance Beam + Expanding Horizon Rings
+        stroke(v, m, new Vec3(0, 1.1, 0), impactCenter.add(dir.scale(4.5 * scale)), 0.24f * scale, alpha, 0xFFFFFFFF);
+        ring(v, m, 0.15f, (1.4f + t * 4.5f) * scale, 0.26f * scale, 0xFFFFEA00, alpha * 0.85f);
+        ringAt(v, m, impactCenter, dir, right, up, (0.9f + t * 2.1f) * scale, 0.16f * scale, 0xFF00E5FF, alpha * 0.9f);
+    }
+
+    private static void renderHinataThoughtAccel(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float scale = Math.max(1.0f, skill.powerMultiplier());
+        ring(v, m, 0.2f + t * 1.4f, (1.2f + t * 1.6f) * scale, 0.14f, 0xFFFFE082, alpha);
+        ring(v, m, 1.1f, 0.95f * scale, 0.10f, 0xFFE0F7FA, alpha * 0.9f);
+        for (int i = 0; i < 6; i++) {
+            double a = i * Math.PI / 3.0 + age * 0.35;
+            Vec3 p0 = new Vec3(Math.cos(a) * 0.8 * scale, 0.3, Math.sin(a) * 0.8 * scale);
+            Vec3 p1 = new Vec3(Math.cos(a) * 1.4 * scale, 2.2, Math.sin(a) * 1.4 * scale);
+            stroke(v, m, p0, p1, 0.07f, alpha * 0.8f, 0xFFFFFFFF);
+        }
+    }
+
+    private static void renderDemonLordHaki(VertexConsumer v, Matrix4f m, ActiveSkillInstance skill, float age) {
+        float t = Math.clamp(age / Math.max(1.0f, skill.totalTicks()), 0.0f, 1.0f);
+        float alpha = (float) Math.sin(t * Math.PI);
+        if (alpha <= 0.02f) return;
+
+        float maxR = 26.0f * Math.max(0.5f, skill.powerMultiplier());
+        for (int w = 0; w < 3; w++) {
+            float waveT = Math.max(0.0f, t - w * 0.14f);
+            if (waveT <= 0.0f) continue;
+            float r = 1.5f + waveT * maxR;
+            int col = (w % 2 == 0) ? 0xFFFACC15 : 0xFFDC2626;
+            ring(v, m, 0.25f + w * 0.45f, r, 0.48f * (1.0f - waveT * 0.5f), col, alpha * (1.0f - waveT * 0.4f));
+        }
+        for (int i = 0; i < 16; i++) {
+            double a = i * Math.PI / 8.0 + age * 0.12;
+            float r = 2.0f + t * maxR * 0.85f;
+            stroke(v, m, new Vec3(0, 0.9, 0), new Vec3(Math.cos(a) * r, 0.4 + Math.sin(a * 3.0) * 0.6, Math.sin(a) * r),
+                    0.16f, alpha * 0.7f, (i % 2 == 0) ? 0xFFFDE047 : 0xFFA855F7);
+        }
+    }
+
+    private static void drawOrientedArc(VertexConsumer v, Matrix4f m, Vec3 origin, Vec3 dir, Vec3 right, Vec3 up,
+                                        float radius, float halfWidth, float startAng, float endAng, float rollRad, int color, float alpha) {
+        int segs = 14;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float cosRoll = (float) Math.cos(rollRad);
+        float sinRoll = (float) Math.sin(rollRad);
+        Vec3 axisX = right.scale(cosRoll).add(up.scale(sinRoll)).normalize();
+        float rIn = Math.max(0.1f, radius - halfWidth);
+        float rOut = radius + halfWidth;
+
+        for (int i = 0; i < segs; i++) {
+            float a1 = Mth.lerp(i / (float) segs, startAng, endAng);
+            float a2 = Mth.lerp((i + 1) / (float) segs, startAng, endAng);
+            Vec3 d1 = dir.scale(Math.cos(a1)).add(axisX.scale(Math.sin(a1)));
+            Vec3 d2 = dir.scale(Math.cos(a2)).add(axisX.scale(Math.sin(a2)));
+            energyVertex(v, m, origin.add(d1.scale(rIn)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d1.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d2.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, origin.add(d2.scale(rIn)), color, opacity, 0.875f, 0.5f);
+        }
+    }
+
+    private static void ringAt(VertexConsumer v, Matrix4f m, Vec3 center, Vec3 normal, Vec3 right, Vec3 up,
+                               float radius, float halfWidth, int color, float alpha) {
+        int segs = 18;
+        int opacity = Math.clamp(Math.round(alpha * 255.0f), 0, 255);
+        float rIn = Math.max(0.05f, radius - halfWidth);
+        float rOut = radius + halfWidth;
+        for (int i = 0; i < segs; i++) {
+            double a1 = i * Math.PI * 2.0 / segs;
+            double a2 = (i + 1) * Math.PI * 2.0 / segs;
+            Vec3 dir1 = right.scale(Math.cos(a1)).add(up.scale(Math.sin(a1)));
+            Vec3 dir2 = right.scale(Math.cos(a2)).add(up.scale(Math.sin(a2)));
+            energyVertex(v, m, center.add(dir1.scale(rIn)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir1.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir2.scale(rOut)), color, opacity, 0.875f, 0.5f);
+            energyVertex(v, m, center.add(dir2.scale(rIn)), color, opacity, 0.875f, 0.5f);
+        }
     }
 }

@@ -66,29 +66,32 @@ public class ChronoaEntity extends PathfinderMob {
             new DustParticleOptions(new Vector3f(0.65F, 0.25F, 0.95F), 1.6F);
 
     private final ServerBossEvent bossEvent = new ServerBossEvent(
-            Component.literal("§5§l[DŨNG GIẢ THỜI KHÔNG] §c§lCHRONOA §7- §d[Hắc Hóa ~65% Thần Khí]"),
+            Component.literal("§5§l[DŨNG GIẢ THỜI KHÔNG] §c§lCHRONOA §7- §d[Chân Dũng Giả • 90% Kết Giới]"),
             BossEvent.BossBarColor.PURPLE,
             BossEvent.BossBarOverlay.NOTCHED_10
     );
 
     private int timeStopCooldown = 140;
     private int slashCooldown = 45;
+    private int voidOrbCooldown = 70;
+    private int severanceCooldown = 110;
+    private int prisonCooldown = 180;
     private int chaosExposure = 0;
 
     public ChronoaEntity(EntityType<? extends PathfinderMob> entityType, Level level) {
         super(entityType, level);
-        this.xpReward = 900;
+        this.xpReward = 2500;
     }
 
     public static AttributeSupplier.Builder createAttributes() {
         return Mob.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 2200.0D)
-                .add(Attributes.MOVEMENT_SPEED, 0.36D)
-                .add(Attributes.ATTACK_DAMAGE, 32.0D) // ~60-65% sức mạnh player dùng Thánh Kiếm/Giáp Thần
-                .add(Attributes.ARMOR, 18.0D)
-                .add(Attributes.ARMOR_TOUGHNESS, 10.0D)
-                .add(Attributes.KNOCKBACK_RESISTANCE, 0.75D)
-                .add(Attributes.FOLLOW_RANGE, 40.0D);
+                .add(Attributes.MAX_HEALTH, 25500.0D)
+                .add(Attributes.MOVEMENT_SPEED, 0.44D)
+                .add(Attributes.ATTACK_DAMAGE, 540.0D)
+                .add(Attributes.ARMOR, 46.0D)
+                .add(Attributes.ARMOR_TOUGHNESS, 30.0D)
+                .add(Attributes.KNOCKBACK_RESISTANCE, 0.95D)
+                .add(Attributes.FOLLOW_RANGE, 48.0D);
     }
 
     @Override
@@ -107,6 +110,8 @@ public class ChronoaEntity extends PathfinderMob {
         this.goalSelector.addGoal(4, new RandomLookAroundGoal(this));
 
         this.targetSelector.addGoal(1, new HurtByTargetGoal(this));
+        this.targetSelector.addGoal(1, new NearestAttackableTargetGoal<>(this, VeldoraEntity.class, 5, false, false,
+                v -> this.isCorrupted() && v instanceof VeldoraEntity vd && vd.isAlive() && !vd.isSealed()));
         // Khi hắc hóa -> Tấn công MỌI Mob & Player trong tầm nhìn!
         this.targetSelector.addGoal(2, new NearestAttackableTargetGoal<>(this, Mob.class, 5, true, false,
                 m -> this.isCorrupted() && m != this && m.isAlive()));
@@ -227,6 +232,9 @@ public class ChronoaEntity extends PathfinderMob {
         }
 
         if (isCorrupted()) {
+            if (this.tickCount % 10 == 0 && this.getHealth() < this.getMaxHealth()) {
+                this.heal(15.0F);
+            }
             if (com.minhphuc.weapons.content.tensura.SkillNullificationAbility.isEntitySkillSealed(this)) {
                 return;
             }
@@ -234,25 +242,74 @@ public class ChronoaEntity extends PathfinderMob {
             if (target != null && target.isAlive()) {
                 if (timeStopCooldown > 0) timeStopCooldown--;
                 if (slashCooldown > 0) slashCooldown--;
+                if (voidOrbCooldown > 0) voidOrbCooldown--;
+                if (severanceCooldown > 0) severanceCooldown--;
+                if (prisonCooldown > 0) prisonCooldown--;
 
-                if (timeStopCooldown <= 0 && this.distanceToSqr(target) <= 16.0D * 16.0D) {
-                    castChronoFreeze(sl);
-                    timeStopCooldown = 200;
+                double distSq = this.distanceToSqr(target);
+                if (prisonCooldown <= 0 && distSq <= 16.0D * 16.0D) {
+                    castInfinitePrison(sl, target);
+                    prisonCooldown = 340;
                 }
-                if (slashCooldown <= 0 && this.distanceToSqr(target) <= 12.0D * 12.0D) {
+                if (timeStopCooldown <= 0 && distSq <= 16.0D * 16.0D) {
+                    castChronoFreeze(sl);
+                    timeStopCooldown = 180;
+                }
+                if (severanceCooldown <= 0 && distSq <= 10.5D * 10.5D) {
+                    castAbsoluteSeveranceArc(sl);
+                    severanceCooldown = 130;
+                }
+                if (slashCooldown <= 0 && distSq <= 14.0D * 14.0D) {
                     castMoonlightDimensionalSlash(sl, target);
-                    slashCooldown = 50;
+                    slashCooldown = 42;
+                }
+                if (voidOrbCooldown <= 0 && distSq <= 26.0D * 26.0D) {
+                    castChronoVoidOrbs(sl, target);
+                    voidOrbCooldown = 75;
                 }
             }
         }
     }
 
+    @Override
+    public boolean doHurtTarget(net.minecraft.world.entity.Entity target) {
+        boolean hit = super.doHurtTarget(target);
+        if (hit && target instanceof LivingEntity living && this.level() instanceof ServerLevel sl) {
+            float pierceBonus = isCorrupted() ? 85.0F : 18.0F;
+            applyArmorPiercingHit(sl, living, pierceBonus);
+        }
+        return hit;
+    }
+
+    private void applyArmorPiercingHit(ServerLevel sl, LivingEntity victim, float damage) {
+        if (victim == null || !victim.isAlive()) return;
+        victim.invulnerableTime = 0;
+        victim.addTag("ChronoaPenetrationDamage");
+        try {
+            victim.hurt(this.damageSources().indirectMagic(this, this), damage);
+        } finally {
+            victim.removeTag("ChronoaPenetrationDamage");
+        }
+        sl.sendParticles(CHRONO_VIOLET, victim.getX(), victim.getY() + 1.0, victim.getZ(), 8, 0.35, 0.45, 0.35, 0.04);
+    }
+
+    private void castInfinitePrison(ServerLevel sl, LivingEntity target) {
+        com.minhphuc.weapons.content.evolution.InfiniteDragonPrisonAbility.spawnChronoaPrison(
+                sl, this, target.position(), 11.5D, 220
+        );
+        for (ServerPlayer sp : sl.getEntitiesOfClass(ServerPlayer.class, this.getBoundingBox().inflate(24.0D))) {
+            sp.displayClientMessage(Component.literal("§5§l[CHRONOA] §dLồng Giam Vô Hạn — Không gian và thời gian quanh ngươi đã bị khóa chặt!"), true);
+        }
+    }
+
     private void castChronoFreeze(ServerLevel sl) {
-        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.0F, 1.35F);
-        sl.sendParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + 1.2, this.getZ(), 40, 6.0, 1.5, 6.0, 0.02);
-        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(12.0D), x -> x != this && x.isAlive())) {
-            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 55, 6));
-            e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 55, 1));
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.WARDEN_SONIC_BOOM, SoundSource.HOSTILE, 2.2F, 1.35F);
+        sl.sendParticles(ParticleTypes.END_ROD, this.getX(), this.getY() + 1.2, this.getZ(), 55, 7.0, 1.8, 7.0, 0.03);
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(15.0D), x -> x != this && x.isAlive())) {
+            e.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 75, 6));
+            e.addEffect(new MobEffectInstance(MobEffects.WEAKNESS, 75, 1));
+            e.addEffect(new MobEffectInstance(MobEffects.DIG_SLOWDOWN, 75, 2));
+            applyArmorPiercingHit(sl, e, 120.0F);
         }
     }
 
@@ -260,14 +317,45 @@ public class ChronoaEntity extends PathfinderMob {
         Vec3 start = this.position().add(0, 1.1, 0);
         Vec3 end = target.position().add(0, 1.0, 0);
         Vec3 diff = end.subtract(start);
-        for (int i = 1; i <= 10; i++) {
-            Vec3 p = start.add(diff.scale(i / 10.0D));
-            sl.sendParticles(CHRONO_VIOLET, p.x, p.y, p.z, 2, 0.2, 0.2, 0.2, 0.02);
+        for (int i = 1; i <= 14; i++) {
+            Vec3 p = start.add(diff.scale(i / 14.0D));
+            sl.sendParticles(CHRONO_VIOLET, p.x, p.y, p.z, 3, 0.25, 0.25, 0.25, 0.02);
             sl.sendParticles(ParticleTypes.SWEEP_ATTACK, p.x, p.y, p.z, 1, 0.1, 0.1, 0.1, 0.0);
         }
-        // Sát thương ~60-65% ngưỡng Thánh Kiếm player
-        target.hurt(this.damageSources().mobAttack(this), 42.0F);
-        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 1.8F, 1.2F);
+        applyArmorPiercingHit(sl, target, 375.0F);
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.PLAYER_ATTACK_SWEEP, SoundSource.HOSTILE, 2.0F, 1.15F);
+    }
+
+    private void castChronoVoidOrbs(ServerLevel sl, LivingEntity target) {
+        Vec3 origin = this.position().add(0, 1.6, 0);
+        Vec3 toTarget = target.position().add(0, 1.0, 0).subtract(origin);
+        double dist = Math.max(1.0D, toTarget.length());
+        Vec3 dir = toTarget.normalize();
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ILLUSIONER_CAST_SPELL, SoundSource.HOSTILE, 2.0F, 0.9F);
+        for (int s = 1; s <= 12; s++) {
+            Vec3 p = origin.add(dir.scale(dist * (s / 12.0D)));
+            sl.sendParticles(ParticleTypes.WITCH, p.x, p.y, p.z, 4, 0.25, 0.25, 0.25, 0.01);
+            sl.sendParticles(ParticleTypes.DRAGON_BREATH, p.x, p.y, p.z, 2, 0.15, 0.15, 0.15, 0.01);
+        }
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, target.getBoundingBox().inflate(3.2D), x -> x != this && x.isAlive())) {
+            applyArmorPiercingHit(sl, e, 234.0F);
+        }
+    }
+
+    private void castAbsoluteSeveranceArc(ServerLevel sl) {
+        sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.TRIDENT_THUNDER.value(), SoundSource.HOSTILE, 2.0F, 1.4F);
+        for (int a = 0; a < 24; a++) {
+            double rad = (Math.PI * 2.0D * a) / 24.0D;
+            double px = this.getX() + Math.cos(rad) * 5.0D;
+            double pz = this.getZ() + Math.sin(rad) * 5.0D;
+            sl.sendParticles(CHRONO_VIOLET, px, this.getY() + 1.0, pz, 3, 0.3, 0.3, 0.3, 0.02);
+            sl.sendParticles(ParticleTypes.END_ROD, px, this.getY() + 1.2, pz, 1, 0.1, 0.1, 0.1, 0.02);
+        }
+        for (LivingEntity e : sl.getEntitiesOfClass(LivingEntity.class, this.getBoundingBox().inflate(10.0D), x -> x != this && x.isAlive())) {
+            applyArmorPiercingHit(sl, e, 435.0F);
+            Vec3 knock = e.position().subtract(this.position()).normalize().scale(0.85D);
+            e.push(knock.x, 0.35D, knock.z);
+        }
     }
 
     @Override
@@ -279,9 +367,13 @@ public class ChronoaEntity extends PathfinderMob {
             triggerCorruption((ServerLevel) this.level(), "Bị kích động xung đột");
             return false;
         }
-        // Giáp Thần Linh giảm 35% sát thương nhận vào
+        // Giáp Dũng Giả Thời Không chặn 90% sát thương nhận vào
         if (isCorrupted()) {
-            amount *= 0.65F;
+            amount *= 0.10F;
+            if (this.level() instanceof ServerLevel sl) {
+                sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.AMETHYST_BLOCK_CHIME, SoundSource.HOSTILE, 1.2F, 1.5F);
+                sl.sendParticles(ParticleTypes.ENCHANT, this.getX(), this.getY() + 1.1, this.getZ(), 8, 0.45, 0.55, 0.45, 0.05);
+            }
         }
         return super.hurt(source, amount);
     }

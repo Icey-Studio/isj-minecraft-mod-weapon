@@ -71,11 +71,11 @@ public class ElementalSpiritEntity extends TamableAnimal {
 
     public static AttributeSupplier.Builder createAttributes() {
         return TamableAnimal.createMobAttributes()
-                .add(Attributes.MAX_HEALTH, 220.0D)
+                .add(Attributes.MAX_HEALTH, 660.0D)
                 .add(Attributes.MOVEMENT_SPEED, 0.38D)
                 .add(Attributes.FLYING_SPEED, 0.55D)
-                .add(Attributes.ATTACK_DAMAGE, 18.0D)
-                .add(Attributes.ARMOR, 14.0D)
+                .add(Attributes.ATTACK_DAMAGE, 54.0D)
+                .add(Attributes.ARMOR, 24.0D)
                 .add(Attributes.FOLLOW_RANGE, 36.0D);
     }
 
@@ -224,11 +224,11 @@ public class ElementalSpiritEntity extends TamableAnimal {
             sl.sendParticles(dust, pt.x, pt.y, pt.z, 2, 0.1, 0.1, 0.1, 0.02);
         }
 
-        float baseDmg = 24.0F;
+        float baseDmg = 72.0F;
         switch (type) {
             case FIRE -> {
                 target.setRemainingFireTicks(100);
-                target.hurt(this.damageSources().inFire(), baseDmg + 8.0F);
+                target.hurt(this.damageSources().inFire(), baseDmg + 24.0F);
                 sl.sendParticles(ParticleTypes.FLAME, target.getX(), target.getY() + 0.8, target.getZ(), 18, 0.5, 0.5, 0.5, 0.08);
             }
             case WIND -> {
@@ -237,7 +237,7 @@ public class ElementalSpiritEntity extends TamableAnimal {
                 target.hurt(this.damageSources().magic(), baseDmg);
             }
             case EARTH -> {
-                target.hurt(this.damageSources().mobAttack(this), baseDmg + 12.0F);
+                target.hurt(this.damageSources().mobAttack(this), baseDmg + 36.0F);
                 target.addEffect(new MobEffectInstance(MobEffects.MOVEMENT_SLOWDOWN, 60, 1));
             }
             case WATER -> {
@@ -250,8 +250,8 @@ public class ElementalSpiritEntity extends TamableAnimal {
             }
             case DARK -> {
                 target.addEffect(new MobEffectInstance(MobEffects.WITHER, 80, 1));
-                target.hurt(this.damageSources().wither(), baseDmg + 4.0F);
-                this.heal(6.0F);
+                target.hurt(this.damageSources().wither(), baseDmg + 12.0F);
+                this.heal(18.0F);
             }
         }
         sl.playSound(null, this.getX(), this.getY(), this.getZ(), SoundEvents.ALLAY_ITEM_GIVEN, SoundSource.NEUTRAL, 1.0F, 1.1F);
